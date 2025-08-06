@@ -59,9 +59,8 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">United States Headquarters</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">United States Office</h3>
                   <p className="text-gray-600">
-                    123 Business District<br />
                     Houston, TX 77002<br />
                     United States
                   </p>
@@ -69,8 +68,7 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Australia Office</h3>
                   <p className="text-gray-600">
-                    456 Collins Street<br />
-                    Melbourne, VIC 3000<br />
+                    Hope Island, QLD<br />
                     Australia
                   </p>
                 </div>
