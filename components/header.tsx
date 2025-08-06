@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
-import Image from "next/image"
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
+import Image from "next/image";
 
 export function Header() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false)
-  }
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <header className="bg-white shadow-sm relative">
@@ -36,19 +36,34 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link
+              href="/"
+              className="text-gray-700 hover:text-gray-900 font-medium"
+            >
               Home
             </Link>
-            <Link href="/product" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link
+              href="/product"
+              className="text-gray-700 hover:text-gray-900 font-medium"
+            >
               Product
             </Link>
-            <Link href="/solutions" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link
+              href="/solutions"
+              className="text-gray-700 hover:text-gray-900 font-medium"
+            >
               Solutions
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link
+              href="/about"
+              className="text-gray-700 hover:text-gray-900 font-medium"
+            >
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link
+              href="/contact"
+              className="text-gray-700 hover:text-gray-900 font-medium"
+            >
               Contact
             </Link>
           </nav>
@@ -56,7 +71,9 @@ export function Header() {
           <div className="flex items-center">
             {/* Desktop Demo Button */}
             <Link href="/demo" className="hidden md:block">
-              <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">Schedule a Demo</Button>
+              <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                Schedule a Demo
+              </Button>
             </Link>
 
             {/* Mobile Menu Button */}
@@ -65,7 +82,11 @@ export function Header() {
               className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500"
               aria-label="Toggle mobile menu"
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
@@ -114,12 +135,16 @@ export function Header() {
             {/* Mobile Demo Button */}
             <div className="pt-4 border-t border-gray-200">
               <Link href="/demo" onClick={closeMobileMenu}>
-                <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white">Schedule a Demo</Button>
+                <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white">
+                  Schedule a Demo
+                </Button>
               </Link>
             </div>
           </div>
         </div>
       )}
     </header>
-  )
+  );
 }
+
+export default Header;

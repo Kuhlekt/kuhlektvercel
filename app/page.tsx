@@ -20,8 +20,8 @@ import {
   TrendingDown,
   DollarSign,
 } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import Link from "next/link";
 
 function TestimonialCarousel() {
