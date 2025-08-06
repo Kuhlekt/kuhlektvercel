@@ -3,13 +3,14 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
 const ses = new SESClient({
-  region: process.env.AWS_REGION,
+  region: process.env.AWS_SES_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
   },
 });
 
+console.log(process.env.AWS_SES_SECRET_ACCESS_KEY);
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string;
