@@ -6,8 +6,8 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const lastName = formData.get("lastName") as string
     const email = formData.get("email") as string
     const company = formData.get("company") as string
-    // const role = formData.get("role") as string
-    // const companySize = formData.get("companySize") as string
+    const role  = formData.get("role") as string
+    const companySize = formData.get("companySize") as string
     const message = formData.get("message") as string
 
     console.log(email, company)
@@ -45,7 +45,7 @@ ${message}
 
 Please follow up with this inquiry.
     `
-
+    console.log('[FormData]', emailContent)
     // In a real implementation, you would send the email here
     // For now, we'll simulate a successful submission
     console.log("Contact form submitted:", {
