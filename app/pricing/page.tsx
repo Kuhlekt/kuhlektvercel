@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Header from "@/components/header";
-import Footer from "@/components/footer";
+import { useState } from "react"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
 
 export default function PricingPage() {
-  const [isUSD, setIsUSD] = useState(true);
+  const [isUSD, setIsUSD] = useState(true)
 
   return (
     <div className="min-h-screen bg-white">
@@ -17,13 +17,7 @@ export default function PricingPage() {
             <div className="w3o-pt-wrapper">
               <div className="w3o-row w3o--ta-center">
                 <div className="w3o-switcher">
-                  <label
-                    className={`w3o-switch-title ${
-                      !isUSD ? "w3o-switch-title-active" : ""
-                    }`}
-                  >
-                    AUD
-                  </label>
+                  <label className={`w3o-switch-title ${!isUSD ? "w3o-switch-title-active" : ""}`}>AUD</label>
                   <div className="w3o-toggle">
                     <input
                       type="checkbox"
@@ -34,13 +28,7 @@ export default function PricingPage() {
                     />
                     <span className="w3o-switch"></span>
                   </div>
-                  <label
-                    className={`w3o-switch-title ${
-                      isUSD ? "w3o-switch-title-active" : ""
-                    }`}
-                  >
-                    USD
-                  </label>
+                  <label className={`w3o-switch-title ${isUSD ? "w3o-switch-title-active" : ""}`}>USD</label>
                 </div>
               </div>
 
@@ -67,10 +55,7 @@ export default function PricingPage() {
                   <div className="tbl-row">
                     <div className="tbl-col tbl-title-col tbl-col1">&nbsp;</div>
 
-                    <div
-                      className="tbl-col tbl-cont-col tbl-col5 tab-Selected"
-                      id="tab-4"
-                    >
+                    <div className="tbl-col tbl-cont-col tbl-col5 tab-Selected" id="tab-4">
                       <div className="price-tbl-title">Bronze</div>
                       <div className="price-btn pbtn-inline">
                         <div className="tbl-subs">
@@ -162,90 +147,48 @@ export default function PricingPage() {
 
                 <div className="table-body">
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Minimum
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col5">
-                      1 Admin user
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col2">
-                      1 Admin user
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col3">
-                      1 Admin user
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col4">
-                      1 Admin user
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Minimum</div>
+                    <div className="tbl-col tbl-cont-col tbl-col5">1 Admin user</div>
+                    <div className="tbl-col tbl-cont-col tbl-col2">1 Admin user</div>
+                    <div className="tbl-col tbl-cont-col tbl-col3">1 Admin user</div>
+                    <div className="tbl-col tbl-cont-col tbl-col4">1 Admin user</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Maximum
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col5">
-                      5 Core users
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col2">
-                      10 Core users
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col3">
-                      15 Core users
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Maximum</div>
+                    <div className="tbl-col tbl-cont-col tbl-col5">5 Core users</div>
+                    <div className="tbl-col tbl-cont-col tbl-col2">10 Core users</div>
+                    <div className="tbl-col tbl-cont-col tbl-col3">15 Core users</div>
                     <div className="tbl-col tbl-cont-col tbl-col4">? Users</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Maximum
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col5">
-                      20 Sales users
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col2">
-                      30 Sales users
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col3">
-                      40 Sales users
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Maximum</div>
+                    <div className="tbl-col tbl-cont-col tbl-col5">20 Sales users</div>
+                    <div className="tbl-col tbl-cont-col tbl-col2">30 Sales users</div>
+                    <div className="tbl-col tbl-cont-col tbl-col3">40 Sales users</div>
                     <div className="tbl-col tbl-cont-col tbl-col4">? Sales</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Setup fees
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Setup fees</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className={isUSD ? "active" : "hidden"}>$990</span>
-                      <span className={!isUSD ? "active" : "hidden"}>
-                        $1,300
-                      </span>
+                      <span className={!isUSD ? "active" : "hidden"}>$1,300</span>
                     </div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
-                      <span className={isUSD ? "active" : "hidden"}>
-                        $1,350
-                      </span>
-                      <span className={!isUSD ? "active" : "hidden"}>
-                        $1,750
-                      </span>
+                      <span className={isUSD ? "active" : "hidden"}>$1,350</span>
+                      <span className={!isUSD ? "active" : "hidden"}>$1,750</span>
                     </div>
                     <div className="tbl-col tbl-cont-col tbl-col3">
-                      <span className={isUSD ? "active" : "hidden"}>
-                        $1,600
-                      </span>
-                      <span className={!isUSD ? "active" : "hidden"}>
-                        $1,750
-                      </span>
+                      <span className={isUSD ? "active" : "hidden"}>$1,600</span>
+                      <span className={!isUSD ? "active" : "hidden"}>$1,750</span>
                     </div>
-                    <div className="tbl-col tbl-cont-col tbl-col4">
-                      Get a quote
-                    </div>
+                    <div className="tbl-col tbl-cont-col tbl-col4">Get a quote</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      CSV SFTP load only
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">CSV SFTP load only</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -257,9 +200,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Unlimited accounts
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Unlimited accounts</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -275,9 +216,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Unlimited open items
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Unlimited open items</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -293,21 +232,15 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Regions / Businesses
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Regions / Businesses</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">1</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">2</div>
                     <div className="tbl-col tbl-cont-col tbl-col3">3</div>
-                    <div className="tbl-col tbl-cont-col tbl-col4">
-                      Unlimited
-                    </div>
+                    <div className="tbl-col tbl-cont-col tbl-col4">Unlimited</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Onboarding credit application per region****
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Onboarding credit application per region****</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className={isUSD ? "active" : "hidden"}>$150</span>
                       <span className={!isUSD ? "active" : "hidden"}>$175</span>
@@ -342,9 +275,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Credit reports @cost + 10%
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Credit reports @cost + 10%</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -360,9 +291,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Approval process
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Approval process</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col3">
@@ -374,27 +303,15 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      ERP integration
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col5">
-                      Get a quote
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col2">
-                      Get a quote
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col3">
-                      Get a quote
-                    </div>
-                    <div className="tbl-col tbl-cont-col tbl-col4">
-                      Get a quote
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">ERP integration</div>
+                    <div className="tbl-col tbl-cont-col tbl-col5">Get a quote</div>
+                    <div className="tbl-col tbl-cont-col tbl-col2">Get a quote</div>
+                    <div className="tbl-col tbl-cont-col tbl-col3">Get a quote</div>
+                    <div className="tbl-col tbl-cont-col tbl-col4">Get a quote</div>
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Kuhlekt collection management platform
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Kuhlekt collection management platform</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -410,9 +327,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Multiple dunning procedures
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Multiple dunning procedures</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -428,9 +343,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Escalations
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Escalations</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -446,9 +359,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Provisioning
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Provisioning</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -464,9 +375,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Dispute workflow management
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Dispute workflow management</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -482,9 +391,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Setup Invoice Receiving & Copies Sending**
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Setup Invoice Receiving & Copies Sending**</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className={isUSD ? "active" : "hidden"}>$150</span>
                       <span className={!isUSD ? "active" : "hidden"}>$100</span>
@@ -501,9 +408,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Immediate or Bulk statements.
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Immediate or Bulk statements.</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -519,9 +424,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Reporting options
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Reporting options</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -537,9 +440,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      AI quick Action templates
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">AI quick Action templates</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -555,9 +456,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      AI Communications
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">AI Communications</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -573,9 +472,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      KPI staff management
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">KPI staff management</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -591,9 +488,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Payment management, Setup base is Stripe***
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Payment management, Setup base is Stripe***</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className={isUSD ? "active" : "hidden"}>$140</span>
                       <span className={!isUSD ? "active" : "hidden"}>$100</span>
@@ -611,9 +506,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Scheduled
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Scheduled</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -629,9 +522,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Ad hoc
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Ad hoc</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -647,9 +538,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Reminders
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Reminders</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">
                       <span className="w3o-symbl w3o-check">✓</span>
                     </div>
@@ -665,9 +554,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1">
-                      Kuhlekt portal,
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1">Kuhlekt portal,</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">$250</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className={isUSD ? "active" : "hidden"}>$175</span>
@@ -682,9 +569,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Payments ***
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Payments ***</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -698,9 +583,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Direct Debits ***
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Direct Debits ***</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -714,9 +597,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Download transactions CSV
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Download transactions CSV</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -730,9 +611,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Dispute lodgement
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Dispute lodgement</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -746,9 +625,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Invoice download
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Invoice download</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -762,9 +639,7 @@ export default function PricingPage() {
                   </div>
 
                   <div className="tbl-row">
-                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">
-                      Statement download
-                    </div>
+                    <div className="tbl-col tbl-title-col tbl-col1 w3o-subplan">Statement download</div>
                     <div className="tbl-col tbl-cont-col tbl-col5">&nbsp;</div>
                     <div className="tbl-col tbl-cont-col tbl-col2">
                       <span className="w3o-symbl w3o-check">✓</span>
@@ -781,35 +656,23 @@ export default function PricingPage() {
 
               <div className="w3o-extra-info">
                 <p>
-                  <strong>
-                    ** Copies received via email BCC from ERP alternate options
-                    available by quote.
-                  </strong>
+                  <strong>** Copies received via email BCC from ERP alternate options available by quote.</strong>
                 </p>
                 <p>
-                  <strong>
-                    *** Based on Stripe other providers quoted. Fees to client
-                    accounts.
-                  </strong>
+                  <strong>*** Based on Stripe other providers quoted. Fees to client accounts.</strong>
                 </p>
                 <p>
-                  <strong>
-                    **** Additional Regional Onboarding @ $140 PCM each in
-                    currency selected table.
-                  </strong>
+                  <strong>**** Additional Regional Onboarding @ $140 PCM each in currency selected table.</strong>
                 </p>
                 <p>
-                  <strong>Core</strong> Users defined as Finance, Collections
-                  staff, Collection Managers, CFO, Accountants.
+                  <strong>Core</strong> Users defined as Finance, Collections staff, Collection Managers, CFO,
+                  Accountants.
                 </p>
                 <p>
-                  <strong>Sales</strong> Users defined as Sales and operational
-                  staff required to have logins for workflow and escalations.
+                  <strong>Sales</strong> Users defined as Sales and operational staff required to have logins for
+                  workflow and escalations.
                 </p>
-                <p>
-                  All figures in selected currency and exempt of any Taxes,
-                  Duties and or fees.
-                </p>
+                <p>All figures in selected currency and exempt of any Taxes, Duties and or fees.</p>
                 <p>AUD available only in Australia</p>
               </div>
             </div>
@@ -881,7 +744,7 @@ export default function PricingPage() {
           right: 0;
           bottom: 0;
           background-color: #ccc;
-          transition: 0.4s;
+          transition: .4s;
           border-radius: 30px;
         }
 
@@ -893,7 +756,7 @@ export default function PricingPage() {
           left: 4px;
           bottom: 4px;
           background-color: white;
-          transition: 0.4s;
+          transition: .4s;
           border-radius: 50%;
         }
 
@@ -908,7 +771,7 @@ export default function PricingPage() {
         .w3o-comparison-tbl {
           background: white;
           border-radius: 10px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
           overflow: hidden;
         }
 
@@ -965,7 +828,7 @@ export default function PricingPage() {
         }
 
         .tbl-col3::before {
-          content: "";
+          content: '';
           position: absolute;
           top: 0;
           left: 0;
@@ -1119,5 +982,5 @@ export default function PricingPage() {
         }
       `}</style>
     </div>
-  );
+  )
 }

@@ -1,21 +1,18 @@
-"use client";
+"use client"
 
-import { useActionState } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, AlertCircle } from "lucide-react";
-import { submitDemoRequest } from "./actions";
-import Image from "next/image";
+import { useActionState } from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { CheckCircle, AlertCircle } from "lucide-react"
+import { submitDemoRequest } from "./actions"
+import Image from "next/image"
 
 export default function DemoPage() {
-  const [state, formAction, isPending] = useActionState(
-    submitDemoRequest,
-    null
-  );
+  const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
 
   return (
     <div className="min-h-screen bg-white">
@@ -28,12 +25,9 @@ export default function DemoPage() {
             {/* Left Column - Content */}
             <div className="space-y-8">
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-                  Schedule a Demonstration
-                </h1>
+                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">Schedule a Demonstration</h1>
                 <p className="text-xl text-gray-600 leading-relaxed">
-                  See how Kuhlekt can transform your accounts receivable process
-                  with a personalized demo.
+                  See how Kuhlekt can transform your accounts receivable process with a personalized demo.
                 </p>
               </div>
 
@@ -41,27 +35,19 @@ export default function DemoPage() {
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">
-                    See how to automate your collections process
-                  </p>
+                  <p className="text-lg text-gray-700">See how to automate your collections process</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">
-                    Learn how to reduce DSO by 30%
-                  </p>
+                  <p className="text-lg text-gray-700">Learn how to reduce DSO by 30%</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">
-                    Discover how to eliminate 80% of manual tasks
-                  </p>
+                  <p className="text-lg text-gray-700">Discover how to eliminate 80% of manual tasks</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">
-                    Get a personalized walkthrough of our platform
-                  </p>
+                  <p className="text-lg text-gray-700">Get a personalized walkthrough of our platform</p>
                 </div>
               </div>
 
@@ -78,9 +64,7 @@ export default function DemoPage() {
                     3
                   </div>
                 </div>
-                <p className="text-gray-600">
-                  Join 500+ finance teams already using Kuhlekt
-                </p>
+                <p className="text-gray-600">Join 500+ finance teams already using Kuhlekt</p>
               </div>
             </div>
 
@@ -100,12 +84,9 @@ export default function DemoPage() {
               </div>
 
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Book Your Demo
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Your Demo</h2>
                 <p className="text-gray-600">
-                  Fill out the form below and we'll contact you to schedule a
-                  personalized demo.
+                  Fill out the form below and we'll contact you to schedule a personalized demo.
                 </p>
               </div>
 
@@ -113,9 +94,7 @@ export default function DemoPage() {
               {state && (
                 <div
                   className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                    state.success
-                      ? "bg-green-50 border border-green-200"
-                      : "bg-red-50 border border-red-200"
+                    state.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
                   }`}
                 >
                   {state.success ? (
@@ -123,13 +102,7 @@ export default function DemoPage() {
                   ) : (
                     <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   )}
-                  <p
-                    className={`text-sm ${
-                      state.success ? "text-green-700" : "text-red-700"
-                    }`}
-                  >
-                    {state.message}
-                  </p>
+                  <p className={`text-sm ${state.success ? "text-green-700" : "text-red-700"}`}>{state.message}</p>
                 </div>
               )}
 
@@ -137,10 +110,7 @@ export default function DemoPage() {
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label
-                      htmlFor="firstName"
-                      className="text-sm font-medium text-gray-900"
-                    >
+                    <Label htmlFor="firstName" className="text-sm font-medium text-gray-900">
                       First name *
                     </Label>
                     <Input
@@ -153,10 +123,7 @@ export default function DemoPage() {
                     />
                   </div>
                   <div>
-                    <Label
-                      htmlFor="lastName"
-                      className="text-sm font-medium text-gray-900"
-                    >
+                    <Label htmlFor="lastName" className="text-sm font-medium text-gray-900">
                       Last name *
                     </Label>
                     <Input
@@ -172,10 +139,7 @@ export default function DemoPage() {
 
                 {/* Email */}
                 <div>
-                  <Label
-                    htmlFor="email"
-                    className="text-sm font-medium text-gray-900"
-                  >
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-900">
                     Email *
                   </Label>
                   <Input
@@ -191,10 +155,7 @@ export default function DemoPage() {
 
                 {/* Company */}
                 <div>
-                  <Label
-                    htmlFor="company"
-                    className="text-sm font-medium text-gray-900"
-                  >
+                  <Label htmlFor="company" className="text-sm font-medium text-gray-900">
                     Company *
                   </Label>
                   <Input
@@ -209,10 +170,7 @@ export default function DemoPage() {
 
                 {/* Role */}
                 <div>
-                  <Label
-                    htmlFor="role"
-                    className="text-sm font-medium text-gray-900"
-                  >
+                  <Label htmlFor="role" className="text-sm font-medium text-gray-900">
                     Role
                   </Label>
                   <Input
@@ -226,10 +184,7 @@ export default function DemoPage() {
 
                 {/* Challenges */}
                 <div>
-                  <Label
-                    htmlFor="challenges"
-                    className="text-sm font-medium text-gray-900"
-                  >
+                  <Label htmlFor="challenges" className="text-sm font-medium text-gray-900">
                     What are your biggest AR challenges?
                   </Label>
                   <Textarea
@@ -262,5 +217,5 @@ export default function DemoPage() {
 
       <Footer />
     </div>
-  );
+  )
 }

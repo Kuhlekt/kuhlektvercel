@@ -1,327 +1,296 @@
-"use client";
+"use client"
 
-import { useActionState } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MapPin, Phone, Mail, CheckCircle, AlertCircle } from "lucide-react";
-import { submitContactForm } from "./actions";
+import { useState } from "react"
+import { useActionState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { submitContactForm } from "./actions"
 
 export default function ContactPage() {
-  const [state, formAction, isPending] = useActionState(
-    submitContactForm,
-    null
-  );
+  const [state, formAction, isPending] = useActionState(submitContactForm, null)
+  const [companySize, setCompanySize] = useState("")
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <img 
+                src="/images/kuhlekt-logo.jpg" 
+                alt="Kuhlekt" 
+                className="h-8"
+              />
+            </div>
+            <nav className="hidden md:flex space-x-8">
+              <a href="/" className="text-gray-600 hover:text-blue-600">Home</a>
+              <a href="/product" className="text-gray-600 hover:text-blue-600">Product</a>
+              <a href="/solutions" className="text-gray-600 hover:text-blue-600">Solutions</a>
+              <a href="/pricing" className="text-gray-600 hover:text-blue-600">Pricing</a>
+              <a href="/about" className="text-gray-600 hover:text-blue-600">About</a>
+              <a href="/contact" className="text-blue-600 font-medium">Contact</a>
+            </nav>
+            <Button asChild>
+              <a href="/demo">Request Demo</a>
+            </Button>
+          </div>
+        </div>
+      </header>
 
-      {/* Hero Section */}
-      <section
-        id="top"
-        className="bg-gradient-to-br from-slate-50 to-blue-50 py-20"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-6">
-            Get in Touch
-          </Badge>
-          <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-            <span className="text-gray-900">Let's Talk About</span>
-            <br />
-            <span className="text-cyan-500">Your AR Challenges</span>
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Ready to transform your accounts receivable process? Our team is
-            here to help you get started and answer any questions you might
-            have.
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Ready to transform your accounts receivable process? Contact our team to learn how Kuhlekt can help your business.
           </p>
         </div>
-      </section>
 
-      {/* Contact Form & Info */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16">
-            {/* Contact Form */}
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">
-                Send us a message
-              </h2>
-              <Card className="p-8">
-                <CardContent className="p-0">
-                  {/* Success/Error Message */}
-                  {state && (
-                    <div
-                      className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                        state.success
-                          ? "bg-green-50 border border-green-200"
-                          : "bg-red-50 border border-red-200"
-                      }`}
-                    >
-                      {state.success ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      )}
-                      <p
-                        className={`text-sm ${
-                          state.success ? "text-green-700" : "text-red-700"
-                        }`}
-                      >
-                        {state.message}
-                      </p>
-                    </div>
-                  )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Contact Information */}
+          <div className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  Our Offices
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">United States Office</h3>
+                  <p className="text-gray-600">
+                    Houston, TX 77002<br />
+                    United States
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Australia Office</h3>
+                  <p className="text-gray-600">
+                    Hope Island, QLD<br />
+                    Australia
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-                  <form action={formAction} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name *</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          placeholder="John"
-                          className="mt-1"
-                          required
-                          disabled={isPending}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          placeholder="Doe"
-                          className="mt-1"
-                          required
-                          disabled={isPending}
-                        />
-                      </div>
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Phone className="h-5 w-5 text-blue-600" />
+                  Phone Numbers
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="font-medium text-gray-900">US: +1 832 888 8575</p>
+                  <p className="text-sm text-gray-600">Monday - Friday, 8:00 AM - 6:00 PM CST</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">AU: +61 452 155 532</p>
+                  <p className="text-sm text-gray-600">Monday - Friday, 9:00 AM - 5:00 PM AEST</p>
+                </div>
+              </CardContent>
+            </Card>
 
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="john@company.com"
-                        className="mt-1"
-                        required
-                        disabled={isPending}
-                      />
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  Email
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-900 font-medium">enquiries@kuhlekt.com</p>
+                <p className="text-sm text-gray-600 mt-1">We typically respond within 24 hours</p>
+              </CardContent>
+            </Card>
 
-                    <div>
-                      <Label htmlFor="company">Company *</Label>
-                      <Input
-                        id="company"
-                        name="company"
-                        placeholder="Your Company"
-                        className="mt-1"
-                        required
-                        disabled={isPending}
-                      />
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                  Business Hours
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <p className="font-medium text-gray-900">United States (CST)</p>
+                  <p className="text-gray-600">Monday - Friday: 8:00 AM - 6:00 PM</p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Australia (AEST)</p>
+                  <p className="text-gray-600">Monday - Friday: 9:00 AM - 5:00 PM</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Select name="role" disabled={isPending}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cfo">CFO</SelectItem>
-                          <SelectItem value="controller">Controller</SelectItem>
-                          <SelectItem value="ar-manager">AR Manager</SelectItem>
-                          <SelectItem value="finance-director">
-                            Finance Director
-                          </SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+          {/* Contact Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Send us a Message</CardTitle>
+              <CardDescription>
+                Fill out the form below and we'll get back to you as soon as possible.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={formAction} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      required
+                      placeholder="John"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      required
+                      placeholder="Smith"
+                    />
+                  </div>
+                </div>
 
-                    <div>
-                      <Label htmlFor="message">Message *</Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        placeholder="Tell us about your AR challenges and how we can help..."
-                        className="mt-1 min-h-[120px]"
-                        required
-                        disabled={isPending}
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="john.smith@company.com"
+                  />
+                </div>
 
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full bg-cyan-500 hover:bg-cyan-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={isPending}
-                    >
-                      {isPending ? "Sending..." : "Send Message"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company Name *</Label>
+                  <Input
+                    id="company"
+                    name="company"
+                    type="text"
+                    required
+                    placeholder="Your Company"
+                  />
+                </div>
 
-            {/* Contact Information */}
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">
-                Get in touch
-              </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Your Role</Label>
+                    <Input
+                      id="role"
+                      name="role"
+                      type="text"
+                      placeholder="CFO, Finance Manager, etc."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="companySize">Company Size</Label>
+                    <Select name="companySize" value={companySize} onValueChange={setCompanySize}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select company size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-10">1-10 employees</SelectItem>
+                        <SelectItem value="11-50">11-50 employees</SelectItem>
+                        <SelectItem value="51-200">51-200 employees</SelectItem>
+                        <SelectItem value="201-1000">201-1000 employees</SelectItem>
+                        <SelectItem value="1000+">1000+ employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-              <div className="space-y-8">
-                <Card className="p-6">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <MapPin className="w-6 h-6 text-cyan-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">Offices</h3>
-                        <p className="text-gray-600">
-                          Houston, TX, United States
-                          <br />
-                          <br />
-                          Hope Island, QLD, Australia
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message *</Label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    required
+                    placeholder="Tell us about your accounts receivable challenges and how we can help..."
+                    rows={5}
+                  />
+                </div>
 
-                <Card className="p-6">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Phone className="w-6 h-6 text-cyan-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">Phone</h3>
-                        <p className="text-gray-600">+1832 888 8575</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="p-6">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Mail className="w-6 h-6 text-cyan-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">Email</h3>
-                        <p className="text-gray-600">
-                          Sales: enquiries@kuhlekt.com
-                          <br />
-                          Support: support@kuhlekt.com
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="mt-12 space-y-4">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Prefer to talk?
-                </h3>
-                <Button
-                  size="lg"
-                  className="bg-cyan-500 hover:bg-cyan-600 text-white w-full"
-                >
-                  Schedule a Demo
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? "Sending..." : "Send Message"}
                 </Button>
+
+                {state && (
+                  <div className={`text-center p-4 rounded-md ${
+                    state.success 
+                      ? "bg-green-50 text-green-800 border border-green-200" 
+                      : "bg-red-50 text-red-800 border border-red-200"
+                  }`}>
+                    {state.message}
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <div className="text-2xl font-bold text-blue-400 mb-4">Kuhlekt</div>
+              <p className="text-gray-300 mb-4">
+                Transforming accounts receivable management with intelligent automation and data-driven insights.
+              </p>
+              <div className="flex space-x-4">
+                <a href="#" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">LinkedIn</span>
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">Twitter</span>
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                  </svg>
+                </a>
               </div>
             </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase mb-4">Product</h3>
+              <ul className="space-y-2">
+                <li><a href="/product" className="text-gray-300 hover:text-white">Features</a></li>
+                <li><a href="/solutions" className="text-gray-300 hover:text-white">Solutions</a></li>
+                <li><a href="/pricing" className="text-gray-300 hover:text-white">Pricing</a></li>
+                <li><a href="/demo" className="text-gray-300 hover:text-white">Request Demo</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase mb-4">Company</h3>
+              <ul className="space-y-2">
+                <li><a href="/about" className="text-gray-300 hover:text-white">About</a></li>
+                <li><a href="/contact" className="text-gray-300 hover:text-white">Contact</a></li>
+                <li><a href="#" className="text-gray-300 hover:text-white">Careers</a></li>
+                <li><a href="#" className="text-gray-300 hover:text-white">Privacy Policy</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center">
+            <p className="text-gray-400">&copy; 2024 Kuhlekt. All rights reserved.</p>
           </div>
         </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-xl text-gray-600">
-              Quick answers to common questions
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <h3 className="font-semibold text-lg mb-3">
-                  How quickly can we get started?
-                </h3>
-                <p className="text-gray-600">
-                  Most customers are up and running within 1-2 weeks. Our
-                  implementation team will work with you and we answer any
-                  questions to ensure a smooth transition.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <h3 className="font-semibold text-lg mb-3">
-                  Do you integrate with our ERP?
-                </h3>
-                <p className="text-gray-600">
-                  Yes! We integrate with all major ERP systems including SAP,
-                  Oracle, NetSuite, QuickBooks, and many others.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <h3 className="font-semibold text-lg mb-3">
-                  What kind of support do you provide?
-                </h3>
-                <p className="text-gray-600">
-                  We offer 24/7 support via phone, email, and chat. Plus
-                  dedicated customer success managers for enterprise customers.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="p-6">
-              <CardContent className="p-0">
-                <h3 className="font-semibold text-lg mb-3">
-                  Is there a free trial?
-                </h3>
-                <p className="text-gray-600">
-                  Yes! We offer a 14-day free trial with full access to all
-                  features. No credit card required to get started.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
+      </footer>
     </div>
-  );
+  )
 }
