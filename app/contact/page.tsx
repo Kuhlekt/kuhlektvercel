@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import { submitContactForm } from "./actions"
-import { Header } from "@/components/header"
 
 export default function ContactPage() {
   const [state, formAction, isPending] = useActionState(submitContactForm, null)
@@ -18,7 +17,31 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Header />
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <img 
+                src="/images/kuhlekt-logo.jpg" 
+                alt="Kuhlekt" 
+                className="h-8"
+              />
+            </div>
+            <nav className="hidden md:flex space-x-8">
+              <a href="/" className="text-gray-600 hover:text-blue-600">Home</a>
+              <a href="/product" className="text-gray-600 hover:text-blue-600">Product</a>
+              <a href="/solutions" className="text-gray-600 hover:text-blue-600">Solutions</a>
+              <a href="/pricing" className="text-gray-600 hover:text-blue-600">Pricing</a>
+              <a href="/about" className="text-gray-600 hover:text-blue-600">About</a>
+              <a href="/contact" className="text-blue-600 font-medium">Contact</a>
+            </nav>
+            <Button asChild>
+              <a href="/demo">Request Demo</a>
+            </Button>
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
@@ -49,7 +72,8 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">Australia Office</h3>
                   <p className="text-gray-600">
-                    Hope Island, QLD 4212<br />
+                    Hope Island, QLD<br />
+                    Australia
                   </p>
                 </div>
               </CardContent>
