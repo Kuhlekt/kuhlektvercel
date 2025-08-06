@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, Phone, Mail, CheckCircle, AlertCircle } from "lucide-react"
+import { MapPin, Phone, Mail, CheckCircle, AlertCircle } from 'lucide-react'
 import { submitContactForm } from "./actions"
 
 export default function ContactPage() {
@@ -201,7 +201,11 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg mb-2">Phone</h3>
-                        <p className="text-gray-600">+1832 888 8575</p>
+                        <p className="text-gray-600">
+                          US: +1 832 888 8575
+                          <br />
+                          AU: +61 452 155 532
+                        </p>
                       </div>
                     </div>
                   </CardContent>
