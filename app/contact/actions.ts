@@ -1,13 +1,12 @@
 "use server"
 
-
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
 const ses = new SESClient({
-  region: process.env.AWS_REGION,
+  region: process.env.AWS_SES_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
   },
 })
 
@@ -17,11 +16,9 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const lastName = formData.get("lastName") as string
     const email = formData.get("email") as string
     const company = formData.get("company") as string
-    const role  = formData.get("role") as string
+    const role = formData.get("role") as string
     const companySize = formData.get("companySize") as string
     const message = formData.get("message") as string
-
-    console.log(email, company)
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company || !message) {
@@ -39,7 +36,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         message: "Please enter a valid email address.",
       }
     }
-
 
     const subject = `New Contact Submission from ${firstName} ${lastName}`
 
@@ -59,7 +55,6 @@ ${message}
 Please follow up with this inquiry.
     `
 
-
     const params = {
       Destination: {
         ToAddresses: ["enquiries@kuhlekt.com"],
@@ -76,10 +71,6 @@ Please follow up with this inquiry.
 
     await ses.send(new SendEmailCommand(params))
 
-
-
-    // In a real implementation, you would send the email here
-    // For now, we'll simulate a successful submission
     console.log("Contact form submitted:", {
       firstName,
       lastName,
@@ -87,8 +78,7 @@ Please follow up with this inquiry.
       company,
       role,
       companySize,
-      body,
-      emailContent,
+      message,
     })
 
     // Simulate processing time
