@@ -156,26 +156,6 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="company-size">Company Size</Label>
-                      <Select name="companySize" disabled={isPending}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select company size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1-10">1-10 employees</SelectItem>
-                          <SelectItem value="11-50">11-50 employees</SelectItem>
-                          <SelectItem value="51-200">
-                            51-200 employees
-                          </SelectItem>
-                          <SelectItem value="201-1000">
-                            201-1000 employees
-                          </SelectItem>
-                          <SelectItem value="1000+">1000+ employees</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
                       <Label htmlFor="message">Message *</Label>
                       <Textarea
                         id="message"

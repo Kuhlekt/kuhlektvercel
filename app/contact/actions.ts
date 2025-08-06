@@ -18,7 +18,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const email = formData.get("email") as string;
     const company = formData.get("company") as string;
     const role = formData.get("role") as string;
-    const companySize = formData.get("companySize") as string;
     const message = formData.get("message") as string;
 
     // Validate required fields
@@ -48,7 +47,6 @@ Contact Information:
 - Email: ${email}
 - Company: ${company}
 - Role: ${role || "Not specified"}
-- Company Size: ${companySize || "Not specified"}
 
 Message:
 ${message}
