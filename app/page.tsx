@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Star,
   CheckCircle,
@@ -19,13 +19,13 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-} from "lucide-react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import Link from "next/link"
+} from "lucide-react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import Link from "next/link";
 
 function TestimonialCarousel() {
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const testimonials = [
     {
@@ -55,20 +55,22 @@ function TestimonialCarousel() {
       quote:
         "Implementation was seamless and the ROI was immediate. We've improved our cash flow by 40% and reduced disputes by 60%. Kuhlekt is a game-changer.",
     },
-  ]
+  ];
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % testimonials.length)
-  }
+    setCurrentSlide((prev) => (prev + 1) % testimonials.length);
+  };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + testimonials.length) % testimonials.length)
-  }
+    setCurrentSlide(
+      (prev) => (prev - 1 + testimonials.length) % testimonials.length
+    );
+  };
 
   useEffect(() => {
-    const timer = setInterval(nextSlide, 5000) // Auto-advance every 5 seconds
-    return () => clearInterval(timer)
-  }, [])
+    const timer = setInterval(nextSlide, 5000); // Auto-advance every 5 seconds
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="relative max-w-4xl mx-auto">
@@ -76,7 +78,10 @@ function TestimonialCarousel() {
         <CardContent className="p-0 w-full">
           <div className="flex items-center gap-1 justify-center mb-6">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              <Star
+                key={i}
+                className="w-5 h-5 fill-yellow-400 text-yellow-400"
+              />
             ))}
           </div>
 
@@ -95,18 +100,26 @@ function TestimonialCarousel() {
                 loading="lazy"
                 onError={(e) => {
                   // Fallback to placeholder if image fails to load
-                  const target = e.target as HTMLImageElement
-                  target.src = `/placeholder.svg?height=64&width=64&text=${testimonials[currentSlide].name
+                  const target = e.target as HTMLImageElement;
+                  target.src = `/placeholder.svg?height=64&width=64&text=${testimonials[
+                    currentSlide
+                  ].name
                     .split(" ")
                     .map((n) => n[0])
-                    .join("")}`
+                    .join("")}`;
                 }}
               />
             </div>
             <div className="text-left">
-              <div className="font-semibold text-gray-900">{testimonials[currentSlide].name}</div>
-              <div className="text-sm text-gray-600">{testimonials[currentSlide].role}</div>
-              <div className="text-sm text-gray-500">{testimonials[currentSlide].company}</div>
+              <div className="font-semibold text-gray-900">
+                {testimonials[currentSlide].name}
+              </div>
+              <div className="text-sm text-gray-600">
+                {testimonials[currentSlide].role}
+              </div>
+              <div className="text-sm text-gray-500">
+                {testimonials[currentSlide].company}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -143,7 +156,7 @@ function TestimonialCarousel() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 export default function HomePage() {
@@ -156,7 +169,9 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <Badge className="bg-red-500 text-white px-4 py-2 rounded-full">⭐ Trusted by 500+ finance teams</Badge>
+            <Badge className="bg-red-500 text-white px-4 py-2 rounded-full">
+              ⭐ Trusted by 500+ finance teams
+            </Badge>
 
             <div className="space-y-4">
               <h1 className="text-4xl lg:text-6xl font-bold">
@@ -166,19 +181,31 @@ export default function HomePage() {
               </h1>
 
               <p className="text-xl text-gray-600 max-w-lg">
-                The #1 platform for B2B credit collections and AR automation. Eliminate manual processes, streamline
-                debt recovery, and improve cash flow.
+                The #1 platform for B2B credit collections and AR automation.
+                Eliminate manual processes, streamline debt recovery, and
+                improve cash flow.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/demo">
-                <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white px-8">
+                <Button
+                  size="lg"
+                  className="bg-cyan-500 hover:bg-cyan-600 text-white px-8"
+                >
                   Schedule a Demo →
                 </Button>
               </Link>
-              <Link href="https://www.youtube.com/watch?v=iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="flex items-center gap-2 bg-transparent">
+              <Link
+                href="https://www.youtube.com/watch?v=iVmvBRzQZDA"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="flex items-center gap-2 bg-transparent"
+                >
                   <Play className="w-4 h-4" />
                   Watch Product Tour
                 </Button>
@@ -215,15 +242,21 @@ export default function HomePage() {
               <CardContent className="p-6">
                 <div className="flex items-center gap-1 mb-3">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <Star
+                      key={i}
+                      className="w-4 h-4 fill-yellow-400 text-yellow-400"
+                    />
                   ))}
                 </div>
                 <blockquote className="text-sm text-gray-700 mb-4 italic">
-                  "Kuhlekt transformed our accounts receivable process. We reduced DSO by 30% and our team now spends
-                  80% less time on manual collections. The ROI was immediate and substantial."
+                  "Kuhlekt transformed our accounts receivable process. We
+                  reduced DSO by 30% and our team now spends 80% less time on
+                  manual collections. The ROI was immediate and substantial."
                 </blockquote>
                 <div>
-                  <div className="font-semibold text-cyan-600">Maria Rodriguez</div>
+                  <div className="font-semibold text-cyan-600">
+                    Maria Rodriguez
+                  </div>
                   <div className="text-xs text-gray-500">CFO at TechStream</div>
                 </div>
               </CardContent>
@@ -236,20 +269,32 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
           <div>
-            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">80%</div>
-            <div className="text-gray-600 font-medium">Manual Tasks Eliminated</div>
+            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+              80%
+            </div>
+            <div className="text-gray-600 font-medium">
+              Manual Tasks Eliminated
+            </div>
           </div>
           <div>
-            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">30%</div>
+            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+              30%
+            </div>
             <div className="text-gray-600 font-medium">DSO Reduction</div>
           </div>
           <div>
-            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">500+</div>
+            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+              500+
+            </div>
             <div className="text-gray-600 font-medium">Finance Teams</div>
           </div>
           <div>
-            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">99%</div>
-            <div className="text-gray-600 font-medium">Customer Satisfaction</div>
+            <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+              99%
+            </div>
+            <div className="text-gray-600 font-medium">
+              Customer Satisfaction
+            </div>
           </div>
         </div>
       </section>
@@ -257,8 +302,12 @@ export default function HomePage() {
       {/* Benefits Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
-          <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Benefits</Badge>
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Kuhlekt helps you:</h2>
+          <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">
+            Benefits
+          </Badge>
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+            Kuhlekt helps you:
+          </h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -267,8 +316,12 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Automate debt recovery</h3>
-              <p className="text-gray-600">Reduce Days Sales Outstanding (DSO) with intelligent automation</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Automate debt recovery
+              </h3>
+              <p className="text-gray-600">
+                Reduce Days Sales Outstanding (DSO) with intelligent automation
+              </p>
             </CardContent>
           </Card>
 
@@ -277,8 +330,12 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Improve cash flow</h3>
-              <p className="text-gray-600">Get real-time insights into your receivables and cash position</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Improve cash flow
+              </h3>
+              <p className="text-gray-600">
+                Get real-time insights into your receivables and cash position
+              </p>
             </CardContent>
           </Card>
 
@@ -287,8 +344,12 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Streamline collections</h3>
-              <p className="text-gray-600">Coordinate collection processes across teams with ease</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Streamline collections
+              </h3>
+              <p className="text-gray-600">
+                Coordinate collection processes across teams with ease
+              </p>
             </CardContent>
           </Card>
 
@@ -297,8 +358,13 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Enhance credit control</h3>
-              <p className="text-gray-600">Use built-in risk assessment tools to make better credit decisions</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Enhance credit control
+              </h3>
+              <p className="text-gray-600">
+                Use built-in risk assessment tools to make better credit
+                decisions
+              </p>
             </CardContent>
           </Card>
 
@@ -307,8 +373,12 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Empower customers</h3>
-              <p className="text-gray-600">Provide a branded self-service credit portal for your customers</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Empower customers
+              </h3>
+              <p className="text-gray-600">
+                Provide a branded self-service credit portal for your customers
+              </p>
             </CardContent>
           </Card>
 
@@ -317,8 +387,12 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle className="w-8 h-8 text-cyan-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-cyan-600">Eliminate manual work</h3>
-              <p className="text-gray-600">Achieve end-to-end automation of your collections process</p>
+              <h3 className="text-xl font-semibold mb-4 text-cyan-600">
+                Eliminate manual work
+              </h3>
+              <p className="text-gray-600">
+                Achieve end-to-end automation of your collections process
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -330,20 +404,36 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="grid grid-cols-2 gap-8">
               <div className="text-center">
-                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">30%</div>
-                <div className="text-gray-600 font-medium">Average DSO Reduction</div>
+                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+                  30%
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Average DSO Reduction
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">80%</div>
-                <div className="text-gray-600 font-medium">Manual Tasks Eliminated</div>
+                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+                  80%
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Manual Tasks Eliminated
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">40%</div>
-                <div className="text-gray-600 font-medium">Cash Flow Improvement</div>
+                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+                  40%
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Cash Flow Improvement
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">60%</div>
-                <div className="text-gray-600 font-medium">Dispute Resolution Time</div>
+                <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">
+                  60%
+                </div>
+                <div className="text-gray-600 font-medium">
+                  Dispute Resolution Time
+                </div>
               </div>
             </div>
 
@@ -361,7 +451,9 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-16">
-            <p className="text-lg text-gray-600">Everything you need to streamline your accounts receivable process</p>
+            <p className="text-lg text-gray-600">
+              Everything you need to streamline your accounts receivable process
+            </p>
           </div>
         </div>
       </section>
@@ -369,9 +461,12 @@ export default function HomePage() {
       {/* Customer Testimonials Carousel */}
       <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">What Our Customers Say</h2>
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            What Our Customers Say
+          </h2>
           <p className="text-xl text-gray-600 mb-16">
-            Hear from finance teams that have transformed their AR process with Kuhlekt
+            Hear from finance teams that have transformed their AR process with
+            Kuhlekt
           </p>
 
           <TestimonialCarousel />
@@ -382,8 +477,12 @@ export default function HomePage() {
       <section className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Comparison</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Why Choose Kuhlekt?</h2>
+            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">
+              Comparison
+            </Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+              Why Choose Kuhlekt?
+            </h2>
           </div>
 
           <Card className="overflow-hidden">
@@ -393,27 +492,37 @@ export default function HomePage() {
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="text-left p-4 font-semibold">Feature</th>
-                      <th className="text-center p-4 font-semibold bg-cyan-500 text-white">Kuhlekt</th>
-                      <th className="text-center p-4 font-semibold">Traditional Software</th>
+                      <th className="text-center p-4 font-semibold bg-cyan-500 text-white">
+                        Kuhlekt
+                      </th>
+                      <th className="text-center p-4 font-semibold">
+                        Traditional Software
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="p-4">B2B Advanced Credit Collection Tools</td>
+                      <td className="p-4">
+                        B2B Advanced Credit Collection Tools
+                      </td>
                       <td className="p-4 text-center">
                         <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
                       </td>
                       <td className="p-4 text-center text-gray-400">✗</td>
                     </tr>
                     <tr className="border-b bg-gray-50">
-                      <td className="p-4">Invoice-to-Cash Advanced Automation</td>
+                      <td className="p-4">
+                        Invoice-to-Cash Advanced Automation
+                      </td>
                       <td className="p-4 text-center">
                         <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
                       </td>
                       <td className="p-4 text-center text-gray-400">✗</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="p-4">Online Credit Applications Direct into ERP</td>
+                      <td className="p-4">
+                        Online Credit Applications Direct into ERP
+                      </td>
                       <td className="p-4 text-center">
                         <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
                       </td>
@@ -452,8 +561,12 @@ export default function HomePage() {
       <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Impact</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Improve KPIs Across the Board</h2>
+            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">
+              Impact
+            </Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+              Improve KPIs Across the Board
+            </h2>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -463,7 +576,9 @@ export default function HomePage() {
                   <TrendingDown className="w-6 h-6 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">Reduce DSO</h3>
-                <p className="text-gray-600">Automated reminders and tools help you get paid faster</p>
+                <p className="text-gray-600">
+                  Automated reminders and tools help you get paid faster
+                </p>
               </CardContent>
             </Card>
 
@@ -472,8 +587,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
                   <TrendingUp className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Improve AR Turnover</h3>
-                <p className="text-gray-600">Smart workflows optimize your collections process</p>
+                <h3 className="text-xl font-semibold mb-3">
+                  Improve AR Turnover
+                </h3>
+                <p className="text-gray-600">
+                  Smart workflows optimize your collections process
+                </p>
               </CardContent>
             </Card>
 
@@ -482,8 +601,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Enhance Productivity</h3>
-                <p className="text-gray-600">Streamline your team focus on high-value accounts</p>
+                <h3 className="text-xl font-semibold mb-3">
+                  Enhance Productivity
+                </h3>
+                <p className="text-gray-600">
+                  Streamline your team focus on high-value accounts
+                </p>
               </CardContent>
             </Card>
 
@@ -492,8 +615,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
                   <DollarSign className="w-6 h-6 text-yellow-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Increase Cash Collection</h3>
-                <p className="text-gray-600">Boost your cash collection by 35-50%</p>
+                <h3 className="text-xl font-semibold mb-3">
+                  Increase Cash Collection
+                </h3>
+                <p className="text-gray-600">
+                  Boost your cash collection by 35-50%
+                </p>
               </CardContent>
             </Card>
 
@@ -502,8 +629,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-red-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Slash Manual Tasks</h3>
-                <p className="text-gray-600">Eliminate up to 80% of manual work</p>
+                <h3 className="text-xl font-semibold mb-3">
+                  Slash Manual Tasks
+                </h3>
+                <p className="text-gray-600">
+                  Eliminate up to 80% of manual work
+                </p>
               </CardContent>
             </Card>
 
@@ -512,8 +643,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-indigo-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Reduce Credit Risk</h3>
-                <p className="text-gray-600">Built-in credit scoring and risk assessment</p>
+                <h3 className="text-xl font-semibold mb-3">
+                  Reduce Credit Risk
+                </h3>
+                <p className="text-gray-600">
+                  Built-in credit scoring and risk assessment
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -524,8 +659,12 @@ export default function HomePage() {
       <section className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Use Cases</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">Use Cases</h2>
+            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">
+              Use Cases
+            </Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+              Use Cases
+            </h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -534,9 +673,12 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-6">
                   <BarChart3 className="w-6 h-6 text-cyan-600" />
                 </div>
-                <h3 className="text-2xl font-semibold mb-4">For Finance Teams</h3>
+                <h3 className="text-2xl font-semibold mb-4">
+                  For Finance Teams
+                </h3>
                 <p className="text-gray-600 mb-6">
-                  Automate credit control, dispute management, and payment follow-up to free up your team.
+                  Automate credit control, dispute management, and payment
+                  follow-up to free up your team.
                 </p>
               </CardContent>
             </Card>
@@ -548,7 +690,8 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-2xl font-semibold mb-4">For Operations</h3>
                 <p className="text-gray-600 mb-6">
-                  Get a unified view of the entire receivables pipeline to optimize your operations.
+                  Get a unified view of the entire receivables pipeline to
+                  optimize your operations.
                 </p>
               </CardContent>
             </Card>
@@ -560,7 +703,8 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-2xl font-semibold mb-4">For Executives</h3>
                 <p className="text-gray-600 mb-6">
-                  Improve visibility into cash flow and receivables KPIs for better decision making.
+                  Improve visibility into cash flow and receivables KPIs for
+                  better decision making.
                 </p>
               </CardContent>
             </Card>
@@ -570,5 +714,5 @@ export default function HomePage() {
 
       <Footer />
     </div>
-  )
+  );
 }
