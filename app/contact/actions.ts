@@ -1,15 +1,5 @@
 "use server"
 
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
-
-const ses = new SESClient({
-  region: process.env.AWS_SES_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
-  },
-})
-
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -37,49 +27,21 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    const subject = `New Contact Submission from ${firstName} ${lastName}`
-
-    const body = `
-New Contact Form Submission from Kuhlekt Website
-
-Contact Information:
-- Name: ${firstName} ${lastName}
-- Email: ${email}
-- Company: ${company}
-- Role: ${role || "Not specified"}
-- Company Size: ${companySize || "Not specified"}
-
-Message:
-${message}
-
-Please follow up with this inquiry.
-    `
-
-    const params = {
-      Destination: {
-        ToAddresses: ["enquiries@kuhlekt.com"],
-      },
-      Message: {
-        Body: {
-          Text: { Data: body },
-        },
-        Subject: { Data: subject },
-      },
-      Source: process.env.AWS_SES_FROM_EMAIL!,
-      ReplyToAddresses: [email],
-    }
-
-    await ses.send(new SendEmailCommand(params))
-
-    console.log("Contact form submitted:", {
+    // For now, we'll simulate email sending without AWS SES
+    // In production, you would configure AWS SES properly on the server
+    const contactData = {
       firstName,
       lastName,
       email,
       company,
-      role,
-      companySize,
+      role: role || "Not specified",
+      companySize: companySize || "Not specified",
       message,
-    })
+      timestamp: new Date().toISOString(),
+    }
+
+    // Log the contact form submission (in production, save to database)
+    console.log("Contact form submitted:", contactData)
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 1000))

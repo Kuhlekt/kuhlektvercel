@@ -1,13 +1,11 @@
 "use client"
 
 import { useActionState } from "react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle, AlertCircle } from "lucide-react"
+import { CheckCircle, AlertCircle } from 'lucide-react'
 import { submitDemoRequest } from "./actions"
 import Image from "next/image"
 
@@ -16,8 +14,6 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       {/* Main Demo Section */}
       <section id="top" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -214,8 +210,6 @@ export default function DemoPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }

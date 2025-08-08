@@ -37,9 +37,6 @@ export function Header() {
             <Link href="/solutions" className="text-gray-700 hover:text-cyan-600 font-medium">
               Solutions
             </Link>
-            <Link href="/pricing" className="text-gray-700 hover:text-cyan-600 font-medium">
-              Pricing
-            </Link>
             <Link href="/about" className="text-gray-700 hover:text-cyan-600 font-medium">
               About
             </Link>
@@ -90,13 +87,6 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Solutions
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-gray-700 hover:text-cyan-600 font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Pricing
               </Link>
               <Link
                 href="/about"

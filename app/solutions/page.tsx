@@ -1,14 +1,10 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle } from 'lucide-react'
 import Image from "next/image"
 
 export default function SolutionsPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       {/* Hero Section */}
       <section id="sme-credit-management" className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -201,8 +197,6 @@ export default function SolutionsPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }
