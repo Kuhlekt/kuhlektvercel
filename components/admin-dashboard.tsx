@@ -10,7 +10,8 @@ import { UserManagementTable } from "./user-management-table"
 import { ArticleManagement } from "./article-management"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
-import { Plus, Users, FileText, BarChart3, Activity, Database } from 'lucide-react'
+import { CategoryManagement } from "./category-management"
+import { Plus, Users, FileText, BarChart3, Activity, Database, Folder, Eye } from 'lucide-react'
 import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"
 import { calculateTotalArticles, getArticleStats } from "../utils/article-utils"
 
@@ -19,12 +20,15 @@ interface AdminDashboardProps {
   users: User[]
   currentUser: User
   auditLog: AuditLogEntry[]
+  pageVisits: number
   onAddArticle: (article: Omit<Article, "id" | "createdAt" | "updatedAt">) => void
   onEditArticle: (article: Article) => void
   onDeleteArticle: (articleId: string) => void
   onCreateUser: (userData: Omit<User, "id" | "createdAt" | "lastLogin">) => void
   onDeleteUser: (userId: string) => void
-  onImportData: (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => void
+  onAddCategory: (name: string) => void
+  onAddSubcategory: (categoryId: string, name: string) => void
+  onImportData: (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[], pageVisits?: number }) => void
   onBack: () => void
 }
 
@@ -33,11 +37,14 @@ export function AdminDashboard({
   users,
   currentUser,
   auditLog,
+  pageVisits,
   onAddArticle,
   onEditArticle,
   onDeleteArticle,
   onCreateUser,
   onDeleteUser,
+  onAddCategory,
+  onAddSubcategory,
   onImportData,
   onBack,
 }: AdminDashboardProps) {
@@ -66,7 +73,7 @@ export function AdminDashboard({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <BarChart3 className="h-4 w-4" />
             <span>Overview</span>
@@ -78,6 +85,10 @@ export function AdminDashboard({
           <TabsTrigger value="add-article" className="flex items-center space-x-2">
             <Plus className="h-4 w-4" />
             <span>Add Article</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center space-x-2">
+            <Folder className="h-4 w-4" />
+            <span>Categories</span>
           </TabsTrigger>
           <TabsTrigger value="audit-log" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
@@ -98,7 +109,7 @@ export function AdminDashboard({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
@@ -147,6 +158,19 @@ export function AdminDashboard({
                 <div className="text-2xl font-bold">{users.length}</div>
                 <p className="text-xs text-muted-foreground">
                   Active system users
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Page Visits</CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pageVisits}</div>
+                <p className="text-xs text-muted-foreground">
+                  Total page views
                 </p>
               </CardContent>
             </Card>
@@ -203,6 +227,10 @@ export function AdminDashboard({
                       }).length} actions today
                     </span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Page Visits</span>
+                    <span className="font-medium">{pageVisits}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -218,6 +246,14 @@ export function AdminDashboard({
             categories={categories}
             onAddArticle={onAddArticle}
             onCancel={() => setActiveTab("overview")}
+          />
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoryManagement
+            categories={categories}
+            onAddCategory={onAddCategory}
+            onAddSubcategory={onAddSubcategory}
           />
         </TabsContent>
 

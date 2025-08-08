@@ -4,7 +4,8 @@ const STORAGE_KEYS = {
   CATEGORIES: 'kb_categories',
   USERS: 'kb_users', 
   AUDIT_LOG: 'kb_audit_log',
-  LAST_BACKUP: 'kb_last_backup'
+  LAST_BACKUP: 'kb_last_backup',
+  PAGE_VISITS: 'kb_page_visits'
 }
 
 // Storage utilities
@@ -32,6 +33,36 @@ export const storage = {
       localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
     } catch (error) {
       console.error('Failed to save audit log:', error)
+    }
+  },
+
+  // Page visit counter
+  incrementPageVisits: (): number => {
+    try {
+      const currentVisits = parseInt(localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) || '0', 10)
+      const newVisits = currentVisits + 1
+      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newVisits.toString())
+      return newVisits
+    } catch (error) {
+      console.error('Failed to increment page visits:', error)
+      return 1
+    }
+  },
+
+  getPageVisits: (): number => {
+    try {
+      return parseInt(localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) || '0', 10)
+    } catch (error) {
+      console.error('Failed to get page visits:', error)
+      return 0
+    }
+  },
+
+  resetPageVisits: () => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, '0')
+    } catch (error) {
+      console.error('Failed to reset page visits:', error)
     }
   },
 
@@ -132,6 +163,7 @@ export const dataManager = {
       categories: storage.loadCategories(),
       users: storage.loadUsers(),
       auditLog: storage.loadAuditLog(),
+      pageVisits: storage.getPageVisits(),
       exportedAt: new Date().toISOString(),
       version: '1.0'
     }
@@ -148,7 +180,7 @@ export const dataManager = {
   },
 
   // Import data from JSON file
-  importData: (file: File): Promise<{ categories: Category[], users: User[], auditLog: AuditLogEntry[] }> => {
+  importData: (file: File): Promise<{ categories: Category[], users: User[], auditLog: AuditLogEntry[], pageVisits?: number }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       
@@ -190,7 +222,12 @@ export const dataManager = {
             timestamp: new Date(entry.timestamp)
           }))
 
-          resolve({ categories, users, auditLog })
+          resolve({ 
+            categories, 
+            users, 
+            auditLog, 
+            pageVisits: data.pageVisits || 0 
+          })
         } catch (error) {
           reject(new Error('Failed to parse backup file: ' + error))
         }

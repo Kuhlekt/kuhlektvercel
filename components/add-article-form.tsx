@@ -1,17 +1,16 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { RichTextEditor } from "./rich-text-editor"
+import { EnhancedRichEditor } from "./enhanced-rich-editor"
+import { X } from 'lucide-react'
 import type { Category, Article } from "../types/knowledge-base"
-import { RichTextEditor, type ImageData } from "./rich-text-editor"
-import { SimpleRichEditor } from "./simple-rich-editor"
-import { Lock, ImageIcon } from 'lucide-react'
 
 interface AddArticleFormProps {
   categories: Category[]
@@ -24,26 +23,34 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [subcategoryId, setSubcategoryId] = useState("")
-  const [tags, setTags] = useState("")
-  const [showPreview, setShowPreview] = useState(false)
-  const [currentImages, setCurrentImages] = useState<ImageData[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
+  const [useEnhancedEditor, setUseEnhancedEditor] = useState(false)
 
   const selectedCategory = categories.find((cat) => cat.id === categoryId)
 
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()])
+      setTagInput("")
+    }
+  }
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title || !content || !categoryId) return
+    if (!title.trim() || !content.trim() || !categoryId) return
 
-    // Content is already in HTML format from the rich text editor
     onAddArticle({
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       categoryId,
       subcategoryId: subcategoryId || undefined,
-      tags: tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
+      tags,
+      createdBy: "current-user", // This should come from auth context
     })
 
     // Reset form
@@ -51,169 +58,131 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
     setContent("")
     setCategoryId("")
     setSubcategoryId("")
-    setTags("")
-    setCurrentImages([])
-  }
-
-  // Process content for preview - content is already HTML
-  const getPreviewContent = () => {
-    return content || ""
+    setTags([])
+    setTagInput("")
   }
 
   return (
-    <Card className="max-w-6xl mx-auto">
+    <Card className="max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Add New Article</CardTitle>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 text-sm text-green-600">
-              <Lock className="h-4 w-4" />
-              <span>Authenticated</span>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
-              {showPreview ? "Hide Preview" : "Show Preview"}
-            </Button>
-          </div>
-        </div>
+        <CardTitle>Add New Article</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Form Section */}
-          <div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Article Title</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter article title"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={categoryId} onValueChange={setCategoryId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedCategory && selectedCategory.subcategories.length > 0 && (
-                <div>
-                  <Label htmlFor="subcategory">Subcategory (Optional)</Label>
-                  <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subcategory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {selectedCategory.subcategories.map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="content">Content</Label>
-                <div className="mt-2">
-                  {/* Try RichTextEditor first, fallback to EnhancedRichEditor */}
-                  <RichTextEditor
-                    value={content}
-                    onChange={setContent}
-                    onImagesChange={setCurrentImages}
-                    placeholder="Enter article content here...
-
-✨ Rich text features:
-• Bold, italic, underline formatting
-• Bullet points and numbered lists  
-• Text alignment and colors
-• Paste formatted text from anywhere
-• Drag & drop or paste images
-• Multiple font sizes
-
-Try the formatting buttons above or use markdown-like syntax!"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="tags">Tags (comma-separated)</Label>
-                <Input
-                  id="tags"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="tag1, tag2, tag3"
-                />
-              </div>
-
-              <div className="flex space-x-2">
-                <Button type="submit">Add Article</Button>
-                <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter article title"
+              required
+            />
           </div>
 
-          {/* Preview Section */}
-          {showPreview && (
-            <div className="border-l pl-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                <ImageIcon className="h-5 w-5" />
-                <span>Live Preview</span>
-              </h3>
-
-              {/* Debug info */}
-              <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <div>
-                  Images: {currentImages.length} | Content length: {content.length}
-                </div>
-                {content && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-gray-600 hover:text-gray-800">Show HTML source</summary>
-                    <pre className="bg-gray-200 p-2 mt-2 rounded overflow-auto max-h-32 text-xs">
-                      {getPreviewContent()}
-                    </pre>
-                  </details>
-                )}
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                {title && <h4 className="text-xl font-bold mb-3">{title}</h4>}
-                {content ? (
-                  <div
-                    className="prose max-w-none preview-content"
-                    style={{
-                      lineHeight: "1.6",
-                      fontSize: "14px",
-                      color: "#374151",
-                    }}
-                    dangerouslySetInnerHTML={{ __html: getPreviewContent() }}
-                  />
-                ) : (
-                  <div className="text-gray-500 italic space-y-2">
-                    <p>Content preview will appear here...</p>
-                    <p className="text-xs">Try using the rich text editor to see formatted content!</p>
-                  </div>
-                )}
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={categoryId} onValueChange={setCategoryId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">Subcategory (Optional)</Label>
+              <Select value={subcategoryId} onValueChange={setSubcategoryId} disabled={!selectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCategory?.subcategories.map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="Add a tag"
+                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+              />
+              <Button type="button" onClick={handleAddTag} variant="outline">
+                Add Tag
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="content">Content</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setUseEnhancedEditor(!useEnhancedEditor)}
+              >
+                Switch to {useEnhancedEditor ? 'Rich' : 'Enhanced'} Editor
+              </Button>
+            </div>
+            
+            {useEnhancedEditor ? (
+              <EnhancedRichEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Write your article content here..."
+              />
+            ) : (
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Write your article content here..."
+              />
+            )}
+          </div>
+
+          <div className="flex space-x-4">
+            <Button type="submit" disabled={!title.trim() || !content.trim() || !categoryId}>
+              Add Article
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   )

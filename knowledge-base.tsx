@@ -41,6 +41,13 @@ export default function KnowledgeBase() {
     return initialAuditLog
   })
 
+  const [pageVisits, setPageVisits] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return storage.getPageVisits()
+    }
+    return 0
+  })
+
   const [currentView, setCurrentView] = useState<"home" | "search" | "admin" | "article" | "edit-article">("home")
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
@@ -52,6 +59,14 @@ export default function KnowledgeBase() {
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
+
+  // Increment page visits on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const newVisits = storage.incrementPageVisits()
+      setPageVisits(newVisits)
+    }
+  }, [])
 
   // Auto-save data to localStorage whenever it changes
   useEffect(() => {
@@ -160,6 +175,56 @@ export default function KnowledgeBase() {
         newSet.delete(subcategoryId)
       }
       return newSet
+    })
+  }
+
+  const handleAddCategory = (name: string) => {
+    const newCategory: Category = {
+      id: `cat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      subcategories: [],
+      articles: [],
+      expanded: false,
+    }
+
+    setCategories((prev) => [...prev, newCategory])
+
+    // Add audit log entry
+    addAuditLogEntry({
+      action: "article_created", // We can extend this to include category actions
+      articleId: newCategory.id,
+      articleTitle: `Category: ${name}`,
+      categoryName: name,
+      performedBy: currentUser?.username || "Unknown",
+      details: `Created new category`,
+    })
+  }
+
+  const handleAddSubcategory = (categoryId: string, name: string) => {
+    const newSubcategory = {
+      id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      articles: [],
+    }
+
+    setCategories((prev) =>
+      prev.map((cat) =>
+        cat.id === categoryId
+          ? { ...cat, subcategories: [...cat.subcategories, newSubcategory] }
+          : cat
+      )
+    )
+
+    // Add audit log entry
+    const categoryName = getCategoryName(categoryId)
+    addAuditLogEntry({
+      action: "article_created", // We can extend this to include subcategory actions
+      articleId: newSubcategory.id,
+      articleTitle: `Subcategory: ${name}`,
+      categoryName,
+      subcategoryName: name,
+      performedBy: currentUser?.username || "Unknown",
+      details: `Created new subcategory in ${categoryName}`,
     })
   }
 
@@ -329,10 +394,13 @@ export default function KnowledgeBase() {
     }
   }
 
-  const handleImportData = (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => {
+  const handleImportData = (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[], pageVisits?: number }) => {
     setCategories(data.categories)
     setUsers(data.users)
     setAuditLog(data.auditLog)
+    if (data.pageVisits !== undefined) {
+      setPageVisits(data.pageVisits)
+    }
   }
 
   const handleSearch = (query: string) => {
@@ -430,7 +498,7 @@ export default function KnowledgeBase() {
                     search functionality to find specific articles. Select categories to view their articles.
                   </p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="p-4 border rounded-lg">
                       <h3 className="font-semibold mb-2">Total Categories</h3>
                       <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
@@ -438,6 +506,10 @@ export default function KnowledgeBase() {
                     <div className="p-4 border rounded-lg">
                       <h3 className="font-semibold mb-2">Total Articles</h3>
                       <p className="text-2xl font-bold text-green-600">{totalArticles}</p>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-semibold mb-2">Page Visits</h3>
+                      <p className="text-2xl font-bold text-purple-600">{pageVisits}</p>
                     </div>
                   </div>
 
@@ -475,11 +547,14 @@ export default function KnowledgeBase() {
             users={users}
             currentUser={currentUser}
             auditLog={auditLog}
+            pageVisits={pageVisits}
             onAddArticle={handleAddArticle}
             onEditArticle={handleEditArticle}
             onDeleteArticle={handleDeleteArticle}
             onCreateUser={handleCreateUser}
             onDeleteUser={handleDeleteUser}
+            onAddCategory={handleAddCategory}
+            onAddSubcategory={handleAddSubcategory}
             onImportData={handleImportData}
             onBack={handleHome}
           />
