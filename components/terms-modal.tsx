@@ -1,7 +1,9 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { X } from "lucide-react"
+import Image from "next/image"
 
 interface TermsModalProps {
   isOpen: boolean
@@ -9,105 +11,278 @@ interface TermsModalProps {
 }
 
 export function TermsModal({ isOpen, onClose }: TermsModalProps) {
+  if (!isOpen) return null
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-900">Terms of Trade</DialogTitle>
-        </DialogHeader>
-        
-        <ScrollArea className="h-[60vh] pr-4">
-          <div className="space-y-6 text-gray-600">
-            <div>
-              <p className="text-sm text-gray-500 mb-4">Service Terms and Conditions</p>
-              <p className="mb-4">
-                These Service Terms and Conditions constitute an agreement (this "Agreement") by and between 
-                Kuhlekt Pty Ltd of 112 3-5 Pendraat Parade Hope Island QLD 4212 ("Kuhlekt") ABN 44 608 435 972 
-                and ("Customer")
-              </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-4xl bg-white max-h-[90vh] overflow-hidden">
+        <CardContent className="p-0 relative">
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors z-10 bg-white shadow-sm"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+
+          {/* Scrollable Content */}
+          <div className="overflow-y-auto max-h-[90vh] p-8">
+            {/* Logo */}
+            <div className="mb-8 text-center">
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
+                alt="Kuhlekt Logo"
+                width={120}
+                height={40}
+                className="h-8 w-auto mx-auto"
+              />
             </div>
 
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Definitions</h3>
-              <div className="space-y-3 text-sm">
-                <p><strong>Account</strong> refers to the Service plans and features selected by Customer through Kuhlekt's customer website at the time of subscription and accepted by Kuhlekt, as such plans and features may change by mutual consent of the parties, as recorded by Kuhlekt through such website.</p>
-                
-                <p><strong>AUP</strong> refers to Kuhlekt's acceptable use policy as set out in Schedule 3.</p>
-                
-                <p><strong>Business Hours</strong> means 8:00am to 8:00pm AEST on any Business Day.</p>
-                
-                <p><strong>Business Day</strong> means a day that is not a Saturday, Sunday, federal public holiday in Australia.</p>
-                
-                <p><strong>Confidential Information</strong> means the Customer Data and all other information disclosed by one party to the other party pursuant to this Agreement, that is marked or noted as confidential or proprietary at the time of its disclosure or that the receiving Party should reasonably understand to be confidential in nature based on the circumstances of its disclosure but does not include information or material which:</p>
-                <ul className="list-disc list-inside ml-4 space-y-1">
-                  <li>is already in the public domain, or enters the public domain other than due to a breach of this Agreement;</li>
-                  <li>is independently developed by either Party without reference to the other Party's Confidential Information;</li>
-                  <li>is disclosed by either Party to a third party who is not bound by an obligation of confidentiality with respect to such information;</li>
-                  <li>Can be proven to be already known by the receiving Party at the time of disclosure, other than through any disclosure under this Agreement; or</li>
-                  <li>is obtained from a source other than the disclosing Party, where that source is entitled to disclose it without an obligation of confidentiality.</li>
-                </ul>
-                
-                <p><strong>Customer Data</strong> refers to data in electronic form input or collected through the Service by or from Customer.</p>
-                
-                <p><strong>Fees</strong> means the fees for the Services as set out in Schedule 1.</p>
-                
-                <p><strong>Force Majeure Event</strong> means any event outside the affected party's reasonable control, including but not limited to an act of God, government or quasi-government act or regulation, riot, act of terrorism, war, flood, fire, industrial dispute, epidemic, or any risk to health or safety.</p>
-                
-                <p><strong>Effective Date</strong> means ######### or such other date as agreed between the parties in writing.</p>
-                
-                <p><strong>Emergency Maintenance</strong> means Maintenance Services that are necessary to restore the Services to working order or protect against a substantial risk threatening the Services or Customer Data.</p>
-                
-                <p><strong>Maintenance Services</strong> means system hardware or software upgrades, updates, modifications, repairs, patches and configuration changes.</p>
-                
-                <p><strong>Materials</strong> refers to written and graphical content provided by or through the Service, including, without limitation, text, photographs, illustrations, designs software used to provide the Service, and all logos and trademarks reproduced through the Service provided by Kuhlekt or its licensors.</p>
-                
-                <p><strong>Privacy Act</strong> means the Privacy Act 1988 (Cth) as amended, and includes the regulations and any guidelines issued by the Privacy Commissioner from time to time.</p>
-                
-                <p><strong>Privacy and Security Policy</strong> refers to Kuhlekt's privacy and security policy, set out in Schedule 4.</p>
-                
-                <p><strong>Production Site</strong> means the version of the System provided for the Customer's production use of the Services.</p>
-                
-                <p><strong>Service</strong> refers to Kuhlekt's hosted software applications including the System that is provided for use by the Customer under this Agreement and any associated services.</p>
-                
-                <p><strong>SLA</strong> refers to the service level agreement set out in Schedule 2.</p>
-                
-                <p><strong>System</strong> means the hosted Kuhlekt accounts receivable management system software components provided to the Customer as part of the Services.</p>
-                
-                <p><strong>Subscriber</strong> means a user provided a renewable, irrevocable (unless as provided for herein), nonexclusive, royalty-free, and worldwide right for any company employee, contractor, or agent, or any other individual or entity authorized by company.</p>
-                
-                <p><strong>UAT Site</strong> means a version of the System provided to the Customer for the purpose of testing functionality in a non-production environment.</p>
+            {/* Terms of Service Content */}
+            <div className="prose prose-gray max-w-none">
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">Kuhlekt - General Terms of Service</h1>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>
+                    <strong>Effective Date:</strong> April 12th, 2025
+                  </p>
+                  <p>
+                    <strong>Last Updated:</strong> April 12th, 2025
+                  </p>
+                </div>
               </div>
-            </section>
 
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Service & Payment</h3>
-              <div className="space-y-3 text-sm">
-                <p><strong>Service.</strong> Subject to the terms of this Agreement, Kuhlekt will provide the Service to Customer from the Effective Date pursuant to the terms of this Agreement.</p>
-                
-                <p><strong>Payment.</strong> Kuhlekt will invoice the Customer each month in arrears for the Fees, payment is due 14 days from the invoice date of each rendered invoice. Kuhlekt may suspend provision of the Service to Customer during any period that the Fees are due and outstanding for more than 14 days and with not less than 2 reminders delivered by email, with a minimum of 3 business days separation and are not the subject of a genuine dispute.</p>
-                
-                <p>Should the undisputed Fees or part thereof be unpaid 14 days after the due date or 14 days after resolution of a dispute in accordance with clause 11(j), Kuhlekt may, in addition to the rights of termination in clause 10, require Customer to pay on demand interest calculated on daily rests on the unpaid Fees until its payment at the default interest rate of 10% per annum or the Commonwealth Bank rate for loans in excess of $100,000 plus 3%, whichever is the higher.</p>
-                
-                <p>The parties will attempt in good faith to resolve any invoice or payment dispute or claim. If the dispute cannot be resolved within 14 days from the date on which either party has served written notice on the other of the dispute the parties will refer the dispute to mediation in accordance with clause 11(j).</p>
+              <div className="space-y-6 text-sm leading-relaxed">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-700">
+                    Welcome to Kuhlekt.com – a cloud-based accounts receivable (AR) automation platform. These Terms of
+                    Service ("Terms") form a binding agreement between you ("Customer", "you", or "your") and Kuhlekt
+                    Pty Ltd ("Kuhlekt", "we", "us", or "our") and govern your access to and use of our services.
+                  </p>
+                  <p className="text-gray-700 mt-2">
+                    By signing up online, accessing, or using Kuhlekt's services, you agree to these Terms.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">1. Eligibility and Sign-up</h2>
+                  <p className="text-gray-700 mb-3">
+                    Our services are available to any business managing accounts receivable, including SMEs,
+                    enterprises, and service providers.
+                  </p>
+                  <p className="text-gray-700 mb-3">To use the platform, you must:</p>
+                  <ul className="list-disc ml-6 space-y-1 text-gray-700">
+                    <li>Be 18 years or older</li>
+                    <li>Have authority to bind the subscribing organization</li>
+                    <li>Agree to these Terms by registering through our online sign-up form</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">2. Our Services</h2>
+                  <p className="text-gray-700 mb-3">Kuhlekt is a SaaS platform offering:</p>
+                  <ul className="list-disc ml-6 space-y-1 text-gray-700">
+                    <li>AR automation workflows</li>
+                    <li>Debt collection and escalation tools</li>
+                    <li>Dispute management features</li>
+                    <li>KPI dashboards and analytics</li>
+                    <li>Customer self-service portals</li>
+                    <li>Reporting tools</li>
+                    <li>Secure payment processing via Stripe or configured alternative</li>
+                    <li>Cash Application</li>
+                    <li>Client onboarding Automation</li>
+                  </ul>
+                  <p className="text-gray-700 mt-3">
+                    We may improve, modify, or discontinue features at any time, with reasonable notice where
+                    applicable.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">3. Account Access</h2>
+                  <p className="text-gray-700 mb-3">
+                    You are responsible for maintaining account security and ensuring authorized users comply with these
+                    Terms.
+                  </p>
+                  <p className="text-gray-700">You must notify us immediately if you suspect unauthorized access.</p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">4. Fees & Billing</h2>
+
+                  <div className="ml-4 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">4.1 Subscription Fees</h3>
+                      <p className="text-gray-700">
+                        Fees are based on your selected plan during online signup or as agreed in a separate written
+                        agreement.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">4.2 Terms of Subscription Fees</h3>
+                      <p className="text-gray-700">
+                        Fees are levied on a 14-day basis unless otherwise specified in a written agreement.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">4.3 Payment</h3>
+                      <p className="text-gray-700">
+                        Payments are securely processed via Stripe. You authorize Kuhlekt and Stripe to charge your
+                        payment method per the plan you've selected.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">4.4 Late Payments</h3>
+                      <p className="text-gray-700">
+                        Unpaid fees may result in immediate suspension of access and interest charges.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Customer Data & Privacy</h2>
+
+                  <div className="ml-4 space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">5.1 Ownership</h3>
+                      <p className="text-gray-700">
+                        You retain ownership of all Customer Data input into Kuhlekt. We use this data only to provide
+                        and improve our services.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">5.2 GDPR Compliance</h3>
+                      <p className="text-gray-700">
+                        If you are based in the EU/EEA or process data of EU/EEA residents, Kuhlekt acts as a data
+                        processor and complies with the General Data Protection Regulation (GDPR). Refer to the Data
+                        Processing Addendum (DPA).
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">5.3 Data Processing</h3>
+                      <p className="text-gray-700">
+                        We process personal data in accordance with our Privacy Policy and applicable privacy laws
+                        including the Australian Privacy Act 1988 and GDPR. By using the platform, you consent to such
+                        processing.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">5.4 Third Parties</h3>
+                      <p className="text-gray-700">
+                        We may share necessary data with trusted sub-processors (e.g., Stripe, hosting providers), bound
+                        by confidentiality and data protection obligations.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Acceptable Use</h2>
+                  <p className="text-gray-700 mb-3">You agree not to:</p>
+                  <ul className="list-disc ml-6 space-y-1 text-gray-700">
+                    <li>Use the platform for illegal or harmful purposes</li>
+                    <li>Interfere with or disrupt our services</li>
+                    <li>Attempt to gain unauthorized access to systems or data</li>
+                    <li>Resell or sublicense the platform without written permission</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">7. Uptime & Support</h2>
+                  <p className="text-gray-700 mb-2">
+                    We strive to maintain 99.9% uptime, excluding planned maintenance.
+                  </p>
+                  <p className="text-gray-700 mb-2">Basic support is available via support@kuhlekt.com.</p>
+                  <p className="text-gray-700">Premium support plans may be available on request.</p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Intellectual Property</h2>
+                  <p className="text-gray-700">
+                    All intellectual property in the platform (excluding your data) remains the property of Kuhlekt or
+                    its licensors. You may not copy, modify, or reproduce any part without permission.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">9. Termination</h2>
+                  <p className="text-gray-700 mb-3">
+                    You may cancel your subscription at any time via your account settings or by contacting support.
+                    Upon cancellation:
+                  </p>
+                  <ul className="list-disc ml-6 space-y-1 text-gray-700">
+                    <li>Access will be revoked at the end of the billing cycle</li>
+                    <li>You may request a copy of your data within 30 days of termination</li>
+                  </ul>
+                  <p className="text-gray-700 mt-3">
+                    We reserve the right to suspend or terminate your account for violations of these Terms or
+                    non-payment.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">10. Limitation of Liability</h2>
+                  <p className="text-gray-700 mb-3">To the extent permitted by law:</p>
+                  <ul className="list-disc ml-6 space-y-1 text-gray-700">
+                    <li>Kuhlekt is not liable for indirect or consequential damages</li>
+                    <li>Our total liability is limited to the fees paid by you in the 3 months preceding the claim</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">11. Jurisdiction</h2>
+                  <p className="text-gray-700">
+                    These Terms are governed by the laws of Queensland, Australia. Disputes shall be subject to the
+                    exclusive jurisdiction of the courts of Queensland.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">12. Changes to Terms</h2>
+                  <p className="text-gray-700">
+                    We may update these Terms periodically. Significant changes will be communicated via email or in-app
+                    notifications. Continued use constitutes acceptance of the revised Terms.
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">13. Contact</h2>
+                  <p className="text-gray-700 mb-3">Questions or concerns? Contact us at:</p>
+                  <ul className="list-none ml-4 space-y-1 text-gray-700">
+                    <li>
+                      📧{" "}
+                      <a href="mailto:support@kuhlekt.com" className="text-cyan-600 hover:text-cyan-700">
+                        support@kuhlekt.com
+                      </a>
+                    </li>
+                    <li>
+                      🌐{" "}
+                      <a href="https://www.kuhlekt.com" className="text-cyan-600 hover:text-cyan-700">
+                        www.kuhlekt.com
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </section>
 
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact Information</h3>
-              <div className="mt-3 p-4 bg-gray-50 rounded-lg text-sm">
-                <p><strong>Kuhlekt Pty Ltd</strong></p>
-                <p>ABN: 44 608 435 972</p>
-                <p>Address: 112 3-5 Pendraat Parade Hope Island QLD 4212</p>
-                <p>Email: support@kuhlekt.biz</p>
+              {/* Close Button */}
+              <div className="text-center mt-8 pt-6 border-t border-gray-200">
+                <Button onClick={onClose} className="bg-cyan-500 hover:bg-cyan-600 text-white px-8">
+                  Close
+                </Button>
               </div>
-            </section>
-
-            <div className="text-xs text-gray-500 mt-8">
-              <p>This is a condensed version of the full Service Terms and Conditions. The complete terms include additional sections covering Service Level Agreement, Materials & IP, Warranties, Liability, Confidentiality, Termination, and other legal provisions. Please contact us for the complete terms document.</p>
             </div>
           </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Check, Edit, X } from 'lucide-react'
+import { Check, Edit, X } from "lucide-react"
 
 interface PricingData {
   bronze: {
@@ -175,6 +177,8 @@ export default function PricingTablePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
+
       <main className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Header Section */}
@@ -524,6 +528,8 @@ export default function PricingTablePage() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }
