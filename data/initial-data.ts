@@ -10,7 +10,7 @@ export const initialCategories: Category[] = [
         id: "acc-1",
         title: "How to Access Account Menu",
         content:
-          "The Account Menu provides access to all account-related functions. To access the Account Menu, navigate to the top-right corner of the application and click on your profile icon.\n\nhttps://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&h=400&fit=crop\n\nFrom here, you can manage your account settings, view account information, and access various account-related features. The interface is designed to be intuitive and user-friendly.",
+          "<p>The Account Menu provides access to all account-related functions. To access the Account Menu, navigate to the top-right corner of the application and click on your profile icon.</p><p>From here, you can manage your account settings, view account information, and access various account-related features. The interface is designed to be intuitive and user-friendly.</p>",
         categoryId: "account-menu",
         tags: ["navigation", "account", "menu"],
         createdAt: new Date("2024-01-15"),
@@ -27,7 +27,7 @@ export const initialCategories: Category[] = [
             id: "acm-1",
             title: "Setting Up Credit Monitoring",
             content:
-              "Credit monitoring helps you track changes to your credit report and score. To set up credit monitoring, go to Account Menu > Credit Monitoring and follow the setup wizard.\n\nhttps://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&h=400&fit=crop\n\nYou'll need to provide basic information and verify your identity. The system will then begin monitoring your credit profile for any changes or suspicious activity.\n\nKey features include:\n• Real-time alerts\n• Monthly credit score updates\n• Identity theft protection\n• Detailed credit report analysis",
+              "<p>Credit monitoring helps you track changes to your credit report and score. To set up credit monitoring, go to Account Menu > Credit Monitoring and follow the setup wizard.</p><p>You'll need to provide basic information and verify your identity. The system will then begin monitoring your credit profile for any changes or suspicious activity.</p><h3>Key features include:</h3><ul><li>Real-time alerts</li><li>Monthly credit score updates</li><li>Identity theft protection</li><li>Detailed credit report analysis</li></ul>",
             categoryId: "account-menu",
             subcategoryId: "accounts-credit-monitoring",
             tags: ["credit", "monitoring", "setup"],
@@ -45,7 +45,7 @@ export const initialCategories: Category[] = [
             id: "acr-1",
             title: "Understanding Your Credit Report",
             content:
-              "Your credit report contains detailed information about your credit history, including payment history, credit accounts, and public records.\n\nhttps://images.unsplash.com/photo-1554224154-26032fced8bd?w=600&h=400&fit=crop\n\nLearn how to read and interpret the different sections of your credit report to better understand your financial standing. Each section provides valuable insights into your creditworthiness and financial behavior.",
+              "<p>Your credit report contains detailed information about your credit history, including payment history, credit accounts, and public records.</p><p>Learn how to read and interpret the different sections of your credit report to better understand your financial standing. Each section provides valuable insights into your creditworthiness and financial behavior.</p>",
             categoryId: "account-menu",
             subcategoryId: "accounts-credit-reports",
             tags: ["credit report", "understanding", "financial"],
@@ -68,7 +68,7 @@ export const initialCategories: Category[] = [
         id: "bj-1",
         title: "Understanding Batch Job Processing",
         content:
-          "Batch jobs are automated processes that run at scheduled intervals to perform bulk operations. These jobs handle large volumes of data processing, report generation, and system maintenance tasks.\n\nhttps://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&h=400&fit=crop\n\nLearn how to monitor and manage batch job execution. The system provides comprehensive logging and monitoring capabilities to ensure all batch processes complete successfully.",
+          "<p>Batch jobs are automated processes that run at scheduled intervals to perform bulk operations. These jobs handle large volumes of data processing, report generation, and system maintenance tasks.</p><p>Learn how to monitor and manage batch job execution. The system provides comprehensive logging and monitoring capabilities to ensure all batch processes complete successfully.</p>",
         categoryId: "batch-jobs",
         tags: ["batch", "automation", "processing"],
         createdAt: new Date("2024-01-22"),
@@ -92,7 +92,7 @@ export const initialCategories: Category[] = [
             id: "cba-1",
             title: "Managing Bulk Communication Activities",
             content:
-              "Bulk communication activities allow you to send messages to multiple recipients simultaneously. This feature is useful for announcements, notifications, and marketing campaigns.\n\nhttps://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=400&fit=crop\n\nLearn how to create, schedule, and monitor bulk communication activities. The system supports various message types including email, SMS, and push notifications.",
+              "<p>Bulk communication activities allow you to send messages to multiple recipients simultaneously. This feature is useful for announcements, notifications, and marketing campaigns.</p><p>Learn how to create, schedule, and monitor bulk communication activities. The system supports various message types including email, SMS, and push notifications.</p>",
             categoryId: "communications",
             subcategoryId: "comms-bulk-activities",
             tags: ["bulk", "communication", "messaging"],
@@ -121,8 +121,8 @@ export const initialCategories: Category[] = [
     subcategories: [],
   },
   {
-    id: "kuhlekt",
-    name: "Kuhlekt",
+    id: "system-docs",
+    name: "System Documentation",
     expanded: false,
     articles: [],
     subcategories: [],

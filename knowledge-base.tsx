@@ -335,26 +335,26 @@ export default function KnowledgeBase() {
             {/* Header */}
             <div className="text-center mb-8">
               <img
-                  src="/images/kuhlekt-logo.jpg"
-                  alt="Kuhlekt Logo"
-                  className="mx-auto mb-4 h-16 w-auto"
-                />
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">Kuhlekt Knowledge Base</h1>
-                <p className="text-xl text-gray-600 mb-4">
-                  Your comprehensive resource for technical documentation and guides
-                </p>
-                <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    <span>{getTotalArticles()} articles</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <span>{categories.length} categories</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Eye className="h-4 w-4" />
-                    <span>{pageVisits} visits</span>
-                  </div>
+                src="/images/kuhlekt-logo.jpg"
+                alt="Kuhlekt Logo"
+                className="mx-auto mb-4 h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
+              <p className="text-xl text-gray-600 mb-4">
+                Internal documentation and technical guides
+              </p>
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <span>{getTotalArticles()} articles</span>
                 </div>
+                <div className="flex items-center space-x-1">
+                  <span>{categories.length} categories</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Eye className="h-4 w-4" />
+                  <span>{pageVisits} visits</span>
+                </div>
+              </div>
             </div>
 
             {/* Search */}

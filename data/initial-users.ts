@@ -6,6 +6,7 @@ export const initialUsers: User[] = [
     username: "admin",
     password: "admin123",
     role: "admin",
+    email: "admin@internal.local",
     createdAt: new Date("2024-01-01"),
     lastLogin: undefined
   },
@@ -14,6 +15,7 @@ export const initialUsers: User[] = [
     username: "editor",
     password: "editor123",
     role: "editor",
+    email: "editor@internal.local",
     createdAt: new Date("2024-01-01"),
     lastLogin: undefined
   },
@@ -22,6 +24,7 @@ export const initialUsers: User[] = [
     username: "viewer", 
     password: "viewer123",
     role: "viewer",
+    email: "viewer@internal.local",
     createdAt: new Date("2024-01-01"),
     lastLogin: undefined
   }

@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive } from 'lucide-react'
+import { Download, Upload, Trash2, AlertTriangle, CheckCircle, Database, FileText, Users, Activity } from 'lucide-react'
 import { storage, dataManager } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -29,212 +29,281 @@ export function DataManagement({
   onUsersUpdate,
   onAuditLogUpdate,
 }: DataManagementProps) {
-  const [importFile, setImportFile] = useState<File | null>(null)
-  const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [showClearDialog, setShowClearDialog] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState(0)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-
-  // Calculate statistics
-  const totalArticles = categories.reduce((total, category) => {
-    const categoryArticles = category.articles.length
-    const subcategoryArticles = category.subcategories.reduce(
-      (subTotal, sub) => subTotal + sub.articles.length,
-      0
-    )
-    return total + categoryArticles + subcategoryArticles
-  }, 0)
-
-  const totalSubcategories = categories.reduce(
-    (total, category) => total + category.subcategories.length,
-    0
-  )
-
-  // Estimate data size
-  const estimateDataSize = () => {
-    const dataString = JSON.stringify({ categories, users, auditLog })
-    const sizeInBytes = new Blob([dataString]).size
-    const sizeInKB = (sizeInBytes / 1024).toFixed(2)
-    return `${sizeInKB} KB`
-  }
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const handleExport = async () => {
     setIsExporting(true)
     setMessage(null)
     
     try {
-      dataManager.exportData()
+      await dataManager.exportData()
       setMessage({ type: 'success', text: 'Data exported successfully!' })
     } catch (error) {
+      console.error('Export error:', error)
       setMessage({ type: 'error', text: 'Failed to export data. Please try again.' })
     } finally {
       setIsExporting(false)
     }
   }
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        setSelectedFile(file)
+        setMessage(null)
+      } else {
+        setMessage({ type: 'error', text: 'Please select a valid JSON file.' })
+        event.target.value = ''
+      }
+    }
+  }
+
   const handleImport = async () => {
-    if (!importFile) return
+    if (!selectedFile) {
+      setMessage({ type: 'error', text: 'Please select a file to import.' })
+      return
+    }
 
     setIsImporting(true)
+    setImportProgress(0)
     setMessage(null)
 
     try {
-      const importedData = await dataManager.importData(importFile)
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setImportProgress(prev => Math.min(prev + 10, 90))
+      }, 100)
+
+      const importedData = await dataManager.importData(selectedFile)
       
-      // Update all data
-      onCategoriesUpdate(importedData.categories)
-      onUsersUpdate(importedData.users)
-      onAuditLogUpdate(importedData.auditLog)
-      
-      // Save to localStorage
+      clearInterval(progressInterval)
+      setImportProgress(100)
+
+      // Update storage and state
       storage.saveCategories(importedData.categories)
       storage.saveUsers(importedData.users)
       storage.saveAuditLog(importedData.auditLog)
       
-      if (importedData.pageVisits) {
+      if (importedData.pageVisits !== undefined) {
         localStorage.setItem('kb_page_visits', importedData.pageVisits.toString())
       }
 
+      // Update parent component state
+      onCategoriesUpdate(importedData.categories)
+      onUsersUpdate(importedData.users)
+      onAuditLogUpdate(importedData.auditLog)
+
       setMessage({ type: 'success', text: 'Data imported successfully!' })
-      setImportFile(null)
+      setSelectedFile(null)
       
       // Reset file input
       const fileInput = document.getElementById('import-file') as HTMLInputElement
       if (fileInput) fileInput.value = ''
       
     } catch (error) {
+      console.error('Import error:', error)
       setMessage({ 
         type: 'error', 
         text: error instanceof Error ? error.message : 'Failed to import data. Please check the file format.' 
       })
     } finally {
       setIsImporting(false)
+      setImportProgress(0)
     }
   }
 
-  const handleClearAll = () => {
-    storage.clearAll()
-    onCategoriesUpdate([])
-    onUsersUpdate([])
-    onAuditLogUpdate([])
-    setShowClearDialog(false)
-    setMessage({ type: 'success', text: 'All data cleared successfully!' })
+  const handleClearAllData = () => {
+    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      storage.clearAll()
+      onCategoriesUpdate([])
+      onUsersUpdate([])
+      onAuditLogUpdate([])
+      setMessage({ type: 'success', text: 'All data cleared successfully!' })
+    }
   }
 
-  const stats = [
-    {
-      title: "Articles",
-      value: totalArticles,
-      icon: FileText,
-      color: "text-blue-600"
-    },
-    {
-      title: "Categories",
-      value: categories.length,
-      icon: Database,
-      color: "text-green-600"
-    },
-    {
-      title: "Subcategories",
-      value: totalSubcategories,
-      icon: Database,
-      color: "text-purple-600"
-    },
-    {
-      title: "Users",
-      value: users.length,
-      icon: Users,
-      color: "text-orange-600"
-    },
-    {
-      title: "Audit Entries",
-      value: auditLog.length,
-      icon: Activity,
-      color: "text-red-600"
-    },
-    {
-      title: "Data Size",
-      value: estimateDataSize(),
-      icon: HardDrive,
-      color: "text-indigo-600"
+  const getTotalArticles = () => {
+    return categories.reduce((total, category) => {
+      const categoryArticles = category.articles.length
+      const subcategoryArticles = category.subcategories.reduce(
+        (subTotal, sub) => subTotal + sub.articles.length,
+        0
+      )
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
+  }
+
+  const getStorageSize = () => {
+    try {
+      let totalSize = 0
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key) && key.startsWith('kb_')) {
+          totalSize += localStorage[key].length
+        }
+      }
+      return `${(totalSize / 1024).toFixed(2)} KB`
+    } catch {
+      return 'Unknown'
     }
-  ]
+  }
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Data Management</h2>
+        <p className="text-gray-600">Export, import, and manage your knowledge base data</p>
+      </div>
+
+      {/* Storage Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Articles</p>
+                <p className="text-2xl font-bold">{getTotalArticles()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Database className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Categories</p>
+                <p className="text-2xl font-bold">{categories.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Users</p>
+                <p className="text-2xl font-bold">{users.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Activity className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-600">Storage</p>
+                <p className="text-2xl font-bold">{getStorageSize()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Message Display */}
       {message && (
         <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+          {message.type === 'success' ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <AlertTriangle className="h-4 w-4" />
+          )}
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Export/Import */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Export */}
+        {/* Export Data */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Download className="h-5 w-5" />
               <span>Export Data</span>
             </CardTitle>
+            <CardDescription>
+              Download a backup of all your knowledge base data
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Download a complete backup of all your knowledge base data including articles, categories, users, and audit logs.
-            </p>
-            <Button onClick={handleExport} disabled={isExporting} className="w-full">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                Export includes:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Articles</Badge>
+                <Badge variant="secondary">Categories</Badge>
+                <Badge variant="secondary">Users</Badge>
+                <Badge variant="secondary">Audit Log</Badge>
+                <Badge variant="secondary">Settings</Badge>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleExport} 
+              disabled={isExporting}
+              className="w-full"
+            >
               <Download className="h-4 w-4 mr-2" />
-              {isExporting ? "Exporting..." : "Export Data"}
+              {isExporting ? 'Exporting...' : 'Export Data'}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Import */}
+        {/* Import Data */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Upload className="h-5 w-5" />
               <span>Import Data</span>
             </CardTitle>
+            <CardDescription>
+              Restore data from a previously exported backup file
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Restore your knowledge base from a previously exported backup file. This will replace all current data.
-            </p>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="import-file">Select Backup File</Label>
               <Input
                 id="import-file"
                 type="file"
                 accept=".json"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                onChange={handleFileSelect}
                 disabled={isImporting}
               />
+              {selectedFile && (
+                <p className="text-sm text-gray-600">
+                  Selected: {selectedFile.name}
+                </p>
+              )}
             </div>
+
+            {isImporting && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Importing...</span>
+                  <span>{importProgress}%</span>
+                </div>
+                <Progress value={importProgress} className="w-full" />
+              </div>
+            )}
+
             <Button 
-              onClick={handleImport} 
-              disabled={!importFile || isImporting} 
+              onClick={handleImport}
+              disabled={!selectedFile || isImporting}
               className="w-full"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isImporting ? "Importing..." : "Import Data"}
+              {isImporting ? 'Importing...' : 'Import Data'}
             </Button>
           </CardContent>
         </Card>
@@ -244,21 +313,25 @@ export function DataManagement({
       <Card className="border-red-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-red-600">
-            <Trash2 className="h-5 w-5" />
+            <AlertTriangle className="h-5 w-5" />
             <span>Danger Zone</span>
           </CardTitle>
+          <CardDescription>
+            Irreversible actions that will permanently delete data
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+        <CardContent>
+          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
             <div>
-              <h4 className="font-medium text-red-800">Clear All Data</h4>
+              <h4 className="font-medium text-red-900">Clear All Data</h4>
               <p className="text-sm text-red-600">
-                Permanently delete all articles, categories, users, and audit logs. This action cannot be undone.
+                Permanently delete all articles, categories, users, and settings
               </p>
             </div>
             <Button 
               variant="destructive" 
-              onClick={() => setShowClearDialog(true)}
+              onClick={handleClearAllData}
+              disabled={isImporting || isExporting}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear All
@@ -266,34 +339,6 @@ export function DataManagement({
           </div>
         </CardContent>
       </Card>
-
-      {/* Clear Confirmation Dialog */}
-      <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear All Data</DialogTitle>
-            <DialogDescription>
-              Are you absolutely sure you want to delete all data? This will permanently remove:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>{totalArticles} articles</li>
-                <li>{categories.length} categories</li>
-                <li>{totalSubcategories} subcategories</li>
-                <li>{users.length} users</li>
-                <li>{auditLog.length} audit log entries</li>
-              </ul>
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowClearDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleClearAll}>
-              Yes, Clear All Data
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
