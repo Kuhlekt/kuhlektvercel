@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Download, Upload, Trash2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Download, Upload, Trash2, AlertTriangle, CheckCircle, Database, HardDrive } from 'lucide-react'
 import { storage, dataManager } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -20,16 +20,24 @@ interface DataManagementProps {
 export function DataManagement({ categories, users, auditLog, onDataUpdate }: DataManagementProps) {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  const handleExport = () => {
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 5000)
+  }
+
+  const handleExport = async () => {
+    setIsExporting(true)
     try {
       dataManager.exportData()
-      setMessage({ type: 'success', text: 'Data exported successfully!' })
-      setTimeout(() => setMessage(null), 3000)
+      showMessage('success', 'Data exported successfully!')
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to export data' })
-      setTimeout(() => setMessage(null), 3000)
+      console.error('Export error:', error)
+      showMessage('error', 'Failed to export data')
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -45,7 +53,7 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
       storage.saveUsers(data.users)
       storage.saveAuditLog(data.auditLog)
       
-      if (data.pageVisits) {
+      if (data.pageVisits !== undefined) {
         localStorage.setItem('kb_page_visits', data.pageVisits.toString())
       }
 
@@ -56,26 +64,35 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
         auditLog: data.auditLog
       })
 
-      setMessage({ type: 'success', text: 'Data imported successfully!' })
+      showMessage('success', 'Data imported successfully!')
       setImportFile(null)
+      
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+      if (fileInput) fileInput.value = ''
+      
     } catch (error) {
-      setMessage({ type: 'error', text: `Import failed: ${error}` })
+      console.error('Import error:', error)
+      showMessage('error', `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsImporting(false)
-      setTimeout(() => setMessage(null), 5000)
     }
   }
 
   const handleClearAll = () => {
     if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      storage.clearAll()
-      onDataUpdate({
-        categories: [],
-        users: [],
-        auditLog: []
-      })
-      setMessage({ type: 'success', text: 'All data cleared successfully!' })
-      setTimeout(() => setMessage(null), 3000)
+      try {
+        storage.clearAll()
+        onDataUpdate({
+          categories: [],
+          users: [],
+          auditLog: []
+        })
+        showMessage('success', 'All data cleared successfully!')
+      } catch (error) {
+        console.error('Clear error:', error)
+        showMessage('error', 'Failed to clear data')
+      }
     }
   }
 
@@ -104,24 +121,51 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
     }
   }
 
+  const getStorageSize = () => {
+    try {
+      let total = 0
+      Object.values(['kb_categories', 'kb_users', 'kb_audit_log', 'kb_page_visits']).forEach(key => {
+        const item = localStorage.getItem(key)
+        if (item) total += item.length
+      })
+      return (total / 1024).toFixed(2) + ' KB'
+    } catch (error) {
+      return 'Unknown'
+    }
+  }
+
   const stats = getDataStats()
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Status Message */}
+      {message && (
+        <Alert className={message.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          {message.type === 'error' ? (
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          ) : (
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          )}
+          <AlertDescription className={message.type === 'error' ? 'text-red-800' : 'text-green-800'}>
+            {message.text}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Storage Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Content</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center space-x-2">
+              <Database className="h-4 w-4" />
+              <span>Content</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Categories:</span>
                 <span className="font-medium">{stats.categories}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Subcategories:</span>
-                <span className="font-medium">{stats.subcategories}</span>
               </div>
               <div className="flex justify-between">
                 <span>Articles:</span>
@@ -145,6 +189,23 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
                 <span>Audit Entries:</span>
                 <span className="font-medium">{stats.auditEntries}</span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center space-x-2">
+              <HardDrive className="h-4 w-4" />
+              <span>Storage</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Size:</span>
+                <span className="font-medium">{getStorageSize()}</span>
+              </div>
               <div className="flex justify-between">
                 <span>Page Visits:</span>
                 <span className="font-medium">{stats.pageVisits}</span>
@@ -155,38 +216,23 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Storage</CardTitle>
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Data Size:</span>
-                <span className="font-medium">
-                  {Math.round(JSON.stringify({ categories, users, auditLog }).length / 1024)} KB
-                </span>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-3 w-3 text-green-500" />
+                <span className="text-green-600">Data Stored</span>
               </div>
-              <div className="flex justify-between">
-                <span>Last Backup:</span>
-                <span className="font-medium text-gray-500">Manual</span>
+              <div className="text-xs text-gray-500">
+                Auto-saved locally
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {message && (
-        <Alert className={message.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
-          {message.type === 'error' ? (
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          ) : (
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          )}
-          <AlertDescription className={message.type === 'error' ? 'text-red-800' : 'text-green-800'}>
-            {message.text}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* Data Management Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -199,9 +245,13 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleExport} className="w-full">
+            <Button 
+              onClick={handleExport} 
+              className="w-full"
+              disabled={isExporting}
+            >
               <Download className="h-4 w-4 mr-2" />
-              Export Backup
+              {isExporting ? 'Exporting...' : 'Export Backup'}
             </Button>
           </CardContent>
         </Card>
@@ -239,6 +289,7 @@ export function DataManagement({ categories, users, auditLog, onDataUpdate }: Da
         </Card>
       </div>
 
+      {/* Danger Zone */}
       <Card className="border-red-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-red-600">

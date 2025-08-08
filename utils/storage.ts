@@ -7,6 +7,16 @@ const STORAGE_KEYS = {
   PAGE_VISITS: "kb_page_visits"
 }
 
+// Helper function to safely parse dates
+const parseDate = (dateValue: any): Date => {
+  if (dateValue instanceof Date) return dateValue
+  if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+    const parsed = new Date(dateValue)
+    return isNaN(parsed.getTime()) ? new Date() : parsed
+  }
+  return new Date()
+}
+
 export const storage = {
   // Categories
   getCategories: (): Category[] => {
@@ -17,17 +27,17 @@ export const storage = {
       const categories = JSON.parse(stored)
       return categories.map((category: any) => ({
         ...category,
-        articles: category.articles.map((article: any) => ({
+        articles: (category.articles || []).map((article: any) => ({
           ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt)
+          createdAt: parseDate(article.createdAt),
+          updatedAt: parseDate(article.updatedAt)
         })),
-        subcategories: category.subcategories.map((subcategory: any) => ({
+        subcategories: (category.subcategories || []).map((subcategory: any) => ({
           ...subcategory,
-          articles: subcategory.articles.map((article: any) => ({
+          articles: (subcategory.articles || []).map((article: any) => ({
             ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt)
+            createdAt: parseDate(article.createdAt),
+            updatedAt: parseDate(article.updatedAt)
           }))
         }))
       }))
@@ -54,8 +64,8 @@ export const storage = {
       const users = JSON.parse(stored)
       return users.map((user: any) => ({
         ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined
+        createdAt: parseDate(user.createdAt),
+        lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined
       }))
     } catch (error) {
       console.error("Error loading users:", error)
@@ -80,7 +90,7 @@ export const storage = {
       const entries = JSON.parse(stored)
       return entries.map((entry: any) => ({
         ...entry,
-        timestamp: new Date(entry.timestamp)
+        timestamp: parseDate(entry.timestamp)
       }))
     } catch (error) {
       console.error("Error loading audit log:", error)
@@ -140,43 +150,6 @@ export const storage = {
     }
   },
 
-  // Data Export/Import
-  exportData: () => {
-    try {
-      return {
-        categories: storage.getCategories(),
-        users: storage.getUsers(),
-        auditLog: storage.getAuditLog(),
-        pageVisits: storage.getPageVisits(),
-        exportDate: new Date().toISOString()
-      }
-    } catch (error) {
-      console.error("Error exporting data:", error)
-      return null
-    }
-  },
-
-  importData: (data: any): boolean => {
-    try {
-      if (data.categories) {
-        storage.saveCategories(data.categories)
-      }
-      if (data.users) {
-        storage.saveUsers(data.users)
-      }
-      if (data.auditLog) {
-        storage.saveAuditLog(data.auditLog)
-      }
-      if (data.pageVisits) {
-        localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, data.pageVisits.toString())
-      }
-      return true
-    } catch (error) {
-      console.error("Error importing data:", error)
-      return false
-    }
-  },
-
   // Clear all data
   clearAll: (): void => {
     try {
@@ -193,24 +166,29 @@ export const storage = {
 export const dataManager = {
   // Export all data as JSON file
   exportData: () => {
-    const data = {
-      categories: storage.getCategories(),
-      users: storage.getUsers(),
-      auditLog: storage.getAuditLog(),
-      pageVisits: storage.getPageVisits(),
-      exportedAt: new Date().toISOString(),
-      version: '1.0'
-    }
+    try {
+      const data = {
+        categories: storage.getCategories(),
+        users: storage.getUsers(),
+        auditLog: storage.getAuditLog(),
+        pageVisits: storage.getPageVisits(),
+        exportedAt: new Date().toISOString(),
+        version: '1.0'
+      }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `knowledge-base-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `knowledge-base-backup-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      throw new Error("Failed to export data")
+    }
   },
 
   // Import data from JSON file
@@ -223,37 +201,43 @@ export const dataManager = {
           const data = JSON.parse(e.target?.result as string)
           
           // Validate data structure
-          if (!data.categories || !data.users || !data.auditLog) {
-            throw new Error('Invalid backup file format')
+          if (!data.categories || !Array.isArray(data.categories)) {
+            throw new Error('Invalid backup file: missing or invalid categories')
+          }
+          if (!data.users || !Array.isArray(data.users)) {
+            throw new Error('Invalid backup file: missing or invalid users')
+          }
+          if (!data.auditLog || !Array.isArray(data.auditLog)) {
+            throw new Error('Invalid backup file: missing or invalid audit log')
           }
 
-          // Convert date strings back to Date objects
+          // Convert date strings back to Date objects with safe parsing
           const categories = data.categories.map((cat: any) => ({
             ...cat,
-            articles: cat.articles.map((article: any) => ({
+            articles: (cat.articles || []).map((article: any) => ({
               ...article,
-              createdAt: new Date(article.createdAt),
-              updatedAt: new Date(article.updatedAt)
+              createdAt: parseDate(article.createdAt),
+              updatedAt: parseDate(article.updatedAt)
             })),
-            subcategories: cat.subcategories.map((sub: any) => ({
+            subcategories: (cat.subcategories || []).map((sub: any) => ({
               ...sub,
-              articles: sub.articles.map((article: any) => ({
+              articles: (sub.articles || []).map((article: any) => ({
                 ...article,
-                createdAt: new Date(article.createdAt),
-                updatedAt: new Date(article.updatedAt)
+                createdAt: parseDate(article.createdAt),
+                updatedAt: parseDate(article.updatedAt)
               }))
             }))
           }))
 
           const users = data.users.map((user: any) => ({
             ...user,
-            createdAt: new Date(user.createdAt),
-            lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined
+            createdAt: parseDate(user.createdAt),
+            lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined
           }))
 
           const auditLog = data.auditLog.map((entry: any) => ({
             ...entry,
-            timestamp: new Date(entry.timestamp)
+            timestamp: parseDate(entry.timestamp)
           }))
 
           resolve({ 
@@ -263,11 +247,16 @@ export const dataManager = {
             pageVisits: data.pageVisits || 0 
           })
         } catch (error) {
-          reject(new Error('Failed to parse backup file: ' + error))
+          console.error("Error parsing backup file:", error)
+          reject(new Error(`Failed to parse backup file: ${error instanceof Error ? error.message : 'Unknown error'}`))
         }
       }
 
-      reader.onerror = () => reject(new Error('Failed to read file'))
+      reader.onerror = () => {
+        console.error("Error reading file")
+        reject(new Error('Failed to read file'))
+      }
+      
       reader.readAsText(file)
     })
   }
