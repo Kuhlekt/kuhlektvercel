@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { submitContactForm } from "./actions"
 
 export default function ContactPage() {
@@ -114,6 +114,26 @@ export default function ContactPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Success/Error Message */}
+              {state && (
+                <div
+                  className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
+                    state.success 
+                      ? "bg-green-50 border border-green-200" 
+                      : "bg-red-50 border border-red-200"
+                  }`}
+                >
+                  {state.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <p className={`text-sm ${state.success ? "text-green-700" : "text-red-700"}`}>
+                    {state.message}
+                  </p>
+                </div>
+              )}
+
               <form action={formAction} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -124,6 +144,7 @@ export default function ContactPage() {
                       type="text"
                       required
                       placeholder="John"
+                      disabled={isPending}
                     />
                   </div>
                   <div className="space-y-2">
@@ -134,6 +155,7 @@ export default function ContactPage() {
                       type="text"
                       required
                       placeholder="Smith"
+                      disabled={isPending}
                     />
                   </div>
                 </div>
@@ -146,6 +168,7 @@ export default function ContactPage() {
                     type="email"
                     required
                     placeholder="john.smith@company.com"
+                    disabled={isPending}
                   />
                 </div>
 
@@ -157,6 +180,7 @@ export default function ContactPage() {
                     type="text"
                     required
                     placeholder="Your Company"
+                    disabled={isPending}
                   />
                 </div>
 
@@ -168,11 +192,12 @@ export default function ContactPage() {
                       name="role"
                       type="text"
                       placeholder="CFO, Finance Manager, etc."
+                      disabled={isPending}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companySize">Company Size</Label>
-                    <Select name="companySize" value={companySize} onValueChange={setCompanySize}>
+                    <Select name="companySize" value={companySize} onValueChange={setCompanySize} disabled={isPending}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select company size" />
                       </SelectTrigger>
@@ -195,22 +220,13 @@ export default function ContactPage() {
                     required
                     placeholder="Tell us about your accounts receivable challenges and how we can help..."
                     rows={5}
+                    disabled={isPending}
                   />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isPending}>
                   {isPending ? "Sending..." : "Send Message"}
                 </Button>
-
-                {state && (
-                  <div className={`text-center p-4 rounded-md ${
-                    state.success 
-                      ? "bg-green-50 text-green-800 border border-green-200" 
-                      : "bg-red-50 text-red-800 border border-red-200"
-                  }`}>
-                    {state.message}
-                  </div>
-                )}
               </form>
             </CardContent>
           </Card>

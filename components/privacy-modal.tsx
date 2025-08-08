@@ -19,132 +19,128 @@ export function PrivacyModal({ isOpen, onClose }: PrivacyModalProps) {
         <ScrollArea className="h-[60vh] pr-4">
           <div className="space-y-6 text-gray-600">
             <div>
-              <p className="text-sm text-gray-500 mb-4">Last updated: January 2025</p>
-              <p>
-                At Kuhlekt, we take your privacy and the security of your data seriously. This Privacy and Security Policy 
-                explains how we collect, use, protect, and share information when you use our AR automation platform.
-              </p>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">We take security seriously</h2>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Kuhlekt Privacy And Security Policy</h3>
+              <p className="text-sm text-gray-500 mb-4">Last modified: August 30th 2018</p>
             </div>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">1. Information We Collect</h3>
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-medium text-gray-900">Account Information</h4>
-                  <p>When you create an account, we collect your name, email address, company information, and contact details.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Financial Data</h4>
-                  <p>We process accounts receivable data, customer information, and payment records as part of our service delivery.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Usage Information</h4>
-                  <p>We collect information about how you use our platform, including features accessed and system interactions.</p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">2. How We Use Your Information</h3>
-              <ul className="space-y-2 list-disc list-inside">
-                <li>Provide and improve our AR automation services</li>
-                <li>Process payments and manage your account</li>
-                <li>Communicate with you about our services</li>
-                <li>Ensure platform security and prevent fraud</li>
-                <li>Comply with legal and regulatory requirements</li>
-                <li>Develop new features and enhance user experience</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">3. Data Security</h3>
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-medium text-gray-900">Encryption</h4>
-                  <p>All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encryption.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Access Controls</h4>
-                  <p>We implement strict access controls, multi-factor authentication, and regular security audits.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Infrastructure</h4>
-                  <p>Our platform is hosted on enterprise-grade cloud infrastructure with 99.9% uptime SLA.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Compliance</h4>
-                  <p>We maintain SOC 2 Type II compliance and adhere to industry best practices for data protection.</p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">4. Data Sharing</h3>
-              <p className="mb-3">We do not sell your personal information. We may share data in the following circumstances:</p>
-              <ul className="space-y-2 list-disc list-inside">
-                <li>With your explicit consent</li>
-                <li>To provide services you've requested</li>
-                <li>With trusted service providers under strict confidentiality agreements</li>
-                <li>To comply with legal obligations or court orders</li>
-                <li>To protect our rights and prevent fraud</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">5. Your Rights</h3>
-              <p className="mb-3">You have the right to:</p>
-              <ul className="space-y-2 list-disc list-inside">
-                <li>Access and review your personal information</li>
-                <li>Correct inaccurate or incomplete data</li>
-                <li>Request deletion of your data (subject to legal requirements)</li>
-                <li>Export your data in a portable format</li>
-                <li>Opt out of marketing communications</li>
-                <li>Lodge a complaint with relevant authorities</li>
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">6. Data Retention</h3>
-              <p>
-                We retain your data for as long as necessary to provide our services and comply with legal obligations. 
-                Financial data may be retained for up to 7 years as required by Australian tax and corporate law.
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">WHAT INFORMATION DO WE COLLECT</h3>
+              <p className="mb-3">
+                We collect information from you when you register on our site, subscribe to our newsletter or fill out a form. 
+                When ordering or registering on our site, as appropriate, you may be asked to enter your: name, e-mail address, 
+                mailing address, phone number. You may, however, visit our site anonymously.
               </p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">7. International Transfers</h3>
-              <p>
-                Your data may be processed in countries outside Australia. We ensure appropriate safeguards are in place 
-                and that all transfers comply with applicable privacy laws.
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">WHAT DO WE USE YOUR INFORMATION FOR?</h3>
+              <p className="mb-3">Any of the information we collect from you may be used in one of the following ways:</p>
+              <ol className="list-decimal list-inside space-y-2 ml-4">
+                <li>To personalize your experience (your information helps us to better respond to your individual needs)</li>
+                <li>To improve our website (we continually strive to improve our website offerings based on the information and feedback we receive from you)</li>
+                <li>To improve customer service (your information helps us to more effectively respond to your customer service requests and support needs)</li>
+                <li>To process transactions</li>
+                <li>Your information, whether public or private, will not be sold, exchanged, transferred, or given to any other company for any reason whatsoever, without your consent, other than for the express purpose of delivering the purchased product or service requested.</li>
+                <li>To send periodic emails</li>
+                <li>The email address you provide for order processing, may be used to send you information and updates pertaining to your order, in addition to receiving occasional company news, updates, related product or service information, etc.</li>
+              </ol>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">HOW DO WE PROTECT YOUR INFORMATION?</h3>
+              <p className="mb-3">
+                We implement a variety of security measures to maintain the safety of your personal information when you enter, 
+                submit, or access your personal information. We offer the use of a secure server. All supplied sensitive/credit 
+                information is transmitted using the latest 256-bit Secure Socket Layer (SSL) encryption technology and then 
+                encrypted into our Payment gateway providers database only to be accessible by those authorized with special 
+                access rights to such systems, and are required to keep the information confidential.
+              </p>
+              <p className="mb-3">
+                256-bit SSL encryption is approximated to take at least one trillion years to break, and is the industry standard. 
+                If you have any questions regarding our security policy, please contact our support@kuhlekt.com Processing of 
+                payments occurs using 3rd party payment gateways and as such, your credit card information is never stored on our servers.
               </p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">8. Cookies and Tracking</h3>
-              <p>
-                We use essential cookies for platform functionality and analytics cookies to improve our services. 
-                You can manage cookie preferences through your browser settings.
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">DO WE USE COOKIES?</h3>
+              <p className="mb-3">
+                Yes (Cookies are small files that a site or its service provider transfers to your computers hard drive through 
+                your Web browser (if you allow) that enables the sites or service providers systems to recognize your browser 
+                and capture and remember certain information)
               </p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">9. Updates to This Policy</h3>
-              <p>
-                We may update this policy periodically. We'll notify you of significant changes via email or 
-                through our platform. Continued use of our services constitutes acceptance of the updated policy.
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">DOES KUHLEKT ALLOW THIRD PARTIES TO USE COOKIES WHEN I AM BROWSING?</h3>
+              <p className="mb-3">
+                Kuhlekt uses Google Analytics™, a web site analysis service provided by Google Inc. Google Analytics uses cookies, 
+                which are text files placed on your computer to help the web site analyse how its users utilise the site and to 
+                create statistics. The data generated by the cookies concerning your use of the site (including your IP address) 
+                are sent and stored by Google on servers located in the United States.
+              </p>
+              <p className="mb-3">
+                Google will use this information in order to evaluate your use of the site, to compile reports on the site's 
+                activity intended for its publisher, and to provide other services relating to the site's activity and to use 
+                of the Internet. Google may communicate these data to third parties if legally obligated to do so, or when these 
+                third parties process these data on behalf of Google, including the publisher of this site. Google will not match 
+                your IP address to any other data held by Google.
+              </p>
+              <p className="mb-3">
+                You can deactivate the use of cookies by selecting the appropriate settings on your browser. However, doing so 
+                may prevent the use of certain of this site's functions.
+              </p>
+              <p className="mb-3">
+                By using this Internet site, you expressly consent to the processing of your personal data by Google under the 
+                conditions and for the purposes described above. To consult Google's Confidentiality Rules, navigate to: 
+                <a href="https://policies.google.com/privacy?hl=en-GB" className="text-cyan-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                  https://policies.google.com/privacy?hl=en-GB
+                </a>.
               </p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">10. Contact Us</h3>
-              <p>
-                If you have questions about this Privacy and Security Policy or wish to exercise your rights, 
-                please contact our Data Protection Officer at:
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">DO WE DISCLOSE ANY INFORMATION TO OUTSIDE PARTIES?</h3>
+              <p className="mb-3">
+                We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information. This 
+                does not include trusted third parties who assist us in operating our website, conducting our business, or 
+                servicing you, so long as those parties agree to keep this information confidential. We may also release your 
+                information when we believe release is appropriate to comply with the law, enforce our site policies, or protect 
+                ours or others rights, property, or safety. However, non-personally identifiable visitor information may be 
+                provided to other parties for marketing, advertising, or other uses.
               </p>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">THIRD PARTY LINKS</h3>
+              <p className="mb-3">
+                Occasionally, at our discretion, we may include or offer third party products or services on our website. These 
+                third party sites have separate and independent privacy policies. We therefore have no responsibility or liability 
+                for the content and activities of these linked sites. Nonetheless, we seek to protect the integrity of our site 
+                and welcome any feedback about these sites.
+              </p>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">YOUR CONSENT</h3>
+              <p className="mb-3">By using our site, you consent to our privacy policy</p>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">CHANGES TO OUR PRIVACY POLICY</h3>
+              <p className="mb-3">
+                If we decide to change our privacy policy, we will post those changes on this page, send an email notifying 
+                you of any changes, and/or update the Privacy Policy modification date below.
+              </p>
+              <p className="text-sm text-gray-500">This policy was last modified on August 30th 2018</p>
+            </section>
+
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact Information</h3>
               <div className="mt-3 p-4 bg-gray-50 rounded-lg">
-                <p><strong>Email:</strong> privacy@kuhlekt.com</p>
-                <p><strong>Phone:</strong> +61 2 8123 4567</p>
-                <p><strong>Address:</strong> Level 15, 1 Bligh Street, Sydney NSW 2000, Australia</p>
+                <p><strong>Email:</strong> support@kuhlekt.com</p>
+                <p><strong>Address:</strong> 112 3-5 Pendraat Parade Hope Island QLD 4212, Australia</p>
               </div>
             </section>
           </div>
