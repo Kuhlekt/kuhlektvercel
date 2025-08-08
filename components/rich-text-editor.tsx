@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Palette, Type, ImageIcon, Upload, AlertCircle, CheckCircle, X, Undo, Redo } from 'lucide-react'
 
+const isBrowser = typeof window !== 'undefined'
+
 export interface ImageData {
   id: string
   dataUrl: string
@@ -65,9 +67,15 @@ export function RichTextEditor({
 
   // Execute formatting command
   const executeCommand = useCallback((command: string, value?: string) => {
-    document.execCommand(command, false, value)
-    editorRef.current?.focus()
-    handleContentChange()
+    if (!isBrowser) return
+  
+    try {
+      document.execCommand(command, false, value)
+      editorRef.current?.focus()
+      handleContentChange()
+    } catch (error) {
+      console.warn('Command execution failed:', command, error)
+    }
   }, [handleContentChange])
 
   // Format text commands
@@ -106,23 +114,30 @@ export function RichTextEditor({
 
   // Apply font size
   const applyFontSize = (size: string) => {
-    executeCommand('fontSize', '3') // Reset to medium first
-    const selection = window.getSelection()
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0)
-      const span = document.createElement('span')
-      span.style.fontSize = size
-      try {
-        range.surroundContents(span)
-      } catch (e) {
-        // If can't surround, insert at cursor
-        span.innerHTML = range.toString()
-        range.deleteContents()
-        range.insertNode(span)
+    if (!isBrowser) return
+  
+    try {
+      executeCommand('fontSize', '3') // Reset to medium first
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        const span = document.createElement('span')
+        span.style.fontSize = size
+        try {
+          range.surroundContents(span)
+        } catch (e) {
+          // If can't surround, insert at cursor
+          span.innerHTML = range.toString()
+          range.deleteContents()
+          range.insertNode(span)
+        }
       }
+      setShowFontSizePicker(false)
+      handleContentChange()
+    } catch (error) {
+      console.warn('Font size application failed:', error)
+      setShowFontSizePicker(false)
     }
-    setShowFontSizePicker(false)
-    handleContentChange()
   }
 
   // Generate unique placeholder for image
