@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2, Calendar, Tag, Folder } from 'lucide-react'
 import type { Article, Category } from "../types/knowledge-base"
@@ -19,21 +19,14 @@ interface ArticleViewerProps {
 export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }: ArticleViewerProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const getCategoryPath = (): string => {
-    for (const category of categories) {
-      // Check if article is in main category
-      if (category.articles.some(a => a.id === article.id)) {
-        return category.name
-      }
-      
-      // Check if article is in subcategory
-      for (const subcategory of category.subcategories) {
-        if (subcategory.articles.some(a => a.id === article.id)) {
-          return `${category.name} > ${subcategory.name}`
-        }
-      }
-    }
-    return "Unknown"
+  const getCategoryName = (categoryId: string) => {
+    return categories.find(c => c.id === categoryId)?.name || "Unknown Category"
+  }
+
+  const getSubcategoryName = (categoryId: string, subcategoryId?: string) => {
+    if (!subcategoryId) return null
+    const category = categories.find(c => c.id === categoryId)
+    return category?.subcategories.find(s => s.id === subcategoryId)?.name
   }
 
   const handleDelete = () => {
@@ -43,7 +36,8 @@ export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }:
     }
   }
 
-  const categoryPath = getCategoryPath()
+  const categoryName = getCategoryName(article.categoryId)
+  const subcategoryName = getSubcategoryName(article.categoryId, article.subcategoryId)
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -75,43 +69,44 @@ export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }:
       {/* Article Content */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold mb-4">{article.title}</CardTitle>
+          <CardTitle className="text-3xl font-bold">{article.title}</CardTitle>
           
           {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 border-b pb-4">
-            <div className="flex items-center space-x-1">
-              <Folder className="h-4 w-4" />
-              <span>{categoryPath}</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 pt-4">
             <div className="flex items-center space-x-1">
               <Calendar className="h-4 w-4" />
-              <span>Created {article.createdAt.toLocaleDateString()}</span>
+              <span>Updated {article.updatedAt.toLocaleDateString()}</span>
             </div>
-            {article.updatedAt && article.updatedAt.getTime() !== article.createdAt.getTime() && (
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>Updated {article.updatedAt.toLocaleDateString()}</span>
-              </div>
-            )}
+            
+            <div className="flex items-center space-x-2">
+              <Folder className="h-4 w-4" />
+              <Badge variant="secondary">{categoryName}</Badge>
+              {subcategoryName && (
+                <Badge variant="outline">{subcategoryName}</Badge>
+              )}
+            </div>
           </div>
 
           {/* Tags */}
           {article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-4">
-              {article.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
-                  <Tag className="h-3 w-3" />
-                  <span>{tag}</span>
-                </Badge>
-              ))}
+            <div className="flex items-center space-x-2 pt-2">
+              <Tag className="h-4 w-4 text-gray-400" />
+              <div className="flex flex-wrap gap-2">
+                {article.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
         </CardHeader>
-        
+
         <CardContent>
-          <div className="prose max-w-none">
-            <div dangerouslySetInnerHTML={{ __html: article.content }} />
-          </div>
+          <div 
+            className="prose max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900"
+            dangerouslySetInnerHTML={{ __html: article.content }}
+          />
         </CardContent>
       </Card>
 

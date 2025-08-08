@@ -1,9 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { FileText, Calendar, Tag, Folder, BookOpen } from 'lucide-react'
+import { Clock, Tag, Folder } from 'lucide-react'
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SelectedArticlesProps {
@@ -13,199 +12,102 @@ interface SelectedArticlesProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Helper function to extract clean text from HTML content
-const extractCleanText = (htmlContent: string): string => {
+// Function to extract clean text from HTML content
+function extractCleanText(htmlContent: string): string {
   if (!htmlContent) return ""
   
-  try {
-    // Create a temporary div to parse HTML
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = htmlContent
-    
-    // Remove script and style elements
-    const scripts = tempDiv.querySelectorAll('script, style')
-    scripts.forEach(el => el.remove())
-    
-    // Get clean text content
-    const textContent = tempDiv.textContent || tempDiv.innerText || ""
-    
-    // Split into sentences and filter out very short ones
-    const sentences = textContent
-      .split(/[.!?]+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 10 && !/^\d+$/.test(s)) // Remove very short sentences and numbers-only
-    
-    // Return first 2-3 sentences, max 200 characters
-    const preview = sentences.slice(0, 3).join('. ')
-    return preview.length > 200 ? preview.substring(0, 200) + '...' : preview + (preview ? '.' : '')
-  } catch (error) {
-    // Fallback: simple text extraction
-    return htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200) + '...'
-  }
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = htmlContent
+  
+  // Remove script and style elements
+  const scripts = tempDiv.querySelectorAll('script, style')
+  scripts.forEach(el => el.remove())
+  
+  // Get text content
+  const textContent = tempDiv.textContent || tempDiv.innerText || ""
+  
+  // Clean up whitespace and get first few sentences
+  const cleanText = textContent
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split('.')
+    .filter(sentence => sentence.trim().length > 10)
+    .slice(0, 2)
+    .join('. ')
+  
+  return cleanText.length > 150 ? cleanText.substring(0, 150) + '...' : cleanText
 }
 
-export function SelectedArticles({
-  categories,
-  selectedCategories,
-  selectedSubcategories,
-  onArticleSelect,
+export function SelectedArticles({ 
+  categories, 
+  selectedCategories, 
+  selectedSubcategories, 
+  onArticleSelect 
 }: SelectedArticlesProps) {
   // Get filtered articles based on selected categories and subcategories
-  const getFilteredArticles = (): { articles: Article[], categoryPath: string }[] => {
-    const results: { articles: Article[], categoryPath: string }[] = []
+  const getFilteredArticles = () => {
+    const articles: Article[] = []
 
     categories.forEach((category) => {
-      const isCategorySelected = selectedCategories.has(category.id)
-      
-      // If category is selected, include all its articles
-      if (isCategorySelected) {
-        if (category.articles.length > 0) {
-          results.push({
-            articles: category.articles,
-            categoryPath: category.name
-          })
-        }
-        
-        // Also include all subcategory articles
-        category.subcategories.forEach((subcategory) => {
-          if (subcategory.articles.length > 0) {
-            results.push({
-              articles: subcategory.articles,
-              categoryPath: `${category.name} > ${subcategory.name}`
-            })
-          }
-        })
-      } else {
-        // Check for selected subcategories
-        category.subcategories.forEach((subcategory) => {
-          if (selectedSubcategories.has(subcategory.id) && subcategory.articles.length > 0) {
-            results.push({
-              articles: subcategory.articles,
-              categoryPath: `${category.name} > ${subcategory.name}`
-            })
-          }
-        })
+      // If category is selected, include its articles
+      if (selectedCategories.has(category.id)) {
+        articles.push(...category.articles)
       }
-    })
 
-    return results
-  }
-
-  const filteredResults = getFilteredArticles()
-  const totalArticles = filteredResults.reduce((sum, result) => sum + result.articles.length, 0)
-
-  // If no categories are selected, show all articles
-  if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
-    const allArticles: { articles: Article[], categoryPath: string }[] = []
-    
-    categories.forEach((category) => {
-      if (category.articles.length > 0) {
-        allArticles.push({
-          articles: category.articles,
-          categoryPath: category.name
-        })
-      }
-      
+      // Check subcategories
       category.subcategories.forEach((subcategory) => {
-        if (subcategory.articles.length > 0) {
-          allArticles.push({
-            articles: subcategory.articles,
-            categoryPath: `${category.name} > ${subcategory.name}`
-          })
+        if (selectedSubcategories.has(subcategory.id)) {
+          articles.push(...subcategory.articles)
         }
       })
     })
 
-    const totalAllArticles = allArticles.reduce((sum, result) => sum + result.articles.length, 0)
+    // Remove duplicates and sort by updated date
+    const uniqueArticles = articles.filter((article, index, self) => 
+      index === self.findIndex(a => a.id === article.id)
+    )
 
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Browse All Articles</h2>
-          <p className="text-gray-600 mb-4">
-            Explore our complete knowledge base with {totalAllArticles} articles across {categories.length} categories.
-          </p>
-          <Badge variant="secondary" className="text-sm">
-            {totalAllArticles} articles available
-          </Badge>
-        </div>
-
-        <div className="space-y-6">
-          {allArticles.map((result, index) => (
-            <div key={index}>
-              <div className="flex items-center space-x-2 mb-4">
-                <Folder className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-medium text-gray-900">{result.categoryPath}</h3>
-                <Badge variant="outline">{result.articles.length} articles</Badge>
-              </div>
-              
-              <div className="grid gap-4">
-                {result.articles.map((article) => {
-                  const cleanPreview = extractCleanText(article.content)
-                  
-                  return (
-                    <Card key={article.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg hover:text-blue-600 transition-colors cursor-pointer">
-                          {article.title}
-                        </CardTitle>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>{article.createdAt.toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <p className="text-gray-700 mb-4 leading-relaxed">
-                          {cleanPreview || "No preview available"}
-                        </p>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-wrap gap-2">
-                            {article.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {tag}
-                              </Badge>
-                            ))}
-                            {article.tags.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{article.tags.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => onArticleSelect(article)}
-                          >
-                            Read Article
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    return uniqueArticles.sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
   }
 
-  // Show filtered results
-  if (filteredResults.length === 0) {
+  // Get all articles if no filters are selected
+  const getAllArticles = () => {
+    const articles: Article[] = []
+
+    categories.forEach((category) => {
+      articles.push(...category.articles)
+      category.subcategories.forEach((subcategory) => {
+        articles.push(...subcategory.articles)
+      })
+    })
+
+    return articles.sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+  }
+
+  const hasFilters = selectedCategories.size > 0 || selectedSubcategories.size > 0
+  const articlesToShow = hasFilters ? getFilteredArticles() : getAllArticles()
+
+  const getCategoryName = (categoryId: string) => {
+    return categories.find(c => c.id === categoryId)?.name || "Unknown"
+  }
+
+  const getSubcategoryName = (categoryId: string, subcategoryId?: string) => {
+    if (!subcategoryId) return null
+    const category = categories.find(c => c.id === categoryId)
+    return category?.subcategories.find(s => s.id === subcategoryId)?.name
+  }
+
+  if (articlesToShow.length === 0) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No articles found</h3>
-          <p className="text-gray-600">
-            No articles found in the selected categories. Try selecting different categories.
+        <CardContent className="text-center py-12">
+          <p className="text-gray-500 text-lg">
+            {hasFilters ? "No articles found in selected categories" : "No articles available"}
           </p>
         </CardContent>
       </Card>
@@ -213,75 +115,64 @@ export function SelectedArticles({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Filtered Articles</h2>
-        <Badge variant="secondary">
-          {totalArticles} article{totalArticles !== 1 ? 's' : ''}
-        </Badge>
+        <h2 className="text-xl font-semibold">
+          {hasFilters ? "Filtered Articles" : "All Articles"} ({articlesToShow.length})
+        </h2>
       </div>
 
-      <div className="space-y-6">
-        {filteredResults.map((result, index) => (
-          <div key={index}>
-            <div className="flex items-center space-x-2 mb-4">
-              <Folder className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-medium text-gray-900">{result.categoryPath}</h3>
-              <Badge variant="outline">{result.articles.length} articles</Badge>
-            </div>
-            
-            <div className="grid gap-4">
-              {result.articles.map((article) => {
-                const cleanPreview = extractCleanText(article.content)
-                
-                return (
-                  <Card key={article.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg hover:text-blue-600 transition-colors cursor-pointer">
-                        {article.title}
-                      </CardTitle>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{article.createdAt.toLocaleDateString()}</span>
-                        </div>
+      <div className="space-y-4">
+        {articlesToShow.map((article) => {
+          const categoryName = getCategoryName(article.categoryId)
+          const subcategoryName = getSubcategoryName(article.categoryId, article.subcategoryId)
+          const cleanContent = extractCleanText(article.content)
+
+          return (
+            <Card key={article.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6" onClick={() => onArticleSelect(article)}>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-blue-600 hover:text-blue-800">
+                      {article.title}
+                    </h3>
+                    <div className="flex items-center text-sm text-gray-500 ml-4">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {article.updatedAt.toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Folder className="h-4 w-4 text-gray-400" />
+                    <Badge variant="secondary">{categoryName}</Badge>
+                    {subcategoryName && (
+                      <Badge variant="outline">{subcategoryName}</Badge>
+                    )}
+                  </div>
+
+                  {cleanContent && (
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {cleanContent}
+                    </p>
+                  )}
+
+                  {article.tags.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <Tag className="h-4 w-4 text-gray-400" />
+                      <div className="flex flex-wrap gap-1">
+                        {article.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <p className="text-gray-700 mb-4 leading-relaxed">
-                        {cleanPreview || "No preview available"}
-                      </p>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-wrap gap-2">
-                          {article.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              <Tag className="h-3 w-3 mr-1" />
-                              {tag}
-                            </Badge>
-                          ))}
-                          {article.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{article.tags.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => onArticleSelect(article)}
-                        >
-                          Read Article
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )
