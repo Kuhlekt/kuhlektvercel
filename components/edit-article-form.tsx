@@ -1,35 +1,36 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { X, Save, Eye, EyeOff, ArrowLeft } from 'lucide-react'
-import { RichTextEditor } from "./rich-text-editor"
+import { ArrowLeft, Save, Eye, Edit3, X } from 'lucide-react'
+import { EnhancedRichEditor } from './enhanced-rich-editor'
 import type { Article, Category } from "../types/knowledge-base"
 
 interface EditArticleFormProps {
   article: Article
   categories: Category[]
-  onSubmit: (articleData: Omit<Article, "createdAt">) => void
+  onSave: (updatedArticle: Article) => void
   onCancel: () => void
 }
 
-export function EditArticleForm({ article, categories, onSubmit, onCancel }: EditArticleFormProps) {
+export function EditArticleForm({ article, categories, onSave, onCancel }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title)
   const [content, setContent] = useState(article.content)
   const [selectedCategoryId, setSelectedCategoryId] = useState(article.categoryId)
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(article.subcategoryId || "none")
-  const [tags, setTags] = useState(article.tags.join(", "))
-  const [showPreview, setShowPreview] = useState(false)
+  const [tags, setTags] = useState<string[]>(article.tags)
+  const [newTag, setNewTag] = useState('')
+  const [activeTab, setActiveTab] = useState('edit')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const selectedCategory = categories.find(cat => cat.id === selectedCategoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
+  // Get available subcategories for selected category
+  const availableSubcategories = categories.find(c => c.id === selectedCategoryId)?.subcategories || []
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -37,6 +38,24 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
       setSelectedSubcategoryId("none")
     }
   }, [selectedCategoryId, article.categoryId])
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()])
+      setNewTag('')
+    }
+  }
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove))
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddTag()
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,81 +67,60 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     setIsSubmitting(true)
 
     try {
-      const updatedArticle = {
-        id: article.id,
+      const updatedArticle: Article = {
+        ...article,
         title: title.trim(),
         content: content.trim(),
         categoryId: selectedCategoryId,
         subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
-        tags: tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0),
-        updatedAt: new Date(),
-        createdBy: article.createdBy
+        tags,
+        updatedAt: new Date()
       }
 
-      onSubmit(updatedArticle)
+      onSave(updatedArticle)
     } catch (error) {
-      console.error("Error updating article:", error)
+      console.error('Error updating article:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  // Function to render content as HTML for preview
   const renderPreview = () => {
-    return (
-      <div className="prose max-w-none">
-        <h1 className="text-2xl font-bold mb-4">{title || "Untitled Article"}</h1>
-        
-        <div className="flex flex-wrap gap-2 mb-4">
-          {selectedCategory && (
-            <Badge variant="secondary">{selectedCategory.name}</Badge>
-          )}
-          {selectedSubcategoryId !== "none" && availableSubcategories.find(sub => sub.id === selectedSubcategoryId) && (
-            <Badge variant="outline">
-              {availableSubcategories.find(sub => sub.id === selectedSubcategoryId)?.name}
-            </Badge>
-          )}
-          {tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0).map((tag, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
-        <div 
-          className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      </div>
-    )
+    return { __html: content }
   }
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle>Edit Article</CardTitle>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={onCancel}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Article
+        </Button>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Edit Article</h1>
+            <p className="text-gray-600 mt-2">Update your knowledge base article</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPreview(!showPreview)}
-          >
-            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showPreview ? "Hide Preview" : "Show Preview"}
-          </Button>
-        </div>
-      </CardHeader>
+      </div>
 
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Article Details</CardTitle>
+            <CardDescription>
+              Update the basic information for your article
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
                 value={title}
@@ -132,40 +130,28 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
               />
             </div>
 
-            <div>
-              <Label htmlFor="tags">Tags</Label>
-              <Input
-                id="tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Enter tags separated by commas"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">Category *</Label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {availableSubcategories.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="subcategory">Subcategory</Label>
+                <Label htmlFor="category">Category</Label>
+                <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="subcategory">Subcategory (Optional)</Label>
                 <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a subcategory (optional)" />
+                    <SelectValue placeholder="Select a subcategory" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
@@ -177,53 +163,90 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
+            </div>
 
-          <div>
-            <Label htmlFor="content">Content *</Label>
-            {showPreview ? (
-              <Tabs defaultValue="edit" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="edit">Edit</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                </TabsList>
-                <TabsContent value="edit" className="mt-4">
-                  <RichTextEditor
-                    value={content}
-                    onChange={setContent}
-                    placeholder="Write your article content here..."
-                  />
-                </TabsContent>
-                <TabsContent value="preview" className="mt-4">
-                  <div className="border rounded-md p-4 min-h-[300px] bg-gray-50">
-                    {renderPreview()}
+            <div>
+              <Label htmlFor="tags">Tags</Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  id="tags"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a tag"
+                />
+                <Button type="button" onClick={handleAddTag} variant="outline">
+                  Add
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => handleRemoveTag(tag)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Content</CardTitle>
+            <CardDescription>
+              Edit your article content with rich text formatting
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="edit" className="flex items-center gap-2">
+                  <Edit3 className="h-4 w-4" />
+                  Edit
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="edit" className="mt-4">
+                <EnhancedRichEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Write your article content here..."
+                />
+              </TabsContent>
+              
+              <TabsContent value="preview" className="mt-4">
+                <div className="border rounded-lg p-4 min-h-[400px] bg-white">
+                  <div className="prose max-w-none">
+                    <h1 className="text-2xl font-bold mb-4">{title || 'Article Title'}</h1>
+                    <div 
+                      dangerouslySetInnerHTML={renderPreview()}
+                      className="prose-content"
+                    />
                   </div>
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <RichTextEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Write your article content here..."
-              />
-            )}
-          </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={!title.trim() || !content.trim() || !selectedCategoryId || isSubmitting}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-end space-x-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim()}>
+            <Save className="h-4 w-4 mr-2" />
+            {isSubmitting ? 'Updating...' : 'Update Article'}
+          </Button>
+        </div>
+      </form>
+    </div>
   )
 }

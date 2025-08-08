@@ -14,31 +14,29 @@ interface SearchResultsProps {
 
 // Function to extract clean text content from HTML
 function extractCleanText(html: string): string {
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, ' ')
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = html
   
-  // Remove CSS styles and parameters
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, '')
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, '')
+  // Remove script and style elements
+  const scripts = tempDiv.querySelectorAll('script, style')
+  scripts.forEach(el => el.remove())
   
-  // Remove data URLs and image URLs
-  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, '')
-  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/gi, '')
+  // Get text content and clean it up
+  let text = tempDiv.textContent || tempDiv.innerText || ''
   
   // Remove extra whitespace and normalize
   text = text.replace(/\s+/g, ' ').trim()
   
-  // Split into sentences and filter meaningful ones
+  // Split into sentences and take first few meaningful ones
   const sentences = text.split(/[.!?]+/).filter(sentence => {
     const cleaned = sentence.trim()
-    return cleaned.length > 20 && 
-           !cleaned.match(/^(width|height|margin|padding|color|font|background)/i) &&
-           !cleaned.match(/^\d+px/) &&
-           !cleaned.match(/^(rgb|rgba|hex|#)/i)
+    return cleaned.length > 10 && !cleaned.match(/^\d+$/)
   })
   
-  // Return first few meaningful sentences
-  return sentences.slice(0, 2).join('. ').trim()
+  // Return first 2-3 sentences, limited to reasonable length
+  const preview = sentences.slice(0, 3).join('. ').trim()
+  return preview.length > 200 ? preview.substring(0, 200) + '...' : preview
 }
 
 // Function to check if content contains images
