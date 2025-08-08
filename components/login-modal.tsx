@@ -128,13 +128,6 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               </div>
             </div>
 
-            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-              <strong>Demo Credentials:</strong><br />
-              Admin: admin / admin123<br />
-              Editor: editor / editor123<br />
-              Viewer: viewer / viewer123
-            </div>
-
             <div className="flex space-x-2">
               <Button type="submit" className="flex-1" disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
