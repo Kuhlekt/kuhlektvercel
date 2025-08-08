@@ -29,7 +29,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [subcategoryId, setSubcategoryId] = useState("")
+  const [subcategoryId, setSubcategoryId] = useState("none")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
   const [editorType, setEditorType] = useState<"rich" | "enhanced">("rich")
@@ -59,14 +59,14 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
       title: title.trim(),
       content: content.trim(),
       categoryId,
-      subcategoryId: subcategoryId || undefined,
+      subcategoryId: subcategoryId === "none" ? undefined : subcategoryId,
       tags,
     })
   }
 
   const handleCategoryChange = (newCategoryId: string) => {
     setCategoryId(newCategoryId)
-    setSubcategoryId("") // Reset subcategory when category changes
+    setSubcategoryId("none") // Reset subcategory when category changes
   }
 
   return (
@@ -122,6 +122,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                     <SelectValue placeholder="Select a subcategory" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
                     {availableSubcategories.map((subcategory) => (
                       <SelectItem key={subcategory.id} value={subcategory.id}>
                         {subcategory.name}

@@ -1,164 +1,125 @@
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 const STORAGE_KEYS = {
-  CATEGORIES: "kb_categories",
-  USERS: "kb_users", 
-  AUDIT_LOG: "kb_audit_log",
-  PAGE_VISITS: "kb_page_visits"
+  CATEGORIES: 'kb_categories',
+  USERS: 'kb_users',
+  AUDIT_LOG: 'kb_audit_log',
+  PAGE_VISITS: 'kb_page_visits'
 }
 
 // Helper function to safely parse dates
 const parseDate = (dateValue: any): Date => {
   if (dateValue instanceof Date) return dateValue
-  if (typeof dateValue === 'string' || typeof dateValue === 'number') {
-    const parsed = new Date(dateValue)
-    return isNaN(parsed.getTime()) ? new Date() : parsed
-  }
+  if (typeof dateValue === 'string') return new Date(dateValue)
+  if (typeof dateValue === 'number') return new Date(dateValue)
   return new Date()
+}
+
+// Helper function to safely parse JSON
+const safeJSONParse = (value: string | null, fallback: any = []) => {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
 }
 
 export const storage = {
   // Categories
-  getCategories: (): Category[] => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      if (!stored) return []
-      
-      const categories = JSON.parse(stored)
-      return categories.map((category: any) => ({
-        ...category,
-        articles: (category.articles || []).map((article: any) => ({
+  getCategories(): Category[] {
+    const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
+    const categories = safeJSONParse(stored, [])
+    
+    // Convert date strings back to Date objects
+    return categories.map((category: any) => ({
+      ...category,
+      articles: category.articles.map((article: any) => ({
+        ...article,
+        createdAt: parseDate(article.createdAt),
+        updatedAt: parseDate(article.updatedAt)
+      })),
+      subcategories: category.subcategories.map((subcategory: any) => ({
+        ...subcategory,
+        articles: subcategory.articles.map((article: any) => ({
           ...article,
           createdAt: parseDate(article.createdAt),
           updatedAt: parseDate(article.updatedAt)
-        })),
-        subcategories: (category.subcategories || []).map((subcategory: any) => ({
-          ...subcategory,
-          articles: (subcategory.articles || []).map((article: any) => ({
-            ...article,
-            createdAt: parseDate(article.createdAt),
-            updatedAt: parseDate(article.updatedAt)
-          }))
         }))
       }))
-    } catch (error) {
-      console.error("Error loading categories:", error)
-      return []
-    }
+    }))
   },
 
-  saveCategories: (categories: Category[]): void => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
-    } catch (error) {
-      console.error("Error saving categories:", error)
-    }
+  saveCategories(categories: Category[]): void {
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
   },
 
   // Users
-  getUsers: (): User[] => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.USERS)
-      if (!stored) return []
-      
-      const users = JSON.parse(stored)
-      return users.map((user: any) => ({
-        ...user,
-        createdAt: parseDate(user.createdAt),
-        lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined
-      }))
-    } catch (error) {
-      console.error("Error loading users:", error)
-      return []
-    }
+  getUsers(): User[] {
+    const stored = localStorage.getItem(STORAGE_KEYS.USERS)
+    const users = safeJSONParse(stored, [])
+    
+    // Convert date strings back to Date objects
+    return users.map((user: any) => ({
+      ...user,
+      createdAt: parseDate(user.createdAt),
+      lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined
+    }))
   },
 
-  saveUsers: (users: User[]): void => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-    } catch (error) {
-      console.error("Error saving users:", error)
-    }
+  saveUsers(users: User[]): void {
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
   },
 
   // Audit Log
-  getAuditLog: (): AuditLogEntry[] => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
-      if (!stored) return []
-      
-      const entries = JSON.parse(stored)
-      return entries.map((entry: any) => ({
-        ...entry,
-        timestamp: parseDate(entry.timestamp)
-      }))
-    } catch (error) {
-      console.error("Error loading audit log:", error)
-      return []
-    }
+  getAuditLog(): AuditLogEntry[] {
+    const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
+    const auditLog = safeJSONParse(stored, [])
+    
+    // Convert date strings back to Date objects
+    return auditLog.map((entry: any) => ({
+      ...entry,
+      timestamp: parseDate(entry.timestamp)
+    }))
   },
 
-  saveAuditLog: (auditLog: AuditLogEntry[]): void => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
-    } catch (error) {
-      console.error("Error saving audit log:", error)
-    }
+  saveAuditLog(auditLog: AuditLogEntry[]): void {
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
   },
 
-  addAuditEntry: (entry: Omit<AuditLogEntry, "id" | "timestamp">): void => {
-    try {
-      const currentLog = storage.getAuditLog()
-      const newEntry: AuditLogEntry = {
-        ...entry,
-        id: Date.now().toString(),
-        timestamp: new Date()
-      }
-      currentLog.unshift(newEntry)
-      
-      // Keep only last 1000 entries
-      if (currentLog.length > 1000) {
-        currentLog.splice(1000)
-      }
-      
-      storage.saveAuditLog(currentLog)
-    } catch (error) {
-      console.error("Error adding audit entry:", error)
+  addAuditEntry(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): void {
+    const currentLog = this.getAuditLog()
+    const newEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      ...entry
     }
+    const updatedLog = [newEntry, ...currentLog]
+    this.saveAuditLog(updatedLog)
   },
 
-  // Page Visits
-  getPageVisits: (): number => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
-      return stored ? parseInt(stored, 10) : 0
-    } catch (error) {
-      console.error("Error loading page visits:", error)
-      return 0
-    }
+  // Page Visits - Fixed function names
+  getPageVisits(): number {
+    const stored = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
+    return stored ? parseInt(stored, 10) : 0
   },
 
-  incrementPageVisits: (): number => {
-    try {
-      const current = storage.getPageVisits()
-      const newCount = current + 1
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
-      return newCount
-    } catch (error) {
-      console.error("Error incrementing page visits:", error)
-      return 0
-    }
+  incrementPageVisits(): number {
+    const current = this.getPageVisits()
+    const newCount = current + 1
+    localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
+    return newCount
+  },
+
+  resetPageVisits(): void {
+    localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, '0')
   },
 
   // Clear all data
-  clearAll: (): void => {
-    try {
-      Object.values(STORAGE_KEYS).forEach(key => {
-        localStorage.removeItem(key)
-      })
-    } catch (error) {
-      console.error("Error clearing data:", error)
-    }
+  clearAll(): void {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key)
+    })
   }
 }
 
