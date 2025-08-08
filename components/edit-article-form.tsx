@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Category, Article } from "../types/knowledge-base"
 import { RichTextEditor, type ImageData } from "./rich-text-editor"
+import { SimpleRichEditor } from "./simple-rich-editor"
 import { ArrowLeft, Save, ImageIcon } from 'lucide-react'
 
 interface EditArticleFormProps {
@@ -123,12 +123,14 @@ export function EditArticleForm({ article, categories, onUpdateArticle, onCancel
 
               <div>
                 <Label htmlFor="content">Content</Label>
-                <RichTextEditor
-                  value={content}
-                  onChange={setContent}
-                  onImagesChange={setCurrentImages}
-                  placeholder="Enter article content here..."
-                />
+                <div className="mt-2">
+                  <RichTextEditor
+                    value={content}
+                    onChange={setContent}
+                    onImagesChange={setCurrentImages}
+                    placeholder="Edit article content here..."
+                  />
+                </div>
               </div>
 
               <div>

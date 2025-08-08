@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { SearchResults } from "./components/search-results"
@@ -12,15 +12,35 @@ import { AdminDashboard } from "./components/admin-dashboard"
 import { initialCategories } from "./data/initial-data"
 import { initialUsers } from "./data/initial-users"
 import { initialAuditLog } from "./data/initial-audit-log"
+import { storage } from "./utils/storage"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 import { SelectedArticles } from "./components/selected-articles"
 import { EditArticleForm } from "./components/edit-article-form"
 import { calculateTotalArticles } from "./utils/article-utils"
 
 export default function KnowledgeBase() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories)
-  const [users, setUsers] = useState<User[]>(initialUsers)
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(initialAuditLog)
+  // Initialize state with stored data or defaults
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window !== 'undefined') {
+      return storage.loadCategories() || initialCategories
+    }
+    return initialCategories
+  })
+  
+  const [users, setUsers] = useState<User[]>(() => {
+    if (typeof window !== 'undefined') {
+      return storage.loadUsers() || initialUsers
+    }
+    return initialUsers
+  })
+  
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      return storage.loadAuditLog() || initialAuditLog
+    }
+    return initialAuditLog
+  })
+
   const [currentView, setCurrentView] = useState<"home" | "search" | "admin" | "article" | "edit-article">("home")
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
@@ -32,6 +52,25 @@ export default function KnowledgeBase() {
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
+
+  // Auto-save data to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      storage.saveCategories(categories)
+    }
+  }, [categories])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      storage.saveUsers(users)
+    }
+  }, [users])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      storage.saveAuditLog(auditLog)
+    }
+  }, [auditLog])
 
   // Calculate total articles using memoization for performance and accuracy
   const totalArticles = useMemo(() => calculateTotalArticles(categories), [categories])
@@ -290,6 +329,12 @@ export default function KnowledgeBase() {
     }
   }
 
+  const handleImportData = (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => {
+    setCategories(data.categories)
+    setUsers(data.users)
+    setAuditLog(data.auditLog)
+  }
+
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     if (!query.trim()) {
@@ -435,6 +480,7 @@ export default function KnowledgeBase() {
             onDeleteArticle={handleDeleteArticle}
             onCreateUser={handleCreateUser}
             onDeleteUser={handleDeleteUser}
+            onImportData={handleImportData}
             onBack={handleHome}
           />
         ) : null

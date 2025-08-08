@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Category, Article } from "../types/knowledge-base"
 import { RichTextEditor, type ImageData } from "./rich-text-editor"
+import { SimpleRichEditor } from "./simple-rich-editor"
 import { Lock, ImageIcon } from 'lucide-react'
 
 interface AddArticleFormProps {
@@ -128,22 +129,24 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
 
               <div>
                 <Label htmlFor="content">Content</Label>
-                <RichTextEditor
-                  value={content}
-                  onChange={setContent}
-                  onImagesChange={setCurrentImages}
-                  placeholder="Enter article content here...
+                <div className="mt-2">
+                  <RichTextEditor
+                    value={content}
+                    onChange={setContent}
+                    onImagesChange={setCurrentImages}
+                    placeholder="Enter article content here...
 
 ✨ Rich text features:
 • Bold, italic, underline formatting
-• Bullet points and numbered lists
+• Bullet points and numbered lists  
 • Text alignment and colors
 • Paste formatted text from anywhere
 • Drag & drop or paste images
 • Multiple font sizes
 
-Try copying formatted text from a document and pasting it here!"
-                />
+Try the formatting buttons above or use markdown-like syntax!"
+                  />
+                </div>
               </div>
 
               <div>

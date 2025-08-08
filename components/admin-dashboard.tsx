@@ -9,7 +9,8 @@ import { UserCreationForm } from "./user-creation-form"
 import { UserManagementTable } from "./user-management-table"
 import { ArticleManagement } from "./article-management"
 import { AuditLog } from "./audit-log"
-import { Plus, Users, FileText, BarChart3, Activity } from 'lucide-react'
+import { DataManagement } from "./data-management"
+import { Plus, Users, FileText, BarChart3, Activity, Database } from 'lucide-react'
 import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"
 import { calculateTotalArticles, getArticleStats } from "../utils/article-utils"
 
@@ -23,6 +24,7 @@ interface AdminDashboardProps {
   onDeleteArticle: (articleId: string) => void
   onCreateUser: (userData: Omit<User, "id" | "createdAt" | "lastLogin">) => void
   onDeleteUser: (userId: string) => void
+  onImportData: (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => void
   onBack: () => void
 }
 
@@ -36,6 +38,7 @@ export function AdminDashboard({
   onDeleteArticle,
   onCreateUser,
   onDeleteUser,
+  onImportData,
   onBack,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
@@ -63,7 +66,7 @@ export function AdminDashboard({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <BarChart3 className="h-4 w-4" />
             <span>Overview</span>
@@ -79,6 +82,10 @@ export function AdminDashboard({
           <TabsTrigger value="audit-log" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
             <span>Audit Log</span>
+          </TabsTrigger>
+          <TabsTrigger value="data" className="flex items-center space-x-2">
+            <Database className="h-4 w-4" />
+            <span>Data</span>
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
@@ -216,6 +223,15 @@ export function AdminDashboard({
 
         <TabsContent value="audit-log">
           <AuditLog auditLog={auditLog} />
+        </TabsContent>
+
+        <TabsContent value="data">
+          <DataManagement 
+            categories={categories}
+            users={users}
+            auditLog={auditLog}
+            onImportData={onImportData}
+          />
         </TabsContent>
 
         <TabsContent value="users">
