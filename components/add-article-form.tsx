@@ -1,16 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Plus, Eye, X } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { RichTextEditor } from "./rich-text-editor"
 import { EnhancedRichEditor } from "./enhanced-rich-editor"
-import type { Article, Category } from "../types/knowledge-base"
+import type { Category, Article } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
   categories: Category[]
@@ -21,19 +28,14 @@ interface AddArticleFormProps {
 export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFormProps) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [selectedCategoryId, setSelectedCategoryId] = useState("")
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState("none")
+  const [categoryId, setCategoryId] = useState("")
+  const [subcategoryId, setSubcategoryId] = useState("none")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editorType, setEditorType] = useState<"rich" | "enhanced">("rich")
 
-  // Get available subcategories for selected category
-  const availableSubcategories = categories.find(cat => cat.id === selectedCategoryId)?.subcategories || []
-
-  // Reset subcategory when category changes
-  useEffect(() => {
-    setSelectedSubcategoryId("none")
-  }, [selectedCategoryId])
+  const selectedCategory = categories.find(c => c.id === categoryId)
+  const availableSubcategories = selectedCategory?.subcategories || []
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -46,176 +48,190 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
     setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddTag()
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!title.trim() || !content.trim() || !categoryId) {
+      return
     }
+
+    onSubmit({
+      title: title.trim(),
+      content: content.trim(),
+      categoryId,
+      subcategoryId: subcategoryId === "none" ? undefined : subcategoryId,
+      tags,
+    })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !content.trim() || !selectedCategoryId) return
-
-    setIsSubmitting(true)
-    
-    try {
-      const newArticle: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
-        title: title.trim(),
-        content: content.trim(),
-        categoryId: selectedCategoryId,
-        subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
-        tags,
-      }
-
-      onSubmit(newArticle)
-    } catch (error) {
-      console.error("Error creating article:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId)
+    setSubcategoryId("none") // Reset subcategory when category changes
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-3xl font-bold">Add New Article</h1>
-        </div>
-      </div>
+    <div className="max-w-4xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Add New Article</CardTitle>
+          <CardDescription>
+            Create a new article for your knowledge base
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter article title"
+                required
+              />
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Article Details */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Article Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter article title"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subcategory (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {availableSubcategories.map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tags">Tags</Label>
-                  <div className="flex space-x-2 mb-2">
-                    <Input
-                      id="tags"
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Add a tag"
-                    />
-                    <Button type="button" onClick={handleAddTag} variant="outline">
-                      Add
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
-                        <span>{tag}</span>
-                        <X
-                          className="h-3 w-3 cursor-pointer hover:text-red-500"
-                          onClick={() => handleRemoveTag(tag)}
-                        />
-                      </Badge>
+            {/* Category Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select value={categoryId} onValueChange={handleCategoryChange} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
                     ))}
-                  </div>
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="pt-4 border-t">
-                  <Button type="submit" disabled={isSubmitting} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    {isSubmitting ? "Creating..." : "Create Article"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="subcategory">Subcategory (Optional)</Label>
+                <Select 
+                  value={subcategoryId} 
+                  onValueChange={setSubcategoryId}
+                  disabled={!categoryId || availableSubcategories.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a subcategory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {availableSubcategories.map((subcategory) => (
+                      <SelectItem key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-          {/* Content Editor */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="editor" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="editor">Editor</TabsTrigger>
-                    <TabsTrigger value="preview">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="editor" className="mt-4">
-                    <EnhancedRichEditor
-                      value={content}
-                      onChange={setContent}
-                      placeholder="Write your article content here..."
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="preview" className="mt-4">
-                    <div className="border rounded-lg p-4 min-h-[400px] bg-white">
-                      <div className="prose max-w-none">
-                        <h1 className="text-2xl font-bold mb-4">{title || "Article Title"}</h1>
-                        <div dangerouslySetInnerHTML={{ __html: content || "<p>No content yet...</p>" }} />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </form>
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-transparent"
+                      onClick={() => handleRemoveTag(tag)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Add a tag"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddTag()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddTag}
+                  disabled={!newTag.trim()}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Editor Type Selection */}
+            <div className="space-y-2">
+              <Label>Editor Type</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={editorType === "rich" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditorType("rich")}
+                >
+                  Rich Text Editor
+                </Button>
+                <Button
+                  type="button"
+                  variant={editorType === "enhanced" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditorType("enhanced")}
+                >
+                  Enhanced Editor
+                </Button>
+              </div>
+            </div>
+
+            {/* Content Editor */}
+            <div className="space-y-2">
+              <Label htmlFor="content">Content *</Label>
+              {editorType === "rich" ? (
+                <RichTextEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Write your article content here..."
+                />
+              ) : (
+                <EnhancedRichEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Write your article content here..."
+                />
+              )}
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end space-x-4 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={!title.trim() || !content.trim() || !categoryId}
+              >
+                Add Article
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

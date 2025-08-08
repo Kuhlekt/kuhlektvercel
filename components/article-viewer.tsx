@@ -2,32 +2,31 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, Edit, Trash2, Calendar, Tag, Folder } from 'lucide-react'
+import { Edit, Trash2, ArrowLeft, Calendar, User, Tag } from 'lucide-react'
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
   article: Article
   categories: Category[]
-  onBack: () => void
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
+  onBack: () => void
 }
 
-export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }: ArticleViewerProps) {
+export function ArticleViewer({ 
+  article, 
+  categories, 
+  onEdit, 
+  onDelete, 
+  onBack 
+}: ArticleViewerProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId)?.name || "Unknown Category"
-  }
-
-  const getSubcategoryName = (categoryId: string, subcategoryId?: string) => {
-    if (!subcategoryId) return null
-    const category = categories.find(c => c.id === categoryId)
-    return category?.subcategories.find(s => s.id === subcategoryId)?.name
-  }
+  const category = categories.find(cat => cat.id === article.categoryId)
+  const subcategory = category?.subcategories.find(sub => sub.id === article.subcategoryId)
 
   const handleDelete = () => {
     if (onDelete) {
@@ -36,18 +35,15 @@ export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }:
     }
   }
 
-  const categoryName = getCategoryName(article.categoryId)
-  const subcategoryName = getSubcategoryName(article.categoryId, article.subcategoryId)
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Articles
+        <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Articles</span>
         </Button>
-        
+
         {(onEdit || onDelete) && (
           <div className="flex space-x-2">
             {onEdit && (
@@ -69,42 +65,50 @@ export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }:
       {/* Article Content */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">{article.title}</CardTitle>
-          
-          {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 pt-4">
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>Updated {article.updatedAt.toLocaleDateString()}</span>
-            </div>
+          <div className="space-y-4">
+            <CardTitle className="text-2xl">{article.title}</CardTitle>
             
-            <div className="flex items-center space-x-2">
-              <Folder className="h-4 w-4" />
-              <Badge variant="secondary">{categoryName}</Badge>
-              {subcategoryName && (
-                <Badge variant="outline">{subcategoryName}</Badge>
+            {/* Metadata */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+              {article.createdBy && (
+                <div className="flex items-center space-x-1">
+                  <User className="h-4 w-4" />
+                  <span>By {article.createdBy}</span>
+                </div>
+              )}
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>Created {article.createdAt.toLocaleDateString()}</span>
+              </div>
+              {article.updatedAt.getTime() !== article.createdAt.getTime() && (
+                <div className="flex items-center space-x-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Updated {article.updatedAt.toLocaleDateString()}</span>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Tags */}
-          {article.tags.length > 0 && (
-            <div className="flex items-center space-x-2 pt-2">
-              <Tag className="h-4 w-4 text-gray-400" />
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+            {/* Categories and Tags */}
+            <div className="flex flex-wrap gap-2">
+              {category && (
+                <Badge variant="secondary">{category.name}</Badge>
+              )}
+              {subcategory && (
+                <Badge variant="outline">{subcategory.name}</Badge>
+              )}
+              {article.tags.map((tag, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {tag}
+                </Badge>
+              ))}
             </div>
-          )}
+          </div>
         </CardHeader>
 
         <CardContent>
           <div 
-            className="prose max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900"
+            className="prose max-w-none"
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
         </CardContent>
@@ -124,7 +128,7 @@ export function ArticleViewer({ article, categories, onBack, onEdit, onDelete }:
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete Article
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
