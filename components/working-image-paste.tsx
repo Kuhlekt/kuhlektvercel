@@ -18,7 +18,10 @@ export function WorkingImagePaste() {
   const [images, setImages] = useState<PastedImage[]>([])
   const [showPreview, setShowPreview] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
+  const [image, setImage] = useState<string | null>(null)
+  const [status, setStatus] = useState('Ready')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const divRef = useRef<HTMLDivElement>(null)
 
   const addLog = (message: string) => {
     console.log(message)
@@ -43,11 +46,13 @@ export function WorkingImagePaste() {
   }
 
   const handlePaste = async (e: React.ClipboardEvent) => {
+    setStatus('Processing...')
     addLog("🎯 Paste event triggered")
 
     const clipboardData = e.clipboardData
     if (!clipboardData) {
       addLog("❌ No clipboard data")
+      setStatus('No image found')
       return
     }
 
@@ -80,14 +85,17 @@ export function WorkingImagePaste() {
               setImages((prev) => [...prev, newImage])
               insertAtCursor(`\n\n${placeholder}\n\n`)
               addLog(`✅ Image added: ${placeholder}`)
+              setStatus('Image pasted!')
             }
           }
           reader.onerror = () => {
             addLog(`❌ Failed to read file: ${file.name}`)
+            setStatus('No image found')
           }
           reader.readAsDataURL(file)
         } catch (error) {
           addLog(`❌ Error processing file: ${error}`)
+          setStatus('No image found')
         }
       }
       return
@@ -124,19 +132,23 @@ export function WorkingImagePaste() {
                 setImages((prev) => [...prev, newImage])
                 insertAtCursor(`\n\n${placeholder}\n\n`)
                 addLog(`✅ Image added: ${placeholder}`)
+                setStatus('Image pasted!')
               }
             }
             reader.onerror = () => {
               addLog(`❌ Failed to read clipboard item`)
+              setStatus('No image found')
             }
             reader.readAsDataURL(file)
           } catch (error) {
             addLog(`❌ Error processing clipboard item: ${error}`)
+            setStatus('No image found')
           }
         }
       }
     } else {
       addLog("ℹ️ No images detected in paste")
+      setStatus('No image found')
     }
   }
 
@@ -164,6 +176,10 @@ export function WorkingImagePaste() {
       setContent((prev) => prev.replace(imageToRemove.placeholder, ""))
       addLog(`🗑️ Removed image: ${imageToRemove.placeholder}`)
     }
+  }
+
+  const handleClick = () => {
+    divRef.current?.focus()
   }
 
   return (
@@ -252,6 +268,33 @@ Try pasting an image with Ctrl+V!"
           </div>
         </CardContent>
       </Card>
+
+      <div
+        ref={divRef}
+        className="border-2 border-dashed border-green-400 p-8 text-center mb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+        onPaste={handlePaste}
+        onClick={handleClick}
+        tabIndex={0}
+      >
+        <p>Click here, then paste image (Ctrl+V)</p>
+        <p className="text-sm text-gray-600 mt-2">Status: {status}</p>
+      </div>
+
+      {image && (
+        <div>
+          <h2 className="font-bold mb-2">Pasted Image:</h2>
+          <img src={image || "/placeholder.svg"} alt="Pasted" className="max-w-full border rounded" />
+          <button
+            onClick={() => {
+              setImage(null)
+              setStatus('Ready')
+            }}
+            className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
+          >
+            Clear
+          </button>
+        </div>
+      )}
     </div>
   )
 }

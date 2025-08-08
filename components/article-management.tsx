@@ -1,220 +1,162 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Edit, Trash2, Search, FileText, ImageIcon, Calendar, User } from "lucide-react"
-import type { Category, Article } from "../types/knowledge-base"
+import { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Plus, Search, Edit, Trash2, Eye, Filter } from 'lucide-react'
+import type { Article, Category, User } from '@/types/knowledge-base'
+import { formatDate, extractCleanText } from '@/utils/article-utils'
 
 interface ArticleManagementProps {
+  articles: Article[]
   categories: Category[]
-  onEditArticle: (article: Article) => void
-  onDeleteArticle: (articleId: string) => void
+  currentUser: User
+  onArticlesChange: (articles: Article[]) => void
+  onAuditLog: (action: string, details: string, targetId?: string) => void
 }
 
-export function ArticleManagement({ categories, onEditArticle, onDeleteArticle }: ArticleManagementProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+export function ArticleManagement({ 
+  articles, 
+  categories, 
+  currentUser, 
+  onArticlesChange, 
+  onAuditLog 
+}: ArticleManagementProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
-  // Get all articles from all categories
-  const getAllArticles = (): Array<Article & { categoryName: string; subcategoryName?: string }> => {
-    const articles: Array<Article & { categoryName: string; subcategoryName?: string }> = []
+  const filteredArticles = articles.filter(article => {
+    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         article.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         extractCleanText(article.content).toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === 'all' || article.status === statusFilter
+    const matchesCategory = categoryFilter === 'all' || article.categoryId === categoryFilter
+    
+    return matchesSearch && matchesStatus && matchesCategory
+  })
 
-    categories.forEach((category) => {
-      // Add articles from main category
-      category.articles.forEach((article) => {
-        articles.push({
-          ...article,
-          categoryName: category.name,
-        })
-      })
-
-      // Add articles from subcategories
-      category.subcategories.forEach((subcategory) => {
-        subcategory.articles.forEach((article) => {
-          articles.push({
-            ...article,
-            categoryName: category.name,
-            subcategoryName: subcategory.name,
-          })
-        })
-      })
-    })
-
-    return articles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-  }
-
-  // Filter articles based on search and category
-  const getFilteredArticles = () => {
-    let articles = getAllArticles()
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      const category = categories.find((cat) => cat.id === selectedCategory)
-      if (category) {
-        articles = articles.filter((article) => article.categoryId === selectedCategory)
-      }
+  const handleDeleteArticle = (articleId: string) => {
+    const article = articles.find(a => a.id === articleId)
+    if (article && window.confirm(`Are you sure you want to delete "${article.title}"?`)) {
+      const updatedArticles = articles.filter(a => a.id !== articleId)
+      onArticlesChange(updatedArticles)
+      onAuditLog('delete_article', `Deleted article "${article.title}"`, articleId)
     }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      articles = articles.filter(
-        (article) =>
-          article.title.toLowerCase().includes(query) ||
-          article.content.toLowerCase().includes(query) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-          article.categoryName.toLowerCase().includes(query) ||
-          (article.subcategoryName && article.subcategoryName.toLowerCase().includes(query)),
-      )
-    }
-
-    return articles
   }
 
-  const filteredArticles = getFilteredArticles()
-
-  // Get content preview (remove HTML and limit length)
-  const getContentPreview = (content: string) => {
-    // Remove HTML tags and data URLs
-    const textContent = content
-      .replace(/<[^>]*>/g, "")
-      .replace(/data:image[^"'\s]+/g, "[IMAGE]")
-      .trim()
-
-    return textContent.length > 150 ? textContent.substring(0, 150) + "..." : textContent
-  }
-
-  // Check if content has images
-  const hasImages = (content: string) => {
-    return content.includes("data:image") || /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)/i.test(content)
-  }
-
-  const handleDeleteClick = (article: Article) => {
-    if (window.confirm(`Are you sure you want to delete "${article.title}"? This action cannot be undone.`)) {
-      onDeleteArticle(article.id)
-    }
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId)
+    return category?.name || 'Unknown Category'
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <FileText className="h-5 w-5" />
-          <span>Article Management</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search and Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search articles by title, content, tags..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Article Management</h2>
+          <p className="text-gray-600">Manage all articles in the knowledge base</p>
+        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          New Article
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Articles ({filteredArticles.length})</CardTitle>
+          <CardDescription>
+            Search and filter articles
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search articles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
 
-        {/* Results Summary */}
-        <div className="text-sm text-gray-600">
-          Showing {filteredArticles.length} of {getAllArticles().length} articles
-        </div>
-
-        {/* Articles List */}
-        {filteredArticles.length === 0 ? (
-          <Alert>
-            <AlertDescription>
-              {searchQuery || selectedCategory !== "all"
-                ? "No articles match your search criteria."
-                : "No articles found. Create your first article using the Add Article tab."}
-            </AlertDescription>
-          </Alert>
-        ) : (
           <div className="space-y-4">
             {filteredArticles.map((article) => (
               <Card key={article.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                      {/* Title and Images Indicator */}
-                      <div className="flex items-center space-x-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold text-lg">{article.title}</h3>
-                        {hasImages(article.content) && (
-                          <ImageIcon className="h-4 w-4 text-gray-400" title="Contains images" />
+                        <Badge variant={article.status === 'published' ? 'default' : 'secondary'}>
+                          {article.status}
+                        </Badge>
+                        {article.featured && (
+                          <Badge variant="outline">Featured</Badge>
                         )}
                       </div>
-
-                      {/* Content Preview */}
-                      <p className="text-gray-600 text-sm line-clamp-2">{getContentPreview(article.content)}</p>
-
-                      {/* Metadata */}
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>Updated: {article.updatedAt.toLocaleDateString()}</span>
-                        </div>
-                        {article.createdBy && (
-                          <div className="flex items-center space-x-1">
-                            <User className="h-3 w-3" />
-                            <span>by {article.createdBy}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Categories and Tags */}
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="secondary">{article.categoryName}</Badge>
-                        {article.subcategoryName && <Badge variant="outline">{article.subcategoryName}</Badge>}
-                        {article.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {article.tags.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{article.tags.length - 3} more
-                          </Badge>
-                        )}
+                      
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        {article.excerpt || extractCleanText(article.content).substring(0, 150) + '...'}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>By {article.author}</span>
+                        <span>•</span>
+                        <span>{getCategoryName(article.categoryId)}</span>
+                        <span>•</span>
+                        <span>{formatDate(article.updatedAt)}</span>
+                        <span>•</span>
+                        <span>{article.viewCount} views</span>
                       </div>
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEditArticle(article)}
-                        className="flex items-center space-x-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                        <span>Edit</span>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
                         size="sm"
-                        onClick={() => handleDeleteClick(article)}
-                        className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                        onClick={() => handleDeleteArticle(article.id)}
+                        className="text-red-600 hover:text-red-700"
                       >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Delete</span>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -222,8 +164,18 @@ export function ArticleManagement({ categories, onEditArticle, onDeleteArticle }
               </Card>
             ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {filteredArticles.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No articles found</h3>
+              <p className="text-gray-500">
+                Try adjusting your search or filter criteria.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }

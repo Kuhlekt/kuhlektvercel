@@ -6,7 +6,7 @@ import { useState, useRef, useCallback, useEffect } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { ImageIcon, Upload, AlertCircle, CheckCircle, X } from "lucide-react"
+import { ImageIcon, Upload, AlertCircle, CheckCircle, X, Bold, Italic, List, Link, Image } from 'lucide-react'
 
 export interface ImageData {
   id: string
@@ -40,6 +40,7 @@ export function EnhancedTextarea({
   const [images, setImages] = useState<ImageData[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showPreview, setShowPreview] = useState(false)
 
   // Notify parent when images change
   useEffect(() => {
@@ -77,6 +78,30 @@ export function EnhancedTextarea({
     },
     [value, onChange],
   )
+
+  const insertText = useCallback((before: string, after: string = '') => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = value.substring(start, end)
+    
+    const newText = value.substring(0, start) + before + selectedText + after + value.substring(end)
+    onChange(newText)
+
+    // Restore cursor position
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length)
+    }, 0)
+  }, [value, onChange])
+
+  const handleBold = () => insertText('<strong>', '</strong>')
+  const handleItalic = () => insertText('<em>', '</em>')
+  const handleList = () => insertText('<ul>\n<li>', '</li>\n</ul>')
+  const handleLink = () => insertText('<a href="URL">', '</a>')
+  const handleImage = () => insertText('<img src="URL" alt="', '" />')
 
   // Handle paste events
   const handlePaste = useCallback(
@@ -285,6 +310,32 @@ export function EnhancedTextarea({
         )}
       </div>
 
+      <div className="flex flex-wrap gap-2 p-2 border rounded-t bg-gray-50">
+        <Button type="button" variant="outline" size="sm" onClick={handleBold}>
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleItalic}>
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleList}>
+          <List className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleLink}>
+          <Link className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={handleImage}>
+          <Image className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          {showPreview ? 'Edit' : 'Preview'}
+        </Button>
+      </div>
+
       <Alert>
         <ImageIcon className="h-4 w-4" />
         <AlertDescription>
@@ -334,16 +385,22 @@ export function EnhancedTextarea({
       )}
 
       <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onPaste={handlePaste}
-          placeholder={placeholder}
-          rows={rows}
-          disabled={disabled || isProcessing}
-          className={`${className} ${isProcessing ? "opacity-50" : ""}`}
-        />
+        {showPreview ? (
+          <div className="min-h-[200px] p-3 border rounded-b bg-white">
+            <div dangerouslySetInnerHTML={{ __html: value }} />
+          </div>
+        ) : (
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onPaste={handlePaste}
+            placeholder={placeholder}
+            rows={rows}
+            disabled={disabled || isProcessing}
+            className={`${className} ${isProcessing ? "opacity-50" : ""}`}
+          />
+        )}
 
         {isProcessing && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded">

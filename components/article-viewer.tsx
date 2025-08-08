@@ -1,104 +1,80 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Edit, Trash2, ArrowLeft, Calendar, User, Tag } from 'lucide-react'
-import type { Article, Category } from "../types/knowledge-base"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Clock, User, Eye, Calendar } from 'lucide-react'
+import type { Category, Article } from '@/types/knowledge-base'
+import { extractCleanText, formatDate, getArticleReadTime } from '@/utils/article-utils'
 
 interface ArticleViewerProps {
   article: Article
   categories: Category[]
-  onEdit?: (article: Article) => void
-  onDelete?: (articleId: string) => void
   onBack: () => void
 }
 
-export function ArticleViewer({ 
-  article, 
-  categories, 
-  onEdit, 
-  onDelete, 
-  onBack 
-}: ArticleViewerProps) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+export function ArticleViewer({ article, categories, onBack }: ArticleViewerProps) {
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId)
+    return category?.name || 'Unknown Category'
+  }
 
-  const category = categories.find(cat => cat.id === article.categoryId)
-  const subcategory = category?.subcategories.find(sub => sub.id === article.subcategoryId)
-
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete(article.id)
-      setShowDeleteDialog(false)
-    }
+  const getSubcategoryName = (categoryId: string, subcategoryId?: string) => {
+    if (!subcategoryId) return null
+    const category = categories.find(c => c.id === categoryId)
+    const subcategory = category?.subcategories.find(s => s.id === subcategoryId)
+    return subcategory?.name || null
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Articles</span>
-        </Button>
+      <Button variant="ghost" onClick={onBack} className="mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Articles
+      </Button>
 
-        {(onEdit || onDelete) && (
-          <div className="flex space-x-2">
-            {onEdit && (
-              <Button variant="outline" onClick={() => onEdit(article)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {onDelete && (
-              <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Article Content */}
       <Card>
         <CardHeader>
           <div className="space-y-4">
-            <CardTitle className="text-2xl">{article.title}</CardTitle>
+            <CardTitle className="text-3xl font-bold leading-tight">
+              {article.title}
+            </CardTitle>
             
-            {/* Metadata */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {article.createdBy && (
-                <div className="flex items-center space-x-1">
-                  <User className="h-4 w-4" />
-                  <span>By {article.createdBy}</span>
-                </div>
-              )}
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>Created {article.createdAt.toLocaleDateString()}</span>
+            <div className="flex items-center space-x-6 text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                <span>By {article.author}</span>
               </div>
-              {article.updatedAt.getTime() !== article.createdAt.getTime() && (
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Updated {article.updatedAt.toLocaleDateString()}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>Updated {formatDate(article.updatedAt)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Eye className="h-4 w-4" />
+                <span>{article.viewCount} views</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                <span>{getArticleReadTime(article.content)} min read</span>
+              </div>
             </div>
 
-            {/* Categories and Tags */}
             <div className="flex flex-wrap gap-2">
-              {category && (
-                <Badge variant="secondary">{category.name}</Badge>
+              {article.featured && (
+                <Badge variant="default">
+                  Featured
+                </Badge>
               )}
-              {subcategory && (
-                <Badge variant="outline">{subcategory.name}</Badge>
+              <Badge variant="outline">
+                {getCategoryName(article.categoryId)}
+              </Badge>
+              {article.subcategoryId && (
+                <Badge variant="outline" className="text-xs">
+                  {getSubcategoryName(article.categoryId, article.subcategoryId)}
+                </Badge>
               )}
-              {article.tags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  <Tag className="h-3 w-3 mr-1" />
+              {article.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">
                   {tag}
                 </Badge>
               ))}
@@ -107,32 +83,13 @@ export function ArticleViewer({
         </CardHeader>
 
         <CardContent>
-          <div 
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: article.content }}
-          />
+          <div className="prose max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-base">
+              {extractCleanText(article.content)}
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Article</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{article.title}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

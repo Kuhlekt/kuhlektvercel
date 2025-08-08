@@ -2,12 +2,13 @@ export interface Article {
   id: string
   title: string
   content: string
+  author: string
   categoryId: string
   subcategoryId?: string
   tags: string[]
   createdAt: Date
   updatedAt: Date
-  createdBy: string
+  pageViews?: number
 }
 
 export interface Subcategory {
@@ -19,30 +20,25 @@ export interface Subcategory {
 export interface Category {
   id: string
   name: string
-  subcategories: Subcategory[]
   articles: Article[]
-  expanded: boolean
-}
-
-export interface KnowledgeBase {
-  categories: Category[]
+  subcategories: Subcategory[]
 }
 
 export interface User {
   id: string
   username: string
   password: string
-  role: "admin" | "editor" | "viewer"
-  createdAt: Date
+  role: 'admin' | 'editor' | 'viewer'
+  email: string
   lastLogin?: Date
 }
 
 export interface AuditLogEntry {
   id: string
-  action: "article_created" | "article_deleted" | "article_updated"
-  articleId: string
-  articleTitle: string
-  categoryName: string
+  action: string
+  articleId?: string
+  articleTitle?: string
+  categoryName?: string
   subcategoryName?: string
   performedBy: string
   timestamp: Date

@@ -1,28 +1,24 @@
-import type { User } from "../types/knowledge-base"
+import type { User } from '@/types/knowledge-base'
 
 export const initialUsers: User[] = [
   {
-    id: "admin-001",
-    username: "admin",
-    password: "admin123",
-    role: "admin",
-    createdAt: new Date("2024-01-01T00:00:00Z"),
-    lastLogin: undefined
+    id: '1',
+    username: 'admin',
+    password: 'admin123',
+    name: 'Administrator',
+    email: 'admin@kuhlekt.com',
+    role: 'admin',
+    createdAt: new Date('2024-01-01'),
+    lastLogin: new Date('2024-01-25')
   },
   {
-    id: "editor-001", 
-    username: "editor",
-    password: "editor123",
-    role: "editor",
-    createdAt: new Date("2024-01-01T00:00:00Z"),
-    lastLogin: undefined
-  },
-  {
-    id: "viewer-001",
-    username: "viewer", 
-    password: "viewer123",
-    role: "viewer",
-    createdAt: new Date("2024-01-01T00:00:00Z"),
-    lastLogin: undefined
+    id: '2',
+    username: 'editor',
+    password: 'editor123',
+    name: 'Content Editor',
+    email: 'editor@kuhlekt.com',
+    role: 'editor',
+    createdAt: new Date('2024-01-02'),
+    lastLogin: new Date('2024-01-24')
   }
 ]

@@ -1,118 +1,92 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react'
 
 export function PreviewDebug() {
-  const [content, setContent] = useState("")
-  const [showPreview, setShowPreview] = useState(false)
+  const [content, setContent] = useState('')
+  const [logs, setLogs] = useState<string[]>([])
 
-  // Simulate the exact same process as the main form
-  const mockImages = [
-    {
-      id: "test123",
-      placeholder: "[IMAGE:test123:image.png]",
-      name: "image.png",
-      dataUrl:
-        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwN2ZmZiIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VEVTVDwvdGV4dD4KPC9zdmc+",
-    },
-  ]
-
-  const getPreviewContent = () => {
-    if (!content) return ""
-
-    let processedContent = content
-
-    console.log("=== PREVIEW DEBUG TEST ===")
-    console.log("Original content:", content)
-
-    // Replace placeholders with actual images (same logic as main form)
-    mockImages.forEach((image) => {
-      if (content.includes(image.placeholder)) {
-        console.log(`✅ Replacing ${image.placeholder}`)
-        const imgTag = `<img src="${image.dataUrl}" alt="${image.name}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-        processedContent = processedContent.replace(image.placeholder, imgTag)
-        console.log("Generated img tag:", imgTag)
-      }
-    })
-
-    console.log("Final processed content:", processedContent)
-    console.log("=== END DEBUG ===")
-
-    return processedContent.replace(/\n/g, "<br />")
+  const addLog = (message: string) => {
+    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`])
   }
 
-  const addPlaceholder = () => {
-    setContent((prev) => prev + "\n\nHere's an image: [IMAGE:test123:image.png]\n\n")
+  const testContent = `
+    <h1>Test Article</h1>
+    <p>This is a test paragraph with <strong>bold</strong> and <em>italic</em> text.</p>
+    <ul>
+      <li>Item 1</li>
+      <li>Item 2</li>
+    </ul>
+    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwNzNlNiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+PC9zdmc+" alt="Test image" />
+  `
+
+  const handleTest = () => {
+    addLog('Testing HTML content rendering')
+    setContent(testContent)
+    addLog('Content set successfully')
+  }
+
+  const handleClear = () => {
+    setContent('')
+    setLogs([])
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Preview Debug Test</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Input Section */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Content:</label>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full p-3 border rounded-lg"
-                  rows={8}
-                  placeholder="Type some content here..."
-                />
-              </div>
+    <div className="p-4 max-w-6xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Preview Debug</h1>
+      
+      <div className="mb-4 space-x-2">
+        <button
+          onClick={handleTest}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Test HTML Rendering
+        </button>
+        <button
+          onClick={handleClear}
+          className="px-4 py-2 bg-red-500 text-white rounded"
+        >
+          Clear
+        </button>
+      </div>
 
-              <div className="flex space-x-2">
-                <Button onClick={addPlaceholder}>Add Test Image</Button>
-                <Button onClick={() => setShowPreview(!showPreview)}>
-                  {showPreview ? "Hide Preview" : "Show Preview"}
-                </Button>
-              </div>
-
-              <div className="text-xs text-gray-600">
-                <p>Mock image placeholder: [IMAGE:test123:image.png]</p>
-                <p>This should render as a blue square with "TEST" text</p>
-              </div>
-            </div>
-
-            {/* Preview Section */}
-            {showPreview && (
-              <div className="border-l pl-6">
-                <h3 className="text-lg font-semibold mb-4">Preview</h3>
-
-                <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                  <details>
-                    <summary className="cursor-pointer">Show processed HTML</summary>
-                    <pre className="bg-gray-200 p-2 mt-2 rounded overflow-auto max-h-32">{getPreviewContent()}</pre>
-                  </details>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  {content ? (
-                    <div
-                      className="prose max-w-none"
-                      style={{
-                        lineHeight: "1.6",
-                        fontSize: "14px",
-                        color: "#374151",
-                      }}
-                      dangerouslySetInnerHTML={{ __html: getPreviewContent() }}
-                    />
-                  ) : (
-                    <div className="text-gray-500 italic">Content preview will appear here...</div>
-                  )}
-                </div>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <h2 className="font-bold mb-2">HTML Source:</h2>
+          <textarea
+            className="w-full h-64 p-2 border rounded font-mono text-xs"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="HTML content will appear here..."
+          />
+        </div>
+        
+        <div>
+          <h2 className="font-bold mb-2">Rendered Preview:</h2>
+          <div className="w-full h-64 p-2 border rounded overflow-auto bg-white">
+            {content ? (
+              <div dangerouslySetInnerHTML={{ __html: content }} />
+            ) : (
+              <p className="text-gray-500 italic">No content to preview</p>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h2 className="font-bold mb-2">Debug Log:</h2>
+        <div className="bg-gray-100 p-2 rounded max-h-32 overflow-y-auto">
+          {logs.length === 0 ? (
+            <p className="text-gray-500 italic">No logs yet...</p>
+          ) : (
+            logs.map((log, index) => (
+              <div key={index} className="text-sm font-mono">
+                {log}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }

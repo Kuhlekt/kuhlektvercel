@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
 export function SimplePreviewTest() {
-  const [content, setContent] = useState("Test content with placeholder: [IMAGE:123:test.png]")
+  const [content, setContent] = useState(`
+    <h1>Sample Article</h1>
+    <p>This is a paragraph with <strong>bold text</strong> and <em>italic text</em>.</p>
+    <ul>
+      <li>List item 1</li>
+      <li>List item 2</li>
+    </ul>
+    <img src="https://via.placeholder.com/300x200" alt="Sample image" />
+  `)
   const [showPreview, setShowPreview] = useState(false)
 
   // Mock image data

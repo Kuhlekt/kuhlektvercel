@@ -6,30 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function extractCleanText(html: string): string {
-  // Remove HTML tags
   let text = html.replace(/<[^>]*>/g, ' ')
-  
-  // Remove extra whitespace and normalize
   text = text.replace(/\s+/g, ' ').trim()
-  
-  // Remove common HTML entities
   text = text.replace(/&nbsp;/g, ' ')
   text = text.replace(/&amp;/g, '&')
   text = text.replace(/&lt;/g, '<')
   text = text.replace(/&gt;/g, '>')
   text = text.replace(/&quot;/g, '"')
   text = text.replace(/&#39;/g, "'")
-  
   return text
 }
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
-  
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
@@ -38,7 +30,6 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
-  
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)

@@ -1,223 +1,115 @@
-"use client"
+'use client'
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Tag, Camera, FileText } from 'lucide-react'
-import type { Article, Category } from "../types/knowledge-base"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Eye, Calendar, User, Clock } from 'lucide-react'
+import type { Article, Category } from '@/types/knowledge-base'
+import { formatDate, extractCleanText, getArticleReadTime } from '@/utils/article-utils'
 
 interface SelectedArticlesProps {
+  articles: Article[]
   categories: Category[]
-  selectedCategories: Set<string>
-  selectedSubcategories: Set<string>
+  selectedCategoryId: string
   onArticleSelect: (article: Article) => void
 }
 
-// Function to extract clean text content from HTML
-function extractCleanText(html: string): string {
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, ' ')
-
-  // Remove CSS styles and parameters
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, '')
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, '')
-
-  // Remove data URLs and image URLs
-  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, '')
-  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/gi, '')
-
-  // Remove extra whitespace and normalize
-  text = text.replace(/\s+/g, ' ').trim()
-
-  // Split into sentences and filter meaningful ones
-  const sentences = text.split(/[.!?]+/).filter(sentence => {
-    const cleaned = sentence.trim()
-    return cleaned.length > 20 && 
-           !cleaned.match(/^(width|height|margin|padding|color|font|background)/i) &&
-           !cleaned.match(/^\d+px/) &&
-           !cleaned.match(/^(rgb|rgba|hex|#)/i)
-  })
-
-  // Return first few meaningful sentences
-  return sentences.slice(0, 2).join('. ').trim()
-}
-
-// Function to check if content contains images
-function hasImages(content: string): boolean {
-  return content.includes('<img') || 
-         content.includes('data:image/') || 
-         content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/i) !== null
-}
-
 export function SelectedArticles({ 
+  articles, 
   categories, 
-  selectedCategories, 
-  selectedSubcategories, 
-  onArticleSelect 
+  selectedCategoryId,
+  onArticleSelect
 }: SelectedArticlesProps) {
-  // Get articles based on selected categories and subcategories
-  const getFilteredArticles = (): Article[] => {
-    const articles: Article[] = []
+  const category = categories.find(c => c.id === selectedCategoryId)
+  const categoryName = category?.name || 'Unknown Category'
 
-    categories.forEach((category) => {
-      // If category is selected, include its articles
-      if (selectedCategories.has(category.id)) {
-        articles.push(...category.articles)
-      }
+  // Ensure articles is always an array
+  const safeArticles = Array.isArray(articles) ? articles : []
 
-      // Check subcategories
-      category.subcategories.forEach((subcategory) => {
-        if (selectedSubcategories.has(subcategory.id)) {
-          articles.push(...subcategory.articles)
-        }
-      })
-    })
-
-    // If no specific selection, show recent articles from all categories
-    if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
-      categories.forEach((category) => {
-        articles.push(...category.articles)
-        category.subcategories.forEach((subcategory) => {
-          articles.push(...subcategory.articles)
-        })
-      })
-    }
-
-    // Sort by updated date (most recent first) and remove duplicates
-    const uniqueArticles = articles.filter((article, index, self) => 
-      index === self.findIndex(a => a.id === article.id)
-    )
-
-    return uniqueArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-  }
-
-  const getCategoryInfo = (categoryId: string, subcategoryId?: string) => {
-    const category = categories.find(c => c.id === categoryId)
-    if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
-    
-    if (subcategoryId) {
-      const subcategory = category.subcategories.find(s => s.id === subcategoryId)
-      return {
-        categoryName: category.name,
-        subcategoryName: subcategory?.name || "Unknown"
-      }
-    }
-    
-    return { categoryName: category.name, subcategoryName: undefined }
-  }
-
-  const filteredArticles = getFilteredArticles()
-
-  const getHeaderText = () => {
-    if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
-      return "Recent Articles"
-    }
-    
-    const selectedCount = selectedCategories.size + selectedSubcategories.size
-    return `Filtered Articles (${selectedCount} selection${selectedCount !== 1 ? 's' : ''})`
-  }
-
-  if (filteredArticles.length === 0) {
+  if (safeArticles.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <div className="text-gray-500">
-          <p className="text-lg mb-2">No articles found</p>
-          <p className="text-sm">
-            {selectedCategories.size > 0 || selectedSubcategories.size > 0
-              ? "Try selecting different categories or clear your selection"
-              : "Start by adding some articles to your knowledge base"
-            }
+      <Card>
+        <CardContent className="p-8 text-center">
+          <h3 className="text-lg font-semibold mb-2">No articles found</h3>
+          <p className="text-gray-500">
+            There are no articles in the "{categoryName}" category yet.
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold mb-2">
-          {getHeaderText()}
-        </h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{categoryName}</h2>
         <p className="text-gray-600">
-          Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''}
+          {safeArticles.length} article{safeArticles.length !== 1 ? 's' : ''} in this category
         </p>
       </div>
 
-      <div className="space-y-4">
-        {filteredArticles.map((article) => {
-          const { categoryName, subcategoryName } = getCategoryInfo(
-            article.categoryId,
-            article.subcategoryId
-          )
-          const cleanPreview = extractCleanText(article.content)
-          const containsImages = hasImages(article.content)
-
-          return (
-            <Card 
-              key={article.id} 
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onArticleSelect(article)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">
-                      {article.title}
-                    </CardTitle>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{categoryName}</span>
-                      {subcategoryName && (
-                        <>
-                          <span>•</span>
-                          <span>{subcategoryName}</span>
-                        </>
-                      )}
-                      <span>•</span>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{article.updatedAt.toLocaleDateString()}</span>
-                      </div>
-                      {containsImages && (
-                        <>
-                          <span>•</span>
-                          <div className="flex items-center space-x-1">
-                            <Camera className="h-3 w-3" />
-                            <span>Images</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {cleanPreview && (
-                  <CardDescription className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {cleanPreview}
+      <div className="grid gap-6">
+        {safeArticles.map((article) => (
+          <Card key={article.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-xl mb-2 hover:text-blue-600 cursor-pointer">
+                    {article.title}
+                  </CardTitle>
+                  <CardDescription className="text-base line-clamp-3">
+                    {article.excerpt || extractCleanText(article.content).substring(0, 200) + '...'}
                   </CardDescription>
+                </div>
+                {article.featured && (
+                  <Badge variant="default" className="ml-4">
+                    Featured
+                  </Badge>
                 )}
-                {article.tags.length > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <Tag className="h-3 w-3 text-gray-400" />
-                    <div className="flex flex-wrap gap-1">
-                      {article.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {article.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{article.tags.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              <div className="flex items-center gap-6 text-sm text-gray-500 mb-4">
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  <span>{article.author}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>{formatDate(article.updatedAt)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  <span>{article.viewCount} views</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  <span>{getArticleReadTime(article.content)} min read</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {article.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {article.tags.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{article.tags.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+                
+                <Button onClick={() => onArticleSelect(article)}>
+                  Read Article
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )

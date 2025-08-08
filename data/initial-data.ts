@@ -1,472 +1,341 @@
-import type { Category } from "../types/knowledge-base"
+import type { Article, Category } from '@/types/knowledge-base'
 
-export const initialCategories: Category[] = [
+const sampleArticles: Article[] = [
   {
-    id: "kuhlekt",
-    name: "Kuhlekt",
-    expanded: true,
+    id: '1',
+    title: 'Getting Started with React Hooks',
+    content: `<h2>Introduction to React Hooks</h2>
+    <p>React Hooks are a powerful feature that allows you to use state and other React features without writing a class component. They were introduced in React 16.8 and have revolutionized how we write React applications.</p>
+    
+    <h3>What are Hooks?</h3>
+    <p>Hooks are functions that let you "hook into" React state and lifecycle features from function components. They allow you to reuse stateful logic between components without changing your component hierarchy.</p>
+    
+    <h3>Basic Hooks</h3>
+    <ul>
+      <li><strong>useState</strong> - Manages local state in functional components</li>
+      <li><strong>useEffect</strong> - Performs side effects in functional components</li>
+      <li><strong>useContext</strong> - Consumes context values</li>
+    </ul>
+    
+    <h3>Example: useState Hook</h3>
+    <pre><code>
+    import React, { useState } from 'react';
+    
+    function Counter() {
+      const [count, setCount] = useState(0);
+      
+      return (
+        <div>
+          <p>You clicked {count} times</p>
+          <button onClick={() => setCount(count + 1)}>
+            Click me
+          </button>
+        </div>
+      );
+    }
+    </code></pre>
+    
+    <p>This example shows how to use the useState hook to manage a simple counter state.</p>`,
+    excerpt: 'Learn the fundamentals of React Hooks and how they can simplify your React components.',
+    author: 'John Doe',
+    categoryId: '1',
+    tags: ['React', 'JavaScript', 'Frontend', 'Hooks'],
+    status: 'published',
+    featured: true,
+    viewCount: 1250,
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-20')
+  },
+  {
+    id: '2',
+    title: 'Advanced TypeScript Patterns',
+    content: `<h2>Advanced TypeScript Patterns</h2>
+    <p>TypeScript offers powerful type system features that can help you write more robust and maintainable code. This article explores some advanced patterns and techniques.</p>
+    
+    <h3>Generic Types</h3>
+    <p>Generics allow you to create reusable components that work with multiple types while maintaining type safety.</p>
+    
+    <pre><code>
+    function identity<T>(arg: T): T {
+      return arg;
+    }
+    
+    let output = identity<string>("myString");
+    </code></pre>
+    
+    <h3>Conditional Types</h3>
+    <p>Conditional types help you create types that depend on a condition, making your type definitions more flexible.</p>
+    
+    <pre><code>
+    type ApiResponse<T> = T extends string 
+      ? { message: T } 
+      : { data: T };
+    </code></pre>
+    
+    <h3>Mapped Types</h3>
+    <p>Mapped types allow you to create new types by transforming properties of existing types.</p>
+    
+    <pre><code>
+    type Readonly<T> = {
+      readonly [P in keyof T]: T[P];
+    };
+    </code></pre>`,
+    excerpt: 'Explore advanced TypeScript patterns including generics, conditional types, and mapped types.',
+    author: 'Jane Smith',
+    categoryId: '1',
+    tags: ['TypeScript', 'JavaScript', 'Types', 'Advanced'],
+    status: 'published',
+    featured: false,
+    viewCount: 890,
+    createdAt: new Date('2024-01-10'),
+    updatedAt: new Date('2024-01-18')
+  },
+  {
+    id: '3',
+    title: 'Building RESTful APIs with Node.js',
+    content: `<h2>Building RESTful APIs with Node.js</h2>
+    <p>REST (Representational State Transfer) is an architectural style for designing networked applications. This guide will show you how to build RESTful APIs using Node.js and Express.</p>
+    
+    <h3>Setting Up Express</h3>
+    <p>First, let's set up a basic Express server:</p>
+    
+    <pre><code>
+    const express = require('express');
+    const app = express();
+    const port = 3000;
+    
+    app.use(express.json());
+    
+    app.listen(port, () => {
+      console.log(\`Server running at http://localhost:\${port}\`);
+    });
+    </code></pre>
+    
+    <h3>Creating Routes</h3>
+    <p>RESTful APIs use HTTP methods to perform different operations:</p>
+    
+    <ul>
+      <li><strong>GET</strong> - Retrieve data</li>
+      <li><strong>POST</strong> - Create new data</li>
+      <li><strong>PUT</strong> - Update existing data</li>
+      <li><strong>DELETE</strong> - Remove data</li>
+    </ul>
+    
+    <h3>Example Routes</h3>
+    <pre><code>
+    // GET all users
+    app.get('/api/users', (req, res) => {
+      res.json(users);
+    });
+    
+    // POST new user
+    app.post('/api/users', (req, res) => {
+      const newUser = req.body;
+      users.push(newUser);
+      res.status(201).json(newUser);
+    });
+    </code></pre>`,
+    excerpt: 'Learn how to create RESTful APIs using Node.js and Express with practical examples.',
+    author: 'Mike Johnson',
+    categoryId: '2',
+    tags: ['Node.js', 'Express', 'API', 'Backend', 'REST'],
+    status: 'published',
+    featured: true,
+    viewCount: 2100,
+    createdAt: new Date('2024-01-05'),
+    updatedAt: new Date('2024-01-15')
+  },
+  {
+    id: '4',
+    title: 'Database Design Best Practices',
+    content: `<h2>Database Design Best Practices</h2>
+    <p>Good database design is crucial for building scalable and maintainable applications. This article covers essential principles and best practices for designing relational databases.</p>
+    
+    <h3>Normalization</h3>
+    <p>Database normalization is the process of organizing data to reduce redundancy and improve data integrity.</p>
+    
+    <h4>First Normal Form (1NF)</h4>
+    <ul>
+      <li>Each column contains atomic values</li>
+      <li>No repeating groups</li>
+      <li>Each row is unique</li>
+    </ul>
+    
+    <h4>Second Normal Form (2NF)</h4>
+    <ul>
+      <li>Must be in 1NF</li>
+      <li>No partial dependencies on composite primary keys</li>
+    </ul>
+    
+    <h4>Third Normal Form (3NF)</h4>
+    <ul>
+      <li>Must be in 2NF</li>
+      <li>No transitive dependencies</li>
+    </ul>
+    
+    <h3>Indexing Strategies</h3>
+    <p>Proper indexing can significantly improve query performance:</p>
+    
+    <ul>
+      <li>Create indexes on frequently queried columns</li>
+      <li>Use composite indexes for multi-column queries</li>
+      <li>Avoid over-indexing as it can slow down writes</li>
+    </ul>
+    
+    <h3>Relationships</h3>
+    <p>Understanding and properly implementing relationships is key:</p>
+    
+    <ul>
+      <li><strong>One-to-One</strong> - Each record relates to exactly one record in another table</li>
+      <li><strong>One-to-Many</strong> - One record can relate to multiple records in another table</li>
+      <li><strong>Many-to-Many</strong> - Multiple records can relate to multiple records (requires junction table)</li>
+    </ul>`,
+    excerpt: 'Essential principles and best practices for designing efficient and scalable relational databases.',
+    author: 'Sarah Wilson',
+    categoryId: '2',
+    tags: ['Database', 'SQL', 'Design', 'Normalization', 'Performance'],
+    status: 'published',
+    featured: false,
+    viewCount: 1680,
+    createdAt: new Date('2024-01-08'),
+    updatedAt: new Date('2024-01-22')
+  },
+  {
+    id: '5',
+    title: 'CSS Grid Layout Guide',
+    content: `<h2>CSS Grid Layout Guide</h2>
+    <p>CSS Grid Layout is a powerful two-dimensional layout system that allows you to create complex layouts with ease. This comprehensive guide covers everything you need to know about CSS Grid.</p>
+    
+    <h3>Basic Grid Setup</h3>
+    <p>To create a grid container, use the display: grid property:</p>
+    
+    <pre><code>
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto;
+      gap: 20px;
+    }
+    </code></pre>
+    
+    <h3>Grid Template Areas</h3>
+    <p>You can define named grid areas for more semantic layouts:</p>
+    
+    <pre><code>
+    .container {
+      display: grid;
+      grid-template-areas: 
+        "header header header"
+        "sidebar main main"
+        "footer footer footer";
+    }
+    
+    .header { grid-area: header; }
+    .sidebar { grid-area: sidebar; }
+    .main { grid-area: main; }
+    .footer { grid-area: footer; }
+    </code></pre>
+    
+    <h3>Responsive Grids</h3>
+    <p>Create responsive layouts using auto-fit and minmax:</p>
+    
+    <pre><code>
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    </code></pre>
+    
+    <h3>Grid Item Placement</h3>
+    <p>Control where items are placed in the grid:</p>
+    
+    <pre><code>
+    .item {
+      grid-column: 1 / 3;
+      grid-row: 2 / 4;
+    }
+    </code></pre>`,
+    excerpt: 'Master CSS Grid Layout with this comprehensive guide covering basic concepts to advanced techniques.',
+    author: 'Alex Chen',
+    categoryId: '3',
+    tags: ['CSS', 'Grid', 'Layout', 'Responsive', 'Frontend'],
+    status: 'published',
+    featured: true,
+    viewCount: 1420,
+    createdAt: new Date('2024-01-12'),
+    updatedAt: new Date('2024-01-25')
+  }
+]
+
+const sampleCategories: Category[] = [
+  {
+    id: '1',
+    name: 'Frontend Development',
+    description: 'Articles about frontend technologies and frameworks',
     articles: [],
     subcategories: [
       {
-        id: "account-menu",
-        name: "Account Menu",
-        articles: [
-          {
-            id: "access-account-menu",
-            title: "How to Access Account Menu",
-            content: `<div class="space-y-4">
-              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop" alt="Account Menu Interface" class="w-full h-48 object-cover rounded-lg mb-4" />
-              
-              <h2 class="text-xl font-semibold">Accessing Your Account Menu</h2>
-              <p>The Account Menu is your central hub for managing all account-related settings and preferences. Here's how to access it:</p>
-              
-              <h3 class="text-lg font-medium">Step 1: Login to Your Dashboard</h3>
-              <p>Navigate to the main dashboard after logging into your Kuhlekt account. The Account Menu icon is located in the top-right corner of the interface.</p>
-              
-              <h3 class="text-lg font-medium">Step 2: Click the Profile Icon</h3>
-              <p>Look for the circular profile icon or your initials in the navigation bar. This will open a dropdown menu with various account options.</p>
-              
-              <h3 class="text-lg font-medium">Available Options</h3>
-              <ul class="list-disc pl-6 space-y-2">
-                <li><strong>Profile Settings:</strong> Update your personal information and preferences</li>
-                <li><strong>Security:</strong> Manage passwords and two-factor authentication</li>
-                <li><strong>Billing:</strong> View subscription details and payment methods</li>
-                <li><strong>Notifications:</strong> Configure email and system notifications</li>
-                <li><strong>API Keys:</strong> Generate and manage API access tokens</li>
-              </ul>
-              
-              <div class="bg-blue-50 p-4 rounded-lg">
-                <p class="text-blue-800"><strong>Pro Tip:</strong> You can also use the keyboard shortcut Ctrl+Shift+A (Cmd+Shift+A on Mac) to quickly access the Account Menu from anywhere in the application.</p>
-              </div>
-            </div>`,
-            categoryId: "kuhlekt",
-            subcategoryId: "account-menu",
-            tags: ["account", "menu", "navigation", "profile"],
-            createdAt: "2024-01-15T10:00:00Z",
-            updatedAt: "2024-01-15T10:00:00Z",
-            createdBy: "admin"
-          },
-          {
-            id: "credit-monitoring-setup",
-            title: "Setting Up Credit Monitoring",
-            content: `<div class="space-y-4">
-              <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop" alt="Credit Monitoring Dashboard" class="w-full h-48 object-cover rounded-lg mb-4" />
-              
-              <h2 class="text-xl font-semibold">Credit Monitoring Setup Guide</h2>
-              <p>Kuhlekt's credit monitoring feature helps you track changes to your credit profile in real-time. Follow these steps to enable comprehensive monitoring:</p>
-              
-              <h3 class="text-lg font-medium">Initial Setup</h3>
-              <ol class="list-decimal pl-6 space-y-2">
-                <li>Navigate to the Account Menu and select "Credit Monitoring"</li>
-                <li>Click "Enable Monitoring" to begin the setup process</li>
-                <li>Verify your identity using the secure verification system</li>
-                <li>Select your monitoring preferences and alert settings</li>
-              </ol>
-              
-              <h3 class="text-lg font-medium">Monitoring Features</h3>
-              <ul class="list-disc pl-6 space-y-2">
-                <li><strong>Real-time Alerts:</strong> Instant notifications for credit changes</li>
-                <li><strong>Score Tracking:</strong> Monthly credit score updates from all three bureaus</li>
-                <li><strong>Identity Protection:</strong> Dark web monitoring for personal information</li>
-                <li><strong>Account Monitoring:</strong> Track new accounts opened in your name</li>
-                <li><strong>Inquiry Alerts:</strong> Notifications when someone checks your credit</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Alert Configuration</h3>
-              <p>Customize your alert preferences to receive notifications via:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Email notifications (recommended)</li>
-                <li>SMS text messages</li>
-                <li>Push notifications through the mobile app</li>
-                <li>In-app dashboard alerts</li>
-              </ul>
-              
-              <div class="bg-green-50 p-4 rounded-lg">
-                <p class="text-green-800"><strong>Security Note:</strong> All credit monitoring data is encrypted and stored securely. Kuhlekt never stores your full SSN or sensitive financial information on our servers.</p>
-              </div>
-            </div>`,
-            categoryId: "kuhlekt",
-            subcategoryId: "account-menu",
-            tags: ["credit", "monitoring", "alerts", "security"],
-            createdAt: "2024-01-16T14:30:00Z",
-            updatedAt: "2024-01-16T14:30:00Z",
-            createdBy: "admin"
-          },
-          {
-            id: "understanding-credit-report",
-            title: "Understanding Your Credit Report",
-            content: `<div class="space-y-4">
-              <img src="https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=800&h=400&fit=crop" alt="Credit Report Analysis" class="w-full h-48 object-cover rounded-lg mb-4" />
-              
-              <h2 class="text-xl font-semibold">Decoding Your Credit Report</h2>
-              <p>Your credit report is a detailed record of your credit history. Understanding each section helps you make informed financial decisions and identify areas for improvement.</p>
-              
-              <h3 class="text-lg font-medium">Personal Information Section</h3>
-              <p>This section contains your identifying information:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Full name and any name variations</li>
-                <li>Current and previous addresses</li>
-                <li>Social Security number</li>
-                <li>Date of birth</li>
-                <li>Employment information</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Account Information</h3>
-              <p>Details about your credit accounts, including:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Account Type:</strong> Credit cards, loans, mortgages</li>
-                <li><strong>Account Status:</strong> Open, closed, paid off</li>
-                <li><strong>Credit Limit:</strong> Maximum amount you can borrow</li>
-                <li><strong>Balance:</strong> Current amount owed</li>
-                <li><strong>Payment History:</strong> Record of on-time and late payments</li>
-                <li><strong>Date Opened:</strong> When the account was established</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Payment History</h3>
-              <p>This is the most important factor in your credit score (35% of FICO score). It shows:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>On-time payment records</li>
-                <li>Late payments (30, 60, 90+ days)</li>
-                <li>Accounts sent to collections</li>
-                <li>Bankruptcies, foreclosures, or liens</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Credit Inquiries</h3>
-              <p>Two types of inquiries appear on your report:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Hard Inquiries:</strong> When you apply for credit (affects your score)</li>
-                <li><strong>Soft Inquiries:</strong> Background checks or pre-approved offers (no score impact)</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Public Records</h3>
-              <p>Legal matters that affect your creditworthiness:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Bankruptcies</li>
-                <li>Tax liens</li>
-                <li>Civil judgments</li>
-                <li>Foreclosures</li>
-              </ul>
-              
-              <div class="bg-yellow-50 p-4 rounded-lg">
-                <p class="text-yellow-800"><strong>Important:</strong> Review your credit report regularly for errors or fraudulent activity. You're entitled to one free credit report annually from each bureau through annualcreditreport.com.</p>
-              </div>
-              
-              <h3 class="text-lg font-medium">Improving Your Credit Report</h3>
-              <ol class="list-decimal pl-6 space-y-2">
-                <li>Pay all bills on time, every time</li>
-                <li>Keep credit utilization below 30% (ideally under 10%)</li>
-                <li>Don't close old credit accounts</li>
-                <li>Limit new credit applications</li>
-                <li>Dispute any errors you find</li>
-                <li>Consider becoming an authorized user on someone else's account</li>
-              </ol>
-            </div>`,
-            categoryId: "kuhlekt",
-            subcategoryId: "account-menu",
-            tags: ["credit report", "credit score", "financial", "analysis"],
-            createdAt: "2024-01-17T09:15:00Z",
-            updatedAt: "2024-01-17T09:15:00Z",
-            createdBy: "admin"
-          }
-        ]
+        id: '1-1',
+        name: 'React',
+        description: 'React framework and ecosystem',
+        articles: []
       },
       {
-        id: "batch-jobs",
-        name: "Batch Jobs",
-        articles: [
-          {
-            id: "batch-job-processing",
-            title: "Understanding Batch Job Processing",
-            content: `<div class="space-y-4">
-              <img src="https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=800&h=400&fit=crop" alt="Data Processing Center" class="w-full h-48 object-cover rounded-lg mb-4" />
-              
-              <h2 class="text-xl font-semibold">Batch Job Processing in Kuhlekt</h2>
-              <p>Batch jobs are automated processes that handle large volumes of data efficiently. Understanding how they work helps you optimize your data processing workflows.</p>
-              
-              <h3 class="text-lg font-medium">What are Batch Jobs?</h3>
-              <p>Batch jobs are scheduled processes that execute without user interaction, typically during off-peak hours. They're designed to:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Process large datasets efficiently</li>
-                <li>Perform routine maintenance tasks</li>
-                <li>Generate reports and analytics</li>
-                <li>Synchronize data between systems</li>
-                <li>Execute data transformations</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Types of Batch Jobs</h3>
-              
-              <h4 class="font-medium">1. Data Import Jobs</h4>
-              <p>These jobs import data from external sources:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Credit bureau data updates</li>
-                <li>Bank transaction imports</li>
-                <li>Third-party API data synchronization</li>
-                <li>File-based data ingestion</li>
-              </ul>
-              
-              <h4 class="font-medium">2. Processing Jobs</h4>
-              <p>Transform and analyze imported data:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Credit score calculations</li>
-                <li>Risk assessment algorithms</li>
-                <li>Data validation and cleansing</li>
-                <li>Duplicate detection and merging</li>
-              </ul>
-              
-              <h4 class="font-medium">3. Report Generation Jobs</h4>
-              <p>Create scheduled reports and analytics:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Monthly credit reports</li>
-                <li>Compliance reports</li>
-                <li>Performance dashboards</li>
-                <li>Customer statements</li>
-              </ul>
-              
-              <h4 class="font-medium">4. Maintenance Jobs</h4>
-              <p>Keep the system running smoothly:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Database optimization</li>
-                <li>Log file cleanup</li>
-                <li>Cache refresh</li>
-                <li>Backup operations</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Job Scheduling</h3>
-              <p>Batch jobs can be scheduled in various ways:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Time-based:</strong> Daily, weekly, monthly schedules</li>
-                <li><strong>Event-driven:</strong> Triggered by specific events</li>
-                <li><strong>Dependency-based:</strong> Run after other jobs complete</li>
-                <li><strong>Manual:</strong> Started by administrators when needed</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Monitoring Batch Jobs</h3>
-              <p>The Kuhlekt dashboard provides comprehensive job monitoring:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Real-time job status updates</li>
-                <li>Execution history and logs</li>
-                <li>Performance metrics and timing</li>
-                <li>Error notifications and alerts</li>
-                <li>Resource utilization tracking</li>
-              </ul>
-              
-              <div class="bg-blue-50 p-4 rounded-lg">
-                <p class="text-blue-800"><strong>Best Practice:</strong> Monitor batch job performance regularly and set up alerts for failed jobs. This ensures data processing continues smoothly and issues are addressed quickly.</p>
-              </div>
-              
-              <h3 class="text-lg font-medium">Troubleshooting Common Issues</h3>
-              
-              <h4 class="font-medium">Job Failures</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Check error logs for specific failure reasons</li>
-                <li>Verify data source availability</li>
-                <li>Ensure sufficient system resources</li>
-                <li>Validate input data format and quality</li>
-              </ul>
-              
-              <h4 class="font-medium">Performance Issues</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Review job execution times and trends</li>
-                <li>Optimize database queries and indexes</li>
-                <li>Consider breaking large jobs into smaller chunks</li>
-                <li>Schedule resource-intensive jobs during off-peak hours</li>
-              </ul>
-              
-              <h4 class="font-medium">Data Quality Problems</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Implement data validation rules</li>
-                <li>Set up data quality monitoring</li>
-                <li>Create data cleansing procedures</li>
-                <li>Establish data governance policies</li>
-              </ul>
-            </div>`,
-            categoryId: "kuhlekt",
-            subcategoryId: "batch-jobs",
-            tags: ["batch", "processing", "automation", "data"],
-            createdAt: "2024-01-18T11:45:00Z",
-            updatedAt: "2024-01-18T11:45:00Z",
-            createdBy: "admin"
-          }
-        ]
+        id: '1-2',
+        name: 'Vue.js',
+        description: 'Vue.js framework and tools',
+        articles: []
+      }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Backend Development',
+    description: 'Server-side development and databases',
+    articles: [],
+    subcategories: [
+      {
+        id: '2-1',
+        name: 'Node.js',
+        description: 'Node.js runtime and frameworks',
+        articles: []
       },
       {
-        id: "communications",
-        name: "Communications",
-        articles: [
-          {
-            id: "bulk-communication-activities",
-            title: "Managing Bulk Communication Activities",
-            content: `<div class="space-y-4">
-              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop" alt="Communication Center" class="w-full h-48 object-cover rounded-lg mb-4" />
-              
-              <h2 class="text-xl font-semibold">Bulk Communication Management</h2>
-              <p>Kuhlekt's bulk communication system enables you to send targeted messages to large groups of customers efficiently while maintaining compliance and personalization.</p>
-              
-              <h3 class="text-lg font-medium">Communication Channels</h3>
-              
-              <h4 class="font-medium">Email Communications</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Marketing Campaigns:</strong> Promotional offers and product updates</li>
-                <li><strong>Transactional Emails:</strong> Account notifications and confirmations</li>
-                <li><strong>Educational Content:</strong> Credit tips and financial guidance</li>
-                <li><strong>Compliance Notices:</strong> Required legal and regulatory communications</li>
-              </ul>
-              
-              <h4 class="font-medium">SMS Messaging</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Alert Notifications:</strong> Credit score changes and account alerts</li>
-                <li><strong>Appointment Reminders:</strong> Consultation and meeting notifications</li>
-                <li><strong>Payment Reminders:</strong> Due date and overdue notifications</li>
-                <li><strong>Security Alerts:</strong> Login attempts and security notifications</li>
-              </ul>
-              
-              <h4 class="font-medium">Push Notifications</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Real-time Alerts:</strong> Immediate credit monitoring notifications</li>
-                <li><strong>App Updates:</strong> New feature announcements</li>
-                <li><strong>Engagement Messages:</strong> Tips and educational content</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Campaign Creation Process</h3>
-              
-              <h4 class="font-medium">Step 1: Audience Segmentation</h4>
-              <p>Define your target audience using various criteria:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Credit score ranges</li>
-                <li>Account status and activity</li>
-                <li>Geographic location</li>
-                <li>Demographic information</li>
-                <li>Behavioral patterns</li>
-                <li>Communication preferences</li>
-              </ul>
-              
-              <h4 class="font-medium">Step 2: Content Development</h4>
-              <p>Create compelling and compliant content:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Personalized messaging using customer data</li>
-                <li>Clear and actionable call-to-actions</li>
-                <li>Mobile-optimized formatting</li>
-                <li>Compliance with regulations (CAN-SPAM, TCPA)</li>
-                <li>A/B testing variations</li>
-              </ul>
-              
-              <h4 class="font-medium">Step 3: Scheduling and Delivery</h4>
-              <p>Optimize timing for maximum engagement:</p>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Time zone considerations</li>
-                <li>Optimal send times based on audience behavior</li>
-                <li>Frequency capping to prevent over-communication</li>
-                <li>Delivery rate limiting for system performance</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Personalization Features</h3>
-              
-              <h4 class="font-medium">Dynamic Content</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Customer name and account information</li>
-                <li>Credit score and recent changes</li>
-                <li>Personalized recommendations</li>
-                <li>Account-specific offers and promotions</li>
-              </ul>
-              
-              <h4 class="font-medium">Behavioral Triggers</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Welcome series for new customers</li>
-                <li>Re-engagement campaigns for inactive users</li>
-                <li>Milestone celebrations (credit score improvements)</li>
-                <li>Abandoned application follow-ups</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Compliance and Regulations</h3>
-              
-              <h4 class="font-medium">CAN-SPAM Act Compliance</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Clear sender identification</li>
-                <li>Truthful subject lines</li>
-                <li>Easy unsubscribe options</li>
-                <li>Physical address disclosure</li>
-                <li>Prompt unsubscribe processing</li>
-              </ul>
-              
-              <h4 class="font-medium">TCPA Compliance (SMS)</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Express written consent for marketing messages</li>
-                <li>Clear opt-out instructions (STOP keyword)</li>
-                <li>Time restrictions (8 AM - 9 PM local time)</li>
-                <li>Consent record keeping</li>
-              </ul>
-              
-              <h4 class="font-medium">GDPR and Privacy</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Lawful basis for processing</li>
-                <li>Data minimization principles</li>
-                <li>Right to be forgotten</li>
-                <li>Consent management</li>
-              </ul>
-              
-              <h3 class="text-lg font-medium">Performance Monitoring</h3>
-              
-              <h4 class="font-medium">Key Metrics</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li><strong>Delivery Rate:</strong> Percentage of messages successfully delivered</li>
-                <li><strong>Open Rate:</strong> Percentage of recipients who opened the message</li>
-                <li><strong>Click-through Rate:</strong> Percentage who clicked on links</li>
-                <li><strong>Conversion Rate:</strong> Percentage who completed desired actions</li>
-                <li><strong>Unsubscribe Rate:</strong> Percentage who opted out</li>
-                <li><strong>Bounce Rate:</strong> Percentage of undeliverable messages</li>
-              </ul>
-              
-              <h4 class="font-medium">Reporting and Analytics</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Real-time campaign performance dashboards</li>
-                <li>Detailed engagement analytics</li>
-                <li>Audience behavior insights</li>
-                <li>ROI and revenue attribution</li>
-                <li>Comparative analysis across campaigns</li>
-              </ul>
-              
-              <div class="bg-green-50 p-4 rounded-lg">
-                <p class="text-green-800"><strong>Success Tip:</strong> Regularly analyze campaign performance and customer feedback to continuously improve your communication strategy. Focus on providing value to your audience rather than just promoting products.</p>
-              </div>
-              
-              <h3 class="text-lg font-medium">Best Practices</h3>
-              
-              <h4 class="font-medium">Content Strategy</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Maintain a consistent brand voice and tone</li>
-                <li>Provide clear value in every communication</li>
-                <li>Use compelling subject lines and preview text</li>
-                <li>Include clear calls-to-action</li>
-                <li>Test different content variations</li>
-              </ul>
-              
-              <h4 class="font-medium">List Management</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Regularly clean and update contact lists</li>
-                <li>Segment audiences for targeted messaging</li>
-                <li>Honor unsubscribe requests promptly</li>
-                <li>Maintain preference centers for customer control</li>
-                <li>Monitor and manage bounce rates</li>
-              </ul>
-              
-              <h4 class="font-medium">Timing and Frequency</h4>
-              <ul class="list-disc pl-6 space-y-1">
-                <li>Test optimal send times for your audience</li>
-                <li>Avoid over-communication fatigue</li>
-                <li>Consider customer time zones</li>
-                <li>Respect quiet hours for SMS messages</li>
-                <li>Plan campaigns around holidays and events</li>
-              </ul>
-            </div>`,
-            categoryId: "kuhlekt",
-            subcategoryId: "communications",
-            tags: ["communication", "email", "sms", "marketing", "compliance"],
-            createdAt: "2024-01-19T16:20:00Z",
-            updatedAt: "2024-01-19T16:20:00Z",
-            createdBy: "admin"
-          }
-        ]
+        id: '2-2',
+        name: 'Databases',
+        description: 'Database design and management',
+        articles: []
+      }
+    ]
+  },
+  {
+    id: '3',
+    name: 'Web Design',
+    description: 'UI/UX design and CSS techniques',
+    articles: [],
+    subcategories: [
+      {
+        id: '3-1',
+        name: 'CSS',
+        description: 'CSS techniques and frameworks',
+        articles: []
+      },
+      {
+        id: '3-2',
+        name: 'UI/UX',
+        description: 'User interface and experience design',
+        articles: []
       }
     ]
   }
 ]
+
+export const initialData = {
+  articles: sampleArticles,
+  categories: sampleCategories
+}
+
+// Export individual arrays for backward compatibility
+export const articles = sampleArticles
+export const categories = sampleCategories

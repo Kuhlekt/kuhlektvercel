@@ -40,6 +40,13 @@ export function CSPTest() {
 
   const clearResults = () => setTestResults([])
 
+  const testHtml = `
+    <h1>CSP Test</h1>
+    <p>Testing Content Security Policy with inline HTML</p>
+    <script>console.log('This should be blocked by CSP')</script>
+    <img src="https://via.placeholder.com/150" alt="External image" />
+  `
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <Card>
@@ -75,10 +82,7 @@ export function CSPTest() {
           <div>
             <h3 className="font-medium mb-2">Test 2: dangerouslySetInnerHTML</h3>
             <div
-              dangerouslySetInnerHTML={{
-                __html:
-                  '<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwN2ZmZiIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VEVTVDwvdGV4dD4KPC9zdmc+" alt="innerHTML test" style="max-width: 100px; height: auto; border: 2px solid green;" />',
-              }}
+              dangerouslySetInnerHTML={{ __html: testHtml }}
             />
             <p className="text-xs text-gray-600 mt-1">This tests if dangerouslySetInnerHTML blocks data URLs</p>
           </div>

@@ -1,4 +1,4 @@
-export const convertImageToDataURL = (file: File): Promise<string> => {
+export function convertImageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as string)
@@ -7,30 +7,45 @@ export const convertImageToDataURL = (file: File): Promise<string> => {
   })
 }
 
-export const isImageFile = (file: File): boolean => {
-  return file.type.startsWith("image/")
-}
+export function pasteImageFromClipboard(event: ClipboardEvent): Promise<string | null> {
+  return new Promise((resolve) => {
+    const items = event.clipboardData?.items
+    if (!items) {
+      resolve(null)
+      return
+    }
 
-export const generateImagePlaceholder = (fileName: string, size: number): string => {
-  // Create a placeholder URL for the pasted image
-  const timestamp = Date.now()
-  const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_")
-  return `/placeholder.svg?height=400&width=600&text=${encodeURIComponent(`Pasted Image: ${cleanFileName}`)}&id=${timestamp}`
-}
-
-export const processClipboardItems = async (clipboardItems: DataTransferItemList): Promise<File[]> => {
-  const files: File[] = []
-
-  for (let i = 0; i < clipboardItems.length; i++) {
-    const item = clipboardItems[i]
-
-    if (item.type.startsWith("image/")) {
-      const file = item.getAsFile()
-      if (file) {
-        files.push(file)
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile()
+        if (file) {
+          convertImageToBase64(file).then(resolve).catch(() => resolve(null))
+          return
+        }
       }
     }
+    resolve(null)
+  })
+}
+
+export function isValidImageUrl(url: string): boolean {
+  try {
+    new URL(url)
+    return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)
+  } catch {
+    return false
+  }
+}
+
+export function extractImagesFromHtml(html: string): string[] {
+  const imgRegex = /<img[^>]+src="([^">]+)"/g
+  const images: string[] = []
+  let match
+
+  while ((match = imgRegex.exec(html)) !== null) {
+    images.push(match[1])
   }
 
-  return files
+  return images
 }

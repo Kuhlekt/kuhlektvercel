@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function BasicPasteTest() {
   const [logs, setLogs] = useState<string[]>([])
-  const [inputValue, setInputValue] = useState("")
+  const [content, setContent] = useState('')
 
   const addLog = (message: string) => {
     console.log(message)
@@ -27,6 +27,8 @@ export function BasicPasteTest() {
         addLog(`Text data: "${textData}"`)
       }
     }
+    console.log('Paste event:', e)
+    console.log('Clipboard data:', e.clipboardData)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -41,7 +43,7 @@ export function BasicPasteTest() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value)
+    setContent(e.target.value)
     addLog(`Input changed: "${e.target.value}"`)
   }
 
@@ -56,7 +58,7 @@ export function BasicPasteTest() {
             <h3 className="font-medium mb-2">Test 1: Regular Input</h3>
             <input
               type="text"
-              value={inputValue}
+              value={content}
               onChange={handleChange}
               onPaste={handlePaste}
               onKeyDown={handleKeyDown}
@@ -69,12 +71,13 @@ export function BasicPasteTest() {
           <div>
             <h3 className="font-medium mb-2">Test 2: Textarea</h3>
             <textarea
+              className="w-full h-32 p-2 border rounded"
+              placeholder="Paste content here..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
               onPaste={handlePaste}
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}
-              placeholder="Type or paste text here..."
-              className="w-full p-2 border rounded"
-              rows={3}
             />
           </div>
 
@@ -82,11 +85,11 @@ export function BasicPasteTest() {
             <h3 className="font-medium mb-2">Test 3: Div with contentEditable</h3>
             <div
               contentEditable
+              className="w-full h-32 p-2 border rounded min-h-[60px] bg-white"
+              style={{ outline: "none" }}
               onPaste={handlePaste}
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}
-              className="w-full p-2 border rounded min-h-[60px] bg-white"
-              style={{ outline: "none" }}
             >
               Click here and paste...
             </div>
@@ -123,6 +126,11 @@ export function BasicPasteTest() {
                 logs.map((log, index) => <div key={index}>{log}</div>)
               )}
             </div>
+          </div>
+
+          <div className="mt-4">
+            <h2 className="font-bold">Content:</h2>
+            <pre className="bg-gray-100 p-2 rounded">{content}</pre>
           </div>
 
           <div className="text-sm text-gray-600 space-y-2">

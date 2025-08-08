@@ -1,125 +1,92 @@
-"use client"
+'use client'
 
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { User } from "../types/knowledge-base"
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { User, UserRole } from '@/types/knowledge-base'
 
 interface UserCreationFormProps {
-  onCreateUser: (userData: Omit<User, "id" | "createdAt" | "lastLogin">) => void
-  error?: string
+  onUserCreate: (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => void
+  onCancel: () => void
 }
 
-export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
-  const [formError, setFormError] = useState("")
+export function UserCreationForm({ onUserCreate, onCancel }: UserCreationFormProps) {
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    email: '',
+    role: 'viewer' as UserRole,
+    isActive: true
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setFormError("")
-
-    if (!username.trim() || !password.trim()) {
-      setFormError("Username and password are required")
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setFormError("Passwords do not match")
-      return
-    }
-
-    if (password.length < 6) {
-      setFormError("Password must be at least 6 characters long")
-      return
-    }
-
-    onCreateUser({
-      username: username.trim(),
-      password,
-      role,
-    })
-
-    // Reset form
-    setUsername("")
-    setPassword("")
-    setConfirmPassword("")
-    setRole("viewer")
+    onUserCreate(formData)
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Create New User</CardTitle>
+        <CardDescription>Add a new user to the knowledge base</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {(error || formError) && (
-            <Alert variant="destructive">
-              <AlertDescription>{error || formError}</AlertDescription>
-            </Alert>
-          )}
-
           <div>
-            <Label htmlFor="new-username">Username</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="new-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              id="username"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               required
             />
           </div>
-
+          
           <div>
-            <Label htmlFor="new-password">Password</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
-              id="new-password"
+              id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password (min 6 characters)"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
           </div>
-
+          
           <div>
-            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm password"
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
           </div>
-
+          
           <div>
             <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(value: "admin" | "editor" | "viewer") => setRole(value)}>
+            <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}>
               <SelectTrigger>
-                <SelectValue placeholder="Select role" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">Viewer - Read only access</SelectItem>
-                <SelectItem value="editor">Editor - Can add/edit articles</SelectItem>
-                <SelectItem value="admin">Admin - Full access</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <Button type="submit" className="w-full">
-            Create User
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1">Create User</Button>
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancel
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

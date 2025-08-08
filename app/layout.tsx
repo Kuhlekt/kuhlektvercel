@@ -1,9 +1,12 @@
-import type { Metadata } from "next"
-import "./globals.css"
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Kuhlekt Knowledge Base",
-  description: "Comprehensive knowledge base for Kuhlekt platform",
+  title: 'Kuhlekt Knowledge Base',
+  description: 'A comprehensive knowledge base for technical documentation',
     generator: 'v0.dev'
 }
 
@@ -14,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
