@@ -1,10 +1,14 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, Settings, Eye } from 'lucide-react'
-import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Search, Plus, Users, Settings, BarChart3, Eye, X } from 'lucide-react'
+
+import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { SearchResults } from "./components/search-results"
 import { SelectedArticles } from "./components/selected-articles"
@@ -13,7 +17,6 @@ import { AddArticleForm } from "./components/add-article-form"
 import { EditArticleForm } from "./components/edit-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { LoginModal } from "./components/login-modal"
-import { Navigation } from "./components/navigation"
 import { storage } from "./utils/storage"
 import { initialCategories } from "./data/initial-data"
 import { initialUsers } from "./data/initial-users"
@@ -123,6 +126,17 @@ export default function KnowledgeBase() {
     })
 
     setSearchResults(results)
+  }
+
+  const handleClearSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(searchQuery)
+    }
   }
 
   const handleCategoryToggle = (categoryId: string) => {
@@ -321,26 +335,26 @@ export default function KnowledgeBase() {
             {/* Header */}
             <div className="text-center mb-8">
               <img
-                src="/images/kuhlekt-logo.jpg"
-                alt="Kuhlekt Logo"
-                className="mx-auto mb-4 h-16 w-auto"
-              />
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Kuhlekt Knowledge Base</h1>
-              <p className="text-xl text-gray-600 mb-4">
-                Your comprehensive resource for technical documentation and guides
-              </p>
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-                <div className="flex items-center space-x-1">
-                  <span>{getTotalArticles()} articles</span>
+                  src="/images/kuhlekt-logo.jpg"
+                  alt="Kuhlekt Logo"
+                  className="mx-auto mb-4 h-16 w-auto"
+                />
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">Kuhlekt Knowledge Base</h1>
+                <p className="text-xl text-gray-600 mb-4">
+                  Your comprehensive resource for technical documentation and guides
+                </p>
+                <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center space-x-1">
+                    <span>{getTotalArticles()} articles</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span>{categories.length} categories</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Eye className="h-4 w-4" />
+                    <span>{pageVisits} visits</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <span>{categories.length} categories</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Eye className="h-4 w-4" />
-                  <span>{pageVisits} visits</span>
-                </div>
-              </div>
             </div>
 
             {/* Search */}
@@ -352,8 +366,19 @@ export default function KnowledgeBase() {
                   placeholder="Search articles, categories, or tags..."
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10 pr-4 py-3 text-lg"
+                  onKeyPress={handleKeyPress}
+                  className="pl-10 pr-10 py-3 text-lg"
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                    onClick={handleClearSearch}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
