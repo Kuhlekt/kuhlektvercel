@@ -1,112 +1,96 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Search, Home, Settings, LogOut, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import type { User } from "../types/knowledge-base"
+import { User, LogOut, Plus, Settings, Home } from 'lucide-react'
+import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
-  onSearch: (query: string) => void
-  onHome: () => void
-  onAdmin?: () => void
-  onLogin?: () => void
+  currentUser: UserType | null
+  onLogin: () => void
   onLogout: () => void
-  currentView: "home" | "search" | "admin" | "article" | "login"
-  currentUser?: User
+  onViewChange: (view: "browse" | "add" | "edit" | "admin") => void
+  currentView: "browse" | "add" | "edit" | "admin"
 }
 
-export function Navigation({
-  onSearch,
-  onHome,
-  onAdmin,
-  onLogin,
-  onLogout,
-  currentView,
-  currentUser,
+export function Navigation({ 
+  currentUser, 
+  onLogin, 
+  onLogout, 
+  onViewChange, 
+  currentView 
 }: NavigationProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch(searchQuery)
-  }
-
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-auto" />
+    <nav className="bg-white shadow-sm border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Left side - Logo and title */}
+          <div className="flex items-center space-x-4">
+            <img
+              src="/images/kuhlekt-logo.jpg"
+              alt="Kuhlekt Logo"
+              className="h-8 w-auto"
+            />
             <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
           </div>
 
+          {/* Center - Navigation buttons */}
           <div className="flex items-center space-x-2">
             <Button
-              variant={currentView === "home" ? "default" : "ghost"}
+              variant={currentView === "browse" ? "default" : "ghost"}
               size="sm"
-              onClick={onHome}
-              className="flex items-center space-x-1"
+              onClick={() => onViewChange("browse")}
             >
-              <Home className="h-4 w-4" />
-              <span>Home</span>
+              <Home className="h-4 w-4 mr-2" />
+              Browse
             </Button>
 
-            {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && onAdmin && (
+            {currentUser && (
+              <Button
+                variant={currentView === "add" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onViewChange("add")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Article
+              </Button>
+            )}
+
+            {currentUser?.role === "admin" && (
               <Button
                 variant={currentView === "admin" ? "default" : "ghost"}
                 size="sm"
-                onClick={onAdmin}
-                className="flex items-center space-x-1"
+                onClick={() => onViewChange("admin")}
               >
-                <Settings className="h-4 w-4" />
-                <span>Admin</span>
+                <Settings className="h-4 w-4 mr-2" />
+                Admin
               </Button>
             )}
           </div>
-        </div>
 
-        <div className="flex items-center space-x-4">
-          <form onSubmit={handleSearch} className="flex items-center space-x-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search knowledge base..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64"
-              />
-            </div>
-            <Button type="submit" size="sm">
-              Search
-            </Button>
-          </form>
-
-          {currentUser ? (
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">{currentUser.username}</span>
-                <Badge variant="outline" className="capitalize">
-                  {currentUser.role}
-                </Badge>
+          {/* Right side - User info */}
+          <div className="flex items-center space-x-4">
+            {currentUser ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">{currentUser.username}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {currentUser.role}
+                  </Badge>
+                </div>
+                <Button variant="ghost" size="sm" onClick={onLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
-              <Button variant="ghost" size="sm" onClick={onLogout} className="flex items-center space-x-1">
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+            ) : (
+              <Button variant="outline" size="sm" onClick={onLogin}>
+                <User className="h-4 w-4 mr-2" />
+                Login
               </Button>
-            </div>
-          ) : (
-            onLogin && (
-              <Button variant="default" size="sm" onClick={onLogin} className="flex items-center space-x-1">
-                <LogIn className="h-4 w-4" />
-                <span>Login</span>
-              </Button>
-            )
-          )}
+            )}
+          </div>
         </div>
       </div>
     </nav>

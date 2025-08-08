@@ -64,24 +64,7 @@ export default function KnowledgeBase() {
       setCategories(categoriesWithDates)
       storage.saveCategories(categoriesWithDates)
     } else {
-      // Parse stored dates
-      const categoriesWithDates = storedCategories.map(category => ({
-        ...category,
-        articles: category.articles.map(article => ({
-          ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt)
-        })),
-        subcategories: category.subcategories.map(subcategory => ({
-          ...subcategory,
-          articles: subcategory.articles.map(article => ({
-            ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt)
-          }))
-        }))
-      }))
-      setCategories(categoriesWithDates)
+      setCategories(storedCategories)
     }
 
     if (storedUsers.length === 0) {
@@ -204,11 +187,14 @@ export default function KnowledgeBase() {
     
     // Add audit log entry
     storage.addAuditEntry({
-      action: "create",
-      entityType: "article",
-      entityId: newArticle.id,
-      details: `Created article: ${newArticle.title}`,
-      userId: currentUser?.id || "anonymous"
+      action: "article_created",
+      articleId: newArticle.id,
+      articleTitle: newArticle.title,
+      categoryName: categories.find(c => c.id === articleData.categoryId)?.name || "Unknown",
+      subcategoryName: articleData.subcategoryId ? 
+        categories.find(c => c.id === articleData.categoryId)?.subcategories.find(s => s.id === articleData.subcategoryId)?.name : undefined,
+      performedBy: currentUser?.username || "anonymous",
+      timestamp: new Date()
     })
 
     setCurrentView("browse")
@@ -253,11 +239,14 @@ export default function KnowledgeBase() {
     
     // Add audit log entry
     storage.addAuditEntry({
-      action: "update",
-      entityType: "article",
-      entityId: articleData.id,
-      details: `Updated article: ${articleData.title}`,
-      userId: currentUser?.id || "anonymous"
+      action: "article_updated",
+      articleId: articleData.id,
+      articleTitle: articleData.title,
+      categoryName: categories.find(c => c.id === articleData.categoryId)?.name || "Unknown",
+      subcategoryName: articleData.subcategoryId ? 
+        categories.find(c => c.id === articleData.categoryId)?.subcategories.find(s => s.id === articleData.subcategoryId)?.name : undefined,
+      performedBy: currentUser?.username || "anonymous",
+      timestamp: new Date()
     })
 
     setCurrentView("browse")
@@ -280,11 +269,12 @@ export default function KnowledgeBase() {
     
     // Add audit log entry
     storage.addAuditEntry({
-      action: "delete",
-      entityType: "article",
-      entityId: articleId,
-      details: `Deleted article: ${selectedArticle?.title || 'Unknown'}`,
-      userId: currentUser?.id || "anonymous"
+      action: "article_deleted",
+      articleId: articleId,
+      articleTitle: selectedArticle?.title || 'Unknown',
+      categoryName: "Unknown",
+      performedBy: currentUser?.username || "anonymous",
+      timestamp: new Date()
     })
 
     setSelectedArticle(null)
@@ -293,6 +283,10 @@ export default function KnowledgeBase() {
   const handleLogin = (user: User) => {
     setCurrentUser(user)
     setShowLoginModal(false)
+    
+    // Update users state with the updated user (including lastLogin)
+    const updatedUsers = users.map(u => u.id === user.id ? user : u)
+    setUsers(updatedUsers)
   }
 
   const handleLogout = () => {

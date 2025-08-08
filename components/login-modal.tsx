@@ -1,30 +1,71 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Lock, X } from "lucide-react"
+import { User, Lock, X } from 'lucide-react'
+import type { User as UserType } from "../types/knowledge-base"
 
 interface LoginModalProps {
-  onLogin: (username: string, password: string) => void
+  isOpen: boolean
   onClose: () => void
-  error?: string
-  loading?: boolean
+  users: UserType[]
+  onLogin: (user: UserType) => void
 }
 
-export function LoginModal({ onLogin, onClose, error, loading }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  if (!isOpen) return null
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (username.trim() && password.trim()) {
-      onLogin(username, password)
+    setError("")
+    setLoading(true)
+
+    try {
+      // Find user by username
+      const user = users.find(u => u.username === username)
+      
+      if (!user) {
+        setError("Invalid username or password")
+        return
+      }
+
+      // Check password
+      if (user.password !== password) {
+        setError("Invalid username or password")
+        return
+      }
+
+      // Update last login
+      const updatedUser = {
+        ...user,
+        lastLogin: new Date()
+      }
+
+      // Update users in storage
+      const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u)
+      localStorage.setItem('kb_users', JSON.stringify(updatedUsers))
+
+      // Call onLogin with updated user
+      onLogin(updatedUser)
+      
+      // Reset form
+      setUsername("")
+      setPassword("")
+      setError("")
+    } catch (err) {
+      setError("Login failed. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -32,7 +73,12 @@ export function LoginModal({ onLogin, onClose, error, loading }: LoginModalProps
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center relative">
-          <Button variant="ghost" size="sm" onClick={onClose} className="absolute right-0 top-0 h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose} 
+            className="absolute right-0 top-0 h-8 w-8 p-0"
+          >
             <X className="h-4 w-4" />
           </Button>
           <div className="flex justify-center mb-4">
@@ -82,11 +128,18 @@ export function LoginModal({ onLogin, onClose, error, loading }: LoginModalProps
               </div>
             </div>
 
+            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+              <strong>Demo Credentials:</strong><br />
+              Admin: admin / admin123<br />
+              Editor: editor / editor123<br />
+              Viewer: viewer / viewer123
+            </div>
+
             <div className="flex space-x-2">
               <Button type="submit" className="flex-1" disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1 bg-transparent">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
             </div>
