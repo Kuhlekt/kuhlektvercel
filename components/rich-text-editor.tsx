@@ -5,7 +5,6 @@ import type { ReactElement } from "react"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
 import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Palette, Type, ImageIcon, Upload, AlertCircle, CheckCircle, X, Undo, Redo } from 'lucide-react'
 
 const isBrowser = typeof window !== 'undefined'
@@ -311,16 +310,16 @@ export function RichTextEditor({
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="border rounded-lg p-3 bg-gray-50 mb-4">
+      <div className="border rounded-lg p-3 bg-white shadow-sm mb-4">
         <div className="flex flex-wrap items-center gap-2">
           {/* Text formatting */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={formatBold}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Bold (Ctrl+B)"
             >
               <Bold className="h-4 w-4" />
@@ -330,7 +329,7 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatItalic}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Italic (Ctrl+I)"
             >
               <Italic className="h-4 w-4" />
@@ -340,23 +339,21 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatUnderline}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Underline (Ctrl+U)"
             >
               <Underline className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300" />
-
           {/* Lists */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={formatBulletList}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Bullet List"
             >
               <List className="h-4 w-4" />
@@ -366,23 +363,21 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatNumberedList}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Numbered List"
             >
               <ListOrdered className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300" />
-
           {/* Alignment */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={formatAlignLeft}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Align Left"
             >
               <AlignLeft className="h-4 w-4" />
@@ -392,7 +387,7 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatAlignCenter}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Align Center"
             >
               <AlignCenter className="h-4 w-4" />
@@ -402,29 +397,27 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatAlignRight}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Align Right"
             >
               <AlignRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="w-px h-6 bg-gray-300" />
-
           {/* Color picker */}
-          <div className="relative">
+          <div className="relative border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setShowColorPicker(!showColorPicker)}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Text Color"
             >
               <Palette className="h-4 w-4" />
             </Button>
             {showColorPicker && (
-              <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg shadow-lg p-3">
+              <div className="absolute top-10 left-0 z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
                 <div className="grid grid-cols-5 gap-2 mb-2">
                   {colors.map((color) => (
                     <button
@@ -451,19 +444,19 @@ export function RichTextEditor({
           </div>
 
           {/* Font size picker */}
-          <div className="relative">
+          <div className="relative border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setShowFontSizePicker(!showFontSizePicker)}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Font Size"
             >
               <Type className="h-4 w-4" />
             </Button>
             {showFontSizePicker && (
-              <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg shadow-lg p-2 min-w-32">
+              <div className="absolute top-10 left-0 z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-32">
                 {fontSizes.map((size) => (
                   <button
                     key={size.value}
@@ -489,16 +482,14 @@ export function RichTextEditor({
             )}
           </div>
 
-          <div className="w-px h-6 bg-gray-300" />
-
           {/* Undo/Redo */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 border-r pr-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={formatUndo}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Undo (Ctrl+Z)"
             >
               <Undo className="h-4 w-4" />
@@ -508,14 +499,12 @@ export function RichTextEditor({
               variant="outline"
               size="sm"
               onClick={formatRedo}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Redo (Ctrl+Y)"
             >
               <Redo className="h-4 w-4" />
             </Button>
           </div>
-
-          <div className="w-px h-6 bg-gray-300" />
 
           {/* Image upload */}
           <div className="flex items-center gap-2">
@@ -532,14 +521,15 @@ export function RichTextEditor({
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing}
-              className="h-8 px-2"
+              className="h-8 px-3 bg-white hover:bg-gray-100 border-gray-300"
               title="Upload Image"
             >
-              <Upload className="h-4 w-4" />
+              <Upload className="h-4 w-4 mr-1" />
+              Image
             </Button>
 
             {images.length > 0 && (
-              <div className="flex items-center space-x-1 text-sm text-green-600">
+              <div className="flex items-center space-x-1 text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
                 <ImageIcon className="h-3 w-3" />
                 <span>{images.length}</span>
               </div>
@@ -549,12 +539,18 @@ export function RichTextEditor({
       </div>
 
       {/* Instructions */}
-      <Alert className="border-blue-200 bg-blue-50">
+      <Alert className="border-blue-200 bg-blue-50 mb-4">
         <ImageIcon className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
-          <p>
-            <strong>Rich Text Editor:</strong> Use the toolbar above for formatting. You can paste formatted text (Ctrl+V) and images directly into the editor.
-          </p>
+          <div className="space-y-1">
+            <p><strong>🎨 Rich Text Editor:</strong> Use the toolbar above for formatting</p>
+            <ul className="text-sm list-disc list-inside space-y-1 ml-4">
+              <li><strong>Text:</strong> Bold, italic, underline, colors, font sizes</li>
+              <li><strong>Lists:</strong> Bullet points and numbered lists</li>
+              <li><strong>Images:</strong> Upload files or paste directly (Ctrl+V)</li>
+              <li><strong>Alignment:</strong> Left, center, right alignment</li>
+            </ul>
+          </div>
         </AlertDescription>
       </Alert>
 
@@ -599,15 +595,15 @@ export function RichTextEditor({
       )}
 
       {/* Rich text editor */}
-      <div className="relative">
+      <div className="relative border border-gray-300 rounded-lg">
         <div
           ref={editorRef}
           contentEditable={!disabled && !isProcessing}
           onInput={handleContentChange}
           onPaste={handlePaste}
           className={`
-            min-h-[300px] p-4 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500
-            ${disabled || isProcessing ? "opacity-50 cursor-not-allowed" : ""}
+            min-h-[300px] p-4 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg
+            ${disabled || isProcessing ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
             ${className}
           `}
           style={{
@@ -620,13 +616,13 @@ export function RichTextEditor({
 
         {/* Placeholder text */}
         {!value && (
-          <div className="absolute top-4 left-4 text-gray-400 pointer-events-none">
+          <div className="absolute top-4 left-4 text-gray-400 pointer-events-none text-sm">
             {placeholder}
           </div>
         )}
 
         {isProcessing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded">
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg">
             <div className="flex items-center space-x-2 text-blue-600">
               <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-sm">Processing...</span>

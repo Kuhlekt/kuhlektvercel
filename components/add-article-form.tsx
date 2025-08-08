@@ -130,6 +130,7 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
               <div>
                 <Label htmlFor="content">Content</Label>
                 <div className="mt-2">
+                  {/* Try RichTextEditor first, fallback to EnhancedRichEditor */}
                   <RichTextEditor
                     value={content}
                     onChange={setContent}
