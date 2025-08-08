@@ -1,424 +1,125 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-
-import { useState, useMemo, useEffect } from "react"
-import { Navigation } from "./components/navigation"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Search, Plus, Settings, Eye } from 'lucide-react'
+import { useState, useEffect } from "react"
 import { CategoryTree } from "./components/category-tree"
 import { SearchResults } from "./components/search-results"
+import { SelectedArticles } from "./components/selected-articles"
 import { ArticleViewer } from "./components/article-viewer"
-import { LoginModal } from "./components/login-modal"
+import { AddArticleForm } from "./components/add-article-form"
+import { EditArticleForm } from "./components/edit-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
+import { LoginModal } from "./components/login-modal"
+import { Navigation } from "./components/navigation"
+import { storage } from "./utils/storage"
 import { initialCategories } from "./data/initial-data"
 import { initialUsers } from "./data/initial-users"
 import { initialAuditLog } from "./data/initial-audit-log"
-import { storage } from "./utils/storage"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
-import { SelectedArticles } from "./components/selected-articles"
-import { EditArticleForm } from "./components/edit-article-form"
-import { calculateTotalArticles } from "./utils/article-utils"
 
 export default function KnowledgeBase() {
-  // Initialize state with stored data or defaults
-  const [categories, setCategories] = useState<Category[]>(() => {
-    if (typeof window !== 'undefined') {
-      return storage.loadCategories() || initialCategories
-    }
-    return initialCategories
-  })
-  
-  const [users, setUsers] = useState<User[]>(() => {
-    if (typeof window !== 'undefined') {
-      return storage.loadUsers() || initialUsers
-    }
-    return initialUsers
-  })
-  
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>(() => {
-    if (typeof window !== 'undefined') {
-      return storage.loadAuditLog() || initialAuditLog
-    }
-    return initialAuditLog
-  })
-
-  const [pageVisits, setPageVisits] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      return storage.getPageVisits()
-    }
-    return 0
-  })
-
-  const [currentView, setCurrentView] = useState<"home" | "search" | "admin" | "article" | "edit-article">("home")
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
-  const [selectedSubcategories, setSelectedSubcategories] = useState<Set<string>>(new Set())
+  const [categories, setCategories] = useState<Category[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
+  const [pageVisits, setPageVisits] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Article[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
+  const [selectedSubcategories, setSelectedSubcategories] = useState<Set<string>>(new Set())
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [loginError, setLoginError] = useState("")
-  const [loginLoading, setLoginLoading] = useState(false)
+  const [currentView, setCurrentView] = useState<"browse" | "add" | "edit" | "admin">("browse")
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
-  // Increment page visits on component mount
+  // Initialize data and increment page visits
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const newVisits = storage.incrementPageVisits()
-      setPageVisits(newVisits)
-    }
-  }, [])
+    // Load existing data or initialize with defaults
+    const storedCategories = storage.getCategories()
+    const storedUsers = storage.getUsers()
+    const storedAuditLog = storage.getAuditLog()
 
-  // Auto-save data to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      storage.saveCategories(categories)
-    }
-  }, [categories])
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      storage.saveUsers(users)
-    }
-  }, [users])
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      storage.saveAuditLog(auditLog)
-    }
-  }, [auditLog])
-
-  // Calculate total articles using memoization for performance and accuracy
-  const totalArticles = useMemo(() => calculateTotalArticles(categories), [categories])
-
-  const addAuditLogEntry = (entry: Omit<AuditLogEntry, "id" | "timestamp">) => {
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
-    }
-    setAuditLog((prev) => [newEntry, ...prev])
-  }
-
-  const getCategoryName = (categoryId: string): string => {
-    return categories.find((cat) => cat.id === categoryId)?.name || "Unknown Category"
-  }
-
-  const getSubcategoryName = (categoryId: string, subcategoryId?: string): string | undefined => {
-    if (!subcategoryId) return undefined
-    const category = categories.find((cat) => cat.id === categoryId)
-    return category?.subcategories.find((sub) => sub.id === subcategoryId)?.name
-  }
-
-  const handleLogin = (username: string, password: string) => {
-    setLoginLoading(true)
-    setLoginError("")
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const user = users.find((u) => u.username === username && u.password === password)
-
-      if (user) {
-        // Update last login
-        const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date() } : u))
-        setUsers(updatedUsers)
-        setCurrentUser({ ...user, lastLogin: new Date() })
-        setShowLoginModal(false)
-        setCurrentView("admin")
-        setLoginError("")
-      } else {
-        setLoginError("Invalid username or password")
-      }
-      setLoginLoading(false)
-    }, 1000)
-  }
-
-  const handleShowLogin = () => {
-    setShowLoginModal(true)
-    setLoginError("")
-  }
-
-  const handleCloseLogin = () => {
-    setShowLoginModal(false)
-    setLoginError("")
-  }
-
-  const handleLogout = () => {
-    setCurrentUser(null)
-    setCurrentView("home")
-    setSearchQuery("")
-    setSearchResults([])
-    setSelectedArticle(null)
-  }
-
-  const handleCategoryToggle = (categoryId: string) => {
-    setCategories((prev) => prev.map((cat) => (cat.id === categoryId ? { ...cat, expanded: !cat.expanded } : cat)))
-  }
-
-  const handleCategorySelect = (categoryId: string, selected: boolean) => {
-    setSelectedCategories((prev) => {
-      const newSet = new Set(prev)
-      if (selected) {
-        newSet.add(categoryId)
-      } else {
-        newSet.delete(categoryId)
-      }
-      return newSet
-    })
-  }
-
-  const handleSubcategorySelect = (categoryId: string, subcategoryId: string, selected: boolean) => {
-    setSelectedSubcategories((prev) => {
-      const newSet = new Set(prev)
-      if (selected) {
-        newSet.add(subcategoryId)
-      } else {
-        newSet.delete(subcategoryId)
-      }
-      return newSet
-    })
-  }
-
-  const handleAddCategory = (name: string) => {
-    const newCategory: Category = {
-      id: `cat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      subcategories: [],
-      articles: [],
-      expanded: false,
-    }
-
-    setCategories((prev) => [...prev, newCategory])
-
-    // Add audit log entry
-    addAuditLogEntry({
-      action: "article_created", // We can extend this to include category actions
-      articleId: newCategory.id,
-      articleTitle: `Category: ${name}`,
-      categoryName: name,
-      performedBy: currentUser?.username || "Unknown",
-      details: `Created new category`,
-    })
-  }
-
-  const handleAddSubcategory = (categoryId: string, name: string) => {
-    const newSubcategory = {
-      id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      articles: [],
-    }
-
-    setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === categoryId
-          ? { ...cat, subcategories: [...cat.subcategories, newSubcategory] }
-          : cat
-      )
-    )
-
-    // Add audit log entry
-    const categoryName = getCategoryName(categoryId)
-    addAuditLogEntry({
-      action: "article_created", // We can extend this to include subcategory actions
-      articleId: newSubcategory.id,
-      articleTitle: `Subcategory: ${name}`,
-      categoryName,
-      subcategoryName: name,
-      performedBy: currentUser?.username || "Unknown",
-      details: `Created new subcategory in ${categoryName}`,
-    })
-  }
-
-  const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
-    const newArticle: Article = {
-      ...articleData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: currentUser?.username || "Unknown",
-    }
-
-    setCategories((prev) =>
-      prev.map((category) => {
-        if (category.id === articleData.categoryId) {
-          if (articleData.subcategoryId) {
-            return {
-              ...category,
-              subcategories: category.subcategories.map((sub) =>
-                sub.id === articleData.subcategoryId ? { ...sub, articles: [...sub.articles, newArticle] } : sub,
-              ),
-            }
-          } else {
-            return {
-              ...category,
-              articles: [...category.articles, newArticle],
-            }
-          }
-        }
-        return category
-      }),
-    )
-
-    // Add audit log entry
-    addAuditLogEntry({
-      action: "article_created",
-      articleId: newArticle.id,
-      articleTitle: newArticle.title,
-      categoryName: getCategoryName(articleData.categoryId),
-      subcategoryName: getSubcategoryName(articleData.categoryId, articleData.subcategoryId),
-      performedBy: currentUser?.username || "Unknown",
-      details: `Created new article with ${newArticle.tags.length} tags`,
-    })
-  }
-
-  const handleCreateUser = (userData: Omit<User, "id" | "createdAt" | "lastLogin">) => {
-    // Check if username already exists
-    if (users.some((user) => user.username === userData.username)) {
-      return // Could show error here
-    }
-
-    const newUser: User = {
-      ...userData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      lastLogin: undefined,
-    }
-
-    setUsers((prev) => [...prev, newUser])
-  }
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers((prev) => prev.filter((user) => user.id !== userId))
-  }
-
-  const handleEditArticle = (article: Article) => {
-    setEditingArticle(article)
-    setCurrentView("edit-article")
-  }
-
-  const handleUpdateArticle = (articleId: string, updates: Partial<Article>) => {
-    let updatedArticle: Article | null = null
-
-    setCategories((prev) =>
-      prev.map((category) => {
-        // Update article in main category
-        if (category.articles.some((article) => article.id === articleId)) {
-          return {
-            ...category,
-            articles: category.articles.map((article) => {
-              if (article.id === articleId) {
-                updatedArticle = { ...article, ...updates }
-                return updatedArticle
-              }
-              return article
-            }),
-          }
-        }
-
-        // Update article in subcategories
-        const updatedSubcategories = category.subcategories.map((subcategory) => ({
-          ...subcategory,
-          articles: subcategory.articles.map((article) => {
-            if (article.id === articleId) {
-              updatedArticle = { ...article, ...updates }
-              return updatedArticle
-            }
-            return article
-          }),
-        }))
-
-        return {
-          ...category,
-          subcategories: updatedSubcategories,
-        }
-      }),
-    )
-
-    // Add audit log entry
-    if (updatedArticle) {
-      addAuditLogEntry({
-        action: "article_updated",
-        articleId: updatedArticle.id,
-        articleTitle: updatedArticle.title,
-        categoryName: getCategoryName(updatedArticle.categoryId),
-        subcategoryName: getSubcategoryName(updatedArticle.categoryId, updatedArticle.subcategoryId),
-        performedBy: currentUser?.username || "Unknown",
-        details: `Updated article content and metadata`,
-      })
-    }
-
-    setEditingArticle(null)
-    setCurrentView("admin")
-  }
-
-  const handleDeleteArticle = (articleId: string) => {
-    let deletedArticle: Article | null = null
-
-    // Find the article before deleting it
-    categories.forEach((category) => {
-      const foundInMain = category.articles.find((article) => article.id === articleId)
-      if (foundInMain) {
-        deletedArticle = foundInMain
-        return
-      }
-
-      category.subcategories.forEach((subcategory) => {
-        const foundInSub = subcategory.articles.find((article) => article.id === articleId)
-        if (foundInSub) {
-          deletedArticle = foundInSub
-        }
-      })
-    })
-
-    setCategories((prev) =>
-      prev.map((category) => ({
+    if (storedCategories.length === 0) {
+      // First time setup - initialize with default data
+      const categoriesWithDates = initialCategories.map(category => ({
         ...category,
-        articles: category.articles.filter((article) => article.id !== articleId),
-        subcategories: category.subcategories.map((subcategory) => ({
-          ...subcategory,
-          articles: subcategory.articles.filter((article) => article.id !== articleId),
+        articles: category.articles.map(article => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt)
         })),
-      })),
-    )
-
-    // Add audit log entry
-    if (deletedArticle) {
-      addAuditLogEntry({
-        action: "article_deleted",
-        articleId: deletedArticle.id,
-        articleTitle: deletedArticle.title,
-        categoryName: getCategoryName(deletedArticle.categoryId),
-        subcategoryName: getSubcategoryName(deletedArticle.categoryId, deletedArticle.subcategoryId),
-        performedBy: currentUser?.username || "Unknown",
-        details: `Permanently deleted article`,
-      })
+        subcategories: category.subcategories.map(subcategory => ({
+          ...subcategory,
+          articles: subcategory.articles.map(article => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt)
+          }))
+        }))
+      }))
+      
+      setCategories(categoriesWithDates)
+      storage.saveCategories(categoriesWithDates)
+    } else {
+      // Parse stored dates
+      const categoriesWithDates = storedCategories.map(category => ({
+        ...category,
+        articles: category.articles.map(article => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt)
+        })),
+        subcategories: category.subcategories.map(subcategory => ({
+          ...subcategory,
+          articles: subcategory.articles.map(article => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt)
+          }))
+        }))
+      }))
+      setCategories(categoriesWithDates)
     }
-  }
 
-  const handleImportData = (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[], pageVisits?: number }) => {
-    setCategories(data.categories)
-    setUsers(data.users)
-    setAuditLog(data.auditLog)
-    if (data.pageVisits !== undefined) {
-      setPageVisits(data.pageVisits)
+    if (storedUsers.length === 0) {
+      setUsers(initialUsers)
+      storage.saveUsers(initialUsers)
+    } else {
+      setUsers(storedUsers)
     }
-  }
+
+    if (storedAuditLog.length === 0) {
+      setAuditLog(initialAuditLog)
+      storage.saveAuditLog(initialAuditLog)
+    } else {
+      setAuditLog(storedAuditLog)
+    }
+
+    // Increment page visits
+    const newVisitCount = storage.incrementPageVisits()
+    setPageVisits(newVisitCount)
+  }, [])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     if (!query.trim()) {
       setSearchResults([])
-      setCurrentView("home")
       return
     }
 
     const results: Article[] = []
+    const searchTerm = query.toLowerCase()
+
     categories.forEach((category) => {
       // Search in category articles
       category.articles.forEach((article) => {
         if (
-          article.title.toLowerCase().includes(query.toLowerCase()) ||
-          article.content.toLowerCase().includes(query.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+          article.title.toLowerCase().includes(searchTerm) ||
+          article.content.toLowerCase().includes(searchTerm) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
         ) {
           results.push(article)
         }
@@ -428,9 +129,9 @@ export default function KnowledgeBase() {
       category.subcategories.forEach((subcategory) => {
         subcategory.articles.forEach((article) => {
           if (
-            article.title.toLowerCase().includes(query.toLowerCase()) ||
-            article.content.toLowerCase().includes(query.toLowerCase()) ||
-            article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+            article.title.toLowerCase().includes(searchTerm) ||
+            article.content.toLowerCase().includes(searchTerm) ||
+            article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
           ) {
             results.push(article)
           }
@@ -439,162 +140,342 @@ export default function KnowledgeBase() {
     })
 
     setSearchResults(results)
-    setCurrentView("search")
+  }
+
+  const handleCategoryToggle = (categoryId: string) => {
+    const newSelected = new Set(selectedCategories)
+    if (newSelected.has(categoryId)) {
+      newSelected.delete(categoryId)
+    } else {
+      newSelected.add(categoryId)
+    }
+    setSelectedCategories(newSelected)
+  }
+
+  const handleSubcategoryToggle = (subcategoryId: string) => {
+    const newSelected = new Set(selectedSubcategories)
+    if (newSelected.has(subcategoryId)) {
+      newSelected.delete(subcategoryId)
+    } else {
+      newSelected.add(subcategoryId)
+    }
+    setSelectedSubcategories(newSelected)
   }
 
   const handleArticleSelect = (article: Article) => {
     setSelectedArticle(article)
-    setCurrentView("article")
-  }
-
-  const handleHome = () => {
-    setCurrentView("home")
     setSearchQuery("")
     setSearchResults([])
+  }
+
+  const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
+    const newArticle: Article = {
+      ...articleData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const updatedCategories = categories.map((category) => {
+      if (category.id === articleData.categoryId) {
+        if (articleData.subcategoryId) {
+          // Add to subcategory
+          return {
+            ...category,
+            subcategories: category.subcategories.map((subcategory) =>
+              subcategory.id === articleData.subcategoryId
+                ? { ...subcategory, articles: [...subcategory.articles, newArticle] }
+                : subcategory
+            ),
+          }
+        } else {
+          // Add to main category
+          return {
+            ...category,
+            articles: [...category.articles, newArticle],
+          }
+        }
+      }
+      return category
+    })
+
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+    
+    // Add audit log entry
+    storage.addAuditEntry({
+      action: "create",
+      entityType: "article",
+      entityId: newArticle.id,
+      details: `Created article: ${newArticle.title}`,
+      userId: currentUser?.id || "anonymous"
+    })
+
+    setCurrentView("browse")
+  }
+
+  const handleEditArticle = (articleData: Omit<Article, "createdAt">) => {
+    const updatedCategories = categories.map((category) => {
+      // Remove from current location
+      const updatedCategory = {
+        ...category,
+        articles: category.articles.filter((a) => a.id !== articleData.id),
+        subcategories: category.subcategories.map((sub) => ({
+          ...sub,
+          articles: sub.articles.filter((a) => a.id !== articleData.id),
+        })),
+      }
+
+      // Add to new location if this is the target category
+      if (category.id === articleData.categoryId) {
+        if (articleData.subcategoryId) {
+          return {
+            ...updatedCategory,
+            subcategories: updatedCategory.subcategories.map((subcategory) =>
+              subcategory.id === articleData.subcategoryId
+                ? { ...subcategory, articles: [...subcategory.articles, { ...articleData, createdAt: editingArticle!.createdAt }] }
+                : subcategory
+            ),
+          }
+        } else {
+          return {
+            ...updatedCategory,
+            articles: [...updatedCategory.articles, { ...articleData, createdAt: editingArticle!.createdAt }],
+          }
+        }
+      }
+
+      return updatedCategory
+    })
+
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+    
+    // Add audit log entry
+    storage.addAuditEntry({
+      action: "update",
+      entityType: "article",
+      entityId: articleData.id,
+      details: `Updated article: ${articleData.title}`,
+      userId: currentUser?.id || "anonymous"
+    })
+
+    setCurrentView("browse")
+    setEditingArticle(null)
+    setSelectedArticle({ ...articleData, createdAt: editingArticle!.createdAt })
+  }
+
+  const handleDeleteArticle = (articleId: string) => {
+    const updatedCategories = categories.map((category) => ({
+      ...category,
+      articles: category.articles.filter((a) => a.id !== articleId),
+      subcategories: category.subcategories.map((sub) => ({
+        ...sub,
+        articles: sub.articles.filter((a) => a.id !== articleId),
+      })),
+    }))
+
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+    
+    // Add audit log entry
+    storage.addAuditEntry({
+      action: "delete",
+      entityType: "article",
+      entityId: articleId,
+      details: `Deleted article: ${selectedArticle?.title || 'Unknown'}`,
+      userId: currentUser?.id || "anonymous"
+    })
+
     setSelectedArticle(null)
   }
 
-  const handleAdmin = () => {
-    if (currentUser) {
-      setCurrentView("admin")
-    } else {
-      setShowLoginModal(true)
-    }
+  const handleLogin = (user: User) => {
+    setCurrentUser(user)
+    setShowLoginModal(false)
   }
 
-  const renderContent = () => {
-    switch (currentView) {
-      case "home":
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold mb-4">Categories</h2>
-                <CategoryTree
-                  categories={categories}
-                  onCategoryToggle={handleCategoryToggle}
-                  onCategorySelect={handleCategorySelect}
-                  onSubcategorySelect={handleSubcategorySelect}
-                  onArticleSelect={handleArticleSelect}
-                  selectedCategories={selectedCategories}
-                  selectedSubcategories={selectedSubcategories}
-                />
-              </div>
-            </div>
-            <div className="lg:col-span-3 space-y-6">
-              {/* Show selected articles if any categories are selected */}
-              {selectedCategories.size > 0 || selectedSubcategories.size > 0 ? (
-                <SelectedArticles
-                  categories={categories}
-                  selectedCategories={selectedCategories}
-                  selectedSubcategories={selectedSubcategories}
-                  onArticleSelect={handleArticleSelect}
-                />
-              ) : (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-2xl font-bold mb-4">Welcome to Kuhlekt Knowledge Base</h2>
-                  <p className="text-gray-600 mb-6">
-                    Browse through our comprehensive knowledge base using the category tree on the left, or use the
-                    search functionality to find specific articles. Select categories to view their articles.
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 border rounded-lg">
-                      <h3 className="font-semibold mb-2">Total Categories</h3>
-                      <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                      <h3 className="font-semibold mb-2">Total Articles</h3>
-                      <p className="text-2xl font-bold text-green-600">{totalArticles}</p>
-                    </div>
-                    <div className="p-4 border rounded-lg">
-                      <h3 className="font-semibold mb-2">Page Visits</h3>
-                      <p className="text-2xl font-bold text-purple-600">{pageVisits}</p>
-                    </div>
-                  </div>
+  const handleLogout = () => {
+    setCurrentUser(null)
+    setCurrentView("browse")
+  }
 
-                  {/* Moved admin access to bottom */}
-                  {!currentUser && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800 mb-2">
-                        <strong>Admin Access:</strong> Login to add articles and manage users.
-                      </p>
-                      <Button onClick={handleShowLogin} size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        Login as Admin
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      case "search":
-        return (
-          <div className="max-w-4xl mx-auto">
-            <SearchResults
-              results={searchResults}
-              categories={categories}
-              query={searchQuery}
-              onArticleSelect={handleArticleSelect}
-            />
-          </div>
-        )
-      case "admin":
-        return currentUser ? (
-          <AdminDashboard
-            categories={categories}
-            users={users}
-            currentUser={currentUser}
-            auditLog={auditLog}
-            pageVisits={pageVisits}
-            onAddArticle={handleAddArticle}
-            onEditArticle={handleEditArticle}
-            onDeleteArticle={handleDeleteArticle}
-            onCreateUser={handleCreateUser}
-            onDeleteUser={handleDeleteUser}
-            onAddCategory={handleAddCategory}
-            onAddSubcategory={handleAddSubcategory}
-            onImportData={handleImportData}
-            onBack={handleHome}
-          />
-        ) : null
-      case "article":
-        return selectedArticle ? (
-          <ArticleViewer article={selectedArticle} categories={categories} onBack={handleHome} />
-        ) : null
-      case "edit-article":
-        return editingArticle ? (
-          <EditArticleForm
-            article={editingArticle}
-            categories={categories}
-            onUpdateArticle={handleUpdateArticle}
-            onCancel={() => {
-              setEditingArticle(null)
-              setCurrentView("admin")
-            }}
-          />
-        ) : null
-      default:
-        return null
-    }
+  const getTotalArticles = () => {
+    return categories.reduce((total, category) => {
+      const categoryArticles = category.articles.length
+      const subcategoryArticles = category.subcategories.reduce(
+        (subTotal, sub) => subTotal + sub.articles.length,
+        0
+      )
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
-        onSearch={handleSearch}
-        onHome={handleHome}
-        onAdmin={handleAdmin}
-        onLogin={handleShowLogin}
-        onLogout={handleLogout}
-        currentView={currentView}
         currentUser={currentUser}
+        onLogin={() => setShowLoginModal(true)}
+        onLogout={handleLogout}
+        onViewChange={setCurrentView}
+        currentView={currentView}
       />
-      <main className="container mx-auto px-4 py-6">{renderContent()}</main>
-      {showLoginModal && (
-        <LoginModal onLogin={handleLogin} onClose={handleCloseLogin} error={loginError} loading={loginLoading} />
-      )}
+
+      <div className="container mx-auto px-4 py-8">
+        {currentView === "browse" && (
+          <>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <img
+                src="/images/kuhlekt-logo.jpg"
+                alt="Kuhlekt Logo"
+                className="mx-auto mb-4 h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Kuhlekt Knowledge Base</h1>
+              <p className="text-xl text-gray-600 mb-4">
+                Your comprehensive resource for technical documentation and guides
+              </p>
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <span>{getTotalArticles()} articles</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <span>{categories.length} categories</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Eye className="h-4 w-4" />
+                  <span>{pageVisits} visits</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Input
+                  type="text"
+                  placeholder="Search articles, categories, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-10 pr-4 py-3 text-lg"
+                />
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Sidebar - Categories */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold">Categories</h2>
+                    {selectedCategories.size > 0 || selectedSubcategories.size > 0 ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategories(new Set())
+                          setSelectedSubcategories(new Set())
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    ) : null}
+                  </div>
+                  <CategoryTree
+                    categories={categories}
+                    selectedCategories={selectedCategories}
+                    selectedSubcategories={selectedSubcategories}
+                    onCategoryToggle={handleCategoryToggle}
+                    onSubcategoryToggle={handleSubcategoryToggle}
+                  />
+                </div>
+              </div>
+
+              {/* Right Content */}
+              <div className="lg:col-span-2">
+                {selectedArticle ? (
+                  <ArticleViewer
+                    article={selectedArticle}
+                    categories={categories}
+                    onBack={() => setSelectedArticle(null)}
+                    onEdit={
+                      currentUser?.role === "admin"
+                        ? (article) => {
+                            setEditingArticle(article)
+                            setCurrentView("edit")
+                          }
+                        : undefined
+                    }
+                    onDelete={
+                      currentUser?.role === "admin" ? handleDeleteArticle : undefined
+                    }
+                  />
+                ) : searchResults.length > 0 ? (
+                  <SearchResults
+                    results={searchResults}
+                    categories={categories}
+                    query={searchQuery}
+                    onArticleSelect={handleArticleSelect}
+                  />
+                ) : (
+                  <SelectedArticles
+                    categories={categories}
+                    selectedCategories={selectedCategories}
+                    selectedSubcategories={selectedSubcategories}
+                    onArticleSelect={handleArticleSelect}
+                  />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {currentView === "add" && (
+          <AddArticleForm
+            categories={categories}
+            onSubmit={handleAddArticle}
+            onCancel={() => setCurrentView("browse")}
+          />
+        )}
+
+        {currentView === "edit" && editingArticle && (
+          <EditArticleForm
+            article={editingArticle}
+            categories={categories}
+            onSubmit={handleEditArticle}
+            onCancel={() => {
+              setCurrentView("browse")
+              setEditingArticle(null)
+            }}
+          />
+        )}
+
+        {currentView === "admin" && currentUser?.role === "admin" && (
+          <AdminDashboard
+            categories={categories}
+            users={users}
+            auditLog={auditLog}
+            onCategoriesUpdate={(newCategories) => {
+              setCategories(newCategories)
+              setAuditLog(storage.getAuditLog())
+            }}
+            onUsersUpdate={(newUsers) => {
+              setUsers(newUsers)
+              setAuditLog(storage.getAuditLog())
+            }}
+            onAuditLogUpdate={setAuditLog}
+          />
+        )}
+      </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        users={users}
+        onLogin={handleLogin}
+      />
     </div>
   )
 }

@@ -1,168 +1,202 @@
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 const STORAGE_KEYS = {
-  CATEGORIES: 'kb_categories',
-  USERS: 'kb_users', 
-  AUDIT_LOG: 'kb_audit_log',
-  LAST_BACKUP: 'kb_last_backup',
-  PAGE_VISITS: 'kb_page_visits'
+  CATEGORIES: "kb_categories",
+  USERS: "kb_users", 
+  AUDIT_LOG: "kb_audit_log",
+  PAGE_VISITS: "kb_page_visits"
 }
 
-// Storage utilities
 export const storage = {
-  // Save data to localStorage
-  saveCategories: (categories: Category[]) => {
+  // Categories
+  getCategories: (): Category[] => {
     try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
-      localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, new Date().toISOString())
+      const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
+      if (!stored) return []
+      
+      const categories = JSON.parse(stored)
+      return categories.map((category: any) => ({
+        ...category,
+        articles: category.articles.map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt)
+        })),
+        subcategories: category.subcategories.map((subcategory: any) => ({
+          ...subcategory,
+          articles: subcategory.articles.map((article: any) => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt)
+          }))
+        }))
+      }))
     } catch (error) {
-      console.error('Failed to save categories:', error)
+      console.error("Error loading categories:", error)
+      return []
     }
   },
 
-  saveUsers: (users: User[]) => {
+  saveCategories: (categories: Category[]): void => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
+    } catch (error) {
+      console.error("Error saving categories:", error)
+    }
+  },
+
+  // Users
+  getUsers: (): User[] => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.USERS)
+      if (!stored) return []
+      
+      const users = JSON.parse(stored)
+      return users.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined
+      }))
+    } catch (error) {
+      console.error("Error loading users:", error)
+      return []
+    }
+  },
+
+  saveUsers: (users: User[]): void => {
     try {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
     } catch (error) {
-      console.error('Failed to save users:', error)
+      console.error("Error saving users:", error)
     }
   },
 
-  saveAuditLog: (auditLog: AuditLogEntry[]) => {
+  // Audit Log
+  getAuditLog: (): AuditLogEntry[] => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
+      if (!stored) return []
+      
+      const entries = JSON.parse(stored)
+      return entries.map((entry: any) => ({
+        ...entry,
+        timestamp: new Date(entry.timestamp)
+      }))
+    } catch (error) {
+      console.error("Error loading audit log:", error)
+      return []
+    }
+  },
+
+  saveAuditLog: (auditLog: AuditLogEntry[]): void => {
     try {
       localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
     } catch (error) {
-      console.error('Failed to save audit log:', error)
+      console.error("Error saving audit log:", error)
     }
   },
 
-  // Page visit counter
-  incrementPageVisits: (): number => {
+  addAuditEntry: (entry: Omit<AuditLogEntry, "id" | "timestamp">): void => {
     try {
-      const currentVisits = parseInt(localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) || '0', 10)
-      const newVisits = currentVisits + 1
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newVisits.toString())
-      return newVisits
+      const currentLog = storage.getAuditLog()
+      const newEntry: AuditLogEntry = {
+        ...entry,
+        id: Date.now().toString(),
+        timestamp: new Date()
+      }
+      currentLog.unshift(newEntry)
+      
+      // Keep only last 1000 entries
+      if (currentLog.length > 1000) {
+        currentLog.splice(1000)
+      }
+      
+      storage.saveAuditLog(currentLog)
     } catch (error) {
-      console.error('Failed to increment page visits:', error)
-      return 1
+      console.error("Error adding audit entry:", error)
     }
   },
 
+  // Page Visits
   getPageVisits: (): number => {
     try {
-      return parseInt(localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) || '0', 10)
+      const stored = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
+      return stored ? parseInt(stored, 10) : 0
     } catch (error) {
-      console.error('Failed to get page visits:', error)
+      console.error("Error loading page visits:", error)
       return 0
     }
   },
 
-  resetPageVisits: () => {
+  incrementPageVisits: (): number => {
     try {
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, '0')
+      const current = storage.getPageVisits()
+      const newCount = current + 1
+      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
+      return newCount
     } catch (error) {
-      console.error('Failed to reset page visits:', error)
+      console.error("Error incrementing page visits:", error)
+      return 0
     }
   },
 
-  // Load data from localStorage
-  loadCategories: (): Category[] | null => {
+  // Data Export/Import
+  exportData: () => {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      if (data) {
-        const categories = JSON.parse(data)
-        // Convert date strings back to Date objects
-        return categories.map((cat: any) => ({
-          ...cat,
-          articles: cat.articles.map((article: any) => ({
-            ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt)
-          })),
-          subcategories: cat.subcategories.map((sub: any) => ({
-            ...sub,
-            articles: sub.articles.map((article: any) => ({
-              ...article,
-              createdAt: new Date(article.createdAt),
-              updatedAt: new Date(article.updatedAt)
-            }))
-          }))
-        }))
+      return {
+        categories: storage.getCategories(),
+        users: storage.getUsers(),
+        auditLog: storage.getAuditLog(),
+        pageVisits: storage.getPageVisits(),
+        exportDate: new Date().toISOString()
       }
-      return null
     } catch (error) {
-      console.error('Failed to load categories:', error)
+      console.error("Error exporting data:", error)
       return null
     }
   },
 
-  loadUsers: (): User[] | null => {
+  importData: (data: any): boolean => {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.USERS)
-      if (data) {
-        const users = JSON.parse(data)
-        return users.map((user: any) => ({
-          ...user,
-          createdAt: new Date(user.createdAt),
-          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined
-        }))
+      if (data.categories) {
+        storage.saveCategories(data.categories)
       }
-      return null
-    } catch (error) {
-      console.error('Failed to load users:', error)
-      return null
-    }
-  },
-
-  loadAuditLog: (): AuditLogEntry[] | null => {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
-      if (data) {
-        const auditLog = JSON.parse(data)
-        return auditLog.map((entry: any) => ({
-          ...entry,
-          timestamp: new Date(entry.timestamp)
-        }))
+      if (data.users) {
+        storage.saveUsers(data.users)
       }
-      return null
+      if (data.auditLog) {
+        storage.saveAuditLog(data.auditLog)
+      }
+      if (data.pageVisits) {
+        localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, data.pageVisits.toString())
+      }
+      return true
     } catch (error) {
-      console.error('Failed to load audit log:', error)
-      return null
-    }
-  },
-
-  // Get last backup time
-  getLastBackupTime: (): Date | null => {
-    try {
-      const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_BACKUP)
-      return timestamp ? new Date(timestamp) : null
-    } catch (error) {
-      return null
+      console.error("Error importing data:", error)
+      return false
     }
   },
 
   // Clear all data
-  clearAll: () => {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      localStorage.removeItem(key)
-    })
-  },
-
-  // Check if data exists
-  hasStoredData: (): boolean => {
-    return localStorage.getItem(STORAGE_KEYS.CATEGORIES) !== null
+  clearAll: (): void => {
+    try {
+      Object.values(STORAGE_KEYS).forEach(key => {
+        localStorage.removeItem(key)
+      })
+    } catch (error) {
+      console.error("Error clearing data:", error)
+    }
   }
 }
 
-// Export/Import utilities
+// Export/Import utilities for file operations
 export const dataManager = {
-  // Export all data as JSON
+  // Export all data as JSON file
   exportData: () => {
     const data = {
-      categories: storage.loadCategories(),
-      users: storage.loadUsers(),
-      auditLog: storage.loadAuditLog(),
+      categories: storage.getCategories(),
+      users: storage.getUsers(),
+      auditLog: storage.getAuditLog(),
       pageVisits: storage.getPageVisits(),
       exportedAt: new Date().toISOString(),
       version: '1.0'

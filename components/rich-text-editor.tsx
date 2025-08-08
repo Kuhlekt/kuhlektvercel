@@ -1,18 +1,17 @@
 "use client"
 
-import { useState, useRef, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Image, Palette, Type, Undo, Redo, Eye, EyeOff } from 'lucide-react'
+import { useState, useRef, useCallback } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Bold, Italic, Underline, List, ListOrdered, Link, Image, Type, Palette, Eye, EyeOff } from 'lucide-react'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface RichTextEditorProps {
   value: string
@@ -22,6 +21,8 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const [showPreview, setShowPreview] = useState(false)
+  const [linkUrl, setLinkUrl] = useState("")
+  const [showLinkInput, setShowLinkInput] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -32,239 +33,234 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     }
   }, [onChange])
 
-  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFontSize = (size: string) => {
+    execCommand('fontSize', size)
+  }
+
+  const handleTextColor = (color: string) => {
+    execCommand('foreColor', color)
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onload = (e) => {
-        const img = `<img src="${e.target?.result}" style="max-width: 100%; height: auto;" alt="Uploaded image" />`
-        execCommand('insertHTML', img)
+        const result = e.target?.result as string
+        execCommand('insertImage', result)
       }
       reader.readAsDataURL(file)
     }
-  }, [execCommand])
+  }
 
-  const handleContentChange = useCallback(() => {
+  const handleLink = () => {
+    if (showLinkInput && linkUrl) {
+      execCommand('createLink', linkUrl)
+      setLinkUrl("")
+      setShowLinkInput(false)
+    } else {
+      setShowLinkInput(true)
+    }
+  }
+
+  const handleInput = () => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML)
     }
-  }, [onChange])
+  }
 
-  const colors = [
-    '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
-    '#800000', '#008000', '#000080', '#808000', '#800080', '#008080', '#808080'
-  ]
-
-  const fontSizes = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px']
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text/plain')
+    document.execCommand('insertText', false, text)
+  }
 
   return (
-    <div className="space-y-4">
-      <Alert className="bg-blue-50 border-blue-200">
-        <AlertDescription className="text-blue-800">
-          <strong>Rich Text Editor Features:</strong>
-          <ul className="mt-2 space-y-1 text-sm">
-            <li>• Use toolbar buttons for formatting (Bold, Italic, etc.)</li>
-            <li>• Upload images with the Image button</li>
-            <li>• Change text colors with the palette</li>
-            <li>• Create lists and adjust alignment</li>
-            <li>• Toggle preview to see formatted content</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
-
-      <Card className="border border-gray-200 shadow-sm">
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-1 p-3 bg-white border-b border-gray-200">
-          {/* Basic formatting */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('bold')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('italic')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('underline')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Underline className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
+    <div className="border rounded-lg overflow-hidden bg-white">
+      {/* Toolbar */}
+      <div className="border-b bg-gray-50 p-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Text Formatting */}
+          <div className="flex items-center gap-1 border-r pr-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => execCommand('bold')}
+              className="h-8 w-8 p-0"
+            >
+              <Bold className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => execCommand('italic')}
+              className="h-8 w-8 p-0"
+            >
+              <Italic className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => execCommand('underline')}
+              className="h-8 w-8 p-0"
+            >
+              <Underline className="h-4 w-4" />
+            </Button>
+          </div>
 
           {/* Lists */}
+          <div className="flex items-center gap-1 border-r pr-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => execCommand('insertUnorderedList')}
+              className="h-8 w-8 p-0"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => execCommand('insertOrderedList')}
+              className="h-8 w-8 p-0"
+            >
+              <ListOrdered className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Font Size */}
+          <div className="flex items-center gap-2 border-r pr-2">
+            <Type className="h-4 w-4 text-gray-500" />
+            <Select onValueChange={handleFontSize}>
+              <SelectTrigger className="w-16 h-8">
+                <SelectValue placeholder="Size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Small</SelectItem>
+                <SelectItem value="3">Normal</SelectItem>
+                <SelectItem value="5">Large</SelectItem>
+                <SelectItem value="7">Huge</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Text Color */}
+          <div className="flex items-center gap-2 border-r pr-2">
+            <Palette className="h-4 w-4 text-gray-500" />
+            <Select onValueChange={handleTextColor}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue placeholder="Color" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="black">Black</SelectItem>
+                <SelectItem value="red">Red</SelectItem>
+                <SelectItem value="blue">Blue</SelectItem>
+                <SelectItem value="green">Green</SelectItem>
+                <SelectItem value="purple">Purple</SelectItem>
+                <SelectItem value="orange">Orange</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Media */}
+          <div className="flex items-center gap-1 border-r pr-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleLink}
+              className="h-8 w-8 p-0"
+            >
+              <Link className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-8 w-8 p-0"
+            >
+              <Image className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Preview Toggle */}
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('insertUnorderedList')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('insertOrderedList')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <ListOrdered className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* Alignment */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('justifyLeft')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <AlignLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('justifyCenter')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <AlignCenter className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('justifyRight')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <AlignRight className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* Color picker */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-              >
-                <Palette className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48 p-2 bg-white border border-gray-200 shadow-lg z-50">
-              <div className="grid grid-cols-7 gap-1">
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
-                    style={{ backgroundColor: color }}
-                    onClick={() => execCommand('foreColor', color)}
-                  />
-                ))}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Font size */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-              >
-                <Type className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white border border-gray-200 shadow-lg z-50">
-              {fontSizes.map((size) => (
-                <DropdownMenuItem
-                  key={size}
-                  onClick={() => execCommand('fontSize', size)}
-                  className="hover:bg-gray-50"
-                >
-                  {size}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* Image upload */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Image className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* Undo/Redo */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('undo')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Undo className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => execCommand('redo')}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
-          >
-            <Redo className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          {/* Preview toggle */}
-          <Button
-            variant="outline"
+            type="button"
+            variant="ghost"
             size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className="h-8 w-8 p-0 bg-white border-gray-300 hover:bg-gray-50"
+            className="h-8 px-3"
           >
-            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPreview ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            {showPreview ? 'Edit' : 'Preview'}
           </Button>
         </div>
 
-        {/* Editor/Preview */}
-        <div className="min-h-[300px]">
-          {showPreview ? (
-            <div 
-              className="p-4 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: value }}
+        {/* Link Input */}
+        {showLinkInput && (
+          <div className="flex items-center gap-2 pt-2 border-t">
+            <Label htmlFor="link-url" className="text-sm">URL:</Label>
+            <Input
+              id="link-url"
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com"
+              className="flex-1 h-8"
             />
-          ) : (
-            <div
-              ref={editorRef}
-              contentEditable
-              className="p-4 min-h-[300px] focus:outline-none"
-              onInput={handleContentChange}
-              dangerouslySetInnerHTML={{ __html: value }}
-              style={{ minHeight: '300px' }}
-            />
-          )}
-        </div>
-      </Card>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleLink}
+              disabled={!linkUrl}
+              className="h-8"
+            >
+              Add Link
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowLinkInput(false)
+                setLinkUrl("")
+              }}
+              className="h-8"
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
 
+      {/* Editor/Preview Area */}
+      <div className="min-h-[300px]">
+        {showPreview ? (
+          <div 
+            className="p-4 prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: value }}
+          />
+        ) : (
+          <div
+            ref={editorRef}
+            contentEditable
+            onInput={handleInput}
+            onPaste={handlePaste}
+            className="p-4 min-h-[300px] focus:outline-none"
+            style={{ minHeight: '300px' }}
+            dangerouslySetInnerHTML={{ __html: value }}
+            data-placeholder={placeholder}
+          />
+        )}
+      </div>
+
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"

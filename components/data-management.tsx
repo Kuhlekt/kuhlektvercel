@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Download, Upload, Database, AlertTriangle, CheckCircle, Clock, HardDrive } from 'lucide-react'
+import { Download, Upload, Trash2, AlertTriangle, CheckCircle } from 'lucide-react'
 import { storage, dataManager } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -13,245 +14,250 @@ interface DataManagementProps {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  onImportData: (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => void
+  onDataUpdate: (data: { categories: Category[], users: User[], auditLog: AuditLogEntry[] }) => void
 }
 
-export function DataManagement({ categories, users, auditLog, onImportData }: DataManagementProps) {
+export function DataManagement({ categories, users, auditLog, onDataUpdate }: DataManagementProps) {
+  const [importFile, setImportFile] = useState<File | null>(null)
   const [isImporting, setIsImporting] = useState(false)
-  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const lastBackupTime = storage.getLastBackupTime()
-  const hasStoredData = storage.hasStoredData()
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const handleExport = () => {
     try {
       dataManager.exportData()
-      setImportStatus({ type: 'success', message: 'Data exported successfully!' })
+      setMessage({ type: 'success', text: 'Data exported successfully!' })
+      setTimeout(() => setMessage(null), 3000)
     } catch (error) {
-      setImportStatus({ type: 'error', message: 'Failed to export data: ' + error })
+      setMessage({ type: 'error', text: 'Failed to export data' })
+      setTimeout(() => setMessage(null), 3000)
     }
   }
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleImport = async () => {
+    if (!importFile) return
 
     setIsImporting(true)
-    setImportStatus(null)
-
     try {
-      const data = await dataManager.importData(file)
-      onImportData(data)
-      setImportStatus({ type: 'success', message: 'Data imported successfully!' })
-    } catch (error) {
-      setImportStatus({ type: 'error', message: String(error) })
-    }
-
-    setIsImporting(false)
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const clearStoredData = () => {
-    if (window.confirm('Are you sure you want to clear all stored data? This action cannot be undone.')) {
-      storage.clearAll()
-      setImportStatus({ type: 'success', message: 'All stored data cleared.' })
-      // Reload page to reset to initial data
-      window.location.reload()
-    }
-  }
-
-  const getStorageSize = () => {
-    try {
-      let total = 0
-      for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key) && key.startsWith('kb_')) {
-          total += localStorage[key].length
-        }
+      const data = await dataManager.importData(importFile)
+      
+      // Save to localStorage
+      storage.saveCategories(data.categories)
+      storage.saveUsers(data.users)
+      storage.saveAuditLog(data.auditLog)
+      
+      if (data.pageVisits) {
+        localStorage.setItem('kb_page_visits', data.pageVisits.toString())
       }
-      return (total / 1024).toFixed(2) + ' KB'
+
+      // Update parent component
+      onDataUpdate({
+        categories: data.categories,
+        users: data.users,
+        auditLog: data.auditLog
+      })
+
+      setMessage({ type: 'success', text: 'Data imported successfully!' })
+      setImportFile(null)
     } catch (error) {
-      return 'Unknown'
+      setMessage({ type: 'error', text: `Import failed: ${error}` })
+    } finally {
+      setIsImporting(false)
+      setTimeout(() => setMessage(null), 5000)
     }
   }
+
+  const handleClearAll = () => {
+    if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+      storage.clearAll()
+      onDataUpdate({
+        categories: [],
+        users: [],
+        auditLog: []
+      })
+      setMessage({ type: 'success', text: 'All data cleared successfully!' })
+      setTimeout(() => setMessage(null), 3000)
+    }
+  }
+
+  const getDataStats = () => {
+    const totalArticles = categories.reduce((total, category) => {
+      const categoryArticles = category.articles.length
+      const subcategoryArticles = category.subcategories.reduce(
+        (subTotal, sub) => subTotal + sub.articles.length,
+        0
+      )
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
+
+    const totalSubcategories = categories.reduce(
+      (total, category) => total + category.subcategories.length,
+      0
+    )
+
+    return {
+      categories: categories.length,
+      subcategories: totalSubcategories,
+      articles: totalArticles,
+      users: users.length,
+      auditEntries: auditLog.length,
+      pageVisits: storage.getPageVisits()
+    }
+  }
+
+  const stats = getDataStats()
 
   return (
     <div className="space-y-6">
-      {/* Storage Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <HardDrive className="h-5 w-5" />
-            <span>Storage Status</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-2">
-              <Database className="h-4 w-4 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium">Storage Size</p>
-                <p className="text-lg font-bold">{getStorageSize()}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Content</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Categories:</span>
+                <span className="font-medium">{stats.categories}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Subcategories:</span>
+                <span className="font-medium">{stats.subcategories}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Articles:</span>
+                <span className="font-medium">{stats.articles}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm font-medium">Last Backup</p>
-                <p className="text-sm text-gray-600">
-                  {lastBackupTime ? lastBackupTime.toLocaleString() : 'Never'}
-                </p>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">System</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Users:</span>
+                <span className="font-medium">{stats.users}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Audit Entries:</span>
+                <span className="font-medium">{stats.auditEntries}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Page Visits:</span>
+                <span className="font-medium">{stats.pageVisits}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center space-x-2">
-              {hasStoredData ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              )}
-              <div>
-                <p className="text-sm font-medium">Status</p>
-                <Badge variant={hasStoredData ? "default" : "secondary"}>
-                  {hasStoredData ? "Data Stored" : "Using Defaults"}
-                </Badge>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Storage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Data Size:</span>
+                <span className="font-medium">
+                  {Math.round(JSON.stringify({ categories, users, auditLog }).length / 1024)} KB
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Last Backup:</span>
+                <span className="font-medium text-gray-500">Manual</span>
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          <Alert className="border-blue-200 bg-blue-50">
-            <Database className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              <p>
-                <strong>Persistent Storage:</strong> Your articles and data are automatically saved to browser storage 
-                and will persist across deployments and browser sessions.
-              </p>
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-
-      {/* Data Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Database className="h-5 w-5" />
-            <span>Data Management</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Current Data Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
-              <p className="text-sm text-gray-600">Categories</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {categories.reduce((total, cat) => 
-                  total + cat.articles.length + cat.subcategories.reduce((subTotal, sub) => 
-                    subTotal + sub.articles.length, 0
-                  ), 0
-                )}
-              </p>
-              <p className="text-sm text-gray-600">Articles</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{users.length}</p>
-              <p className="text-sm text-gray-600">Users</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">{auditLog.length}</p>
-              <p className="text-sm text-gray-600">Audit Entries</p>
-            </div>
-          </div>
-
-          {/* Export/Import Actions */}
-          <div className="flex flex-wrap gap-4">
-            <Button onClick={handleExport} className="flex items-center space-x-2">
-              <Download className="h-4 w-4" />
-              <span>Export Backup</span>
-            </Button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleFileImport}
-              className="hidden"
-            />
-            <Button 
-              onClick={handleImportClick} 
-              variant="outline" 
-              disabled={isImporting}
-              className="flex items-center space-x-2"
-            >
-              <Upload className="h-4 w-4" />
-              <span>{isImporting ? 'Importing...' : 'Import Backup'}</span>
-            </Button>
-
-            <Button 
-              onClick={clearStoredData} 
-              variant="destructive" 
-              className="flex items-center space-x-2"
-            >
-              <AlertTriangle className="h-4 w-4" />
-              <span>Clear All Data</span>
-            </Button>
-          </div>
-
-          {/* Status Messages */}
-          {importStatus && (
-            <Alert variant={importStatus.type === 'error' ? 'destructive' : 'default'}>
-              {importStatus.type === 'success' ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              <AlertDescription>{importStatus.message}</AlertDescription>
-            </Alert>
+      {message && (
+        <Alert className={message.type === 'error' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          {message.type === 'error' ? (
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          ) : (
+            <CheckCircle className="h-4 w-4 text-green-600" />
           )}
+          <AlertDescription className={message.type === 'error' ? 'text-red-800' : 'text-green-800'}>
+            {message.text}
+          </AlertDescription>
+        </Alert>
+      )}
 
-          {/* Instructions */}
-          <div className="space-y-2 text-sm text-gray-600">
-            <p><strong>Export Backup:</strong> Download all your data as a JSON file for safekeeping.</p>
-            <p><strong>Import Backup:</strong> Restore data from a previously exported backup file.</p>
-            <p><strong>Automatic Saving:</strong> Changes are automatically saved to browser storage.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Download className="h-5 w-5" />
+              <span>Export Data</span>
+            </CardTitle>
+            <CardDescription>
+              Download a backup of all your knowledge base data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleExport} className="w-full">
+              <Download className="h-4 w-4 mr-2" />
+              Export Backup
+            </Button>
+          </CardContent>
+        </Card>
 
-      {/* Deployment Protection Info */}
-      <Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Upload className="h-5 w-5" />
+              <span>Import Data</span>
+            </CardTitle>
+            <CardDescription>
+              Restore data from a backup file
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="import-file">Select backup file</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".json"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="mt-1"
+              />
+            </div>
+            <Button 
+              onClick={handleImport} 
+              disabled={!importFile || isImporting}
+              className="w-full"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isImporting ? 'Importing...' : 'Import Backup'}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-red-200">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <CheckCircle className="h-5 w-5 text-green-500" />
-            <span>Deployment Protection</span>
+          <CardTitle className="flex items-center space-x-2 text-red-600">
+            <Trash2 className="h-5 w-5" />
+            <span>Danger Zone</span>
           </CardTitle>
+          <CardDescription>
+            Permanently delete all data. This action cannot be undone.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
-              <div className="space-y-2">
-                <p><strong>✅ Your articles are protected!</strong></p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>All data is automatically saved to browser localStorage</li>
-                  <li>Articles persist across deployments and browser sessions</li>
-                  <li>Export backups regularly for extra safety</li>
-                  <li>Import/export functionality for data migration</li>
-                </ul>
-              </div>
-            </AlertDescription>
-          </Alert>
+          <Button 
+            variant="destructive" 
+            onClick={handleClearAll}
+            className="w-full"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All Data
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Card } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Bold, Italic, List, Eye } from 'lucide-react'
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Bold, Italic, List, ListOrdered, Link, Image, Eye, EyeOff, Upload } from 'lucide-react'
 
 interface EnhancedRichEditorProps {
   value: string
@@ -14,19 +14,22 @@ interface EnhancedRichEditorProps {
 }
 
 export function EnhancedRichEditor({ value, onChange, placeholder }: EnhancedRichEditorProps) {
-  const [activeTab, setActiveTab] = useState('edit')
+  const [showPreview, setShowPreview] = useState(false)
+  const [imageUrl, setImageUrl] = useState("")
+  const [linkText, setLinkText] = useState("")
+  const [linkUrl, setLinkUrl] = useState("")
 
-  const insertFormatting = (before: string, after: string = '') => {
+  const insertText = (before: string, after: string = "") => {
     const textarea = document.querySelector('textarea') as HTMLTextAreaElement
     if (!textarea) return
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selectedText = value.substring(start, end)
+    
     const newText = value.substring(0, start) + before + selectedText + after + value.substring(end)
-    
     onChange(newText)
-    
+
     // Restore cursor position
     setTimeout(() => {
       textarea.focus()
@@ -34,68 +37,193 @@ export function EnhancedRichEditor({ value, onChange, placeholder }: EnhancedRic
     }, 0)
   }
 
-  const renderPreview = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-      .replace(/\n/g, '<br>')
+  const insertImage = () => {
+    if (imageUrl) {
+      insertText(`<img src="${imageUrl}" alt="Image" style="max-width: 100%; height: auto;" />`)
+      setImageUrl("")
+    }
+  }
+
+  const insertLink = () => {
+    if (linkUrl && linkText) {
+      insertText(`<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkText}</a>`)
+      setLinkText("")
+      setLinkUrl("")
+    }
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        insertText(`<img src="${result}" alt="Uploaded image" style="max-width: 100%; height: auto;" />`)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   return (
-    <Card className="border border-gray-200">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-white">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => insertFormatting('**', '**')}
-              className="h-8 w-8 p-0"
-            >
-              <Bold className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => insertFormatting('*', '*')}
-              className="h-8 w-8 p-0"
-            >
-              <Italic className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => insertFormatting('- ', '')}
-              className="h-8 w-8 p-0"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <TabsList className="grid w-32 grid-cols-2">
-            <TabsTrigger value="edit">Edit</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-          </TabsList>
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => insertText('<strong>', '</strong>')}
+            className="h-8 w-8 p-0"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => insertText('<em>', '</em>')}
+            className="h-8 w-8 p-0"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
         </div>
 
-        <TabsContent value="edit" className="m-0">
-          <Textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder || "Start typing your content..."}
-            className="min-h-[300px] border-0 resize-none focus:ring-0 rounded-none"
-          />
-        </TabsContent>
+        <div className="w-px h-6 bg-gray-300" />
 
-        <TabsContent value="preview" className="m-0">
-          <div 
-            className="p-4 min-h-[300px] prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
-          />
-        </TabsContent>
-      </Tabs>
-    </Card>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => insertText('<ul><li>', '</li></ul>')}
+            className="h-8 w-8 p-0"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => insertText('<ol><li>', '</li></ol>')}
+            className="h-8 w-8 p-0"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="w-px h-6 bg-gray-300" />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowPreview(!showPreview)}
+          className="h-8 px-3"
+        >
+          {showPreview ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+          {showPreview ? 'Edit' : 'Preview'}
+        </Button>
+      </div>
+
+      {/* Editor/Preview */}
+      {showPreview ? (
+        <div className="min-h-[300px] p-4 border rounded-lg bg-white prose max-w-none">
+          <div dangerouslySetInnerHTML={{ __html: value }} />
+        </div>
+      ) : (
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="min-h-[300px] font-mono text-sm"
+        />
+      )}
+
+      {/* Quick Insert Tools */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border">
+        {/* Image Insert */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Insert Image
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              placeholder="Image URL"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={insertImage}
+              disabled={!imageUrl}
+            >
+              Insert
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">or</span>
+            <Label htmlFor="image-upload" className="cursor-pointer">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                asChild
+              >
+                <span>
+                  <Upload className="h-3 w-3 mr-1" />
+                  Upload
+                </span>
+              </Button>
+            </Label>
+            <input
+              id="image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Link Insert */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Insert Link
+          </Label>
+          <div className="space-y-2">
+            <Input
+              type="text"
+              placeholder="Link text"
+              value={linkText}
+              onChange={(e) => setLinkText(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="URL"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={insertLink}
+                disabled={!linkUrl || !linkText}
+              >
+                Insert
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
