@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Category, Article } from "../types/knowledge-base"
-import { EnhancedTextarea, type ImageData } from "./enhanced-textarea"
-import { ArrowLeft, Save, ImageIcon } from "lucide-react"
+import { RichTextEditor, type ImageData } from "./rich-text-editor"
+import { ArrowLeft, Save, ImageIcon } from 'lucide-react'
 
 interface EditArticleFormProps {
   article: Article
@@ -30,47 +30,14 @@ export function EditArticleForm({ article, categories, onUpdateArticle, onCancel
 
   const selectedCategory = categories.find((cat) => cat.id === categoryId)
 
-  // Extract existing images from content on component mount
-  useEffect(() => {
-    const extractImagesFromContent = () => {
-      const dataUrlRegex = /(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g
-      const matches = content.match(dataUrlRegex)
-
-      if (matches) {
-        const extractedImages: ImageData[] = matches.map((dataUrl, index) => ({
-          id: `existing-${index}-${Date.now()}`,
-          dataUrl,
-          name: `existing-image-${index + 1}`,
-          placeholder: `[EXISTING:${index}:existing-image-${index + 1}]`,
-        }))
-
-        // Replace data URLs in content with placeholders
-        let updatedContent = content
-        extractedImages.forEach((image) => {
-          updatedContent = updatedContent.replace(image.dataUrl, image.placeholder)
-        })
-
-        setContent(updatedContent)
-        setCurrentImages(extractedImages)
-      }
-    }
-
-    extractImagesFromContent()
-  }, []) // Only run on mount
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !content || !categoryId) return
 
-    // Replace placeholders with actual image data URLs
-    let finalContent = content
-    currentImages.forEach((image) => {
-      finalContent = finalContent.replace(image.placeholder, image.dataUrl)
-    })
-
+    // Content is already in HTML format from the rich text editor
     onUpdateArticle(article.id, {
       title,
-      content: finalContent,
+      content,
       categoryId,
       subcategoryId: subcategoryId || undefined,
       tags: tags
@@ -81,26 +48,9 @@ export function EditArticleForm({ article, categories, onUpdateArticle, onCancel
     })
   }
 
-  // Process content for preview
+  // Process content for preview - content is already HTML
   const getPreviewContent = () => {
-    if (!content) return ""
-
-    let processedContent = content
-
-    // Replace placeholders with actual images
-    currentImages.forEach((image) => {
-      if (content.includes(image.placeholder) && image.dataUrl) {
-        const imgTag = `<img src="${image.dataUrl}" alt="${image.name}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-
-        const index = processedContent.indexOf(image.placeholder)
-        if (index !== -1) {
-          processedContent =
-            processedContent.substring(0, index) + imgTag + processedContent.substring(index + image.placeholder.length)
-        }
-      }
-    })
-
-    return processedContent.replace(/\n/g, "<br />")
+    return content || ""
   }
 
   return (
@@ -173,12 +123,11 @@ export function EditArticleForm({ article, categories, onUpdateArticle, onCancel
 
               <div>
                 <Label htmlFor="content">Content</Label>
-                <EnhancedTextarea
+                <RichTextEditor
                   value={content}
                   onChange={setContent}
                   onImagesChange={setCurrentImages}
                   placeholder="Enter article content here..."
-                  rows={15}
                 />
               </div>
 

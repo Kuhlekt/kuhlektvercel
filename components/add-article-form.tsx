@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Category, Article } from "../types/knowledge-base"
-import { EnhancedTextarea, type ImageData } from "./enhanced-textarea"
-import { Lock, ImageIcon } from "lucide-react"
+import { RichTextEditor, type ImageData } from "./rich-text-editor"
+import { Lock, ImageIcon } from 'lucide-react'
 
 interface AddArticleFormProps {
   categories: Category[]
@@ -33,17 +33,10 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
     e.preventDefault()
     if (!title || !content || !categoryId) return
 
-    // Use current images state directly
-    let finalContent = content
-
-    // Replace placeholders with actual image data URLs
-    currentImages.forEach((image) => {
-      finalContent = finalContent.replace(image.placeholder, image.dataUrl)
-    })
-
+    // Content is already in HTML format from the rich text editor
     onAddArticle({
       title,
-      content: finalContent,
+      content,
       categoryId,
       subcategoryId: subcategoryId || undefined,
       tags: tags
@@ -61,49 +54,9 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
     setCurrentImages([])
   }
 
-  // Process content for preview using direct state - FIXED VERSION
+  // Process content for preview - content is already HTML
   const getPreviewContent = () => {
-    if (!content) return ""
-
-    let processedContent = content
-
-    console.log("=== PREVIEW DEBUG (FIXED) ===")
-    console.log("Content:", content)
-    console.log("Current images:", currentImages)
-
-    // Replace placeholders with actual images using direct state
-    currentImages.forEach((image) => {
-      console.log(`Looking for placeholder: "${image.placeholder}"`)
-      console.log(`Content includes placeholder:`, content.includes(image.placeholder))
-      console.log(`Image data URL starts with:`, image.dataUrl?.substring(0, 50) || "NO DATA URL")
-
-      if (content.includes(image.placeholder) && image.dataUrl) {
-        console.log(`✅ Replacing ${image.placeholder} with image`)
-
-        // Create a clean img tag - make sure we don't double-replace
-        const imgTag = `<img src="${image.dataUrl}" alt="${image.name}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-
-        // Replace only the first occurrence to avoid nested replacements
-        const index = processedContent.indexOf(image.placeholder)
-        if (index !== -1) {
-          processedContent =
-            processedContent.substring(0, index) + imgTag + processedContent.substring(index + image.placeholder.length)
-          console.log(`✅ Successfully replaced placeholder`)
-        }
-      } else {
-        console.log(`❌ Cannot replace ${image.placeholder}:`, {
-          placeholderFound: content.includes(image.placeholder),
-          hasDataUrl: !!image.dataUrl,
-        })
-      }
-    })
-
-    console.log("Final processed content length:", processedContent.length)
-    console.log("Final content preview:", processedContent.substring(0, 200) + "...")
-    console.log("=== END DEBUG ===")
-
-    // Replace newlines with line breaks
-    return processedContent.replace(/\n/g, "<br />")
+    return content || ""
   }
 
   return (
@@ -175,20 +128,21 @@ export function AddArticleForm({ categories, onAddArticle, onCancel }: AddArticl
 
               <div>
                 <Label htmlFor="content">Content</Label>
-                <EnhancedTextarea
+                <RichTextEditor
                   value={content}
                   onChange={setContent}
                   onImagesChange={setCurrentImages}
                   placeholder="Enter article content here...
 
-Try pasting an image:
-1. Copy any image (screenshot, from browser, etc.)
-2. Click in this text area
-3. Press Ctrl+V (or Cmd+V on Mac)
-4. The image will be attached and show in preview!
+✨ Rich text features:
+• Bold, italic, underline formatting
+• Bullet points and numbered lists
+• Text alignment and colors
+• Paste formatted text from anywhere
+• Drag & drop or paste images
+• Multiple font sizes
 
-You can also type regular text and paste image URLs."
-                  rows={15}
+Try copying formatted text from a document and pasting it here!"
                 />
               </div>
 
@@ -226,7 +180,7 @@ You can also type regular text and paste image URLs."
                 </div>
                 {content && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-gray-600 hover:text-gray-800">Show processed HTML</summary>
+                    <summary className="cursor-pointer text-gray-600 hover:text-gray-800">Show HTML source</summary>
                     <pre className="bg-gray-200 p-2 mt-2 rounded overflow-auto max-h-32 text-xs">
                       {getPreviewContent()}
                     </pre>
@@ -249,7 +203,7 @@ You can also type regular text and paste image URLs."
                 ) : (
                   <div className="text-gray-500 italic space-y-2">
                     <p>Content preview will appear here...</p>
-                    <p className="text-xs">Try pasting an image to see it appear in the preview!</p>
+                    <p className="text-xs">Try using the rich text editor to see formatted content!</p>
                   </div>
                 )}
               </div>

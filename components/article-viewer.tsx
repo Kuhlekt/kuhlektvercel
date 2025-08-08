@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from 'lucide-react'
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
@@ -24,26 +24,6 @@ export function ArticleViewer({ article, categories, onBack }: ArticleViewerProp
   }
 
   const subcategoryName = getSubcategoryName(article.categoryId, article.subcategoryId)
-
-  // Function to process content - simplified approach
-  const processContent = (content: string) => {
-    let processedContent = content
-
-    // Simple replacement: find any data:image and convert to img tag
-    processedContent = processedContent.replace(
-      /(data:image[^"'\s]+)/g,
-      '<img src="$1" alt="Pasted image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-    )
-
-    // Handle regular image URLs
-    processedContent = processedContent.replace(
-      /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
-      '<img src="$1" alt="Article image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-    )
-
-    // Replace newlines with line breaks
-    return processedContent.replace(/\n/g, "<br />")
-  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -75,7 +55,7 @@ export function ArticleViewer({ article, categories, onBack }: ArticleViewerProp
           <div className="prose max-w-none">
             <div
               className="article-content"
-              dangerouslySetInnerHTML={{ __html: processContent(article.content) }}
+              dangerouslySetInnerHTML={{ __html: article.content }}
               style={{
                 lineHeight: "1.6",
                 fontSize: "16px",
