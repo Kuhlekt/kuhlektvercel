@@ -308,8 +308,11 @@ export default function KnowledgeBase() {
   }
 
   const handleEditArticle = (articleData: Omit<Article, "createdAt">) => {
+    console.log("handleEditArticle called with:", articleData)
+    console.log("Current editing article:", editingArticle)
+
     const updatedCategories = categories.map((category) => {
-      // Remove from current location
+      // Remove from current location first
       const updatedCategory = {
         ...category,
         articles: category.articles.filter((a) => a.id !== articleData.id),
@@ -321,6 +324,13 @@ export default function KnowledgeBase() {
 
       // Add to new location if this is the target category
       if (category.id === articleData.categoryId) {
+        const updatedArticle = {
+          ...articleData,
+          createdAt: editingArticle!.createdAt,
+        }
+
+        console.log("Adding updated article to category:", updatedArticle)
+
         if (articleData.subcategoryId) {
           return {
             ...updatedCategory,
@@ -328,7 +338,7 @@ export default function KnowledgeBase() {
               subcategory.id === articleData.subcategoryId
                 ? {
                     ...subcategory,
-                    articles: [...subcategory.articles, { ...articleData, createdAt: editingArticle!.createdAt }],
+                    articles: [...subcategory.articles, updatedArticle],
                   }
                 : subcategory,
             ),
@@ -336,13 +346,15 @@ export default function KnowledgeBase() {
         } else {
           return {
             ...updatedCategory,
-            articles: [...updatedCategory.articles, { ...articleData, createdAt: editingArticle!.createdAt }],
+            articles: [...updatedCategory.articles, updatedArticle],
           }
         }
       }
 
       return updatedCategory
     })
+
+    console.log("Updated categories:", updatedCategories)
 
     setCategories(updatedCategories)
     storage.saveCategories(updatedCategories)
@@ -362,9 +374,14 @@ export default function KnowledgeBase() {
       timestamp: new Date(),
     })
 
+    // Update the selected article to show the changes
+    const finalUpdatedArticle = { ...articleData, createdAt: editingArticle!.createdAt }
+    setSelectedArticle(finalUpdatedArticle)
+
     setCurrentView("browse")
     setEditingArticle(null)
-    setSelectedArticle({ ...articleData, createdAt: editingArticle!.createdAt })
+
+    console.log("Article update completed")
   }
 
   const handleDeleteArticle = (articleId: string) => {

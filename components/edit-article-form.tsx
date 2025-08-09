@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { X, Save, Eye, EyeOff, ArrowLeft } from 'lucide-react'
-import { RichTextEditor } from "./rich-text-editor"
+import { Save, Eye, EyeOff, ArrowLeft } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
+import { Textarea } from "@/components/ui/textarea"
 
 interface EditArticleFormProps {
   article: Article
@@ -28,7 +30,7 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
   const [showPreview, setShowPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const selectedCategory = categories.find(cat => cat.id === selectedCategoryId)
+  const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
 
   // Reset subcategory when category changes
@@ -38,10 +40,33 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     }
   }, [selectedCategoryId, article.categoryId])
 
+  // Add useEffect to debug content changes
+  useEffect(() => {
+    console.log("Content state changed:", content)
+  }, [content])
+
+  useEffect(() => {
+    console.log("Title state changed:", title)
+  }, [title])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!title.trim() || !content.trim() || !selectedCategoryId) {
+
+    console.log("Form submission started")
+    console.log("Current form values:", { title, content, selectedCategoryId, selectedSubcategoryId, tags })
+
+    if (!title.trim()) {
+      console.error("Title is required")
+      return
+    }
+
+    if (!content.trim()) {
+      console.error("Content is required")
+      return
+    }
+
+    if (!selectedCategoryId) {
+      console.error("Category is required")
       return
     }
 
@@ -54,11 +79,15 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
         content: content.trim(),
         categoryId: selectedCategoryId,
         subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
-        tags: tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0),
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
         updatedAt: new Date(),
-        createdBy: article.createdBy
+        createdBy: article.createdBy,
       }
 
+      console.log("Submitting updated article:", updatedArticle)
       onSubmit(updatedArticle)
     } catch (error) {
       console.error("Error updating article:", error)
@@ -71,27 +100,27 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     return (
       <div className="prose max-w-none">
         <h1 className="text-2xl font-bold mb-4">{title || "Untitled Article"}</h1>
-        
+
         <div className="flex flex-wrap gap-2 mb-4">
-          {selectedCategory && (
-            <Badge variant="secondary">{selectedCategory.name}</Badge>
-          )}
-          {selectedSubcategoryId !== "none" && availableSubcategories.find(sub => sub.id === selectedSubcategoryId) && (
-            <Badge variant="outline">
-              {availableSubcategories.find(sub => sub.id === selectedSubcategoryId)?.name}
-            </Badge>
-          )}
-          {tags.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0).map((tag, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
+          {selectedCategory && <Badge variant="secondary">{selectedCategory.name}</Badge>}
+          {selectedSubcategoryId !== "none" &&
+            availableSubcategories.find((sub) => sub.id === selectedSubcategoryId) && (
+              <Badge variant="outline">
+                {availableSubcategories.find((sub) => sub.id === selectedSubcategoryId)?.name}
+              </Badge>
+            )}
+          {tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0)
+            .map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
         </div>
 
-        <div 
-          className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     )
   }
@@ -106,12 +135,7 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
           <CardTitle>Edit Article</CardTitle>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPreview(!showPreview)}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
             {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             {showPreview ? "Hide Preview" : "Show Preview"}
           </Button>
@@ -189,24 +213,30 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
                   <TabsTrigger value="preview">Preview</TabsTrigger>
                 </TabsList>
                 <TabsContent value="edit" className="mt-4">
-                  <RichTextEditor
-                    value={content}
-                    onChange={setContent}
-                    placeholder="Write your article content here..."
-                  />
+                  <div className="border rounded-lg">
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Write your article content here..."
+                      className="min-h-[300px] border-0 resize-none focus:ring-0"
+                      rows={15}
+                    />
+                  </div>
                 </TabsContent>
                 <TabsContent value="preview" className="mt-4">
-                  <div className="border rounded-md p-4 min-h-[300px] bg-gray-50">
-                    {renderPreview()}
-                  </div>
+                  <div className="border rounded-md p-4 min-h-[300px] bg-gray-50">{renderPreview()}</div>
                 </TabsContent>
               </Tabs>
             ) : (
-              <RichTextEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Write your article content here..."
-              />
+              <div className="border rounded-lg">
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Write your article content here..."
+                  className="min-h-[300px] border-0 resize-none focus:ring-0"
+                  rows={15}
+                />
+              </div>
             )}
           </div>
 
@@ -214,10 +244,7 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={!title.trim() || !content.trim() || !selectedCategoryId || isSubmitting}
-            >
+            <Button type="submit" disabled={!title.trim() || !content.trim() || !selectedCategoryId || isSubmitting}>
               <Save className="h-4 w-4 mr-2" />
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
