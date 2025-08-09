@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Tag, Camera } from 'lucide-react'
+import { Clock, Tag, Camera } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SearchResultsProps {
@@ -12,70 +12,90 @@ interface SearchResultsProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Function to extract clean text content from HTML
+// Enhanced function to extract clean text content from HTML
 function extractCleanText(html: string): string {
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, ' ')
+  // Create a temporary div to parse HTML properly
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = html
 
-  // Remove CSS styles and parameters
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, '')
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, '')
+  // Remove script and style elements
+  const scripts = tempDiv.querySelectorAll("script, style")
+  scripts.forEach((el) => el.remove())
 
-  // Remove data URLs and image URLs
-  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, '')
-  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/gi, '')
+  // Get text content
+  let text = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Remove extra whitespace and normalize
-  text = text.replace(/\s+/g, ' ').trim()
+  // Remove data URLs and image references
+  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "")
+  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "")
+  text = text.replace(/\[IMAGE:[^\]]+\]/gi, "[Image]")
+
+  // Clean up CSS-related text
+  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, "")
+  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, "")
+  text = text.replace(/(width|height|margin|padding|color|font|background):\s*[^;]+;?/gi, "")
+  text = text.replace(/\d+px/gi, "")
+  text = text.replace(/(rgb|rgba|hex|#)[^;\s]*/gi, "")
+
+  // Normalize whitespace
+  text = text.replace(/\s+/g, " ").trim()
 
   // Split into sentences and filter meaningful ones
-  const sentences = text.split(/[.!?]+/).filter(sentence => {
+  const sentences = text.split(/[.!?]+/).filter((sentence) => {
     const cleaned = sentence.trim()
-    return cleaned.length > 20 && 
-           !cleaned.match(/^(width|height|margin|padding|color|font|background)/i) &&
-           !cleaned.match(/^\d+px/) &&
-           !cleaned.match(/^(rgb|rgba|hex|#)/i)
+    return (
+      cleaned.length > 15 &&
+      !cleaned.match(/^(max-width|height|auto|margin|padding|border|display)/i) &&
+      !cleaned.match(/^\d+$/) &&
+      cleaned.split(" ").length > 2
+    )
   })
 
-  // Return first few meaningful sentences
-  return sentences.slice(0, 2).join('. ').trim()
+  // Return first meaningful sentences
+  const preview = sentences.slice(0, 3).join(". ").trim()
+  return preview.length > 200 ? preview.substring(0, 200) + "..." : preview
 }
 
 // Function to check if content contains images
 function hasImages(content: string): boolean {
-  return content.includes('<img') || 
-         content.includes('data:image/') || 
-         content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/i) !== null
+  return (
+    content.includes("<img") ||
+    content.includes("data:image/") ||
+    content.includes("[IMAGE:") ||
+    content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/i) !== null
+  )
 }
 
 export function SearchResults({ results, categories, query, onArticleSelect }: SearchResultsProps) {
   const getCategoryInfo = (categoryId: string, subcategoryId?: string) => {
-    const category = categories.find(c => c.id === categoryId)
+    const category = categories.find((c) => c.id === categoryId)
     if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
-    
+
     if (subcategoryId) {
-      const subcategory = category.subcategories.find(s => s.id === subcategoryId)
+      const subcategory = category.subcategories.find((s) => s.id === subcategoryId)
       return {
         categoryName: category.name,
-        subcategoryName: subcategory?.name || "Unknown"
+        subcategoryName: subcategory?.name || "Unknown",
       }
     }
-    
+
     return { categoryName: category.name, subcategoryName: undefined }
   }
 
   const highlightText = (text: string, query: string) => {
     if (!query.trim()) return text
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
     const parts = text.split(regex)
-    
-    return parts.map((part, index) => 
+
+    return parts.map((part, index) =>
       regex.test(part) ? (
         <mark key={index} className="bg-yellow-200 px-1 rounded">
           {part}
         </mark>
-      ) : part
+      ) : (
+        part
+      ),
     )
   }
 
@@ -93,35 +113,28 @@ export function SearchResults({ results, categories, query, onArticleSelect }: S
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold mb-2">
-          Search Results ({results.length})
-        </h2>
+        <h2 className="text-xl font-semibold mb-2">Search Results ({results.length})</h2>
         <p className="text-gray-600">
-          Found {results.length} article{results.length !== 1 ? 's' : ''} matching "{query}"
+          Found {results.length} article{results.length !== 1 ? "s" : ""} matching "{query}"
         </p>
       </div>
 
       <div className="space-y-4">
         {results.map((article) => {
-          const { categoryName, subcategoryName } = getCategoryInfo(
-            article.categoryId,
-            article.subcategoryId
-          )
+          const { categoryName, subcategoryName } = getCategoryInfo(article.categoryId, article.subcategoryId)
           const cleanPreview = extractCleanText(article.content)
           const containsImages = hasImages(article.content)
 
           return (
-            <Card 
-              key={article.id} 
+            <Card
+              key={article.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onArticleSelect(article)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">
-                      {highlightText(article.title, query)}
-                    </CardTitle>
+                    <CardTitle className="text-lg mb-2">{highlightText(article.title, query)}</CardTitle>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <span>{categoryName}</span>
                       {subcategoryName && (
