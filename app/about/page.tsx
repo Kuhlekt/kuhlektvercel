@@ -1,9 +1,13 @@
-import { CheckCircle } from 'lucide-react'
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { CheckCircle } from "lucide-react"
 import Image from "next/image"
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
+      <Header />
+
       {/* Main Content */}
       <div id="top" className="max-w-6xl mx-auto px-8 py-16">
         {/* Hero Section */}
@@ -85,6 +89,8 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   )
 }
