@@ -1,79 +1,74 @@
 "use client"
 
 import { useActionState } from "react"
-import { submitDemoForm } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { submitDemoForm } from "@/actions/form-actions"
+
+const initialState = {
+  success: false,
+  message: "",
+  errors: {},
+}
 
 export default function DemoForm() {
-  const [state, action, isPending] = useActionState(submitDemoForm, null)
+  const [state, formAction, isPending] = useActionState(submitDemoForm, initialState)
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
         <CardTitle>Request a Demo</CardTitle>
-        <CardDescription>See our platform in action. Schedule a personalized demo with our team.</CardDescription>
+        <CardDescription>See our platform in action. Schedule your personalized demo today.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input id="name" name="name" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
-              <Input id="phone" name="phone" type="tel" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company">Company *</Label>
-              <Input id="company" name="company" required />
-            </div>
+        <form action={formAction} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="demo-name">Name *</Label>
+            <Input id="demo-name" name="name" placeholder="Enter your full name" required />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="affiliateNumber">Affiliate Number (Optional)</Label>
-            <Input id="affiliateNumber" name="affiliateNumber" placeholder="e.g., AFF001" className="font-mono" />
-            <p className="text-sm text-muted-foreground">
-              If you were referred by an affiliate, please enter their number here.
-            </p>
+            <Label htmlFor="demo-email">Email *</Label>
+            <Input id="demo-email" name="email" type="email" placeholder="Enter your business email" required />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="message">Tell us about your needs</Label>
-            <Textarea
-              id="message"
-              name="message"
-              className="min-h-[120px]"
-              placeholder="What would you like to see in the demo? Any specific features or use cases?"
+            <Label htmlFor="demo-company">Company *</Label>
+            <Input id="demo-company" name="company" placeholder="Enter your company name" required />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="demo-phone">Phone</Label>
+            <Input id="demo-phone" name="phone" type="tel" placeholder="Enter your phone number" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="demo-affiliateNumber">Affiliate# *</Label>
+            <Input
+              id="demo-affiliateNumber"
+              name="affiliateNumber"
+              placeholder="Enter your affiliate number (e.g., AFF001)"
+              required
+              className={state.errors?.affiliateNumber ? "border-red-500" : ""}
             />
+            {state.errors?.affiliateNumber && (
+              <p className="text-sm text-red-600" role="alert">
+                {state.errors.affiliateNumber}
+              </p>
+            )}
           </div>
 
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? "Submitting..." : "Request Demo"}
-          </Button>
-
-          {state && (
-            <div
-              className={`p-4 rounded-md ${
-                state.success
-                  ? "bg-green-50 text-green-800 border border-green-200"
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}
-            >
-              {state.message}
+          {state.success && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-green-800 text-sm">{state.message}</p>
             </div>
           )}
+
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Requesting Demo..." : "Request Demo"}
+          </Button>
         </form>
       </CardContent>
     </Card>
