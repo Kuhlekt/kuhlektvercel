@@ -1,438 +1,353 @@
-"use client"
-
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Search, BookOpen, Shield, Eye, EyeOff } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import type { Article, Category, User } from "@/types/knowledge-base"
-import {
-  getArticles,
-  getCategories,
-  getCurrentUser,
-  setCurrentUser,
-  getUsers,
-  initializeStorage,
-  addAuditLogEntry,
-} from "@/utils/storage"
+import { ArrowRight, CheckCircle, Star, TrendingUp, Users, Shield, Zap } from 'lucide-react'
 
-export default function KnowledgeBase() {
-  const [articles, setArticles] = useState<Article[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [filteredArticles, setFilteredArticles] = useState<Article[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [currentUser, setCurrentUserState] = useState<User | null>(null)
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" })
-  const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    initializeStorage()
-    setArticles(getArticles())
-    setCategories(getCategories())
-    setCurrentUserState(getCurrentUser())
-  }, [])
-
-  useEffect(() => {
-    let filtered = articles.filter((article) => article.isPublished)
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (article) =>
-          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
-      )
-    }
-
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((article) => article.category === selectedCategory)
-    }
-
-    setFilteredArticles(filtered)
-  }, [articles, searchTerm, selectedCategory])
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    const users = getUsers()
-    const user = users.find((u) => u.username === loginForm.username && u.password === loginForm.password)
-
-    if (user) {
-      setCurrentUser(user)
-      setCurrentUserState(user)
-      setShowLoginModal(false)
-      setLoginForm({ username: "", password: "" })
-
-      addAuditLogEntry({
-        id: Date.now().toString(),
-        userId: user.id,
-        username: user.username,
-        action: "User Login",
-        details: `User ${user.username} logged in`,
-        timestamp: new Date().toISOString(),
-      })
-    } else {
-      alert("Invalid credentials")
-    }
-  }
-
-  const handleLogout = () => {
-    if (currentUser) {
-      addAuditLogEntry({
-        id: Date.now().toString(),
-        userId: currentUser.id,
-        username: currentUser.username,
-        action: "User Logout",
-        details: `User ${currentUser.username} logged out`,
-        timestamp: new Date().toISOString(),
-      })
-    }
-
-    setCurrentUser(null)
-    setCurrentUserState(null)
-    setShowAdminPanel(false)
-  }
-
-  const openArticle = (article: Article) => {
-    setSelectedArticle(article)
-    // Increment view count
-    const updatedArticles = articles.map((a) => (a.id === article.id ? { ...a, viewCount: a.viewCount + 1 } : a))
-    setArticles(updatedArticles)
-  }
-
-  const getCategoryName = (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    return category ? category.name : "Uncategorized"
-  }
-
-  const getCategoryColor = (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    return category ? category.color : "#6B7280"
-  }
-
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-40">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-cyan-50 to-blue-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Kuhlekt Knowledge Base
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="bg-red-500 text-white mb-6 px-3 py-1">
+                <Star className="w-4 h-4 mr-1" />
+                Trusted by 500+ finance teams
+              </Badge>
+              
+              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
+                <span className="text-cyan-500">Automate AR.</span><br />
+                <span className="text-red-500">Get Paid Faster.</span>
               </h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {currentUser ? (
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">Welcome, {currentUser.username}</span>
-                  <Badge
-                    variant={
-                      currentUser.role === "admin"
-                        ? "destructive"
-                        : currentUser.role === "editor"
-                          ? "default"
-                          : "secondary"
-                    }
-                  >
-                    {currentUser.role}
-                  </Badge>
-                  {(currentUser.role === "admin" || currentUser.role === "editor") && (
-                    <Button variant="outline" size="sm" onClick={() => setShowAdminPanel(!showAdminPanel)}>
-                      {showAdminPanel ? "Public View" : "Admin Panel"}
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={handleLogout}>
-                    Logout
+              
+              <p className="text-xl text-gray-600 mb-8 max-w-lg">
+                The #1 platform for B2B credit collections and AR automation. Eliminate manual processes, 
+                streamline debt recovery, and improve cash flow.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <Link href="/demo">
+                  <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                    Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
+                </Link>
+                <Button variant="outline" size="lg" className="border-gray-300">
+                  <span className="mr-2">▶</span> Watch Product Tour
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-6 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  No credit card required
                 </div>
-              ) : (
-                <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <Shield className="h-4 w-4 mr-2" />
-                      Login
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Login to Knowledge Base</DialogTitle>
-                      <DialogDescription>Enter your credentials to access the knowledge base.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleLogin} className="space-y-4">
-                      <div>
-                        <Input
-                          placeholder="Username"
-                          value={loginForm.username}
-                          onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Password"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      <Button type="submit" className="w-full">
-                        Login
-                      </Button>
-                    </form>
-                    <div className="text-sm text-gray-500 space-y-1">
-                      <p>
-                        <strong>Demo Credentials:</strong>
-                      </p>
-                      <p>Admin: admin / admin123</p>
-                      <p>Editor: editor / editor123</p>
-                      <p>Viewer: viewer / viewer123</p>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  Free 14-day trial
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Admin Panel */}
-      {showAdminPanel && currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
-        <div className="bg-gray-900 text-white p-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Admin Panel</h2>
-              <div className="flex space-x-4">
-                <Button variant="secondary" size="sm">
-                  Manage Articles
-                </Button>
-                <Button variant="secondary" size="sm">
-                  Manage Categories
-                </Button>
-                {currentUser.role === "admin" && (
-                  <Button variant="secondary" size="sm">
-                    Manage Users
-                  </Button>
-                )}
+            
+            <div className="relative">
+              <Image
+                src="/images/businesswoman.png"
+                alt="Professional businesswoman using Kuhlekt AR automation platform"
+                width={600}
+                height={400}
+                className="rounded-lg shadow-2xl"
+              />
+              
+              {/* Testimonial Overlay */}
+              <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-lg shadow-lg max-w-sm">
+                <p className="text-gray-600 italic mb-3">
+                  "Kuhlekt transformed our accounts receivable process. We reduced DSO by 30% and our team now spends 80% 
+                  less time on manual collections. The ROI was immediate and substantial."
+                </p>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/images/sarah-johnson-headshot.png"
+                    alt="Maria Rodriguez"
+                    width={40}
+                    height={40}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold text-cyan-600">Maria Rodriguez</p>
+                    <p className="text-sm text-gray-500">CFO at TechStream</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {selectedArticle ? (
-          /* Article View */
-          <div className="max-w-4xl mx-auto">
-            <Button variant="ghost" onClick={() => setSelectedArticle(null)} className="mb-6">
-              ← Back to Articles
-            </Button>
+      {/* Stats Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-cyan-500 mb-2">80%</div>
+              <div className="text-gray-600">Manual Tasks Eliminated</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-cyan-500 mb-2">30%</div>
+              <div className="text-gray-600">DSO Reduction</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-cyan-500 mb-2">500+</div>
+              <div className="text-gray-600">Finance Teams</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-cyan-500 mb-2">99%</div>
+              <div className="text-gray-600">Customer Satisfaction</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <Card className="bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <Badge style={{ backgroundColor: getCategoryColor(selectedArticle.category) }} className="text-white">
-                    {getCategoryName(selectedArticle.category)}
-                  </Badge>
-                  <span className="text-sm text-gray-500">{selectedArticle.viewCount} views</span>
+      {/* Benefits Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="bg-cyan-100 text-cyan-800 mb-4">Benefits</Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Kuhlekt helps you:
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <TrendingUp className="w-8 h-8 text-cyan-600" />
                 </div>
-                <CardTitle className="text-3xl">{selectedArticle.title}</CardTitle>
-                <CardDescription>
-                  By {selectedArticle.author} • {new Date(selectedArticle.createdAt).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  {selectedArticle.content.split("\n").map((paragraph, index) => {
-                    if (paragraph.startsWith("# ")) {
-                      return (
-                        <h1 key={index} className="text-2xl font-bold mt-6 mb-4">
-                          {paragraph.slice(2)}
-                        </h1>
-                      )
-                    } else if (paragraph.startsWith("## ")) {
-                      return (
-                        <h2 key={index} className="text-xl font-semibold mt-5 mb-3">
-                          {paragraph.slice(3)}
-                        </h2>
-                      )
-                    } else if (paragraph.startsWith("### ")) {
-                      return (
-                        <h3 key={index} className="text-lg font-medium mt-4 mb-2">
-                          {paragraph.slice(4)}
-                        </h3>
-                      )
-                    } else if (paragraph.startsWith("- ")) {
-                      return (
-                        <li key={index} className="ml-4">
-                          {paragraph.slice(2)}
-                        </li>
-                      )
-                    } else if (paragraph.trim() === "") {
-                      return <br key={index} />
-                    } else {
-                      return (
-                        <p key={index} className="mb-3">
-                          {paragraph}
-                        </p>
-                      )
-                    }
-                  })}
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Improve Cash Flow</h3>
+                <p className="text-gray-600">
+                  Accelerate collections with automated follow-ups, payment reminders, and intelligent prioritization 
+                  to get paid faster.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Users className="w-8 h-8 text-cyan-600" />
                 </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Reduce Manual Work</h3>
+                <p className="text-gray-600">
+                  Eliminate time-consuming manual tasks with automated workflows, smart routing, and AI-powered 
+                  decision making.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="w-8 h-8 text-cyan-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Minimize Risk</h3>
+                <p className="text-gray-600">
+                  Proactively identify at-risk accounts with predictive analytics and take action before 
+                  problems escalate.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-                <div className="mt-8 pt-6 border-t">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedArticle.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
+      {/* Product Features */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Everything you need to automate AR
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              From invoice processing to collections management, Kuhlekt provides a complete platform 
+              for accounts receivable automation.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">AR Automation Platform</h3>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <Zap className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Automated Invoice Processing</h4>
+                    <p className="text-gray-600">
+                      Streamline invoice creation, delivery, and tracking with intelligent automation that 
+                      reduces errors and saves time.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <Users className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Digital Collections</h4>
+                    <p className="text-gray-600">
+                      Engage customers through multiple channels with personalized communication strategies 
+                      that improve payment rates.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <TrendingUp className="w-4 h-4 text-cyan-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Advanced Analytics</h4>
+                    <p className="text-gray-600">
+                      Get deep insights into your AR performance with real-time dashboards and predictive 
+                      analytics that drive better decisions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Image
+                src="/images/ar-dashboard.png"
+                alt="Kuhlekt AR Dashboard showing key metrics and analytics"
+                width={600}
+                height={400}
+                className="rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Trusted by finance teams worldwide
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-600 mb-6">
+                  "Kuhlekt has revolutionized our collections process. We've seen a 40% improvement in collection rates 
+                  and our team is much more efficient."
+                </p>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/images/michael-chen-asian.png"
+                    alt="Michael Chen"
+                    width={48}
+                    height={48}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">Michael Chen</p>
+                    <p className="text-sm text-gray-500">Finance Director, GlobalTech</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-600 mb-6">
+                  "The automation features have saved us countless hours. Our DSO has dropped significantly and 
+                  cash flow has never been better."
+                </p>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/images/jessica-rodriguez-hispanic.png"
+                    alt="Jessica Rodriguez"
+                    width={48}
+                    height={48}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">Jessica Rodriguez</p>
+                    <p className="text-sm text-gray-500">CFO, InnovateCorp</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-600 mb-6">
+                  "Implementation was smooth and the results were immediate. Kuhlekt has become an essential 
+                  part of our financial operations."
+                </p>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/images/sarah-johnson-headshot.png"
+                    alt="Sarah Johnson"
+                    width={48}
+                    height={48}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">Sarah Johnson</p>
+                    <p className="text-sm text-gray-500">Controller, TechSolutions</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        ) : (
-          /* Main View */
-          <>
-            {/* Search and Filters */}
-            <div className="mb-8">
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search articles..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/70 backdrop-blur-sm"
-                  />
-                </div>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 rounded-md border border-gray-300 bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+        </div>
+      </section>
 
-              {/* Category Pills */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={selectedCategory === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory("all")}
-                  className="bg-white/70 backdrop-blur-sm"
-                >
-                  All ({articles.filter((a) => a.isPublished).length})
-                </Button>
-                {categories.map((category) => {
-                  const count = articles.filter((a) => a.category === category.id && a.isPublished).length
-                  return (
-                    <Button
-                      key={category.id}
-                      variant={selectedCategory === category.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(category.id)}
-                      className="bg-white/70 backdrop-blur-sm"
-                      style={{
-                        backgroundColor: selectedCategory === category.id ? category.color : undefined,
-                        borderColor: category.color,
-                        color: selectedCategory === category.id ? "white" : category.color,
-                      }}
-                    >
-                      {category.name} ({count})
-                    </Button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Articles Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredArticles.map((article) => (
-                <Card
-                  key={article.id}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-200 bg-white/70 backdrop-blur-sm hover:bg-white/90"
-                  onClick={() => openArticle(article)}
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge style={{ backgroundColor: getCategoryColor(article.category) }} className="text-white">
-                        {getCategoryName(article.category)}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{article.viewCount} views</span>
-                    </div>
-                    <CardTitle className="text-lg line-clamp-2">{article.title}</CardTitle>
-                    <CardDescription>
-                      By {article.author} • {new Date(article.createdAt).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                      {article.content.replace(/[#*]/g, "").substring(0, 150)}...
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {article.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {article.tags.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{article.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {filteredArticles.length === 0 && (
-              <div className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No articles found</h3>
-                <p className="text-gray-500">
-                  {searchTerm || selectedCategory !== "all"
-                    ? "Try adjusting your search or filter criteria."
-                    : "No articles have been published yet."}
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+            Ready to transform your AR process?
+          </h2>
+          <p className="text-xl text-cyan-100 mb-8 max-w-3xl mx-auto">
+            Join 500+ finance teams who trust Kuhlekt to automate their accounts receivable and get paid faster.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/demo">
+              <Button size="lg" className="bg-white text-cyan-600 hover:bg-gray-100">
+                Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-cyan-600">
+              Start Free Trial
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
