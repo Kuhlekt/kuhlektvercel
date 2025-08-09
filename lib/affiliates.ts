@@ -22,10 +22,12 @@ export function validateAffiliate(affiliateNumber: string): boolean {
 }
 
 export function getAffiliateError(affiliateNumber: string): string | null {
-  if (!affiliateNumber.trim()) {
-    return "Affiliate number is required"
+  // If no affiliate number provided, that's okay (it's optional)
+  if (!affiliateNumber || !affiliateNumber.trim()) {
+    return null
   }
 
+  // Only validate if an affiliate number was provided
   if (!validateAffiliate(affiliateNumber)) {
     return "Invalid affiliate number. Please check and try again."
   }

@@ -8,22 +8,23 @@ export async function submitContactForm(prevState: any, formData: FormData) {
   const message = formData.get("message") as string
   const affiliateNumber = formData.get("affiliateNumber") as string
 
-  // Validate affiliate number
-  const affiliateError = getAffiliateError(affiliateNumber)
-  if (affiliateError) {
-    return {
-      success: false,
-      errors: {
-        affiliateNumber: affiliateError,
-      },
+  // Validate affiliate number only if provided
+  if (affiliateNumber) {
+    const affiliateError = getAffiliateError(affiliateNumber)
+    if (affiliateError) {
+      return {
+        success: false,
+        errors: {
+          affiliateNumber: affiliateError,
+        },
+      }
     }
   }
 
   // Simulate form submission delay
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  // Here you would typically save to database or send email
-  console.log("Contact form submitted:", { name, email, message, affiliateNumber })
+  console.log("Contact form submitted:", { name, email, message, affiliateNumber: affiliateNumber || "Not provided" })
 
   return {
     success: true,
@@ -38,22 +39,29 @@ export async function submitDemoForm(prevState: any, formData: FormData) {
   const phone = formData.get("phone") as string
   const affiliateNumber = formData.get("affiliateNumber") as string
 
-  // Validate affiliate number
-  const affiliateError = getAffiliateError(affiliateNumber)
-  if (affiliateError) {
-    return {
-      success: false,
-      errors: {
-        affiliateNumber: affiliateError,
-      },
+  // Validate affiliate number only if provided
+  if (affiliateNumber) {
+    const affiliateError = getAffiliateError(affiliateNumber)
+    if (affiliateError) {
+      return {
+        success: false,
+        errors: {
+          affiliateNumber: affiliateError,
+        },
+      }
     }
   }
 
   // Simulate form submission delay
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  // Here you would typically save to database or send email
-  console.log("Demo form submitted:", { name, email, company, phone, affiliateNumber })
+  console.log("Demo form submitted:", {
+    name,
+    email,
+    company,
+    phone,
+    affiliateNumber: affiliateNumber || "Not provided",
+  })
 
   return {
     success: true,

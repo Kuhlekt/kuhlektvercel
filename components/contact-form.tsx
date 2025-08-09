@@ -36,12 +36,11 @@ export default function ContactForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="affiliateNumber">Affiliate# *</Label>
+            <Label htmlFor="affiliateNumber">Affiliate# (Optional)</Label>
             <Input
               id="affiliateNumber"
               name="affiliateNumber"
               placeholder="Enter your affiliate number (e.g., AFF001)"
-              required
               className={state.errors?.affiliateNumber ? "border-red-500" : ""}
             />
             {state.errors?.affiliateNumber && (
