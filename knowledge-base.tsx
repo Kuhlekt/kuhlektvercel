@@ -497,7 +497,11 @@ export default function KnowledgeBase() {
                   type="text"
                   placeholder="Search articles, categories, or tags..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const newQuery = e.target.value
+                    setSearchQuery(newQuery)
+                    handleSearch(newQuery) // Trigger search immediately on input change
+                  }}
                   onKeyPress={handleKeyPress}
                   className="pl-10 pr-10 py-3 text-lg"
                 />
@@ -562,7 +566,8 @@ export default function KnowledgeBase() {
                     }
                     onDelete={currentUser?.role === "admin" ? handleDeleteArticle : undefined}
                   />
-                ) : searchQuery.trim() && searchResults.length >= 0 ? (
+                ) : searchQuery.trim() ? (
+                  // Show search results when there's a search query
                   <SearchResults
                     results={searchResults}
                     categories={categories}
@@ -570,6 +575,7 @@ export default function KnowledgeBase() {
                     onArticleSelect={handleArticleSelect}
                   />
                 ) : (
+                  // Show filtered articles when no search query
                   <SelectedArticles
                     categories={categories}
                     selectedCategories={selectedCategories}
