@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Tag, Camera, FileText } from 'lucide-react'
+import { Clock, Tag, Camera, FileText } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SelectedArticlesProps {
@@ -15,93 +15,120 @@ interface SelectedArticlesProps {
 // Function to extract clean text content from HTML
 function extractCleanText(html: string): string {
   // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, ' ')
+  let text = html.replace(/<[^>]*>/g, " ")
 
   // Remove CSS styles and parameters
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, '')
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, '')
+  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, "")
+  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, "")
 
   // Remove data URLs and image URLs
-  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, '')
-  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/gi, '')
+  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "")
+  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/gi, "")
 
   // Remove extra whitespace and normalize
-  text = text.replace(/\s+/g, ' ').trim()
+  text = text.replace(/\s+/g, " ").trim()
 
   // Split into sentences and filter meaningful ones
-  const sentences = text.split(/[.!?]+/).filter(sentence => {
+  const sentences = text.split(/[.!?]+/).filter((sentence) => {
     const cleaned = sentence.trim()
-    return cleaned.length > 20 && 
-           !cleaned.match(/^(width|height|margin|padding|color|font|background)/i) &&
-           !cleaned.match(/^\d+px/) &&
-           !cleaned.match(/^(rgb|rgba|hex|#)/i)
+    return (
+      cleaned.length > 20 &&
+      !cleaned.match(/^(width|height|margin|padding|color|font|background)/i) &&
+      !cleaned.match(/^\d+px/) &&
+      !cleaned.match(/^(rgb|rgba|hex|#)/i)
+    )
   })
 
   // Return first few meaningful sentences
-  return sentences.slice(0, 2).join('. ').trim()
+  return sentences.slice(0, 2).join(". ").trim()
 }
 
 // Function to check if content contains images
 function hasImages(content: string): boolean {
-  return content.includes('<img') || 
-         content.includes('data:image/') || 
-         content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/i) !== null
+  return (
+    content.includes("<img") ||
+    content.includes("data:image/") ||
+    content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp)/i) !== null
+  )
 }
 
-export function SelectedArticles({ 
-  categories, 
-  selectedCategories, 
-  selectedSubcategories, 
-  onArticleSelect 
+export function SelectedArticles({
+  categories,
+  selectedCategories,
+  selectedSubcategories,
+  onArticleSelect,
 }: SelectedArticlesProps) {
   // Get articles based on selected categories and subcategories
   const getFilteredArticles = (): Article[] => {
+    console.log("SelectedArticles - Getting filtered articles")
+    console.log("Selected categories:", Array.from(selectedCategories))
+    console.log("Selected subcategories:", Array.from(selectedSubcategories))
+
     const articles: Article[] = []
-
-    categories.forEach((category) => {
-      // If category is selected, include its articles
-      if (selectedCategories.has(category.id)) {
-        articles.push(...category.articles)
-      }
-
-      // Check subcategories
-      category.subcategories.forEach((subcategory) => {
-        if (selectedSubcategories.has(subcategory.id)) {
-          articles.push(...subcategory.articles)
-        }
-      })
-    })
 
     // If no specific selection, show recent articles from all categories
     if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
+      console.log("No selections, showing all articles")
       categories.forEach((category) => {
-        articles.push(...category.articles)
-        category.subcategories.forEach((subcategory) => {
-          articles.push(...subcategory.articles)
-        })
+        if (Array.isArray(category.articles)) {
+          articles.push(...category.articles)
+        }
+        if (Array.isArray(category.subcategories)) {
+          category.subcategories.forEach((subcategory) => {
+            if (Array.isArray(subcategory.articles)) {
+              articles.push(...subcategory.articles)
+            }
+          })
+        }
+      })
+    } else {
+      // Show articles from selected categories and subcategories
+      categories.forEach((category) => {
+        // If category is selected, include its direct articles
+        if (selectedCategories.has(category.id)) {
+          console.log(`Including articles from selected category: ${category.name}`)
+          if (Array.isArray(category.articles)) {
+            articles.push(...category.articles)
+          }
+        }
+
+        // Check subcategories
+        if (Array.isArray(category.subcategories)) {
+          category.subcategories.forEach((subcategory) => {
+            if (selectedSubcategories.has(subcategory.id)) {
+              console.log(`Including articles from selected subcategory: ${subcategory.name}`)
+              if (Array.isArray(subcategory.articles)) {
+                articles.push(...subcategory.articles)
+              }
+            }
+          })
+        }
       })
     }
 
     // Sort by updated date (most recent first) and remove duplicates
-    const uniqueArticles = articles.filter((article, index, self) => 
-      index === self.findIndex(a => a.id === article.id)
+    const uniqueArticles = articles.filter(
+      (article, index, self) => index === self.findIndex((a) => a.id === article.id),
     )
 
-    return uniqueArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    const sortedArticles = uniqueArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+
+    console.log(`Filtered articles count: ${sortedArticles.length}`)
+    return sortedArticles
   }
 
   const getCategoryInfo = (categoryId: string, subcategoryId?: string) => {
-    const category = categories.find(c => c.id === categoryId)
+    const category = categories.find((c) => c.id === categoryId)
     if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
-    
+
     if (subcategoryId) {
-      const subcategory = category.subcategories.find(s => s.id === subcategoryId)
+      const subcategory = category.subcategories.find((s) => s.id === subcategoryId)
       return {
         categoryName: category.name,
-        subcategoryName: subcategory?.name || "Unknown"
+        subcategoryName: subcategory?.name || "Unknown",
       }
     }
-    
+
     return { categoryName: category.name, subcategoryName: undefined }
   }
 
@@ -111,9 +138,9 @@ export function SelectedArticles({
     if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
       return "Recent Articles"
     }
-    
+
     const selectedCount = selectedCategories.size + selectedSubcategories.size
-    return `Filtered Articles (${selectedCount} selection${selectedCount !== 1 ? 's' : ''})`
+    return `Filtered Articles (${selectedCount} selection${selectedCount !== 1 ? "s" : ""})`
   }
 
   if (filteredArticles.length === 0) {
@@ -125,8 +152,7 @@ export function SelectedArticles({
           <p className="text-sm">
             {selectedCategories.size > 0 || selectedSubcategories.size > 0
               ? "Try selecting different categories or clear your selection"
-              : "Start by adding some articles to your knowledge base"
-            }
+              : "Start by adding some articles to your knowledge base"}
           </p>
         </div>
       </div>
@@ -136,35 +162,28 @@ export function SelectedArticles({
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold mb-2">
-          {getHeaderText()}
-        </h2>
+        <h2 className="text-xl font-semibold mb-2">{getHeaderText()}</h2>
         <p className="text-gray-600">
-          Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''}
+          Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       <div className="space-y-4">
         {filteredArticles.map((article) => {
-          const { categoryName, subcategoryName } = getCategoryInfo(
-            article.categoryId,
-            article.subcategoryId
-          )
+          const { categoryName, subcategoryName } = getCategoryInfo(article.categoryId, article.subcategoryId)
           const cleanPreview = extractCleanText(article.content)
           const containsImages = hasImages(article.content)
 
           return (
-            <Card 
-              key={article.id} 
+            <Card
+              key={article.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onArticleSelect(article)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">
-                      {article.title}
-                    </CardTitle>
+                    <CardTitle className="text-lg mb-2">{article.title}</CardTitle>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <span>{categoryName}</span>
                       {subcategoryName && (
@@ -193,9 +212,7 @@ export function SelectedArticles({
               </CardHeader>
               <CardContent className="pt-0">
                 {cleanPreview && (
-                  <CardDescription className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {cleanPreview}
-                  </CardDescription>
+                  <CardDescription className="text-sm text-gray-600 mb-3 line-clamp-2">{cleanPreview}</CardDescription>
                 )}
                 {article.tags.length > 0 && (
                   <div className="flex items-center space-x-2">

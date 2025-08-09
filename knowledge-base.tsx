@@ -138,60 +138,33 @@ export default function KnowledgeBase() {
     initializeData()
   }, [])
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Knowledge Base...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-600 mb-4">
-            <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Application Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-        </div>
-      </div>
-    )
-  }
-
+  // Fixed search function
   const handleSearch = (query: string) => {
+    console.log("Search triggered with query:", query)
     setSearchQuery(query)
+
     if (!query.trim()) {
+      console.log("Empty query, clearing results")
       setSearchResults([])
       return
     }
 
     const results: Article[] = []
     const searchTerm = query.toLowerCase()
+    console.log("Searching for:", searchTerm)
 
     categories.forEach((category) => {
+      console.log(`Searching in category: ${category.name}`)
+
       // Search in category articles
       if (Array.isArray(category.articles)) {
         category.articles.forEach((article) => {
-          if (
-            article.title.toLowerCase().includes(searchTerm) ||
-            article.content.toLowerCase().includes(searchTerm) ||
-            article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
-          ) {
+          const titleMatch = article.title.toLowerCase().includes(searchTerm)
+          const contentMatch = article.content.toLowerCase().includes(searchTerm)
+          const tagMatch = article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
+
+          if (titleMatch || contentMatch || tagMatch) {
+            console.log(`Found match in category article: ${article.title}`)
             results.push(article)
           }
         })
@@ -200,13 +173,15 @@ export default function KnowledgeBase() {
       // Search in subcategory articles
       if (Array.isArray(category.subcategories)) {
         category.subcategories.forEach((subcategory) => {
+          console.log(`Searching in subcategory: ${subcategory.name}`)
           if (Array.isArray(subcategory.articles)) {
             subcategory.articles.forEach((article) => {
-              if (
-                article.title.toLowerCase().includes(searchTerm) ||
-                article.content.toLowerCase().includes(searchTerm) ||
-                article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
-              ) {
+              const titleMatch = article.title.toLowerCase().includes(searchTerm)
+              const contentMatch = article.content.toLowerCase().includes(searchTerm)
+              const tagMatch = article.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
+
+              if (titleMatch || contentMatch || tagMatch) {
+                console.log(`Found match in subcategory article: ${article.title}`)
                 results.push(article)
               }
             })
@@ -215,10 +190,12 @@ export default function KnowledgeBase() {
       }
     })
 
+    console.log("Search results:", results)
     setSearchResults(results)
   }
 
   const handleClearSearch = () => {
+    console.log("Clearing search")
     setSearchQuery("")
     setSearchResults([])
   }
@@ -229,27 +206,50 @@ export default function KnowledgeBase() {
     }
   }
 
+  // Fixed category toggle function
   const handleCategoryToggle = (categoryId: string) => {
+    console.log("Category toggle:", categoryId)
     const newSelected = new Set(selectedCategories)
     if (newSelected.has(categoryId)) {
       newSelected.delete(categoryId)
+      console.log("Removed category:", categoryId)
     } else {
       newSelected.add(categoryId)
+      console.log("Added category:", categoryId)
     }
     setSelectedCategories(newSelected)
+    console.log("Selected categories:", Array.from(newSelected))
+
+    // Clear search when category selection changes
+    if (searchQuery) {
+      setSearchQuery("")
+      setSearchResults([])
+    }
   }
 
+  // Fixed subcategory toggle function
   const handleSubcategoryToggle = (subcategoryId: string) => {
+    console.log("Subcategory toggle:", subcategoryId)
     const newSelected = new Set(selectedSubcategories)
     if (newSelected.has(subcategoryId)) {
       newSelected.delete(subcategoryId)
+      console.log("Removed subcategory:", subcategoryId)
     } else {
       newSelected.add(subcategoryId)
+      console.log("Added subcategory:", subcategoryId)
     }
     setSelectedSubcategories(newSelected)
+    console.log("Selected subcategories:", Array.from(newSelected))
+
+    // Clear search when subcategory selection changes
+    if (searchQuery) {
+      setSearchQuery("")
+      setSearchResults([])
+    }
   }
 
   const handleArticleSelect = (article: Article) => {
+    console.log("Article selected:", article.title)
     setSelectedArticle(article)
     setSearchQuery("")
     setSearchResults([])
@@ -420,6 +420,41 @@ export default function KnowledgeBase() {
     }, 0)
   }
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading Knowledge Base...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-600 mb-4">
+            <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Application Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation
@@ -462,7 +497,7 @@ export default function KnowledgeBase() {
                   type="text"
                   placeholder="Search articles, categories, or tags..."
                   value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={handleKeyPress}
                   className="pl-10 pr-10 py-3 text-lg"
                 />
@@ -491,6 +526,7 @@ export default function KnowledgeBase() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          console.log("Clearing all selections")
                           setSelectedCategories(new Set())
                           setSelectedSubcategories(new Set())
                         }}
@@ -526,7 +562,7 @@ export default function KnowledgeBase() {
                     }
                     onDelete={currentUser?.role === "admin" ? handleDeleteArticle : undefined}
                   />
-                ) : searchResults.length > 0 ? (
+                ) : searchQuery.trim() && searchResults.length >= 0 ? (
                   <SearchResults
                     results={searchResults}
                     categories={categories}
