@@ -113,7 +113,7 @@ async function sendEmailWithSES(to: string, subject: string, body: string): Prom
   }
 }
 
-export async function submitDemoRequest(formData: FormData) {
+export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     // Check if formData is valid
     if (!formData || typeof formData.get !== "function") {
