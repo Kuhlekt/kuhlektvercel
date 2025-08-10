@@ -1,5 +1,6 @@
 "use server"
 
+import { headers } from "next/headers"
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
 import crypto from "crypto"
 
@@ -125,18 +126,19 @@ export async function submitContactForm(formData: FormData) {
       affiliate: (formData.get("affiliate") as string) || undefined,
     }
 
-    // Get client IP and user agent for tracking
+    // Get client IP and user agent for tracking with proper error handling
     let ip = "unknown"
     let userAgent = "unknown"
 
     try {
-      const headers = await import("next/headers")
-      const headersList = headers.headers()
-
-      if (headersList) {
+      const headersList = headers()
+      if (headersList && typeof headersList.get === "function") {
         const forwarded = headersList.get("x-forwarded-for")
-        ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
-        userAgent = headersList.get("user-agent") || "unknown"
+        const realIp = headersList.get("x-real-ip")
+        const ua = headersList.get("user-agent")
+
+        ip = forwarded ? forwarded.split(",")[0].trim() : realIp || "unknown"
+        userAgent = ua || "unknown"
       }
     } catch (error) {
       console.error("Error getting headers:", error)
