@@ -1,37 +1,7 @@
 "use server"
 
-import { headers } from "next/headers"
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
 import crypto from "crypto"
-
-interface ContactFormData {
-  name: string
-  email: string
-  company: string
-  phone: string
-  message: string
-  affiliateCode?: string
-}
-
-function createSignature(
-  method: string,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-  secretKey: string,
-): string {
-  const canonicalRequest = [
-    method,
-    url,
-    Object.keys(headers)
-      .sort()
-      .map((key) => `${key}:${headers[key]}`)
-      .join("\n"),
-    body,
-  ].join("\n")
-
-  return crypto.createHmac("sha256", secretKey).update(canonicalRequest).digest("base64")
-}
 
 async function sendEmailWithSES(to: string, subject: string, body: string): Promise<boolean> {
   try {
@@ -126,24 +96,9 @@ export async function submitContactForm(formData: FormData) {
       affiliate: (formData.get("affiliate") as string) || undefined,
     }
 
-    // Get client IP and user agent for tracking with proper error handling
-    let ip = "unknown"
-    let userAgent = "unknown"
-
-    try {
-      const headersList = headers()
-      if (headersList && typeof headersList.get === "function") {
-        const forwarded = headersList.get("x-forwarded-for")
-        const realIp = headersList.get("x-real-ip")
-        const ua = headersList.get("user-agent")
-
-        ip = forwarded ? forwarded.split(",")[0].trim() : realIp || "unknown"
-        userAgent = ua || "unknown"
-      }
-    } catch (error) {
-      console.error("Error getting headers:", error)
-      // Continue with default values
-    }
+    // Use default values for tracking - avoid headers access that's causing issues
+    const ip = "unknown"
+    const userAgent = "unknown"
 
     // Validate affiliate code if provided
     let affiliateData = null
@@ -169,7 +124,7 @@ export async function submitContactForm(formData: FormData) {
       }
     }
 
-    // Track form submission before attempting to send email
+    // Track form submission
     const submissionId = await trackFormSubmission(ip, userAgent, "contact", {
       ...data,
       affiliate: affiliateData?.code || data.affiliate,
@@ -191,7 +146,6 @@ Message:
 ${data.message}
 
 Submitted at: ${new Date().toISOString()}
-IP Address: ${ip}
     `.trim()
 
     const emailSent = await sendEmailWithSES("info@kuhlekt.com", subject, body)
