@@ -83,20 +83,37 @@ async function sendEmailWithSES(to: string, subject: string, body: string): Prom
   }
 }
 
-export async function submitContactForm(formData: FormData) {
+export async function submitContactForm(prevState: any, formData: FormData) {
   try {
-    const data = {
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      company: formData.get("company") as string,
-      role: (formData.get("role") as string) || "",
-      companySize: (formData.get("companySize") as string) || "",
-      message: formData.get("message") as string,
-      affiliate: (formData.get("affiliate") as string) || undefined,
+    // Check if formData is valid
+    if (!formData || typeof formData.get !== "function") {
+      console.error("Invalid formData received")
+      return {
+        success: false,
+        message: "Invalid form data. Please try again.",
+      }
     }
 
-    // Use default values for tracking - avoid headers access that's causing issues
+    const data = {
+      firstName: formData.get("firstName")?.toString() || "",
+      lastName: formData.get("lastName")?.toString() || "",
+      email: formData.get("email")?.toString() || "",
+      company: formData.get("company")?.toString() || "",
+      role: formData.get("role")?.toString() || "",
+      companySize: formData.get("companySize")?.toString() || "",
+      message: formData.get("message")?.toString() || "",
+      affiliate: formData.get("affiliate")?.toString() || undefined,
+    }
+
+    // Validate required fields
+    if (!data.firstName || !data.lastName || !data.email || !data.company || !data.message) {
+      return {
+        success: false,
+        message: "Please fill in all required fields.",
+      }
+    }
+
+    // Use default values for tracking
     const ip = "unknown"
     const userAgent = "unknown"
 
