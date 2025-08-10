@@ -115,14 +115,31 @@ async function sendEmailWithSES(to: string, subject: string, body: string): Prom
 
 export async function submitDemoRequest(formData: FormData) {
   try {
+    // Check if formData is valid
+    if (!formData || typeof formData.get !== "function") {
+      console.error("Invalid formData received")
+      return {
+        success: false,
+        message: "Invalid form data. Please try again.",
+      }
+    }
+
     const data: DemoFormData = {
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      company: formData.get("company") as string,
-      role: (formData.get("role") as string) || "",
-      challenges: (formData.get("challenges") as string) || "",
-      affiliate: (formData.get("affiliate") as string) || undefined,
+      firstName: formData.get("firstName")?.toString() || "",
+      lastName: formData.get("lastName")?.toString() || "",
+      email: formData.get("email")?.toString() || "",
+      company: formData.get("company")?.toString() || "",
+      role: formData.get("role")?.toString() || "",
+      challenges: formData.get("challenges")?.toString() || "",
+      affiliate: formData.get("affiliate")?.toString() || undefined,
+    }
+
+    // Validate required fields
+    if (!data.firstName || !data.lastName || !data.email || !data.company) {
+      return {
+        success: false,
+        message: "Please fill in all required fields.",
+      }
     }
 
     // Get client IP and user agent for tracking
