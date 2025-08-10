@@ -53,7 +53,7 @@ export default function HomePage() {
 
             <div className="relative">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-FGHYnnjZ43yqXOEZXmLE5ucaRE1EHG.png"
+                src="/images/v200-businesswoman-hero.png"
                 alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
                 width={600}
                 height={400}
