@@ -114,13 +114,15 @@ async function sendEmailWithSES(to: string, subject: string, body: string): Prom
 
 export async function submitContactForm(formData: FormData) {
   try {
-    const data: ContactFormData = {
-      name: formData.get("name") as string,
+    const data = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
       company: formData.get("company") as string,
-      phone: formData.get("phone") as string,
+      role: (formData.get("role") as string) || "",
+      companySize: (formData.get("companySize") as string) || "",
       message: formData.get("message") as string,
-      affiliateCode: (formData.get("affiliateCode") as string) || undefined,
+      affiliate: (formData.get("affiliate") as string) || undefined,
     }
 
     // Get client IP and user agent for tracking
@@ -130,19 +132,47 @@ export async function submitContactForm(formData: FormData) {
     const ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
     const userAgent = headersList.get("user-agent") || "unknown"
 
+    // Validate affiliate code if provided
+    let affiliateData = null
+    if (data.affiliate) {
+      try {
+        const affiliateResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/validate-affiliate`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: data.affiliate }),
+          },
+        )
+
+        if (affiliateResponse.ok) {
+          const result = await affiliateResponse.json()
+          if (result.valid) {
+            affiliateData = result.affiliate
+          }
+        }
+      } catch (error) {
+        console.error("Error validating affiliate:", error)
+      }
+    }
+
     // Track form submission before attempting to send email
-    const submissionId = await trackFormSubmission(ip, userAgent, "contact", data)
+    const submissionId = await trackFormSubmission(ip, userAgent, "contact", {
+      ...data,
+      affiliate: affiliateData?.code || data.affiliate,
+    })
 
     // Send email notification
-    const subject = `New Contact Form Submission from ${data.name}`
+    const subject = `New Contact Form Submission from ${data.firstName} ${data.lastName}`
     const body = `
 New contact form submission:
 
-Name: ${data.name}
+Name: ${data.firstName} ${data.lastName}
 Email: ${data.email}
 Company: ${data.company}
-Phone: ${data.phone}
-${data.affiliateCode ? `Affiliate Code: ${data.affiliateCode}` : ""}
+Role: ${data.role}
+Company Size: ${data.companySize}
+${data.affiliate ? `Affiliate Code: ${data.affiliate}${affiliateData ? ` (Valid - ${affiliateData.name})` : " (Invalid)"}` : ""}
 
 Message:
 ${data.message}
@@ -157,12 +187,22 @@ IP Address: ${ip}
     await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
 
     if (emailSent) {
-      return { success: true, message: "Thank you for your message. We'll get back to you soon!" }
+      return {
+        success: true,
+        message: "Thank you for your message. We'll get back to you soon!",
+        affiliate: affiliateData?.code,
+      }
     } else {
-      return { success: false, message: "There was an error sending your message. Please try again." }
+      return {
+        success: false,
+        message: "There was an error sending your message. Please try again.",
+      }
     }
   } catch (error) {
     console.error("Contact form submission error:", error)
-    return { success: false, message: "There was an error processing your request. Please try again." }
+    return {
+      success: false,
+      message: "There was an error processing your request. Please try again.",
+    }
   }
 }

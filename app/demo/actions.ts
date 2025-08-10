@@ -4,14 +4,13 @@ import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-t
 import crypto from "crypto"
 
 interface DemoFormData {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   company: string
-  phone: string
-  employees: string
-  currentSolution: string
+  role: string
   challenges: string
-  affiliateCode?: string
+  affiliate?: string
 }
 
 function createSignature(
@@ -114,17 +113,16 @@ async function sendEmailWithSES(to: string, subject: string, body: string): Prom
   }
 }
 
-export async function submitDemoForm(formData: FormData) {
+export async function submitDemoRequest(formData: FormData) {
   try {
     const data: DemoFormData = {
-      name: formData.get("name") as string,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
       company: formData.get("company") as string,
-      phone: formData.get("phone") as string,
-      employees: formData.get("employees") as string,
-      currentSolution: formData.get("currentSolution") as string,
-      challenges: formData.get("challenges") as string,
-      affiliateCode: (formData.get("affiliateCode") as string) || undefined,
+      role: (formData.get("role") as string) || "",
+      challenges: (formData.get("challenges") as string) || "",
+      affiliate: (formData.get("affiliate") as string) || undefined,
     }
 
     // Get client IP and user agent for tracking
@@ -134,21 +132,46 @@ export async function submitDemoForm(formData: FormData) {
     const ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
     const userAgent = headersList.get("user-agent") || "unknown"
 
+    // Validate affiliate code if provided
+    let affiliateData = null
+    if (data.affiliate) {
+      try {
+        const affiliateResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/validate-affiliate`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: data.affiliate }),
+          },
+        )
+
+        if (affiliateResponse.ok) {
+          const result = await affiliateResponse.json()
+          if (result.valid) {
+            affiliateData = result.affiliate
+          }
+        }
+      } catch (error) {
+        console.error("Error validating affiliate:", error)
+      }
+    }
+
     // Track form submission before attempting to send email
-    const submissionId = await trackFormSubmission(ip, userAgent, "demo", data)
+    const submissionId = await trackFormSubmission(ip, userAgent, "demo", {
+      ...data,
+      affiliate: affiliateData?.code || data.affiliate,
+    })
 
     // Send email notification
-    const subject = `New Demo Request from ${data.name} at ${data.company}`
+    const subject = `New Demo Request from ${data.firstName} ${data.lastName} at ${data.company}`
     const body = `
 New demo request submission:
 
-Name: ${data.name}
+Name: ${data.firstName} ${data.lastName}
 Email: ${data.email}
 Company: ${data.company}
-Phone: ${data.phone}
-Number of Employees: ${data.employees}
-Current Solution: ${data.currentSolution}
-${data.affiliateCode ? `Affiliate Code: ${data.affiliateCode}` : ""}
+Role: ${data.role}
+${data.affiliate ? `Affiliate Code: ${data.affiliate}${affiliateData ? ` (Valid - ${affiliateData.name})` : " (Invalid)"}` : ""}
 
 Challenges:
 ${data.challenges}
@@ -167,12 +190,19 @@ IP Address: ${ip}
         success: true,
         message:
           "Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration.",
+        affiliate: affiliateData?.code,
       }
     } else {
-      return { success: false, message: "There was an error processing your demo request. Please try again." }
+      return {
+        success: false,
+        message: "There was an error processing your demo request. Please try again.",
+      }
     }
   } catch (error) {
     console.error("Demo form submission error:", error)
-    return { success: false, message: "There was an error processing your request. Please try again." }
+    return {
+      success: false,
+      message: "There was an error processing your request. Please try again.",
+    }
   }
 }
