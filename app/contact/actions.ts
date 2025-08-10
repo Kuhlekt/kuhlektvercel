@@ -171,13 +171,13 @@ Submitted at: ${new Date().toISOString()}
 
     const emailSent = await sendEmailWithSES("enquiries@kuhlekt.com", subject, body)
 
-    // Update submission status
+    // Update submission status based on email result
     await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
 
     if (emailSent) {
       return {
         success: true,
-        message: "Thank you for your message! We'll get back to you within 24 hours.",
+        message: "Thank you for your message. We'll get back to you soon!",
         affiliate: affiliateData?.code,
       }
     } else {

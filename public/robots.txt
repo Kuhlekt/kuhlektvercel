@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/track-visitor
+Disallow: /api/validate-affiliate
+Disallow: /api/update-affiliate
+
+Sitemap: https://kuhlekt.com/sitemap.xml
