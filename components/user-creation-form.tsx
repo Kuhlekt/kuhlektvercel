@@ -1,0 +1,127 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import type { User } from "../types/knowledge-base"
+
+interface UserCreationFormProps {
+  onCreateUser: (userData: Omit<User, "id" | "createdAt" | "lastLogin">) => void
+  error?: string
+}
+
+export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps) {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
+  const [formError, setFormError] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError("")
+
+    if (!username.trim() || !password.trim()) {
+      setFormError("Username and password are required")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setFormError("Passwords do not match")
+      return
+    }
+
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters long")
+      return
+    }
+
+    onCreateUser({
+      username: username.trim(),
+      password,
+      role,
+    })
+
+    // Reset form
+    setUsername("")
+    setPassword("")
+    setConfirmPassword("")
+    setRole("viewer")
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Create New User</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {(error || formError) && (
+            <Alert variant="destructive">
+              <AlertDescription>{error || formError}</AlertDescription>
+            </Alert>
+          )}
+
+          <div>
+            <Label htmlFor="new-username">Username</Label>
+            <Input
+              id="new-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="new-password">Password</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password (min 6 characters)"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="role">Role</Label>
+            <Select value={role} onValueChange={(value: "admin" | "editor" | "viewer") => setRole(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">Viewer - Read only access</SelectItem>
+                <SelectItem value="editor">Editor - Can add/edit articles</SelectItem>
+                <SelectItem value="admin">Admin - Full access</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button type="submit" className="w-full">
+            Create User
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  )
+}

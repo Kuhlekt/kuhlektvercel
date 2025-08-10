@@ -7,20 +7,22 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
-        port: '',
-        pathname: '/**',
-      },
-    ],
+    domains: ['images.unsplash.com'],
     unoptimized: true,
   },
-  // Ensure AWS SDK works properly in serverless environment
   experimental: {
-    serverComponentsExternalPackages: ['@aws-sdk/client-ses'],
+    esmExternals: false,
   },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    }
+    return config
+  },
+  output: 'standalone',
 }
 
 export default nextConfig

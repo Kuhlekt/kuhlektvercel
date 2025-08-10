@@ -1,21 +1,20 @@
+import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from 'next/font/google'
 import "./globals.css"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  display: 'swap',
-  variable: '--font-inter',
-})
 
 export const metadata: Metadata = {
-  title: "Kuhlekt - AR Automation & Digital Collections",
-  description: "Transform your accounts receivable process with Kuhlekt's advanced AR Automation and Digital Collections solutions. Get paid faster with less stress.",
-  keywords: "accounts receivable, AR automation, digital collections, credit management, invoice processing, debt collection",
-  authors: [{ name: "Kuhlekt" }],
-  viewport: "width=device-width, initial-scale=1",
+  title: "Kuhlekt Knowledge Base",
+  description: "Comprehensive knowledge base for Kuhlekt platform",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.gif",
+        type: "image/gif",
+      },
+    ],
+    shortcut: "/favicon.gif",
+    apple: "/favicon.gif",
+  },
     generator: 'v0.dev'
 }
 
@@ -25,18 +24,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="icon" href="/favicon.gif" type="image/gif" />
+        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
+        <link rel="apple-touch-icon" href="/favicon.gif" />
       </head>
-      <body className={`${inter.className} antialiased min-h-screen bg-white`}>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-      </body>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   )
 }
