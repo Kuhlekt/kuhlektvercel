@@ -9,6 +9,9 @@ export function VisitorTracker() {
   useEffect(() => {
     const trackVisit = async () => {
       try {
+        // Only track in browser environment
+        if (typeof window === "undefined") return
+
         // Get or create session ID
         let sessionId = sessionStorage.getItem("kuhlekt_session_id")
         if (!sessionId) {
@@ -25,16 +28,22 @@ export function VisitorTracker() {
           body: JSON.stringify({
             sessionId,
             page: pathname,
-            referrer: document.referrer,
-            userAgent: navigator.userAgent,
+            referrer: document.referrer || "",
+            userAgent: navigator.userAgent || "",
           }),
+        }).catch(() => {
+          // Silently handle fetch errors
+          console.log("Visitor tracking unavailable")
         })
       } catch (error) {
-        console.error("Error tracking visitor:", error)
+        // Silently handle any tracking errors
+        console.log("Visitor tracking error:", error)
       }
     }
 
-    trackVisit()
+    // Add a small delay to ensure page is loaded
+    const timer = setTimeout(trackVisit, 100)
+    return () => clearTimeout(timer)
   }, [pathname])
 
   return null
