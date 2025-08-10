@@ -38,23 +38,25 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Try to send email, but don't fail if it doesn't work
+    // Try to send email with AWS SES
     try {
-      // Check if AWS SES is configured
       if (
         process.env.AWS_SES_ACCESS_KEY_ID &&
         process.env.AWS_SES_SECRET_ACCESS_KEY &&
         process.env.AWS_SES_REGION &&
         process.env.AWS_SES_FROM_EMAIL
       ) {
+        // Dynamic import to avoid edge runtime issues
         const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses")
 
-        const ses = new SESClient({
+        const sesClient = new SESClient({
           region: process.env.AWS_SES_REGION,
           credentials: {
             accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
             secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
           },
+          // Explicitly disable credential file loading
+          maxAttempts: 3,
         })
 
         const subject = `New Contact Submission from ${firstName} ${lastName}`
@@ -75,24 +77,30 @@ ${message}
 Please follow up with this inquiry.
         `
 
-        const params = {
+        const command = new SendEmailCommand({
           Destination: {
             ToAddresses: ["enquiries@kuhlekt.com"],
           },
           Message: {
             Body: {
-              Text: { Data: body },
+              Text: {
+                Data: body,
+                Charset: "UTF-8",
+              },
             },
-            Subject: { Data: subject },
+            Subject: {
+              Data: subject,
+              Charset: "UTF-8",
+            },
           },
           Source: process.env.AWS_SES_FROM_EMAIL,
           ReplyToAddresses: [email],
-        }
+        })
 
-        await ses.send(new SendEmailCommand(params))
-        console.log("Email sent successfully via AWS SES")
+        const result = await sesClient.send(command)
+        console.log("Email sent successfully via AWS SES:", result.MessageId)
       } else {
-        // Fallback: Log the submission (in production, you might use a different email service)
+        // Fallback: Log the submission
         console.log("AWS SES not configured, logging contact form:", {
           firstName,
           lastName,

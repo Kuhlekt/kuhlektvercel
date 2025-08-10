@@ -45,14 +45,17 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
         process.env.AWS_SES_REGION &&
         process.env.AWS_SES_FROM_EMAIL
       ) {
+        // Dynamic import to avoid edge runtime issues
         const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses")
 
-        const ses = new SESClient({
+        const sesClient = new SESClient({
           region: process.env.AWS_SES_REGION,
           credentials: {
             accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
             secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
           },
+          // Explicitly disable credential file loading
+          maxAttempts: 3,
         })
 
         const subject = `New Demo Request from ${firstName} ${lastName}`
@@ -74,22 +77,28 @@ ${affiliate || "Not specified"}
 Please follow up with this prospect to schedule a demo.
         `
 
-        const params = {
+        const command = new SendEmailCommand({
           Destination: {
             ToAddresses: ["enquiries@kuhlekt.com"],
           },
           Message: {
             Body: {
-              Text: { Data: body },
+              Text: {
+                Data: body,
+                Charset: "UTF-8",
+              },
             },
-            Subject: { Data: subject },
+            Subject: {
+              Data: subject,
+              Charset: "UTF-8",
+            },
           },
           Source: process.env.AWS_SES_FROM_EMAIL,
           ReplyToAddresses: [email],
-        }
+        })
 
-        await ses.send(new SendEmailCommand(params))
-        console.log("Email sent successfully via AWS SES")
+        const result = await sesClient.send(command)
+        console.log("Email sent successfully via AWS SES:", result.MessageId)
       } else {
         console.log("AWS SES not configured, logging demo request:", {
           firstName,
@@ -104,6 +113,16 @@ Please follow up with this prospect to schedule a demo.
       }
     } catch (emailError) {
       console.error("Email sending failed:", emailError)
+      console.log("Demo request data (email failed):", {
+        firstName,
+        lastName,
+        email,
+        company,
+        role,
+        challenges,
+        affiliate,
+        timestamp: new Date().toISOString(),
+      })
     }
 
     // Simulate processing time
