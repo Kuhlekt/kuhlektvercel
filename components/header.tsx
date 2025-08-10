@@ -34,29 +34,31 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - exact spacing and styling */}
           <nav className="hidden md:flex space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link href="/" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Home
             </Link>
-            <Link href="/product" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link href="/product" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Product
             </Link>
-            <Link href="/solutions" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link href="/solutions" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Solutions
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link href="/about" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-gray-900 font-medium">
+            <Link href="/contact" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Contact
             </Link>
           </nav>
 
           <div className="flex items-center">
-            {/* Desktop Demo Button */}
+            {/* Desktop Demo Button - exact cyan color */}
             <Link href="/demo" className="hidden md:block">
-              <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">Schedule a Demo</Button>
+              <Button className="bg-cyan-400 hover:bg-cyan-500 text-white text-sm font-medium px-6 py-2">
+                Schedule a Demo
+              </Button>
             </Link>
 
             {/* Mobile Menu Button */}
@@ -114,7 +116,7 @@ export function Header() {
             {/* Mobile Demo Button */}
             <div className="pt-4 border-t border-gray-200">
               <Link href="/demo" onClick={closeMobileMenu}>
-                <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white">Schedule a Demo</Button>
+                <Button className="w-full bg-cyan-400 hover:bg-cyan-500 text-white">Schedule a Demo</Button>
               </Link>
             </div>
           </div>
