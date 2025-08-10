@@ -114,6 +114,7 @@ Please follow up with this prospect to schedule a demo.
       success: true,
       message:
         "Thank you! Your demo request has been submitted. We'll contact you within 24 hours to schedule your personalized demo.",
+      affiliate: affiliate || null, // Return affiliate for client-side tracking
     }
   } catch (error) {
     console.error("Error submitting demo request:", error)

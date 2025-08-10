@@ -11,6 +11,9 @@ export interface VisitorData {
   device?: string
   browser?: string
   os?: string
+  affiliate?: string
+  affiliateSource?: "demo" | "contact"
+  affiliateTimestamp?: Date
 }
 
 export interface PageView {
@@ -49,6 +52,19 @@ export function trackVisitor(data: Omit<VisitorData, "id" | "timestamp">): Visit
   }
 
   return visitor
+}
+
+export function updateVisitorAffiliate(sessionId: string, affiliate: string, source: "demo" | "contact"): void {
+  // Find visitor by session ID
+  for (const [id, visitor] of visitors.entries()) {
+    if (visitor.sessionId === sessionId) {
+      visitor.affiliate = affiliate
+      visitor.affiliateSource = source
+      visitor.affiliateTimestamp = new Date()
+      visitors.set(id, visitor)
+      break
+    }
+  }
 }
 
 export function trackPageView(visitorId: string, page: string): PageView {
@@ -97,6 +113,22 @@ export function getVisitorStats() {
   const monthPageViews = allPageViews.filter((pv) => pv.timestamp >= thisMonth).length
   const totalPageViews = allPageViews.length
 
+  // Affiliate stats
+  const affiliateVisitors = allVisitors.filter((v) => v.affiliate && v.affiliate.trim() !== "")
+  const affiliateStats = affiliateVisitors.reduce(
+    (acc, visitor) => {
+      const affiliate = visitor.affiliate!
+      if (!acc[affiliate]) {
+        acc[affiliate] = { count: 0, demo: 0, contact: 0 }
+      }
+      acc[affiliate].count++
+      if (visitor.affiliateSource === "demo") acc[affiliate].demo++
+      if (visitor.affiliateSource === "contact") acc[affiliate].contact++
+      return acc
+    },
+    {} as Record<string, { count: number; demo: number; contact: number }>,
+  )
+
   return {
     visitors: {
       today: todayVisitors,
@@ -109,6 +141,10 @@ export function getVisitorStats() {
       week: weekPageViews,
       month: monthPageViews,
       total: totalPageViews,
+    },
+    affiliates: {
+      total: affiliateVisitors.length,
+      breakdown: affiliateStats,
     },
   }
 }

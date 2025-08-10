@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Users, MousePointer, Calendar, RefreshCw } from "lucide-react"
+import { Eye, Users, MousePointer, Calendar, RefreshCw, Target } from "lucide-react"
 
 interface VisitorData {
   id: string
@@ -21,6 +21,9 @@ interface VisitorData {
   device?: string
   browser?: string
   os?: string
+  affiliate?: string
+  affiliateSource?: "demo" | "contact"
+  affiliateTimestamp?: string
 }
 
 interface PageView {
@@ -43,6 +46,10 @@ interface Stats {
     week: number
     month: number
     total: number
+  }
+  affiliates: {
+    total: number
+    breakdown: Record<string, { count: number; demo: number; contact: number }>
   }
 }
 
@@ -137,7 +144,7 @@ export default function AdminVisitorsPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -185,6 +192,18 @@ export default function AdminVisitorsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Target className="w-8 h-8 text-cyan-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Affiliate Visitors</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.affiliates.total}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -192,6 +211,7 @@ export default function AdminVisitorsPage() {
           <TabsList>
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
             <TabsTrigger value="pageviews">Page Views</TabsTrigger>
+            <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
           </TabsList>
 
           <TabsContent value="visitors">
@@ -209,6 +229,7 @@ export default function AdminVisitorsPage() {
                         <th className="text-left p-2">Browser</th>
                         <th className="text-left p-2">OS</th>
                         <th className="text-left p-2">Current Page</th>
+                        <th className="text-left p-2">Affiliate</th>
                         <th className="text-left p-2">Referrer</th>
                         <th className="text-left p-2">Timestamp</th>
                       </tr>
@@ -227,6 +248,15 @@ export default function AdminVisitorsPage() {
                             <Badge variant="outline">{visitor.os || "Unknown"}</Badge>
                           </td>
                           <td className="p-2 text-blue-600">{visitor.currentPage}</td>
+                          <td className="p-2">
+                            {visitor.affiliate ? (
+                              <Badge className="bg-cyan-100 text-cyan-800">
+                                {visitor.affiliate} ({visitor.affiliateSource})
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
                           <td className="p-2 text-gray-600 max-w-xs truncate">{visitor.referrer || "Direct"}</td>
                           <td className="p-2 text-gray-500">{new Date(visitor.timestamp).toLocaleString()}</td>
                         </tr>
@@ -266,6 +296,48 @@ export default function AdminVisitorsPage() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="affiliates">
+            <Card>
+              <CardHeader>
+                <CardTitle>Affiliate Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {stats?.affiliates.breakdown && Object.keys(stats.affiliates.breakdown).length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Affiliate Code</th>
+                          <th className="text-left p-2">Total Visitors</th>
+                          <th className="text-left p-2">Demo Forms</th>
+                          <th className="text-left p-2">Contact Forms</th>
+                          <th className="text-left p-2">Conversion Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(stats.affiliates.breakdown).map(([affiliate, data]) => (
+                          <tr key={affiliate} className="border-b hover:bg-gray-50">
+                            <td className="p-2 font-semibold">{affiliate}</td>
+                            <td className="p-2">{data.count}</td>
+                            <td className="p-2">{data.demo}</td>
+                            <td className="p-2">{data.contact}</td>
+                            <td className="p-2">
+                              {data.count > 0
+                                ? `${(((data.demo + data.contact) / data.count) * 100).toFixed(1)}%`
+                                : "0%"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No affiliate data available yet.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

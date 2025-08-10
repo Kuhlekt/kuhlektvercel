@@ -117,6 +117,7 @@ Please follow up with this inquiry.
     return {
       success: true,
       message: "Thank you for your message! We've received your inquiry and will get back to you within 24 hours.",
+      affiliate: affiliate || null, // Return affiliate for client-side tracking
     }
   } catch (error) {
     console.error("Error submitting contact form:", error)

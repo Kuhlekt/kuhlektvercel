@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,26 @@ import Image from "next/image"
 
 export default function DemoPage() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
+
+  // Track affiliate when form is successfully submitted
+  useEffect(() => {
+    if (state?.success && state?.affiliate) {
+      const sessionId = sessionStorage.getItem("kuhlekt_session_id")
+      if (sessionId) {
+        fetch("/api/update-affiliate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            affiliate: state.affiliate,
+            source: "demo",
+          }),
+        }).catch(() => {
+          // Silently handle errors
+        })
+      }
+    }
+  }, [state])
 
   return (
     <div className="min-h-screen bg-white">

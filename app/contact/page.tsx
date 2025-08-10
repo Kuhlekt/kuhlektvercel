@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,26 @@ import { submitContactForm } from "./actions"
 export default function ContactPage() {
   const [state, formAction, isPending] = useActionState(submitContactForm, null)
   const [companySize, setCompanySize] = useState("")
+
+  // Track affiliate when form is successfully submitted
+  useEffect(() => {
+    if (state?.success && state?.affiliate) {
+      const sessionId = sessionStorage.getItem("kuhlekt_session_id")
+      if (sessionId) {
+        fetch("/api/update-affiliate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            affiliate: state.affiliate,
+            source: "contact",
+          }),
+        }).catch(() => {
+          // Silently handle errors
+        })
+      }
+    }
+  }, [state])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
