@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useActionState } from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,32 +10,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { submitDemoRequest } from "./actions"
 import Image from "next/image"
-import { Recaptcha } from "@/components/recaptcha"
 
 export default function DemoPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [captchaToken, setCaptchaToken] = useState("")
-
-  const handleSubmit = async (formData: FormData) => {
-    setIsSubmitting(true)
-    setSubmitResult(null)
-
-    try {
-      const result = await submitDemoRequest(null, formData)
-      setSubmitResult(result)
-    } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: "An error occurred. Please try again.",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+  const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
 
   return (
     <div className="min-h-screen bg-white">
+      <Header />
+
       {/* Main Demo Section */}
       <section id="top" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,24 +91,22 @@ export default function DemoPage() {
               </div>
 
               {/* Success/Error Message */}
-              {submitResult && (
+              {state && (
                 <div
                   className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                    submitResult.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                    state.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
                   }`}
                 >
-                  {submitResult.success ? (
+                  {state.success ? (
                     <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                   ) : (
                     <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   )}
-                  <p className={`text-sm ${submitResult.success ? "text-green-700" : "text-red-700"}`}>
-                    {submitResult.message}
-                  </p>
+                  <p className={`text-sm ${state.success ? "text-green-700" : "text-red-700"}`}>{state.message}</p>
                 </div>
               )}
 
-              <form action={handleSubmit} className="space-y-6">
+              <form action={formAction} className="space-y-6">
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -137,7 +119,7 @@ export default function DemoPage() {
                       placeholder="John"
                       required
                       className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isSubmitting}
+                      disabled={isPending}
                     />
                   </div>
                   <div>
@@ -150,7 +132,7 @@ export default function DemoPage() {
                       placeholder="Doe"
                       required
                       className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isSubmitting}
+                      disabled={isPending}
                     />
                   </div>
                 </div>
@@ -167,7 +149,7 @@ export default function DemoPage() {
                     placeholder="john.doe@company.com"
                     required
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
+                    disabled={isPending}
                   />
                 </div>
 
@@ -182,7 +164,7 @@ export default function DemoPage() {
                     placeholder="Acme Inc."
                     required
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
+                    disabled={isPending}
                   />
                 </div>
 
@@ -196,7 +178,7 @@ export default function DemoPage() {
                     name="role"
                     placeholder="Finance Manager"
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
+                    disabled={isPending}
                   />
                 </div>
 
@@ -211,29 +193,17 @@ export default function DemoPage() {
                     placeholder="Tell us about your current process and challenges..."
                     rows={4}
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500 resize-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <input type="hidden" name="captcha-token" value={captchaToken} />
-
-                {/* CAPTCHA */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-900">Security Verification</Label>
-                  <Recaptcha
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken("")}
-                    onError={() => setCaptchaToken("")}
+                    disabled={isPending}
                   />
                 </div>
 
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !captchaToken}
+                  disabled={isPending}
                   className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Submitting..." : "Request Demo"}
+                  {isPending ? "Submitting..." : "Request Demo"}
                 </Button>
               </form>
 
@@ -244,6 +214,8 @@ export default function DemoPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }

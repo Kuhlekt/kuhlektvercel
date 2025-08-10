@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight } from "lucide-react"
 import Image from "next/image"
 import { CareersModal } from "./careers-modal"
 import { PrivacyModal } from "./privacy-modal"
@@ -179,6 +179,3 @@ export function Footer() {
     </footer>
   )
 }
-
-// Export as default as well to support both import styles
-export default Footer

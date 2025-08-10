@@ -1,8 +1,5 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
-import { verifyCaptcha } from "@/lib/captcha"
-
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -11,7 +8,6 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
-    const captchaToken = formData.get("captcha-token") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -30,71 +26,37 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify CAPTCHA
-    const captchaResult = await verifyCaptcha(captchaToken)
-    if (!captchaResult.success) {
-      return {
-        success: false,
-        message: captchaResult.error || "Please complete the CAPTCHA verification.",
-      }
-    }
-
-    const demoData = {
-      firstName,
-      lastName,
-      email,
-      company,
-      role: role || "Not specified",
-      challenges: challenges || "Not specified",
-      timestamp: new Date().toISOString(),
-      captchaVerified: true,
-    }
-
-    console.log("Processing demo request:", {
-      name: `${firstName} ${lastName}`,
-      email,
-      company,
-      captchaVerified: true,
-    })
-
-    // Try to send email using AWS SDK
-    try {
-      const emailResult = await sendEmailWithSES({
-        to: ["enquiries@kuhlekt.com"],
-        subject: `New Demo Request from ${firstName} ${lastName}`,
-        body: `
+    // Simulate email sending (in a real app, you'd use a service like Resend, SendGrid, etc.)
+    const emailContent = `
 New Demo Request from Kuhlekt Website
 
 Contact Information:
 - Name: ${firstName} ${lastName}
 - Email: ${email}
 - Company: ${company}
-- Role: ${role || "Not specified"}
+- Role: ${role}
 
 Challenges:
 ${challenges || "Not specified"}
 
-Security:
-- CAPTCHA Verified: Yes
-- Timestamp: ${demoData.timestamp}
-
 Please follow up with this prospect to schedule a demo.
-        `,
-        replyTo: email,
-      })
+    `
 
-      if (emailResult.success) {
-        console.log("Demo request email sent successfully via AWS SDK:", emailResult.messageId)
-      } else {
-        console.log("Email sending failed, logging demo data:", demoData)
-        console.error("Email error:", emailResult.message)
-      }
-    } catch (emailError) {
-      console.error("Error with AWS SDK email service:", emailError)
-      console.log("Logging demo data for manual follow-up:", demoData)
-    }
+    // In a real implementation, you would send the email here
+    // For now, we'll simulate a successful submission
+    console.log("Demo request submitted:", {
+      firstName,
+      lastName,
+      email,
+      company,
+      role,
+      challenges,
+      emailContent,
+    })
 
-    // Always return success to user
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
     return {
       success: true,
       message:

@@ -1,7 +1,14 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
-import { verifyCaptcha } from "@/lib/captcha"
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+
+const ses = new SESClient({
+  region: process.env.AWS_SES_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
+  },
+})
 
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
@@ -12,7 +19,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const role = formData.get("role") as string
     const companySize = formData.get("companySize") as string
     const message = formData.get("message") as string
-    const captchaToken = formData.get("captcha-token") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company || !message) {
@@ -31,40 +37,9 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify CAPTCHA
-    const captchaResult = await verifyCaptcha(captchaToken)
-    if (!captchaResult.success) {
-      return {
-        success: false,
-        message: captchaResult.error || "Please complete the CAPTCHA verification.",
-      }
-    }
+    const subject = `New Contact Submission from ${firstName} ${lastName}`
 
-    const contactData = {
-      firstName,
-      lastName,
-      email,
-      company,
-      role: role || "Not specified",
-      companySize: companySize || "Not specified",
-      message,
-      timestamp: new Date().toISOString(),
-      captchaVerified: true,
-    }
-
-    console.log("Processing contact form submission:", {
-      name: `${firstName} ${lastName}`,
-      email,
-      company,
-      captchaVerified: true,
-    })
-
-    // Try to send email using AWS SDK
-    try {
-      const emailResult = await sendEmailWithSES({
-        to: ["enquiries@kuhlekt.com"],
-        subject: `New Contact Submission from ${firstName} ${lastName}`,
-        body: `
+    const body = `
 New Contact Form Submission from Kuhlekt Website
 
 Contact Information:
@@ -77,27 +52,38 @@ Contact Information:
 Message:
 ${message}
 
-Security:
-- CAPTCHA Verified: Yes
-- Timestamp: ${contactData.timestamp}
-
 Please follow up with this inquiry.
-        `,
-        replyTo: email,
-      })
+    `
 
-      if (emailResult.success) {
-        console.log("Contact form email sent successfully via AWS SDK:", emailResult.messageId)
-      } else {
-        console.log("Email sending failed, logging contact data:", contactData)
-        console.error("Email error:", emailResult.message)
-      }
-    } catch (emailError) {
-      console.error("Error with AWS SDK email service:", emailError)
-      console.log("Logging contact data for manual follow-up:", contactData)
+    const params = {
+      Destination: {
+        ToAddresses: ["enquiries@kuhlekt.com"],
+      },
+      Message: {
+        Body: {
+          Text: { Data: body },
+        },
+        Subject: { Data: subject },
+      },
+      Source: process.env.AWS_SES_FROM_EMAIL!,
+      ReplyToAddresses: [email],
     }
 
-    // Always return success to user
+    await ses.send(new SendEmailCommand(params))
+
+    console.log("Contact form submitted:", {
+      firstName,
+      lastName,
+      email,
+      company,
+      role,
+      companySize,
+      message,
+    })
+
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
     return {
       success: true,
       message: "Thank you for your message! We've received your inquiry and will get back to you within 24 hours.",
@@ -110,10 +96,4 @@ Please follow up with this inquiry.
         "Sorry, there was an error sending your message. Please try again or contact us directly at enquiries@kuhlekt.com",
     }
   }
-}
-
-// Server action to test AWS SES SDK configuration
-export async function testAWSSES() {
-  const { testAWSSESConnection } = await import("@/lib/aws-ses")
-  return testAWSSESConnection()
 }
