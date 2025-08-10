@@ -126,11 +126,22 @@ export async function submitDemoRequest(formData: FormData) {
     }
 
     // Get client IP and user agent for tracking
-    const headers = await import("next/headers")
-    const headersList = headers.headers()
-    const forwarded = headersList.get("x-forwarded-for")
-    const ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
-    const userAgent = headersList.get("user-agent") || "unknown"
+    let ip = "unknown"
+    let userAgent = "unknown"
+
+    try {
+      const headers = await import("next/headers")
+      const headersList = headers.headers()
+
+      if (headersList) {
+        const forwarded = headersList.get("x-forwarded-for")
+        ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
+        userAgent = headersList.get("user-agent") || "unknown"
+      }
+    } catch (error) {
+      console.error("Error getting headers:", error)
+      // Continue with default values
+    }
 
     // Validate affiliate code if provided
     let affiliateData = null
