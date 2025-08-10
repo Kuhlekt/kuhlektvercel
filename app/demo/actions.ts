@@ -2,6 +2,73 @@
 
 import { isValidAffiliate } from "@/lib/affiliate-management"
 
+// AWS Signature Version 4 signing function
+async function signAWSRequest(
+  method: string,
+  url: string,
+  headers: Record<string, string>,
+  payload: string,
+  region: string,
+  service: string,
+  accessKeyId: string,
+  secretAccessKey: string,
+) {
+  const { createHmac, createHash } = await import("crypto")
+
+  const now = new Date()
+  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "")
+  const amzDate = now.toISOString().slice(0, 19).replace(/[-:]/g, "") + "Z"
+
+  // Create canonical request
+  const canonicalUri = "/"
+  const canonicalQuerystring = ""
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map((key) => `${key.toLowerCase()}:${headers[key]}\n`)
+    .join("")
+  const signedHeaders = Object.keys(headers)
+    .sort()
+    .map((key) => key.toLowerCase())
+    .join(";")
+
+  const payloadHash = createHash("sha256").update(payload).digest("hex")
+
+  const canonicalRequest = [
+    method,
+    canonicalUri,
+    canonicalQuerystring,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n")
+
+  // Create string to sign
+  const algorithm = "AWS4-HMAC-SHA256"
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n")
+
+  // Calculate signature
+  const kDate = createHmac("sha256", `AWS4${secretAccessKey}`).update(dateStamp).digest()
+  const kRegion = createHmac("sha256", kDate).update(region).digest()
+  const kService = createHmac("sha256", kRegion).update(service).digest()
+  const kSigning = createHmac("sha256", kService).update("aws4_request").digest()
+  const signature = createHmac("sha256", kSigning).update(stringToSign).digest("hex")
+
+  // Create authorization header
+  const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+  return {
+    ...headers,
+    "X-Amz-Date": amzDate,
+    Authorization: authorizationHeader,
+  }
+}
+
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -45,7 +112,6 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
         process.env.AWS_SES_REGION &&
         process.env.AWS_SES_FROM_EMAIL
       ) {
-        // Use fetch to call SES API directly to avoid fs issues
         const sesEndpoint = `https://email.${process.env.AWS_SES_REGION}.amazonaws.com/`
 
         const subject = `New Demo Request from ${firstName} ${lastName}`
@@ -67,7 +133,7 @@ ${affiliate || "Not specified"}
 Please follow up with this prospect to schedule a demo.
         `
 
-        // Create basic SES API call
+        // Create SES API parameters
         const params = new URLSearchParams({
           Action: "SendEmail",
           Version: "2010-12-01",
@@ -78,21 +144,35 @@ Please follow up with this prospect to schedule a demo.
           "ReplyToAddresses.member.1": email,
         })
 
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, "") + "Z"
+        const payload = params.toString()
+        const headers = {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Host: `email.${process.env.AWS_SES_REGION}.amazonaws.com`,
+        }
+
+        // Sign the request
+        const signedHeaders = await signAWSRequest(
+          "POST",
+          sesEndpoint,
+          headers,
+          payload,
+          process.env.AWS_SES_REGION,
+          "ses",
+          process.env.AWS_SES_ACCESS_KEY_ID,
+          process.env.AWS_SES_SECRET_ACCESS_KEY,
+        )
 
         const response = await fetch(sesEndpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Amz-Date": timestamp,
-          },
-          body: params.toString(),
+          headers: signedHeaders,
+          body: payload,
         })
 
         if (response.ok) {
           console.log("Email sent successfully via AWS SES API")
         } else {
-          throw new Error(`SES API error: ${response.status}`)
+          const errorText = await response.text()
+          throw new Error(`SES API error: ${response.status} - ${errorText}`)
         }
       } else {
         console.log("AWS SES not configured, logging demo request:", {
