@@ -1,6 +1,6 @@
 "use server"
 
-import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
+import { trackFormSubmission } from "@/lib/visitor-tracking"
 import { trackAffiliateActivity } from "@/lib/affiliate-management"
 import crypto from "crypto"
 
@@ -159,38 +159,4 @@ New contact form submission:
 Name: ${data.firstName} ${data.lastName}
 Email: ${data.email}
 Company: ${data.company}
-Role: ${data.role}
-Company Size: ${data.companySize}
-${data.affiliate ? `Affiliate Code: ${data.affiliate}${affiliateData ? ` (Valid - ${affiliateData.name})` : " (Invalid)"}` : ""}
-
-Message:
-${data.message}
-
-Submitted at: ${new Date().toISOString()}
-    `.trim()
-
-    const emailSent = await sendEmailWithSES("enquiries@kuhlekt.com", subject, body)
-
-    // Update submission status based on email result
-    await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
-
-    if (emailSent) {
-      return {
-        success: true,
-        message: "Thank you for your message. We'll get back to you soon!",
-        affiliate: affiliateData?.code,
-      }
-    } else {
-      return {
-        success: false,
-        message: "There was an error sending your message. Please try again.",
-      }
-    }
-  } catch (error) {
-    console.error("Contact form submission error:", error)
-    return {
-      success: false,
-      message: "There was an error processing your request. Please try again.",
-    }
-  }
-}
+Role: ${
