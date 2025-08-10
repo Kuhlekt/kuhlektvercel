@@ -1,352 +1,147 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Users, MousePointer, Calendar, RefreshCw, Target, FileText } from "lucide-react"
-import React from "react"
+import { Badge } from "@/components/ui/badge"
+import { Eye, Users, FileText, TrendingUp, Settings, LogOut } from "lucide-react"
 
-interface VisitorData {
+interface Visitor {
   id: string
-  ipAddress: string
+  ip: string
   userAgent: string
-  referrer: string
-  currentPage: string
-  timestamp: string
-  sessionId: string
-  country?: string
-  city?: string
-  device?: string
-  browser?: string
-  os?: string
-  affiliate?: string
-  affiliateSource?: "demo" | "contact"
-  affiliateTimestamp?: string
-}
-
-interface PageView {
-  id: string
-  visitorId: string
-  page: string
-  timestamp: string
-  timeSpent?: number
+  firstVisit: Date
+  lastVisit: Date
+  pageViews: number
+  pages: string[]
+  referrer?: string
+  formSubmissions: FormSubmission[]
 }
 
 interface FormSubmission {
   id: string
-  visitorId: string
-  sessionId: string
-  formType: "demo" | "contact"
-  timestamp: string
-  data: {
-    firstName?: string
-    lastName?: string
-    email?: string
-    company?: string
-    role?: string
-    companySize?: string
-    message?: string
-    challenges?: string
-    affiliate?: string
-  }
-  ipAddress?: string
-  userAgent?: string
+  type: "contact" | "demo"
+  timestamp: Date
+  data: Record<string, any>
+  status: "pending" | "completed" | "failed"
 }
 
-interface Stats {
-  visitors: {
-    today: number
-    week: number
-    month: number
-    total: number
-  }
-  pageViews: {
-    today: number
-    week: number
-    month: number
-    total: number
-  }
-  forms: {
-    today: number
-    week: number
-    month: number
-    total: number
-  }
-  affiliates: {
-    total: number
-    breakdown: Record<string, { count: number; demo: number; contact: number }>
-  }
+interface VisitorStats {
+  totalVisitors: number
+  recentVisitors: number
+  totalPageViews: number
+  totalFormSubmissions: number
 }
 
-function PasswordManagement({ currentPassword }: { currentPassword: string }) {
-  const [oldPassword, setOldPassword] = useState("")
+interface Affiliate {
+  id: string
+  name: string
+  email: string
+  code: string
+  commissionRate: number
+  totalEarnings: number
+  status: "active" | "inactive" | "pending"
+  createdAt: Date
+  lastActivity?: Date
+}
+
+interface AffiliateStats {
+  totalAffiliates: number
+  activeAffiliates: number
+  totalCommissions: number
+  monthlyCommissions: number
+}
+
+export default function AdminDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState("")
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [visitorStats, setVisitorStats] = useState<VisitorStats | null>(null)
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([])
+  const [affiliateStats, setAffiliateStats] = useState<AffiliateStats | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [activeTab, setActiveTab] = useState("visitors")
+
+  // Password change form
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState("")
+  const [passwordMessage, setPasswordMessage] = useState("")
 
-  const handlePasswordChange = async () => {
-    if (newPassword !== confirmPassword) {
-      setMessage("New passwords don't match")
-      return
-    }
-
-    if (newPassword.length < 6) {
-      setMessage("New password must be at least 6 characters")
-      return
-    }
-
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
+    setError("")
+
     try {
       const response = await fetch("/api/admin/password", {
-        method: "POST",
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${password}`,
         },
-        body: JSON.stringify({
-          currentPassword: oldPassword,
-          newPassword: newPassword,
-        }),
       })
 
-      const data = await response.json()
-
       if (response.ok) {
-        setMessage("Password updated successfully!")
-        setOldPassword("")
-        setNewPassword("")
-        setConfirmPassword("")
+        setIsAuthenticated(true)
+        await fetchData()
       } else {
-        setMessage(data.error || "Failed to update password")
+        setError("Invalid password")
       }
     } catch (error) {
-      setMessage("Error updating password")
+      setError("Authentication failed")
     } finally {
       setLoading(false)
     }
   }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Change Admin Password</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Current Password</label>
-            <Input
-              type="password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              placeholder="Enter current password"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">New Password</label>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new password (min 6 characters)"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
-          <Button
-            onClick={handlePasswordChange}
-            disabled={loading || !oldPassword || !newPassword || !confirmPassword}
-            className="w-full"
-          >
-            {loading ? "Updating..." : "Update Password"}
-          </Button>
-          {message && (
-            <div
-              className={`text-sm p-2 rounded ${
-                message.includes("successfully") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-              }`}
-            >
-              {message}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function AffiliateManagement({ authToken }: { authToken: string }) {
-  const [affiliates, setAffiliates] = useState<string[]>([])
-  const [newAffiliate, setNewAffiliate] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  const fetchAffiliates = async () => {
-    try {
-      const response = await fetch("/api/admin/affiliates", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setAffiliates(data.affiliates)
-      }
-    } catch (error) {
-      console.error("Error fetching affiliates:", error)
-    }
-  }
-
-  const addAffiliate = async () => {
-    if (!newAffiliate.trim()) return
-
-    setLoading(true)
-    try {
-      const response = await fetch("/api/admin/affiliates", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ code: newAffiliate, action: "add" }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setAffiliates(data.affiliates)
-        setNewAffiliate("")
-      }
-    } catch (error) {
-      console.error("Error adding affiliate:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const removeAffiliate = async (code: string) => {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/admin/affiliates", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ code, action: "remove" }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setAffiliates(data.affiliates)
-      }
-    } catch (error) {
-      console.error("Error removing affiliate:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  React.useEffect(() => {
-    fetchAffiliates()
-  }, [authToken])
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Affiliate Code Management</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter affiliate code"
-              value={newAffiliate}
-              onChange={(e) => setNewAffiliate(e.target.value.toUpperCase())}
-              onKeyPress={(e) => e.key === "Enter" && addAffiliate()}
-            />
-            <Button onClick={addAffiliate} disabled={loading || !newAffiliate.trim()}>
-              Add
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <h4 className="font-medium">Valid Affiliate Codes:</h4>
-            {affiliates.length === 0 ? (
-              <p className="text-gray-500">No affiliate codes configured</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {affiliates.map((code) => (
-                  <div key={code} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                    <span className="font-mono text-sm">{code}</span>
-                    <Button size="sm" variant="destructive" onClick={() => removeAffiliate(code)} disabled={loading}>
-                      ×
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export default function AdminVisitorsPage() {
-  const [visitors, setVisitors] = useState<VisitorData[]>([])
-  const [pageViews, setPageViews] = useState<PageView[]>([])
-  const [formSubmissions, setFormSubmissions] = useState<FormSubmission[]>([])
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [password, setPassword] = useState("")
-  const [authenticated, setAuthenticated] = useState(false)
-  const [authToken, setAuthToken] = useState("")
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-
-      // Fetch stats
-      const statsResponse = await fetch("/api/admin/visitors?type=stats", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        setStats(statsData)
-      }
-
       // Fetch visitors
       const visitorsResponse = await fetch("/api/admin/visitors", {
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: {
+          Authorization: `Bearer ${password}`,
+        },
       })
+
       if (visitorsResponse.ok) {
         const visitorsData = await visitorsResponse.json()
-        setVisitors(visitorsData)
+        setVisitors(
+          visitorsData.visitors.map((v: any) => ({
+            ...v,
+            firstVisit: new Date(v.firstVisit),
+            lastVisit: new Date(v.lastVisit),
+            formSubmissions: v.formSubmissions.map((s: any) => ({
+              ...s,
+              timestamp: new Date(s.timestamp),
+            })),
+          })),
+        )
+        setVisitorStats(visitorsData.stats)
       }
 
-      // Fetch page views
-      const pageViewsResponse = await fetch("/api/admin/visitors?type=pageviews", {
-        headers: { Authorization: `Bearer ${authToken}` },
+      // Fetch affiliates
+      const affiliatesResponse = await fetch("/api/admin/affiliates", {
+        headers: {
+          Authorization: `Bearer ${password}`,
+        },
       })
-      if (pageViewsResponse.ok) {
-        const pageViewsData = await pageViewsResponse.json()
-        setPageViews(pageViewsData)
-      }
 
-      // Fetch form submissions
-      const formsResponse = await fetch("/api/admin/visitors?type=forms", {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
-      if (formsResponse.ok) {
-        const formsData = await formsResponse.json()
-        setFormSubmissions(formsData)
+      if (affiliatesResponse.ok) {
+        const affiliatesData = await affiliatesResponse.json()
+        setAffiliates(
+          affiliatesData.affiliates.map((a: any) => ({
+            ...a,
+            createdAt: new Date(a.createdAt),
+            lastActivity: a.lastActivity ? new Date(a.lastActivity) : undefined,
+          })),
+        )
+        setAffiliateStats(affiliatesData.stats)
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -355,31 +150,85 @@ export default function AdminVisitorsPage() {
     }
   }
 
-  const handleLogin = () => {
-    // Use password as auth token for API calls
-    setAuthToken(password)
-    setAuthenticated(true)
-    fetchData()
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordMessage("")
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage("New passwords don't match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordMessage("Password must be at least 6 characters")
+      return
+    }
+
+    try {
+      const response = await fetch("/api/admin/password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      })
+
+      if (response.ok) {
+        setPasswordMessage("Password updated successfully")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+        setShowPasswordForm(false)
+        // Update the stored password for future requests
+        setPassword(newPassword)
+      } else {
+        const data = await response.json()
+        setPasswordMessage(data.error || "Failed to update password")
+      }
+    } catch (error) {
+      setPasswordMessage("Error updating password")
+    }
   }
 
-  if (!authenticated) {
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    setPassword("")
+    setVisitors([])
+    setVisitorStats(null)
+    setAffiliates([])
+    setAffiliateStats(null)
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Admin Access</CardTitle>
+            <CardTitle>Admin Login</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Enter admin password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
-            />
-            <Button onClick={handleLogin} className="w-full">
-              Login
-            </Button>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  required
+                />
+              </div>
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -388,103 +237,156 @@ export default function AdminVisitorsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Visitor Analytics</h1>
-          <Button onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Users className="w-8 h-8 text-blue-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Visitors</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.visitors.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Eye className="w-8 h-8 text-green-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Page Views</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.pageViews.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <FileText className="w-8 h-8 text-purple-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Form Submissions</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.forms.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Calendar className="w-8 h-8 text-orange-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Today's Visitors</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.visitors.today}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <MousePointer className="w-8 h-8 text-red-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Today's Forms</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.forms.today}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Target className="w-8 h-8 text-cyan-600" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Affiliate Visitors</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.affiliates.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-xl font-semibold text-gray-900">Kuhlekt Admin Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <Button variant="outline" size="sm" onClick={() => setShowPasswordForm(!showPasswordForm)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showPasswordForm && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    required
+                  />
+                </div>
+                {passwordMessage && (
+                  <p
+                    className={`text-sm ${passwordMessage.includes("successfully") ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {passwordMessage}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button type="submit">Update Password</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowPasswordForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         )}
 
-        <Tabs defaultValue="visitors" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="visitors">Visitors</TabsTrigger>
-            <TabsTrigger value="pageviews">Page Views</TabsTrigger>
-            <TabsTrigger value="forms">Form Submissions</TabsTrigger>
-            <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
-            <TabsTrigger value="affiliate-management">Affiliate Management</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="visitors">
+              <Users className="w-4 h-4 mr-2" />
+              Visitors
+            </TabsTrigger>
+            <TabsTrigger value="affiliates">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Affiliates
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="visitors">
+          <TabsContent value="visitors" className="space-y-6">
+            {/* Visitor Stats */}
+            {visitorStats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Users className="w-8 h-8 text-cyan-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Visitors</p>
+                        <p className="text-2xl font-bold text-gray-900">{visitorStats.totalVisitors}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Eye className="w-8 h-8 text-green-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Recent Visitors (24h)</p>
+                        <p className="text-2xl font-bold text-gray-900">{visitorStats.recentVisitors}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Page Views</p>
+                        <p className="text-2xl font-bold text-gray-900">{visitorStats.totalPageViews}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-8 h-8 text-purple-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Form Submissions</p>
+                        <p className="text-2xl font-bold text-gray-900">{visitorStats.totalFormSubmissions}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Visitors Table */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Visitors</CardTitle>
@@ -495,40 +397,57 @@ export default function AdminVisitorsPage() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2">IP Address</th>
-                        <th className="text-left p-2">Device</th>
-                        <th className="text-left p-2">Browser</th>
-                        <th className="text-left p-2">OS</th>
-                        <th className="text-left p-2">Current Page</th>
-                        <th className="text-left p-2">Affiliate</th>
+                        <th className="text-left p-2">First Visit</th>
+                        <th className="text-left p-2">Last Visit</th>
+                        <th className="text-left p-2">Page Views</th>
+                        <th className="text-left p-2">Pages</th>
+                        <th className="text-left p-2">Form Submissions</th>
                         <th className="text-left p-2">Referrer</th>
-                        <th className="text-left p-2">Timestamp</th>
                       </tr>
                     </thead>
                     <tbody>
                       {visitors.map((visitor) => (
                         <tr key={visitor.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2 font-mono text-xs">{visitor.ipAddress}</td>
+                          <td className="p-2 font-mono text-xs">{visitor.ip}</td>
+                          <td className="p-2">{visitor.firstVisit.toLocaleDateString()}</td>
+                          <td className="p-2">{visitor.lastVisit.toLocaleDateString()}</td>
+                          <td className="p-2">{visitor.pageViews}</td>
                           <td className="p-2">
-                            <Badge variant="outline">{visitor.device || "Unknown"}</Badge>
+                            <div className="flex flex-wrap gap-1">
+                              {visitor.pages.slice(0, 3).map((page, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {page}
+                                </Badge>
+                              ))}
+                              {visitor.pages.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{visitor.pages.length - 3}
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="p-2">
-                            <Badge variant="outline">{visitor.browser || "Unknown"}</Badge>
+                            <div className="flex flex-wrap gap-1">
+                              {visitor.formSubmissions.map((submission) => (
+                                <Badge
+                                  key={submission.id}
+                                  variant={
+                                    submission.status === "completed"
+                                      ? "default"
+                                      : submission.status === "failed"
+                                        ? "destructive"
+                                        : "secondary"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {submission.type}
+                                </Badge>
+                              ))}
+                            </div>
                           </td>
-                          <td className="p-2">
-                            <Badge variant="outline">{visitor.os || "Unknown"}</Badge>
+                          <td className="p-2 text-xs text-gray-600 max-w-32 truncate">
+                            {visitor.referrer || "Direct"}
                           </td>
-                          <td className="p-2 text-blue-600">{visitor.currentPage}</td>
-                          <td className="p-2">
-                            {visitor.affiliate ? (
-                              <Badge className="bg-cyan-100 text-cyan-800">
-                                {visitor.affiliate} ({visitor.affiliateSource})
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="p-2 text-gray-600 max-w-xs truncate">{visitor.referrer || "Direct"}</td>
-                          <td className="p-2 text-gray-500">{new Date(visitor.timestamp).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -538,85 +457,111 @@ export default function AdminVisitorsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="pageviews">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Page Views</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Visitor ID</th>
-                        <th className="text-left p-2">Page</th>
-                        <th className="text-left p-2">Timestamp</th>
-                        <th className="text-left p-2">Time Spent</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pageViews.map((pageView) => (
-                        <tr key={pageView.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2 font-mono text-xs">{pageView.visitorId}</td>
-                          <td className="p-2 text-blue-600">{pageView.page}</td>
-                          <td className="p-2 text-gray-500">{new Date(pageView.timestamp).toLocaleString()}</td>
-                          <td className="p-2 text-gray-600">{pageView.timeSpent ? `${pageView.timeSpent}s` : "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="affiliates" className="space-y-6">
+            {/* Affiliate Stats */}
+            {affiliateStats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <Users className="w-8 h-8 text-cyan-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Affiliates</p>
+                        <p className="text-2xl font-bold text-gray-900">{affiliateStats.totalAffiliates}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          <TabsContent value="forms">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-8 h-8 text-green-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Active Affiliates</p>
+                        <p className="text-2xl font-bold text-gray-900">{affiliateStats.activeAffiliates}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Commissions</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          ${affiliateStats.totalCommissions.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-8 h-8 text-purple-600" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Monthly Commissions</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          ${affiliateStats.monthlyCommissions.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Affiliates Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Form Submissions</CardTitle>
+                <CardTitle>Affiliate Partners</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left p-2">Type</th>
                         <th className="text-left p-2">Name</th>
                         <th className="text-left p-2">Email</th>
-                        <th className="text-left p-2">Company</th>
-                        <th className="text-left p-2">Affiliate</th>
-                        <th className="text-left p-2">IP Address</th>
-                        <th className="text-left p-2">Timestamp</th>
+                        <th className="text-left p-2">Code</th>
+                        <th className="text-left p-2">Commission Rate</th>
+                        <th className="text-left p-2">Total Earnings</th>
+                        <th className="text-left p-2">Status</th>
+                        <th className="text-left p-2">Created</th>
+                        <th className="text-left p-2">Last Activity</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {formSubmissions.map((submission) => (
-                        <tr key={submission.id} className="border-b hover:bg-gray-50">
+                      {affiliates.map((affiliate) => (
+                        <tr key={affiliate.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium">{affiliate.name}</td>
+                          <td className="p-2">{affiliate.email}</td>
+                          <td className="p-2 font-mono text-xs bg-gray-100 rounded px-2 py-1 inline-block">
+                            {affiliate.code}
+                          </td>
+                          <td className="p-2">{(affiliate.commissionRate * 100).toFixed(1)}%</td>
+                          <td className="p-2 font-medium">${affiliate.totalEarnings.toFixed(2)}</td>
                           <td className="p-2">
                             <Badge
-                              className={
-                                submission.formType === "demo"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-green-100 text-green-800"
+                              variant={
+                                affiliate.status === "active"
+                                  ? "default"
+                                  : affiliate.status === "inactive"
+                                    ? "destructive"
+                                    : "secondary"
                               }
                             >
-                              {submission.formType}
+                              {affiliate.status}
                             </Badge>
                           </td>
+                          <td className="p-2">{affiliate.createdAt.toLocaleDateString()}</td>
                           <td className="p-2">
-                            {submission.data.firstName} {submission.data.lastName}
+                            {affiliate.lastActivity ? affiliate.lastActivity.toLocaleDateString() : "Never"}
                           </td>
-                          <td className="p-2 text-blue-600">{submission.data.email}</td>
-                          <td className="p-2">{submission.data.company}</td>
-                          <td className="p-2">
-                            {submission.data.affiliate ? (
-                              <Badge className="bg-cyan-100 text-cyan-800">{submission.data.affiliate}</Badge>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="p-2 font-mono text-xs">{submission.ipAddress}</td>
-                          <td className="p-2 text-gray-500">{new Date(submission.timestamp).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -624,56 +569,6 @@ export default function AdminVisitorsPage() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="affiliates">
-            <Card>
-              <CardHeader>
-                <CardTitle>Affiliate Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats?.affiliates.breakdown && Object.keys(stats.affiliates.breakdown).length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2">Affiliate Code</th>
-                          <th className="text-left p-2">Total Visitors</th>
-                          <th className="text-left p-2">Demo Forms</th>
-                          <th className="text-left p-2">Contact Forms</th>
-                          <th className="text-left p-2">Conversion Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(stats.affiliates.breakdown).map(([affiliate, data]) => (
-                          <tr key={affiliate} className="border-b hover:bg-gray-50">
-                            <td className="p-2 font-semibold">{affiliate}</td>
-                            <td className="p-2">{data.count}</td>
-                            <td className="p-2">{data.demo}</td>
-                            <td className="p-2">{data.contact}</td>
-                            <td className="p-2">
-                              {data.count > 0
-                                ? `${(((data.demo + data.contact) / data.count) * 100).toFixed(1)}%`
-                                : "0%"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">No affiliate data available yet.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="affiliate-management">
-            <AffiliateManagement authToken={authToken} />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <PasswordManagement currentPassword={authToken} />
           </TabsContent>
         </Tabs>
       </div>

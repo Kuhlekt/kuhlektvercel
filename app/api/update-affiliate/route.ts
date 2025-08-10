@@ -1,17 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateVisitorAffiliate } from "@/lib/visitor-tracking"
+import { updateAffiliate } from "@/lib/affiliate-management"
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
-    const { sessionId, affiliate, source } = await request.json()
+    const body = await request.json()
+    const { id, ...updates } = body
 
-    if (sessionId && affiliate && affiliate.trim() !== "" && (source === "demo" || source === "contact")) {
-      updateVisitorAffiliate(sessionId, affiliate.trim(), source)
+    const success = updateAffiliate(id, updates)
+
+    if (!success) {
+      return NextResponse.json({ error: "Affiliate not found" }, { status: 404 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error updating affiliate:", error)
-    return NextResponse.json({ success: true }) // Don't fail the request
+    return NextResponse.json({ error: "Failed to update affiliate" }, { status: 500 })
   }
 }

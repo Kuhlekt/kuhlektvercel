@@ -1,313 +1,168 @@
 "use server"
 
-import { isValidAffiliate } from "@/lib/affiliate-management"
-import { trackFormSubmission, getVisitors } from "@/lib/visitor-tracking"
-import { headers } from "next/headers"
+import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
+import crypto from "crypto"
 
-// AWS Signature Version 4 signing function
-async function signAWSRequest(
+interface ContactFormData {
+  name: string
+  email: string
+  company: string
+  phone: string
+  message: string
+  affiliateCode?: string
+}
+
+function createSignature(
   method: string,
   url: string,
   headers: Record<string, string>,
-  payload: string,
-  region: string,
-  service: string,
-  accessKeyId: string,
-  secretAccessKey: string,
-) {
-  const { createHmac, createHash } = await import("crypto")
-
-  const now = new Date()
-  const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, "")
-  const amzDate = now.toISOString().slice(0, 19).replace(/[-:]/g, "") + "Z"
-
-  // Create canonical request
-  const canonicalUri = "/"
-  const canonicalQuerystring = ""
-  const canonicalHeaders = Object.keys(headers)
-    .sort()
-    .map((key) => `${key.toLowerCase()}:${headers[key]}\n`)
-    .join("")
-  const signedHeaders = Object.keys(headers)
-    .sort()
-    .map((key) => key.toLowerCase())
-    .join(";")
-
-  const payloadHash = createHash("sha256").update(payload).digest("hex")
-
+  body: string,
+  secretKey: string,
+): string {
   const canonicalRequest = [
     method,
-    canonicalUri,
-    canonicalQuerystring,
-    canonicalHeaders,
-    signedHeaders,
-    payloadHash,
+    url,
+    Object.keys(headers)
+      .sort()
+      .map((key) => `${key}:${headers[key]}`)
+      .join("\n"),
+    body,
   ].join("\n")
 
-  // Create string to sign
-  const algorithm = "AWS4-HMAC-SHA256"
-  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
-  const stringToSign = [
-    algorithm,
-    amzDate,
-    credentialScope,
-    createHash("sha256").update(canonicalRequest).digest("hex"),
-  ].join("\n")
+  return crypto.createHmac("sha256", secretKey).update(canonicalRequest).digest("base64")
+}
 
-  // Calculate signature
-  const kDate = createHmac("sha256", `AWS4${secretAccessKey}`).update(dateStamp).digest()
-  const kRegion = createHmac("sha256", kDate).update(region).digest()
-  const kService = createHmac("sha256", kRegion).update(service).digest()
-  const kSigning = createHmac("sha256", kService).update("aws4_request").digest()
-  const signature = createHmac("sha256", kSigning).update(stringToSign).digest("hex")
+async function sendEmailWithSES(to: string, subject: string, body: string): Promise<boolean> {
+  try {
+    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
+    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
+    const region = process.env.AWS_SES_REGION
+    const fromEmail = process.env.AWS_SES_FROM_EMAIL
 
-  // Create authorization header
-  const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+    if (!accessKeyId || !secretAccessKey || !region || !fromEmail) {
+      console.error("Missing AWS SES configuration")
+      return false
+    }
 
-  return {
-    ...headers,
-    "X-Amz-Date": amzDate,
-    Authorization: authorizationHeader,
+    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
+    const date = timestamp.substr(0, 8)
+
+    const params = new URLSearchParams({
+      Action: "SendEmail",
+      Source: fromEmail,
+      "Destination.ToAddresses.member.1": to,
+      "Message.Subject.Data": subject,
+      "Message.Body.Text.Data": body,
+      Version: "2010-12-01",
+    })
+
+    const payload = params.toString()
+    const host = `email.${region}.amazonaws.com`
+    const url = `https://${host}/`
+
+    // Create AWS Signature Version 4
+    const algorithm = "AWS4-HMAC-SHA256"
+    const credentialScope = `${date}/${region}/ses/aws4_request`
+
+    const canonicalHeaders = [`host:${host}`, `x-amz-date:${timestamp}`].join("\n") + "\n"
+
+    const signedHeaders = "host;x-amz-date"
+
+    const payloadHash = crypto.createHash("sha256").update(payload).digest("hex")
+
+    const canonicalRequest = ["POST", "/", "", canonicalHeaders, signedHeaders, payloadHash].join("\n")
+
+    const stringToSign = [
+      algorithm,
+      timestamp,
+      credentialScope,
+      crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
+    ].join("\n")
+
+    const kDate = crypto.createHmac("sha256", `AWS4${secretAccessKey}`).update(date).digest()
+    const kRegion = crypto.createHmac("sha256", kDate).update(region).digest()
+    const kService = crypto.createHmac("sha256", kRegion).update("ses").digest()
+    const kSigning = crypto.createHmac("sha256", kService).update("aws4_request").digest()
+
+    const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex")
+
+    const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: authorizationHeader,
+        "X-Amz-Date": timestamp,
+        Host: host,
+      },
+      body: payload,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("SES API Error:", response.status, errorText)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error sending email:", error)
+    return false
   }
 }
 
-export async function submitContactForm(prevState: any, formData: FormData) {
-  let sessionId = "unknown"
-  let visitorId = "unknown"
-  let ipAddress = "unknown"
-  let userAgent = "unknown"
-
+export async function submitContactForm(formData: FormData) {
   try {
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const role = formData.get("role") as string
-    const companySize = formData.get("companySize") as string
-    const message = formData.get("message") as string
-    const affiliate = formData.get("affiliate") as string
-
-    // Get request headers for tracking
-    const headersList = headers()
-    ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || headersList.get("x-real-ip") || "unknown"
-    userAgent = headersList.get("user-agent") || "unknown"
-
-    // Try to find existing visitor by IP and user agent
-    const existingVisitors = getVisitors()
-    const existingVisitor = existingVisitors.find(
-      (v) =>
-        v.ipAddress === ipAddress &&
-        v.userAgent === userAgent &&
-        new Date().getTime() - new Date(v.timestamp).getTime() < 24 * 60 * 60 * 1000, // Within 24 hours
-    )
-
-    if (existingVisitor) {
-      sessionId = existingVisitor.sessionId
-      visitorId = existingVisitor.id
-    } else {
-      // Generate new session/visitor IDs
-      sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36)
-      visitorId = `visitor_${sessionId}`
+    const data: ContactFormData = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      company: formData.get("company") as string,
+      phone: formData.get("phone") as string,
+      message: formData.get("message") as string,
+      affiliateCode: (formData.get("affiliateCode") as string) || undefined,
     }
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !company || !message) {
-      return {
-        success: false,
-        message: "Please fill in all required fields.",
-      }
-    }
+    // Get client IP and user agent for tracking
+    const headers = await import("next/headers")
+    const headersList = headers.headers()
+    const forwarded = headersList.get("x-forwarded-for")
+    const ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
+    const userAgent = headersList.get("user-agent") || "unknown"
 
-    // Affiliate validation
-    if (affiliate && !isValidAffiliate(affiliate)) {
-      return {
-        success: false,
-        message: "Invalid affiliate code. Please check with your affiliate partner for the correct code.",
-      }
-    }
+    // Track form submission before attempting to send email
+    const submissionId = await trackFormSubmission(ip, userAgent, "contact", data)
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return {
-        success: false,
-        message: "Please enter a valid email address.",
-      }
-    }
+    // Send email notification
+    const subject = `New Contact Form Submission from ${data.name}`
+    const body = `
+New contact form submission:
 
-    // Track form submission BEFORE any potential errors
-    console.log("Tracking contact form submission:", {
-      visitorId,
-      sessionId,
-      formType: "contact",
-      data: { firstName, lastName, email, company, role, companySize, message, affiliate },
-      ipAddress,
-      userAgent,
-      timestamp: new Date().toISOString(),
-    })
-
-    const formSubmission = trackFormSubmission({
-      visitorId,
-      sessionId,
-      formType: "contact",
-      data: {
-        firstName,
-        lastName,
-        email,
-        company,
-        role,
-        companySize,
-        message,
-        affiliate,
-      },
-      ipAddress,
-      userAgent,
-    })
-
-    console.log("Form submission tracked successfully:", formSubmission.id)
-
-    // Try to send email with AWS SES
-    try {
-      if (
-        process.env.AWS_SES_ACCESS_KEY_ID &&
-        process.env.AWS_SES_SECRET_ACCESS_KEY &&
-        process.env.AWS_SES_REGION &&
-        process.env.AWS_SES_FROM_EMAIL
-      ) {
-        const sesEndpoint = `https://email.${process.env.AWS_SES_REGION}.amazonaws.com/`
-
-        const subject = `New Contact Submission from ${firstName} ${lastName}`
-        const body = `
-New Contact Form Submission from Kuhlekt Website
-
-Contact Information:
-- Name: ${firstName} ${lastName}
-- Email: ${email}
-- Company: ${company}
-- Role: ${role || "Not specified"}
-- Company Size: ${companySize || "Not specified"}
-- Affiliate: ${affiliate || "Not specified"}
+Name: ${data.name}
+Email: ${data.email}
+Company: ${data.company}
+Phone: ${data.phone}
+${data.affiliateCode ? `Affiliate Code: ${data.affiliateCode}` : ""}
 
 Message:
-${message}
+${data.message}
 
-Technical Details:
-- IP Address: ${ipAddress}
-- User Agent: ${userAgent}
-- Session ID: ${sessionId}
-- Visitor ID: ${visitorId}
-- Form Submission ID: ${formSubmission.id}
-- Timestamp: ${new Date().toISOString()}
+Submitted at: ${new Date().toISOString()}
+IP Address: ${ip}
+    `.trim()
 
-Please follow up with this inquiry.
-        `
+    const emailSent = await sendEmailWithSES("info@kuhlekt.com", subject, body)
 
-        // Create SES API parameters
-        const params = new URLSearchParams({
-          Action: "SendEmail",
-          Version: "2010-12-01",
-          Source: process.env.AWS_SES_FROM_EMAIL,
-          "Destination.ToAddresses.member.1": "enquiries@kuhlekt.com",
-          "Message.Subject.Data": subject,
-          "Message.Body.Text.Data": body,
-          "ReplyToAddresses.member.1": email,
-        })
+    // Update submission status based on email result
+    await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
 
-        const payload = params.toString()
-        const headers = {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Host: `email.${process.env.AWS_SES_REGION}.amazonaws.com`,
-        }
-
-        // Sign the request
-        const signedHeaders = await signAWSRequest(
-          "POST",
-          sesEndpoint,
-          headers,
-          payload,
-          process.env.AWS_SES_REGION,
-          "ses",
-          process.env.AWS_SES_ACCESS_KEY_ID,
-          process.env.AWS_SES_SECRET_ACCESS_KEY,
-        )
-
-        const response = await fetch(sesEndpoint, {
-          method: "POST",
-          headers: signedHeaders,
-          body: payload,
-        })
-
-        if (response.ok) {
-          console.log("Email sent successfully via AWS SES API")
-        } else {
-          const errorText = await response.text()
-          console.error(`SES API error: ${response.status} - ${errorText}`)
-        }
-      } else {
-        // Fallback: Log the submission
-        console.log("AWS SES not configured, contact form logged:", {
-          submissionId: formSubmission.id,
-          firstName,
-          lastName,
-          email,
-          company,
-          role,
-          companySize,
-          message,
-          affiliate,
-          ipAddress,
-          userAgent,
-          sessionId,
-          visitorId,
-          timestamp: new Date().toISOString(),
-        })
-      }
-    } catch (emailError) {
-      // Log email error but don't fail the form submission
-      console.error("Email sending failed:", emailError)
-      console.log("Contact form data logged despite email failure:", {
-        submissionId: formSubmission.id,
-        firstName,
-        lastName,
-        email,
-        company,
-        role,
-        companySize,
-        message,
-        affiliate,
-        ipAddress,
-        userAgent,
-        sessionId,
-        visitorId,
-        timestamp: new Date().toISOString(),
-      })
-    }
-
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    return {
-      success: true,
-      message: "Thank you for your message! We've received your inquiry and will get back to you within 24 hours.",
-      affiliate: affiliate || null, // Return affiliate for client-side tracking
+    if (emailSent) {
+      return { success: true, message: "Thank you for your message. We'll get back to you soon!" }
+    } else {
+      return { success: false, message: "There was an error sending your message. Please try again." }
     }
   } catch (error) {
-    console.error("Error submitting contact form:", error)
-
-    // Still try to log the form data even if there's an error
-    console.log("Contact form data (error occurred):", {
-      sessionId,
-      visitorId,
-      ipAddress,
-      userAgent,
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : "Unknown error",
-    })
-
-    return {
-      success: false,
-      message:
-        "Sorry, there was an error sending your message. Please try again or contact us directly at enquiries@kuhlekt.com",
-    }
+    console.error("Contact form submission error:", error)
+    return { success: false, message: "There was an error processing your request. Please try again." }
   }
 }

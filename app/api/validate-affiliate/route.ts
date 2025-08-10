@@ -1,14 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { isValidAffiliate } from "@/lib/affiliate-management"
+import { validateAffiliateCode } from "@/lib/affiliate-management"
 
 export async function POST(request: NextRequest) {
   try {
-    const { code } = await request.json()
-    const isValid = isValidAffiliate(code)
+    const body = await request.json()
+    const { code } = body
 
-    return NextResponse.json({ isValid })
+    const affiliate = validateAffiliateCode(code)
+
+    if (!affiliate) {
+      return NextResponse.json({ valid: false, message: "Invalid affiliate code" })
+    }
+
+    return NextResponse.json({
+      valid: true,
+      affiliate: {
+        id: affiliate.id,
+        name: affiliate.name,
+        code: affiliate.code,
+        commissionRate: affiliate.commissionRate,
+      },
+    })
   } catch (error) {
-    console.error("Error validating affiliate:", error)
-    return NextResponse.json({ isValid: true }) // Default to valid on error
+    console.error("Error validating affiliate code:", error)
+    return NextResponse.json({ error: "Failed to validate affiliate code" }, { status: 500 })
   }
 }
