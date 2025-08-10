@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Users, MousePointer, Calendar, RefreshCw, Target } from "lucide-react"
+import { Eye, Users, MousePointer, Calendar, RefreshCw, Target, FileText } from "lucide-react"
 import React from "react"
 
 interface VisitorData {
@@ -35,6 +35,27 @@ interface PageView {
   timeSpent?: number
 }
 
+interface FormSubmission {
+  id: string
+  visitorId: string
+  sessionId: string
+  formType: "demo" | "contact"
+  timestamp: string
+  data: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    role?: string
+    companySize?: string
+    message?: string
+    challenges?: string
+    affiliate?: string
+  }
+  ipAddress?: string
+  userAgent?: string
+}
+
 interface Stats {
   visitors: {
     today: number
@@ -43,6 +64,12 @@ interface Stats {
     total: number
   }
   pageViews: {
+    today: number
+    week: number
+    month: number
+    total: number
+  }
+  forms: {
     today: number
     week: number
     month: number
@@ -171,6 +198,7 @@ function AffiliateManagement() {
 export default function AdminVisitorsPage() {
   const [visitors, setVisitors] = useState<VisitorData[]>([])
   const [pageViews, setPageViews] = useState<PageView[]>([])
+  const [formSubmissions, setFormSubmissions] = useState<FormSubmission[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [password, setPassword] = useState("")
@@ -205,6 +233,15 @@ export default function AdminVisitorsPage() {
       if (pageViewsResponse.ok) {
         const pageViewsData = await pageViewsResponse.json()
         setPageViews(pageViewsData)
+      }
+
+      // Fetch form submissions
+      const formsResponse = await fetch("/api/admin/visitors?type=forms", {
+        headers: { Authorization: "Bearer admin123" },
+      })
+      if (formsResponse.ok) {
+        const formsData = await formsResponse.json()
+        setFormSubmissions(formsData)
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -259,7 +296,7 @@ export default function AdminVisitorsPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -287,7 +324,19 @@ export default function AdminVisitorsPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
-                  <Calendar className="w-8 h-8 text-purple-600" />
+                  <FileText className="w-8 h-8 text-purple-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Form Submissions</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.forms.total}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Calendar className="w-8 h-8 text-orange-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Today's Visitors</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.visitors.today}</p>
@@ -299,10 +348,10 @@ export default function AdminVisitorsPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
-                  <MousePointer className="w-8 h-8 text-orange-600" />
+                  <MousePointer className="w-8 h-8 text-red-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Today's Page Views</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.pageViews.today}</p>
+                    <p className="text-sm font-medium text-gray-600">Today's Forms</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.forms.today}</p>
                   </div>
                 </div>
               </CardContent>
@@ -326,6 +375,7 @@ export default function AdminVisitorsPage() {
           <TabsList>
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
             <TabsTrigger value="pageviews">Page Views</TabsTrigger>
+            <TabsTrigger value="forms">Form Submissions</TabsTrigger>
             <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
             <TabsTrigger value="affiliate-management">Affiliate Management</TabsTrigger>
           </TabsList>
@@ -416,6 +466,62 @@ export default function AdminVisitorsPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="forms">
+            <Card>
+              <CardHeader>
+                <CardTitle>Form Submissions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-left p-2">Name</th>
+                        <th className="text-left p-2">Email</th>
+                        <th className="text-left p-2">Company</th>
+                        <th className="text-left p-2">Affiliate</th>
+                        <th className="text-left p-2">IP Address</th>
+                        <th className="text-left p-2">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formSubmissions.map((submission) => (
+                        <tr key={submission.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2">
+                            <Badge
+                              className={
+                                submission.formType === "demo"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-green-100 text-green-800"
+                              }
+                            >
+                              {submission.formType}
+                            </Badge>
+                          </td>
+                          <td className="p-2">
+                            {submission.data.firstName} {submission.data.lastName}
+                          </td>
+                          <td className="p-2 text-blue-600">{submission.data.email}</td>
+                          <td className="p-2">{submission.data.company}</td>
+                          <td className="p-2">
+                            {submission.data.affiliate ? (
+                              <Badge className="bg-cyan-100 text-cyan-800">{submission.data.affiliate}</Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="p-2 font-mono text-xs">{submission.ipAddress}</td>
+                          <td className="p-2 text-gray-500">{new Date(submission.timestamp).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="affiliates">
             <Card>
               <CardHeader>
@@ -457,6 +563,7 @@ export default function AdminVisitorsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="affiliate-management">
             <AffiliateManagement />
           </TabsContent>

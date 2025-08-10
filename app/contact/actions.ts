@@ -1,6 +1,8 @@
 "use server"
 
 import { isValidAffiliate } from "@/lib/affiliate-management"
+import { trackFormSubmission } from "@/lib/visitor-tracking"
+import { headers } from "next/headers"
 
 // AWS Signature Version 4 signing function
 async function signAWSRequest(
@@ -80,6 +82,11 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const message = formData.get("message") as string
     const affiliate = formData.get("affiliate") as string
 
+    // Get request headers for tracking
+    const headersList = headers()
+    const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || headersList.get("x-real-ip") || "unknown"
+    const userAgent = headersList.get("user-agent") || "unknown"
+
     // Validate required fields
     if (!firstName || !lastName || !email || !company || !message) {
       return {
@@ -105,6 +112,26 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
+    // Track form submission
+    const sessionId = headersList.get("x-session-id") || "unknown"
+    trackFormSubmission({
+      visitorId: `visitor_${sessionId}`,
+      sessionId,
+      formType: "contact",
+      data: {
+        firstName,
+        lastName,
+        email,
+        company,
+        role,
+        companySize,
+        message,
+        affiliate,
+      },
+      ipAddress,
+      userAgent,
+    })
+
     // Try to send email with AWS SES
     try {
       if (
@@ -129,6 +156,12 @@ Contact Information:
 
 Message:
 ${message}
+
+Technical Details:
+- IP Address: ${ipAddress}
+- User Agent: ${userAgent}
+- Session ID: ${sessionId}
+- Timestamp: ${new Date().toISOString()}
 
 Please follow up with this inquiry.
         `
@@ -185,6 +218,9 @@ Please follow up with this inquiry.
           companySize,
           message,
           affiliate,
+          ipAddress,
+          userAgent,
+          sessionId,
           timestamp: new Date().toISOString(),
         })
       }
@@ -200,6 +236,9 @@ Please follow up with this inquiry.
         companySize,
         message,
         affiliate,
+        ipAddress,
+        userAgent,
+        sessionId,
         timestamp: new Date().toISOString(),
       })
     }

@@ -1,6 +1,8 @@
 "use server"
 
 import { isValidAffiliate } from "@/lib/affiliate-management"
+import { trackFormSubmission } from "@/lib/visitor-tracking"
+import { headers } from "next/headers"
 
 // AWS Signature Version 4 signing function
 async function signAWSRequest(
@@ -79,6 +81,11 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const challenges = formData.get("challenges") as string
     const affiliate = formData.get("affiliate") as string
 
+    // Get request headers for tracking
+    const headersList = headers()
+    const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || headersList.get("x-real-ip") || "unknown"
+    const userAgent = headersList.get("user-agent") || "unknown"
+
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
       return {
@@ -103,6 +110,25 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
         message: "Invalid affiliate code. Please check with your affiliate partner for the correct code.",
       }
     }
+
+    // Track form submission
+    const sessionId = headersList.get("x-session-id") || "unknown"
+    trackFormSubmission({
+      visitorId: `visitor_${sessionId}`,
+      sessionId,
+      formType: "demo",
+      data: {
+        firstName,
+        lastName,
+        email,
+        company,
+        role,
+        challenges,
+        affiliate,
+      },
+      ipAddress,
+      userAgent,
+    })
 
     // Try to send email with AWS SES
     try {
@@ -129,6 +155,12 @@ ${challenges || "Not specified"}
 
 Affiliate Code:
 ${affiliate || "Not specified"}
+
+Technical Details:
+- IP Address: ${ipAddress}
+- User Agent: ${userAgent}
+- Session ID: ${sessionId}
+- Timestamp: ${new Date().toISOString()}
 
 Please follow up with this prospect to schedule a demo.
         `
@@ -183,6 +215,9 @@ Please follow up with this prospect to schedule a demo.
           role,
           challenges,
           affiliate,
+          ipAddress,
+          userAgent,
+          sessionId,
           timestamp: new Date().toISOString(),
         })
       }
@@ -196,6 +231,9 @@ Please follow up with this prospect to schedule a demo.
         role,
         challenges,
         affiliate,
+        ipAddress,
+        userAgent,
+        sessionId,
         timestamp: new Date().toISOString(),
       })
     }

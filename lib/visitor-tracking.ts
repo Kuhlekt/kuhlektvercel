@@ -24,9 +24,31 @@ export interface PageView {
   timeSpent?: number
 }
 
+export interface FormSubmission {
+  id: string
+  visitorId: string
+  sessionId: string
+  formType: "demo" | "contact"
+  timestamp: Date
+  data: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    role?: string
+    companySize?: string
+    message?: string
+    challenges?: string
+    affiliate?: string
+  }
+  ipAddress?: string
+  userAgent?: string
+}
+
 // Use Map for better performance and memory management
 const visitors = new Map<string, VisitorData>()
 const pageViews = new Map<string, PageView>()
+const formSubmissions = new Map<string, FormSubmission>()
 
 export function generateSessionId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36)
@@ -86,12 +108,34 @@ export function trackPageView(visitorId: string, page: string): PageView {
   return pageView
 }
 
+export function trackFormSubmission(data: Omit<FormSubmission, "id" | "timestamp">): FormSubmission {
+  const submission: FormSubmission = {
+    ...data,
+    id: "form_" + Math.random().toString(36).substring(2),
+    timestamp: new Date(),
+  }
+
+  formSubmissions.set(submission.id, submission)
+
+  // Keep only last 1000 form submissions to prevent memory issues
+  if (formSubmissions.size > 1000) {
+    const firstKey = formSubmissions.keys().next().value
+    formSubmissions.delete(firstKey)
+  }
+
+  return submission
+}
+
 export function getVisitors(): VisitorData[] {
   return Array.from(visitors.values()).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 }
 
 export function getPageViews(): PageView[] {
   return Array.from(pageViews.values()).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+}
+
+export function getFormSubmissions(): FormSubmission[] {
+  return Array.from(formSubmissions.values()).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 }
 
 export function getVisitorStats() {
@@ -102,6 +146,7 @@ export function getVisitorStats() {
 
   const allVisitors = Array.from(visitors.values())
   const allPageViews = Array.from(pageViews.values())
+  const allFormSubmissions = Array.from(formSubmissions.values())
 
   const todayVisitors = allVisitors.filter((v) => v.timestamp >= today).length
   const weekVisitors = allVisitors.filter((v) => v.timestamp >= thisWeek).length
@@ -112,6 +157,11 @@ export function getVisitorStats() {
   const weekPageViews = allPageViews.filter((pv) => pv.timestamp >= thisWeek).length
   const monthPageViews = allPageViews.filter((pv) => pv.timestamp >= thisMonth).length
   const totalPageViews = allPageViews.length
+
+  const todayForms = allFormSubmissions.filter((fs) => fs.timestamp >= today).length
+  const weekForms = allFormSubmissions.filter((fs) => fs.timestamp >= thisWeek).length
+  const monthForms = allFormSubmissions.filter((fs) => fs.timestamp >= thisMonth).length
+  const totalForms = allFormSubmissions.length
 
   // Affiliate stats
   const affiliateVisitors = allVisitors.filter((v) => v.affiliate && v.affiliate.trim() !== "")
@@ -141,6 +191,12 @@ export function getVisitorStats() {
       week: weekPageViews,
       month: monthPageViews,
       total: totalPageViews,
+    },
+    forms: {
+      today: todayForms,
+      week: weekForms,
+      month: monthForms,
+      total: totalForms,
     },
     affiliates: {
       total: affiliateVisitors.length,

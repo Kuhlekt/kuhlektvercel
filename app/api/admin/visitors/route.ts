@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getVisitors, getPageViews, getVisitorStats } from "@/lib/visitor-tracking"
+import { getVisitors, getPageViews, getVisitorStats, getFormSubmissions } from "@/lib/visitor-tracking"
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(getVisitorStats())
       case "pageviews":
         return NextResponse.json(getPageViews())
+      case "forms":
+        return NextResponse.json(getFormSubmissions())
       default:
         return NextResponse.json(getVisitors())
     }
