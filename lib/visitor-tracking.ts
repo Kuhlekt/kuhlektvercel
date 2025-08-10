@@ -8,6 +8,7 @@ interface Visitor {
   pages: string[]
   referrer?: string
   formSubmissions: FormSubmission[]
+  affiliate?: string
 }
 
 interface FormSubmission {
@@ -16,6 +17,7 @@ interface FormSubmission {
   timestamp: Date
   data: Record<string, any>
   status: "pending" | "completed" | "failed"
+  affiliate?: string
 }
 
 interface VisitorData {
@@ -24,6 +26,7 @@ interface VisitorData {
   page: string
   referrer?: string
   timestamp: Date
+  affiliate?: string
 }
 
 // In-memory storage for demo purposes
@@ -40,6 +43,10 @@ export async function trackVisitor(data: VisitorData): Promise<void> {
     if (!existingVisitor.pages.includes(data.page)) {
       existingVisitor.pages.push(data.page)
     }
+    // Update affiliate if provided
+    if (data.affiliate && !existingVisitor.affiliate) {
+      existingVisitor.affiliate = data.affiliate
+    }
   } else {
     // Create new visitor
     const newVisitor: Visitor = {
@@ -52,6 +59,7 @@ export async function trackVisitor(data: VisitorData): Promise<void> {
       pages: [data.page],
       referrer: data.referrer,
       formSubmissions: [],
+      affiliate: data.affiliate,
     }
     visitors.push(newVisitor)
   }
@@ -65,17 +73,22 @@ export async function trackFormSubmission(
 ): Promise<string> {
   const visitor = visitors.find((v) => v.ip === ip && v.userAgent === userAgent)
 
-  const submissionId = Date.now().toString()
+  const submissionId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
   const submission: FormSubmission = {
     id: submissionId,
     type,
     timestamp: new Date(),
     data,
     status: "pending",
+    affiliate: data.affiliate,
   }
 
   if (visitor) {
     visitor.formSubmissions.push(submission)
+    // Update visitor affiliate if provided in form
+    if (data.affiliate && !visitor.affiliate) {
+      visitor.affiliate = data.affiliate
+    }
   } else {
     // Create new visitor if not found
     const newVisitor: Visitor = {
@@ -85,8 +98,9 @@ export async function trackFormSubmission(
       firstVisit: new Date(),
       lastVisit: new Date(),
       pageViews: 1,
-      pages: ["/"],
+      pages: [type === "contact" ? "/contact" : "/demo"],
       formSubmissions: [submission],
+      affiliate: data.affiliate,
     }
     visitors.push(newVisitor)
   }
@@ -112,16 +126,49 @@ export function getVisitorStats() {
   const totalVisitors = visitors.length
   const totalPageViews = visitors.reduce((sum, v) => sum + v.pageViews, 0)
   const totalFormSubmissions = visitors.reduce((sum, v) => sum + v.formSubmissions.length, 0)
+  const totalDemoForms = visitors.reduce((sum, v) => sum + v.formSubmissions.filter((s) => s.type === "demo").length, 0)
+  const totalContactForms = visitors.reduce(
+    (sum, v) => sum + v.formSubmissions.filter((s) => s.type === "contact").length,
+    0,
+  )
 
   // Calculate unique visitors in last 24 hours
   const twentyFourHoursAgo = new Date()
   twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
   const recentVisitors = visitors.filter((v) => v.lastVisit >= twentyFourHoursAgo).length
 
+  // Calculate affiliate stats
+  const visitorsWithAffiliates = visitors.filter((v) => v.affiliate).length
+  const affiliateFormSubmissions = visitors.reduce(
+    (sum, v) => sum + v.formSubmissions.filter((s) => s.affiliate).length,
+    0,
+  )
+
   return {
     totalVisitors,
     recentVisitors,
     totalPageViews,
     totalFormSubmissions,
+    totalDemoForms,
+    totalContactForms,
+    visitorsWithAffiliates,
+    affiliateFormSubmissions,
   }
+}
+
+export function getFormSubmissions(): FormSubmission[] {
+  const allSubmissions: FormSubmission[] = []
+  for (const visitor of visitors) {
+    for (const submission of visitor.formSubmissions) {
+      allSubmissions.push({
+        ...submission,
+        data: {
+          ...submission.data,
+          visitorId: visitor.id,
+          ip: visitor.ip,
+        },
+      })
+    }
+  }
+  return allSubmissions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 }

@@ -1,6 +1,7 @@
 "use server"
 
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
+import { trackAffiliateActivity } from "@/lib/affiliate-management"
 import crypto from "crypto"
 
 interface DemoFormData {
@@ -162,14 +163,14 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
     // Validate affiliate code if provided
     let affiliateData = null
-    if (data.affiliate) {
+    if (data.affiliate && data.affiliate.trim().length > 0) {
       try {
         const affiliateResponse = await fetch(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/validate-affiliate`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code: data.affiliate }),
+            body: JSON.stringify({ code: data.affiliate.trim() }),
           },
         )
 
@@ -177,6 +178,8 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
           const result = await affiliateResponse.json()
           if (result.valid) {
             affiliateData = result.affiliate
+            // Track affiliate demo form submission
+            trackAffiliateActivity(result.affiliate.code, "demo")
           }
         }
       } catch (error) {
@@ -188,6 +191,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const submissionId = await trackFormSubmission(ip, userAgent, "demo", {
       ...data,
       affiliate: affiliateData?.code || data.affiliate,
+      affiliateValid: !!affiliateData,
     })
 
     // Send email notification
