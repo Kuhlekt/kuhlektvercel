@@ -169,7 +169,7 @@ ${data.message}
 Submitted at: ${new Date().toISOString()}
     `.trim()
 
-    const emailSent = await sendEmailWithSES("info@kuhlekt.com", subject, body)
+    const emailSent = await sendEmailWithSES("enquiries@kuhlekt.com", subject, body)
 
     // Update submission status based on email result
     await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")

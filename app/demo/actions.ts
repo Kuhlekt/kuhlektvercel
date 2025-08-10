@@ -212,7 +212,7 @@ Submitted at: ${new Date().toISOString()}
 IP Address: ${ip}
     `.trim()
 
-    const emailSent = await sendEmailWithSES("demos@kuhlekt.com", subject, body)
+    const emailSent = await sendEmailWithSES("enquiries@kuhlekt.com", subject, body)
 
     // Update submission status based on email result
     await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
