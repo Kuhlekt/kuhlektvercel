@@ -1,16 +1,20 @@
 "use client"
 
 import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star, Play, CheckCircle } from "lucide-react"
+import { Star, Play, CheckCircle, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
+      <VisitorTracker />
+
       {/* Header */}
       <Header />
 
@@ -38,22 +42,24 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/demo">
+                <Link href="/demo#top">
                   <Button
                     size="lg"
                     className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-3 text-base font-medium"
                   >
-                    Schedule a Demo →
+                    Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="flex items-center gap-2 px-8 py-3 text-base font-medium bg-transparent"
-                >
-                  <Play className="w-4 h-4" />
-                  Watch Product Tour
-                </Button>
+                <Link href="https://www.youtube.com/watch?v=iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="flex items-center gap-2 px-8 py-3 text-base font-medium bg-transparent"
+                  >
+                    <Play className="w-4 h-4" />
+                    Watch Product Tour
+                  </Button>
+                </Link>
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-600">
@@ -69,14 +75,14 @@ export default function HomePage() {
             </div>
 
             <div className="relative">
-              {/* Professional businesswoman image exactly as in screenshot */}
+              {/* Professional businesswoman image - restored original */}
               <div className="relative z-10">
                 <Image
-                  src="https://sjc.microlink.io/B-8RrlTokm_idSCD6F9SnwbpO5g4F0nqHVENhnraPCC7ZcQrBOGfXy_i-0gucrb97m1dH_vrtZtnUodRnsJcmg.jpeg"
+                  src="/images/businesswoman.png"
                   alt="Professional businesswoman in blue blazer"
                   width={600}
                   height={500}
-                  className="w-full h-auto object-cover"
+                  className="w-full h-auto object-cover rounded-lg"
                   priority
                 />
               </div>
@@ -203,6 +209,32 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Dashboard Section - Added back */}
+      <section className="bg-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-4">Platform</Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">See Your AR Performance at a Glance</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Get real-time insights into your receivables with our comprehensive dashboard and reporting tools.
+            </p>
+          </div>
+
+          <div className="relative">
+            <Image
+              src="/images/dso-reduction-chart.png"
+              alt="Kuhlekt AR Dashboard showing DSO reduction metrics and performance analytics"
+              width={1200}
+              height={700}
+              className="w-full h-auto rounded-lg shadow-2xl"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
+      <Footer />
     </div>
   )
 }
