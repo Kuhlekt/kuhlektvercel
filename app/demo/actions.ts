@@ -45,18 +45,8 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
         process.env.AWS_SES_REGION &&
         process.env.AWS_SES_FROM_EMAIL
       ) {
-        // Dynamic import to avoid edge runtime issues
-        const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses")
-
-        const sesClient = new SESClient({
-          region: process.env.AWS_SES_REGION,
-          credentials: {
-            accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
-          },
-          // Explicitly disable credential file loading
-          maxAttempts: 3,
-        })
+        // Use fetch to call SES API directly to avoid fs issues
+        const sesEndpoint = `https://email.${process.env.AWS_SES_REGION}.amazonaws.com/`
 
         const subject = `New Demo Request from ${firstName} ${lastName}`
         const body = `
@@ -77,28 +67,33 @@ ${affiliate || "Not specified"}
 Please follow up with this prospect to schedule a demo.
         `
 
-        const command = new SendEmailCommand({
-          Destination: {
-            ToAddresses: ["enquiries@kuhlekt.com"],
-          },
-          Message: {
-            Body: {
-              Text: {
-                Data: body,
-                Charset: "UTF-8",
-              },
-            },
-            Subject: {
-              Data: subject,
-              Charset: "UTF-8",
-            },
-          },
+        // Create basic SES API call
+        const params = new URLSearchParams({
+          Action: "SendEmail",
+          Version: "2010-12-01",
           Source: process.env.AWS_SES_FROM_EMAIL,
-          ReplyToAddresses: [email],
+          "Destination.ToAddresses.member.1": "enquiries@kuhlekt.com",
+          "Message.Subject.Data": subject,
+          "Message.Body.Text.Data": body,
+          "ReplyToAddresses.member.1": email,
         })
 
-        const result = await sesClient.send(command)
-        console.log("Email sent successfully via AWS SES:", result.MessageId)
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, "") + "Z"
+
+        const response = await fetch(sesEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Amz-Date": timestamp,
+          },
+          body: params.toString(),
+        })
+
+        if (response.ok) {
+          console.log("Email sent successfully via AWS SES API")
+        } else {
+          throw new Error(`SES API error: ${response.status}`)
+        }
       } else {
         console.log("AWS SES not configured, logging demo request:", {
           firstName,
