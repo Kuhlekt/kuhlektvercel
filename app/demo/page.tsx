@@ -1,8 +1,7 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import { useActionState } from "react"
 import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,32 +13,12 @@ import Image from "next/image"
 export default function DemoPage() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
 
-  // Track affiliate when form is successfully submitted
-  useEffect(() => {
-    if (state?.success && state?.affiliate) {
-      const sessionId = sessionStorage.getItem("kuhlekt_session_id")
-      if (sessionId) {
-        fetch("/api/update-affiliate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            affiliate: state.affiliate,
-            source: "demo",
-          }),
-        }).catch(() => {
-          // Silently handle errors
-        })
-      }
-    }
-  }, [state])
-
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
       {/* Main Demo Section */}
-      <section id="top" className="py-20">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             {/* Left Column - Content */}
@@ -70,22 +49,6 @@ export default function DemoPage() {
                   <p className="text-lg text-gray-700">Get a personalized walkthrough of our platform</p>
                 </div>
               </div>
-
-              {/* Steps */}
-              <div className="flex items-center gap-4 pt-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                    1
-                  </div>
-                  <div className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    2
-                  </div>
-                  <div className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    3
-                  </div>
-                </div>
-                <p className="text-gray-600">Join 500+ finance teams already using Kuhlekt</p>
-              </div>
             </div>
 
             {/* Right Column - Form */}
@@ -93,7 +56,6 @@ export default function DemoPage() {
               {/* Kuhlekt Logo */}
               <div className="mb-8 text-center">
                 <Image
-                  id="kuhlekt-logo"
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
                   alt="Kuhlekt Logo"
                   width={150}
@@ -202,21 +164,6 @@ export default function DemoPage() {
                   />
                 </div>
 
-                {/* Affiliate */}
-                <div>
-                  <Label htmlFor="affiliate" className="text-sm font-medium text-gray-900">
-                    Affiliate
-                  </Label>
-                  <Input
-                    id="affiliate"
-                    name="affiliate"
-                    placeholder="Affiliate code"
-                    maxLength={10}
-                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isPending}
-                  />
-                </div>
-
                 {/* Challenges */}
                 <div>
                   <Label htmlFor="challenges" className="text-sm font-medium text-gray-900">
@@ -249,8 +196,6 @@ export default function DemoPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }

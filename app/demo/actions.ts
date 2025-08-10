@@ -8,7 +8,6 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
-    const affiliate = formData.get("affiliate") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -27,9 +26,8 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Try to send email, but don't fail if it doesn't work
+    // Try to send email with AWS SES
     try {
-      // Check if AWS SES is configured
       if (
         process.env.AWS_SES_ACCESS_KEY_ID &&
         process.env.AWS_SES_SECRET_ACCESS_KEY &&
@@ -55,7 +53,6 @@ Contact Information:
 - Email: ${email}
 - Company: ${company}
 - Role: ${role || "Not specified"}
-- Affiliate: ${affiliate || "Not specified"}
 
 Challenges:
 ${challenges || "Not specified"}
@@ -80,7 +77,6 @@ Please follow up with this prospect to schedule a demo.
         await ses.send(new SendEmailCommand(params))
         console.log("Email sent successfully via AWS SES")
       } else {
-        // Fallback: Log the submission (in production, you might use a different email service)
         console.log("AWS SES not configured, logging demo request:", {
           firstName,
           lastName,
@@ -88,23 +84,11 @@ Please follow up with this prospect to schedule a demo.
           company,
           role,
           challenges,
-          affiliate,
           timestamp: new Date().toISOString(),
         })
       }
     } catch (emailError) {
-      // Log email error but don't fail the form submission
       console.error("Email sending failed:", emailError)
-      console.log("Demo request data (email failed):", {
-        firstName,
-        lastName,
-        email,
-        company,
-        role,
-        challenges,
-        affiliate,
-        timestamp: new Date().toISOString(),
-      })
     }
 
     // Simulate processing time
@@ -114,7 +98,6 @@ Please follow up with this prospect to schedule a demo.
       success: true,
       message:
         "Thank you! Your demo request has been submitted. We'll contact you within 24 hours to schedule your personalized demo.",
-      affiliate: affiliate || null, // Return affiliate for client-side tracking
     }
   } catch (error) {
     console.error("Error submitting demo request:", error)
