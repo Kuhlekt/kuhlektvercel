@@ -1,15 +1,5 @@
 "use server"
 
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
-
-const ses = new SESClient({
-  region: process.env.AWS_SES_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
-  },
-})
-
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -38,9 +28,27 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    const subject = `New Contact Submission from ${firstName} ${lastName}`
+    // Try to send email, but don't fail if it doesn't work
+    try {
+      // Check if AWS SES is configured
+      if (
+        process.env.AWS_SES_ACCESS_KEY_ID &&
+        process.env.AWS_SES_SECRET_ACCESS_KEY &&
+        process.env.AWS_SES_REGION &&
+        process.env.AWS_SES_FROM_EMAIL
+      ) {
+        const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses")
 
-    const body = `
+        const ses = new SESClient({
+          region: process.env.AWS_SES_REGION,
+          credentials: {
+            accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
+          },
+        })
+
+        const subject = `New Contact Submission from ${firstName} ${lastName}`
+        const body = `
 New Contact Form Submission from Kuhlekt Website
 
 Contact Information:
@@ -55,34 +63,53 @@ Message:
 ${message}
 
 Please follow up with this inquiry.
-    `
+        `
 
-    const params = {
-      Destination: {
-        ToAddresses: ["enquiries@kuhlekt.com"],
-      },
-      Message: {
-        Body: {
-          Text: { Data: body },
-        },
-        Subject: { Data: subject },
-      },
-      Source: process.env.AWS_SES_FROM_EMAIL!,
-      ReplyToAddresses: [email],
+        const params = {
+          Destination: {
+            ToAddresses: ["enquiries@kuhlekt.com"],
+          },
+          Message: {
+            Body: {
+              Text: { Data: body },
+            },
+            Subject: { Data: subject },
+          },
+          Source: process.env.AWS_SES_FROM_EMAIL,
+          ReplyToAddresses: [email],
+        }
+
+        await ses.send(new SendEmailCommand(params))
+        console.log("Email sent successfully via AWS SES")
+      } else {
+        // Fallback: Log the submission (in production, you might use a different email service)
+        console.log("AWS SES not configured, logging contact form:", {
+          firstName,
+          lastName,
+          email,
+          company,
+          role,
+          companySize,
+          message,
+          affiliate,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the form submission
+      console.error("Email sending failed:", emailError)
+      console.log("Contact form data (email failed):", {
+        firstName,
+        lastName,
+        email,
+        company,
+        role,
+        companySize,
+        message,
+        affiliate,
+        timestamp: new Date().toISOString(),
+      })
     }
-
-    await ses.send(new SendEmailCommand(params))
-
-    console.log("Contact form submitted:", {
-      firstName,
-      lastName,
-      email,
-      company,
-      role,
-      companySize,
-      message,
-      affiliate,
-    })
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 1000))

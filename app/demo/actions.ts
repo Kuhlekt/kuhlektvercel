@@ -27,35 +27,85 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Simulate email sending (in a real app, you'd use a service like Resend, SendGrid, etc.)
-    const emailContent = `
+    // Try to send email, but don't fail if it doesn't work
+    try {
+      // Check if AWS SES is configured
+      if (
+        process.env.AWS_SES_ACCESS_KEY_ID &&
+        process.env.AWS_SES_SECRET_ACCESS_KEY &&
+        process.env.AWS_SES_REGION &&
+        process.env.AWS_SES_FROM_EMAIL
+      ) {
+        const { SESClient, SendEmailCommand } = await import("@aws-sdk/client-ses")
+
+        const ses = new SESClient({
+          region: process.env.AWS_SES_REGION,
+          credentials: {
+            accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
+          },
+        })
+
+        const subject = `New Demo Request from ${firstName} ${lastName}`
+        const body = `
 New Demo Request from Kuhlekt Website
 
 Contact Information:
 - Name: ${firstName} ${lastName}
 - Email: ${email}
 - Company: ${company}
-- Role: ${role}
+- Role: ${role || "Not specified"}
 - Affiliate: ${affiliate || "Not specified"}
 
 Challenges:
 ${challenges || "Not specified"}
 
 Please follow up with this prospect to schedule a demo.
-    `
+        `
 
-    // In a real implementation, you would send the email here
-    // For now, we'll simulate a successful submission
-    console.log("Demo request submitted:", {
-      firstName,
-      lastName,
-      email,
-      company,
-      role,
-      challenges,
-      affiliate,
-      emailContent,
-    })
+        const params = {
+          Destination: {
+            ToAddresses: ["enquiries@kuhlekt.com"],
+          },
+          Message: {
+            Body: {
+              Text: { Data: body },
+            },
+            Subject: { Data: subject },
+          },
+          Source: process.env.AWS_SES_FROM_EMAIL,
+          ReplyToAddresses: [email],
+        }
+
+        await ses.send(new SendEmailCommand(params))
+        console.log("Email sent successfully via AWS SES")
+      } else {
+        // Fallback: Log the submission (in production, you might use a different email service)
+        console.log("AWS SES not configured, logging demo request:", {
+          firstName,
+          lastName,
+          email,
+          company,
+          role,
+          challenges,
+          affiliate,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the form submission
+      console.error("Email sending failed:", emailError)
+      console.log("Demo request data (email failed):", {
+        firstName,
+        lastName,
+        email,
+        company,
+        role,
+        challenges,
+        affiliate,
+        timestamp: new Date().toISOString(),
+      })
+    }
 
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 1000))
