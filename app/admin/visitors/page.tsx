@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Eye, Users, MousePointer, Calendar, RefreshCw, Target } from "lucide-react"
+import React from "react"
 
 interface VisitorData {
   id: string
@@ -51,6 +52,120 @@ interface Stats {
     total: number
     breakdown: Record<string, { count: number; demo: number; contact: number }>
   }
+}
+
+function AffiliateManagement() {
+  const [affiliates, setAffiliates] = useState<string[]>([])
+  const [newAffiliate, setNewAffiliate] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const fetchAffiliates = async () => {
+    try {
+      const response = await fetch("/api/admin/affiliates", {
+        headers: { Authorization: "Bearer admin123" },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAffiliates(data.affiliates)
+      }
+    } catch (error) {
+      console.error("Error fetching affiliates:", error)
+    }
+  }
+
+  const addAffiliate = async () => {
+    if (!newAffiliate.trim()) return
+
+    setLoading(true)
+    try {
+      const response = await fetch("/api/admin/affiliates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer admin123",
+        },
+        body: JSON.stringify({ code: newAffiliate, action: "add" }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAffiliates(data.affiliates)
+        setNewAffiliate("")
+      }
+    } catch (error) {
+      console.error("Error adding affiliate:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const removeAffiliate = async (code: string) => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/admin/affiliates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer admin123",
+        },
+        body: JSON.stringify({ code, action: "remove" }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAffiliates(data.affiliates)
+      }
+    } catch (error) {
+      console.error("Error removing affiliate:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchAffiliates()
+  }, [])
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Affiliate Code Management</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter affiliate code"
+              value={newAffiliate}
+              onChange={(e) => setNewAffiliate(e.target.value.toUpperCase())}
+              onKeyPress={(e) => e.key === "Enter" && addAffiliate()}
+            />
+            <Button onClick={addAffiliate} disabled={loading || !newAffiliate.trim()}>
+              Add
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-medium">Valid Affiliate Codes:</h4>
+            {affiliates.length === 0 ? (
+              <p className="text-gray-500">No affiliate codes configured</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {affiliates.map((code) => (
+                  <div key={code} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <span className="font-mono text-sm">{code}</span>
+                    <Button size="sm" variant="destructive" onClick={() => removeAffiliate(code)} disabled={loading}>
+                      ×
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function AdminVisitorsPage() {
@@ -212,6 +327,7 @@ export default function AdminVisitorsPage() {
             <TabsTrigger value="visitors">Visitors</TabsTrigger>
             <TabsTrigger value="pageviews">Page Views</TabsTrigger>
             <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
+            <TabsTrigger value="affiliate-management">Affiliate Management</TabsTrigger>
           </TabsList>
 
           <TabsContent value="visitors">
@@ -340,6 +456,9 @@ export default function AdminVisitorsPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="affiliate-management">
+            <AffiliateManagement />
           </TabsContent>
         </Tabs>
       </div>

@@ -223,10 +223,10 @@ export default function HomePage() {
 
           <div className="relative">
             <Image
-              src="/images/ar-dashboard.png"
-              alt="Kuhlekt AR Dashboard showing accounts receivable automation and collections management"
+              src="/images/kuhlekt-dashboard.png"
+              alt="Kuhlekt Dashboard showing accounts receivable metrics, workload management, and performance analytics"
               width={1200}
-              height={700}
+              height={800}
               className="w-full h-auto rounded-lg shadow-2xl"
               loading="lazy"
             />

@@ -179,6 +179,21 @@ export default function DemoPage() {
                   />
                 </div>
 
+                {/* Add after the challenges field */}
+                <div className="space-y-2">
+                  <Label htmlFor="affiliate" className="text-sm font-medium text-gray-900">
+                    Affiliate Code
+                  </Label>
+                  <Input
+                    id="affiliate"
+                    name="affiliate"
+                    placeholder="Enter affiliate code (optional)"
+                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                    disabled={isPending}
+                    maxLength={20}
+                  />
+                </div>
+
                 {/* Submit Button */}
                 <Button
                   type="submit"

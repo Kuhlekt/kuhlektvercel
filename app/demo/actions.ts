@@ -1,5 +1,7 @@
 "use server"
 
+import { isValidAffiliate } from "@/lib/affiliate-management"
+
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -8,6 +10,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
+    const affiliate = formData.get("affiliate") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -23,6 +26,14 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       return {
         success: false,
         message: "Please enter a valid email address.",
+      }
+    }
+
+    // Affiliate validation
+    if (affiliate && !isValidAffiliate(affiliate)) {
+      return {
+        success: false,
+        message: "Invalid affiliate code. Please check with your affiliate partner for the correct code.",
       }
     }
 
@@ -57,6 +68,9 @@ Contact Information:
 Challenges:
 ${challenges || "Not specified"}
 
+Affiliate Code:
+${affiliate || "Not specified"}
+
 Please follow up with this prospect to schedule a demo.
         `
 
@@ -84,6 +98,7 @@ Please follow up with this prospect to schedule a demo.
           company,
           role,
           challenges,
+          affiliate,
           timestamp: new Date().toISOString(),
         })
       }

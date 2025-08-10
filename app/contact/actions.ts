@@ -1,5 +1,7 @@
 "use server"
 
+import { isValidAffiliate } from "@/lib/affiliate-management"
+
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     const firstName = formData.get("firstName") as string
@@ -16,6 +18,14 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       return {
         success: false,
         message: "Please fill in all required fields.",
+      }
+    }
+
+    // Affiliate validation
+    if (affiliate && !isValidAffiliate(affiliate)) {
+      return {
+        success: false,
+        message: "Invalid affiliate code. Please check with your affiliate partner for the correct code.",
       }
     }
 
