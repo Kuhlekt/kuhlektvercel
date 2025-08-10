@@ -223,8 +223,8 @@ export default function HomePage() {
 
           <div className="relative">
             <Image
-              src="/images/dso-reduction-chart.png"
-              alt="Kuhlekt AR Dashboard showing DSO reduction metrics and performance analytics"
+              src="/images/ar-dashboard.png"
+              alt="Kuhlekt AR Dashboard showing accounts receivable automation and collections management"
               width={1200}
               height={700}
               className="w-full h-auto rounded-lg shadow-2xl"
