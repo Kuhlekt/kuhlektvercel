@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star, Play, CheckCircle, ArrowRight } from "lucide-react"
+import { Star, Play, CheckCircle } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { VisitorTracker } from "@/components/visitor-tracker"
@@ -18,7 +18,7 @@ export default function HomePage() {
       {/* Header */}
       <Header />
 
-      {/* Hero Section - Exact match to screenshot */}
+      {/* Hero Section - Exact match to kuhlekt.com */}
       <section className="bg-white py-12 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -47,7 +47,7 @@ export default function HomePage() {
                     size="lg"
                     className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-3 text-base font-medium"
                   >
-                    Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
+                    Schedule a Demo →
                   </Button>
                 </Link>
                 <Link href="https://www.youtube.com/watch?v=iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
