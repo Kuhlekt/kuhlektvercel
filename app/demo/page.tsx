@@ -182,6 +182,21 @@ export default function DemoPage() {
                   />
                 </div>
 
+                {/* Affiliate */}
+                <div>
+                  <Label htmlFor="affiliate" className="text-sm font-medium text-gray-900">
+                    Affiliate
+                  </Label>
+                  <Input
+                    id="affiliate"
+                    name="affiliate"
+                    placeholder="Affiliate code"
+                    maxLength={10}
+                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                    disabled={isPending}
+                  />
+                </div>
+
                 {/* Challenges */}
                 <div>
                   <Label htmlFor="challenges" className="text-sm font-medium text-gray-900">

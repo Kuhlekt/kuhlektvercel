@@ -19,6 +19,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const role = formData.get("role") as string
     const companySize = formData.get("companySize") as string
     const message = formData.get("message") as string
+    const affiliate = formData.get("affiliate") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company || !message) {
@@ -48,6 +49,7 @@ Contact Information:
 - Company: ${company}
 - Role: ${role || "Not specified"}
 - Company Size: ${companySize || "Not specified"}
+- Affiliate: ${affiliate || "Not specified"}
 
 Message:
 ${message}
@@ -79,6 +81,7 @@ Please follow up with this inquiry.
       role,
       companySize,
       message,
+      affiliate,
     })
 
     // Simulate processing time

@@ -8,6 +8,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
+    const affiliate = formData.get("affiliate") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -35,6 +36,7 @@ Contact Information:
 - Email: ${email}
 - Company: ${company}
 - Role: ${role}
+- Affiliate: ${affiliate || "Not specified"}
 
 Challenges:
 ${challenges || "Not specified"}
@@ -51,6 +53,7 @@ Please follow up with this prospect to schedule a demo.
       company,
       role,
       challenges,
+      affiliate,
       emailContent,
     })
 
