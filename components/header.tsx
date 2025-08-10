@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from 'lucide-react'
+import { Menu, X } from "lucide-react"
 import Image from "next/image"
 
 export function Header() {
@@ -32,17 +32,35 @@ export function Header() {
             <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
               Home
             </Link>
-            <Link href="/product" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/product"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Product
             </Link>
-            <Link href="/solutions" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/solutions"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Solutions
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/about"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/contact"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Contact
+            </Link>
+            <Link
+              href="/analytics"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
+              Analytics
             </Link>
           </nav>
 
@@ -103,6 +121,13 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
+              </Link>
+              <Link
+                href="/analytics"
+                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Analytics
               </Link>
               <Link href="/demo" onClick={() => setIsMenuOpen(false)}>
                 <Button className="bg-cyan-600 hover:bg-cyan-700 text-white w-full font-medium py-2 transition-colors duration-200">
