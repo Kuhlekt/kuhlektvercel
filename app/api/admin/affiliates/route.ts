@@ -1,11 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { addAffiliate, removeAffiliate, getAllAffiliates } from "@/lib/affiliate-management"
+import { validateAdminPassword } from "@/lib/admin-config"
 
 export async function GET(request: NextRequest) {
   try {
-    // Simple admin authentication
+    // Enhanced admin authentication
     const authHeader = request.headers.get("authorization")
-    if (authHeader !== "Bearer admin123") {
+    const token = authHeader?.replace("Bearer ", "")
+
+    if (!token || !validateAdminPassword(token)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -18,9 +21,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Simple admin authentication
+    // Enhanced admin authentication
     const authHeader = request.headers.get("authorization")
-    if (authHeader !== "Bearer admin123") {
+    const token = authHeader?.replace("Bearer ", "")
+
+    if (!token || !validateAdminPassword(token)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

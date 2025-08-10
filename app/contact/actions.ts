@@ -1,7 +1,7 @@
 "use server"
 
 import { isValidAffiliate } from "@/lib/affiliate-management"
-import { trackFormSubmission } from "@/lib/visitor-tracking"
+import { trackFormSubmission, getVisitors } from "@/lib/visitor-tracking"
 import { headers } from "next/headers"
 
 // AWS Signature Version 4 signing function
@@ -72,6 +72,11 @@ async function signAWSRequest(
 }
 
 export async function submitContactForm(prevState: any, formData: FormData) {
+  let sessionId = "unknown"
+  let visitorId = "unknown"
+  let ipAddress = "unknown"
+  let userAgent = "unknown"
+
   try {
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
@@ -84,8 +89,26 @@ export async function submitContactForm(prevState: any, formData: FormData) {
 
     // Get request headers for tracking
     const headersList = headers()
-    const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || headersList.get("x-real-ip") || "unknown"
-    const userAgent = headersList.get("user-agent") || "unknown"
+    ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || headersList.get("x-real-ip") || "unknown"
+    userAgent = headersList.get("user-agent") || "unknown"
+
+    // Try to find existing visitor by IP and user agent
+    const existingVisitors = getVisitors()
+    const existingVisitor = existingVisitors.find(
+      (v) =>
+        v.ipAddress === ipAddress &&
+        v.userAgent === userAgent &&
+        new Date().getTime() - new Date(v.timestamp).getTime() < 24 * 60 * 60 * 1000, // Within 24 hours
+    )
+
+    if (existingVisitor) {
+      sessionId = existingVisitor.sessionId
+      visitorId = existingVisitor.id
+    } else {
+      // Generate new session/visitor IDs
+      sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36)
+      visitorId = `visitor_${sessionId}`
+    }
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company || !message) {
@@ -112,10 +135,19 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Track form submission
-    const sessionId = headersList.get("x-session-id") || "unknown"
-    trackFormSubmission({
-      visitorId: `visitor_${sessionId}`,
+    // Track form submission BEFORE any potential errors
+    console.log("Tracking contact form submission:", {
+      visitorId,
+      sessionId,
+      formType: "contact",
+      data: { firstName, lastName, email, company, role, companySize, message, affiliate },
+      ipAddress,
+      userAgent,
+      timestamp: new Date().toISOString(),
+    })
+
+    const formSubmission = trackFormSubmission({
+      visitorId,
       sessionId,
       formType: "contact",
       data: {
@@ -131,6 +163,8 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       ipAddress,
       userAgent,
     })
+
+    console.log("Form submission tracked successfully:", formSubmission.id)
 
     // Try to send email with AWS SES
     try {
@@ -161,6 +195,8 @@ Technical Details:
 - IP Address: ${ipAddress}
 - User Agent: ${userAgent}
 - Session ID: ${sessionId}
+- Visitor ID: ${visitorId}
+- Form Submission ID: ${formSubmission.id}
 - Timestamp: ${new Date().toISOString()}
 
 Please follow up with this inquiry.
@@ -205,11 +241,12 @@ Please follow up with this inquiry.
           console.log("Email sent successfully via AWS SES API")
         } else {
           const errorText = await response.text()
-          throw new Error(`SES API error: ${response.status} - ${errorText}`)
+          console.error(`SES API error: ${response.status} - ${errorText}`)
         }
       } else {
         // Fallback: Log the submission
-        console.log("AWS SES not configured, logging contact form:", {
+        console.log("AWS SES not configured, contact form logged:", {
+          submissionId: formSubmission.id,
           firstName,
           lastName,
           email,
@@ -221,13 +258,15 @@ Please follow up with this inquiry.
           ipAddress,
           userAgent,
           sessionId,
+          visitorId,
           timestamp: new Date().toISOString(),
         })
       }
     } catch (emailError) {
       // Log email error but don't fail the form submission
       console.error("Email sending failed:", emailError)
-      console.log("Contact form data (email failed):", {
+      console.log("Contact form data logged despite email failure:", {
+        submissionId: formSubmission.id,
         firstName,
         lastName,
         email,
@@ -239,6 +278,7 @@ Please follow up with this inquiry.
         ipAddress,
         userAgent,
         sessionId,
+        visitorId,
         timestamp: new Date().toISOString(),
       })
     }
@@ -253,6 +293,17 @@ Please follow up with this inquiry.
     }
   } catch (error) {
     console.error("Error submitting contact form:", error)
+
+    // Still try to log the form data even if there's an error
+    console.log("Contact form data (error occurred):", {
+      sessionId,
+      visitorId,
+      ipAddress,
+      userAgent,
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : "Unknown error",
+    })
+
     return {
       success: false,
       message:

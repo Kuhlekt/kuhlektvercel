@@ -81,7 +81,111 @@ interface Stats {
   }
 }
 
-function AffiliateManagement() {
+function PasswordManagement({ currentPassword }: { currentPassword: string }) {
+  const [oldPassword, setOldPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState("")
+
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      setMessage("New passwords don't match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setMessage("New password must be at least 6 characters")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch("/api/admin/password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword: oldPassword,
+          newPassword: newPassword,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage("Password updated successfully!")
+        setOldPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        setMessage(data.error || "Failed to update password")
+      }
+    } catch (error) {
+      setMessage("Error updating password")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Change Admin Password</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Current Password</label>
+            <Input
+              type="password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              placeholder="Enter current password"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">New Password</label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password (min 6 characters)"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
+          </div>
+          <Button
+            onClick={handlePasswordChange}
+            disabled={loading || !oldPassword || !newPassword || !confirmPassword}
+            className="w-full"
+          >
+            {loading ? "Updating..." : "Update Password"}
+          </Button>
+          {message && (
+            <div
+              className={`text-sm p-2 rounded ${
+                message.includes("successfully") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+              }`}
+            >
+              {message}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function AffiliateManagement({ authToken }: { authToken: string }) {
   const [affiliates, setAffiliates] = useState<string[]>([])
   const [newAffiliate, setNewAffiliate] = useState("")
   const [loading, setLoading] = useState(false)
@@ -89,7 +193,7 @@ function AffiliateManagement() {
   const fetchAffiliates = async () => {
     try {
       const response = await fetch("/api/admin/affiliates", {
-        headers: { Authorization: "Bearer admin123" },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       if (response.ok) {
         const data = await response.json()
@@ -109,7 +213,7 @@ function AffiliateManagement() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer admin123",
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ code: newAffiliate, action: "add" }),
       })
@@ -133,7 +237,7 @@ function AffiliateManagement() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer admin123",
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ code, action: "remove" }),
       })
@@ -151,7 +255,7 @@ function AffiliateManagement() {
 
   React.useEffect(() => {
     fetchAffiliates()
-  }, [])
+  }, [authToken])
 
   return (
     <Card>
@@ -203,6 +307,7 @@ export default function AdminVisitorsPage() {
   const [loading, setLoading] = useState(true)
   const [password, setPassword] = useState("")
   const [authenticated, setAuthenticated] = useState(false)
+  const [authToken, setAuthToken] = useState("")
 
   const fetchData = async () => {
     try {
@@ -210,7 +315,7 @@ export default function AdminVisitorsPage() {
 
       // Fetch stats
       const statsResponse = await fetch("/api/admin/visitors?type=stats", {
-        headers: { Authorization: "Bearer admin123" },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
@@ -219,7 +324,7 @@ export default function AdminVisitorsPage() {
 
       // Fetch visitors
       const visitorsResponse = await fetch("/api/admin/visitors", {
-        headers: { Authorization: "Bearer admin123" },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       if (visitorsResponse.ok) {
         const visitorsData = await visitorsResponse.json()
@@ -228,7 +333,7 @@ export default function AdminVisitorsPage() {
 
       // Fetch page views
       const pageViewsResponse = await fetch("/api/admin/visitors?type=pageviews", {
-        headers: { Authorization: "Bearer admin123" },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       if (pageViewsResponse.ok) {
         const pageViewsData = await pageViewsResponse.json()
@@ -237,7 +342,7 @@ export default function AdminVisitorsPage() {
 
       // Fetch form submissions
       const formsResponse = await fetch("/api/admin/visitors?type=forms", {
-        headers: { Authorization: "Bearer admin123" },
+        headers: { Authorization: `Bearer ${authToken}` },
       })
       if (formsResponse.ok) {
         const formsData = await formsResponse.json()
@@ -251,12 +356,10 @@ export default function AdminVisitorsPage() {
   }
 
   const handleLogin = () => {
-    if (password === "admin123") {
-      setAuthenticated(true)
-      fetchData()
-    } else {
-      alert("Invalid password")
-    }
+    // Use password as auth token for API calls
+    setAuthToken(password)
+    setAuthenticated(true)
+    fetchData()
   }
 
   if (!authenticated) {
@@ -378,6 +481,7 @@ export default function AdminVisitorsPage() {
             <TabsTrigger value="forms">Form Submissions</TabsTrigger>
             <TabsTrigger value="affiliates">Affiliates</TabsTrigger>
             <TabsTrigger value="affiliate-management">Affiliate Management</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="visitors">
@@ -565,7 +669,11 @@ export default function AdminVisitorsPage() {
           </TabsContent>
 
           <TabsContent value="affiliate-management">
-            <AffiliateManagement />
+            <AffiliateManagement authToken={authToken} />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <PasswordManagement currentPassword={authToken} />
           </TabsContent>
         </Tabs>
       </div>
