@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
 import { submitDemoRequest } from "./actions"
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
-  const [state, action, isPending] = useActionState(submitDemoRequest, null)
+  const [state, formAction] = useFormState(submitDemoRequest, null)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [isPending, setIsPending] = useState(false)
 
   // Reset form on successful submission
   useEffect(() => {
@@ -32,10 +33,12 @@ export default function DemoPage() {
   }, [state?.success])
 
   const handleSubmit = async (formData: FormData) => {
+    setIsPending(true)
     if (recaptchaToken) {
       formData.append("recaptchaToken", recaptchaToken)
     }
-    action(formData)
+    formAction(formData)
+    setIsPending(false)
   }
 
   return (
