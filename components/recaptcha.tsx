@@ -20,13 +20,21 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
 
   useEffect(() => {
     fetch("/api/recaptcha-config")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch config")
+        }
+        return res.json()
+      })
       .then(setConfig)
-      .catch(console.error)
+      .catch((error) => {
+        console.error("Failed to load reCAPTCHA config:", error)
+        setConfig({ siteKey: "", isEnabled: false })
+      })
   }, [])
 
   useEffect(() => {
-    if (isLoaded && config?.isEnabled && window.grecaptcha) {
+    if (isLoaded && config?.isEnabled && typeof window !== "undefined" && window.grecaptcha) {
       const widgetId = window.grecaptcha.render("recaptcha-container", {
         sitekey: config.siteKey,
         callback: onVerify,
@@ -35,7 +43,7 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
       })
 
       return () => {
-        if (window.grecaptcha && widgetId !== undefined) {
+        if (typeof window !== "undefined" && window.grecaptcha && widgetId !== undefined) {
           window.grecaptcha.reset(widgetId)
         }
       }

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
 import { submitDemoRequest } from "./actions"
-import { useActionState } from "react"
+import { useActionState } from "@/hooks/useActionState" // Corrected import
 import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
@@ -24,7 +24,7 @@ export default function DemoPage() {
         form.reset()
         setRecaptchaToken("")
         // Reset recaptcha
-        if (window.grecaptcha) {
+        if (typeof window !== "undefined" && window.grecaptcha) {
           window.grecaptcha.reset()
         }
       }
@@ -63,7 +63,9 @@ export default function DemoPage() {
               <CardTitle className="text-2xl text-center">Request Your Demo</CardTitle>
             </CardHeader>
             <CardContent>
-              <form id="demo-form" action={handleSubmit} className="space-y-6">
+              <form id="demo-form" onSubmit={handleSubmit} className="space-y-6">
+                {" "}
+                {/* Corrected form action */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">First Name *</Label>
@@ -74,27 +76,22 @@ export default function DemoPage() {
                     <Input id="lastName" name="lastName" type="text" required className="mt-1" />
                   </div>
                 </div>
-
                 <div>
                   <Label htmlFor="email">Business Email *</Label>
                   <Input id="email" name="email" type="email" required className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="company">Company Name *</Label>
                   <Input id="company" name="company" type="text" required className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input id="phone" name="phone" type="tel" className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="jobTitle">Job Title</Label>
                   <Input id="jobTitle" name="jobTitle" type="text" className="mt-1" />
                 </div>
-
                 <div>
                   <Label htmlFor="companySize">Company Size</Label>
                   <Select name="companySize">
@@ -111,7 +108,6 @@ export default function DemoPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
                   <Label htmlFor="affiliate">Affiliate Code (Optional)</Label>
                   <Input
@@ -122,13 +118,11 @@ export default function DemoPage() {
                     className="mt-1"
                   />
                 </div>
-
                 <Recaptcha
                   onVerify={setRecaptchaToken}
                   onExpire={() => setRecaptchaToken("")}
                   onError={() => setRecaptchaToken("")}
                 />
-
                 <Button
                   type="submit"
                   disabled={isPending}
@@ -136,10 +130,10 @@ export default function DemoPage() {
                 >
                   {isPending ? "Scheduling Demo..." : "Schedule My Demo"}
                 </Button>
-
-                {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
-
-                {state?.error && <div className="text-red-600 text-center">{state.message}</div>}
+                {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}{" "}
+                {/* Added success message */}
+                {state?.error && <div className="text-red-600 text-center">{state.message}</div>}{" "}
+                {/* Added error message */}
               </form>
             </CardContent>
           </Card>

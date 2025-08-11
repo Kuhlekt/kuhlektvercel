@@ -28,7 +28,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     }
 
     // Verify reCAPTCHA
-    const captchaResult = await verifyCaptcha(recaptchaToken)
+    const captchaResult = await verifyCaptcha(recaptchaToken || "")
     if (!captchaResult.success) {
       return {
         success: false,

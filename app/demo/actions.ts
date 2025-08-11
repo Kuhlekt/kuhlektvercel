@@ -31,7 +31,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     }
 
     // Verify CAPTCHA
-    const captchaResult = await verifyCaptcha(captchaToken)
+    const captchaResult = await verifyCaptcha(captchaToken || "")
     if (!captchaResult.success) {
       return {
         success: false,

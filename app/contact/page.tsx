@@ -24,7 +24,7 @@ export default function ContactPage() {
         form.reset()
         setRecaptchaToken("")
         // Reset recaptcha
-        if (window.grecaptcha) {
+        if (typeof window !== "undefined" && window.grecaptcha) {
           window.grecaptcha.reset()
         }
       }
