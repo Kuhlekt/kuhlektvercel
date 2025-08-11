@@ -58,14 +58,14 @@ export default function HomePage() {
               <Image
                 src="/images/businesswoman.png"
                 alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
-                width={600}
-                height={400}
-                className="rounded-lg w-full h-auto"
+                width={500}
+                height={350}
+                className="rounded-lg w-full h-auto max-w-lg"
               />
 
               {/* Testimonial Card positioned exactly as in screenshot */}
-              <Card className="absolute top-8 right-8 w-72 bg-white shadow-xl z-20 border-0">
-                <CardContent className="p-5">
+              <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
+                <CardContent className="p-4">
                   <div className="flex items-center gap-1 mb-3">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
