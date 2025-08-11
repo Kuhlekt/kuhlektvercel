@@ -221,7 +221,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="relative">
+          <div className="relative max-w-3xl mx-auto">
             <Image
               src="/images/kuhlekt-dashboard.png"
               alt="Kuhlekt Dashboard showing accounts receivable metrics, workload management, and performance analytics"
