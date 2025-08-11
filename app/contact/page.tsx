@@ -85,6 +85,20 @@ export default function ContactPage() {
     }
   }, [state])
 
+  // Add this useEffect after the existing useEffect for affiliate tracking
+  useEffect(() => {
+    if (state?.success) {
+      // Clear the form by resetting all form elements
+      const form = document.querySelector("form") as HTMLFormElement
+      if (form) {
+        form.reset()
+      }
+      // Also clear the company size state and reCAPTCHA token
+      setCompanySize("")
+      setRecaptchaToken("")
+    }
+  }, [state?.success])
+
   const isFormPending = isPending || isPendingTransition
 
   return (

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useActionState, useState, useTransition } from "react"
+import { useActionState, useState, useTransition, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -64,6 +64,19 @@ export default function DemoPage() {
   }
 
   const isFormPending = isPending || isPendingTransition
+
+  // Add this useEffect after the existing useEffect
+  useEffect(() => {
+    if (state?.success) {
+      // Clear the form by resetting all form elements
+      const form = document.querySelector("form") as HTMLFormElement
+      if (form) {
+        form.reset()
+      }
+      // Also clear the reCAPTCHA token
+      setRecaptchaToken("")
+    }
+  }, [state?.success])
 
   return (
     <div className="min-h-screen bg-white">
