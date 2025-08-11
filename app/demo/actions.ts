@@ -13,7 +13,7 @@ interface DemoFormData {
   role: string
   challenges: string
   affiliate?: string
-  recaptchaToken: string
+  recaptchaToken?: string
 }
 
 function createSignature(
@@ -135,7 +135,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       role: formData.get("role")?.toString() || "",
       challenges: formData.get("challenges")?.toString() || "",
       affiliate: formData.get("affiliate")?.toString() || undefined,
-      recaptchaToken: formData.get("recaptchaToken")?.toString() || "",
+      recaptchaToken: formData.get("recaptchaToken")?.toString() || undefined,
     }
 
     // Validate required fields
@@ -146,19 +146,15 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify reCAPTCHA
-    if (!data.recaptchaToken) {
-      return {
-        success: false,
-        message: "Please complete the reCAPTCHA verification.",
-      }
-    }
-
-    const recaptchaValid = await verifyRecaptcha(data.recaptchaToken)
-    if (!recaptchaValid) {
-      return {
-        success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
+    // Verify reCAPTCHA only if configured and token provided
+    const isRecaptchaConfigured = !!process.env.RECAPTCHA_SECRET_KEY
+    if (isRecaptchaConfigured && data.recaptchaToken) {
+      const recaptchaValid = await verifyRecaptcha(data.recaptchaToken)
+      if (!recaptchaValid) {
+        return {
+          success: false,
+          message: "reCAPTCHA verification failed. Please try again.",
+        }
       }
     }
 

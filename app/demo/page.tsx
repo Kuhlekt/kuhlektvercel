@@ -16,6 +16,9 @@ export default function DemoPage() {
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [recaptchaError, setRecaptchaError] = useState<string>("")
 
+  // Check if reCAPTCHA is configured
+  const isRecaptchaConfigured = !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+
   const handleRecaptchaVerify = (token: string) => {
     setRecaptchaToken(token)
     setRecaptchaError("")
@@ -32,13 +35,15 @@ export default function DemoPage() {
   }
 
   const handleSubmit = (formData: FormData) => {
-    if (!recaptchaToken) {
+    if (isRecaptchaConfigured && !recaptchaToken) {
       setRecaptchaError("Please complete the reCAPTCHA verification.")
       return
     }
 
-    // Add recaptcha token to form data
-    formData.append("recaptchaToken", recaptchaToken)
+    // Add recaptcha token to form data if configured
+    if (isRecaptchaConfigured) {
+      formData.append("recaptchaToken", recaptchaToken)
+    }
     formAction(formData)
   }
 
@@ -229,20 +234,22 @@ export default function DemoPage() {
                   />
                 </div>
 
-                {/* reCAPTCHA */}
-                <div className="space-y-2">
-                  <Recaptcha
-                    onVerify={handleRecaptchaVerify}
-                    onExpire={handleRecaptchaExpire}
-                    onError={handleRecaptchaError}
-                  />
-                  {recaptchaError && <p className="text-red-600 text-sm text-center">{recaptchaError}</p>}
-                </div>
+                {/* reCAPTCHA - only show if configured */}
+                {isRecaptchaConfigured && (
+                  <div className="space-y-2">
+                    <Recaptcha
+                      onVerify={handleRecaptchaVerify}
+                      onExpire={handleRecaptchaExpire}
+                      onError={handleRecaptchaError}
+                    />
+                    {recaptchaError && <p className="text-red-600 text-sm text-center">{recaptchaError}</p>}
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={isPending || !recaptchaToken}
+                  disabled={isPending || (isRecaptchaConfigured && !recaptchaToken)}
                   className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? "Submitting..." : "Request Demo"}
