@@ -20,27 +20,38 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
   const widgetId = useRef<number | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [siteKey, setSiteKey] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if reCAPTCHA is configured on the client side
-    const checkConfiguration = () => {
-      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
-      if (!siteKey || siteKey.trim() === "" || siteKey === "your_recaptcha_site_key_here") {
+    // Fetch reCAPTCHA configuration from server
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/recaptcha-config")
+        const config = await response.json()
+
+        if (config.isConfigured && config.siteKey) {
+          setIsConfigured(true)
+          setSiteKey(config.siteKey)
+          console.log("reCAPTCHA configured with site key:", config.siteKey.substring(0, 10) + "...")
+        } else {
+          setIsConfigured(false)
+          setIsLoading(false)
+          console.log("reCAPTCHA not configured - site key missing or placeholder")
+        }
+      } catch (error) {
+        console.error("Error fetching reCAPTCHA config:", error)
         setIsConfigured(false)
         setIsLoading(false)
-        console.log("reCAPTCHA not configured - site key missing or placeholder")
-        return false
       }
-      console.log("reCAPTCHA configured with site key:", siteKey.substring(0, 10) + "...")
-      setIsConfigured(true)
-      return true
     }
 
-    if (!checkConfiguration()) {
+    fetchConfig()
+  }, [])
+
+  useEffect(() => {
+    if (!isConfigured || !siteKey) {
       return
     }
-
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!
 
     const loadRecaptcha = () => {
       console.log("Loading reCAPTCHA...")
@@ -102,7 +113,7 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
         }
       }
     }
-  }, [onVerify, onExpire, onError])
+  }, [isConfigured, siteKey, onVerify, onExpire, onError])
 
   // If not configured, don't render anything
   if (!isConfigured) {

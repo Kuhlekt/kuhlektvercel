@@ -20,14 +20,23 @@ export default function ContactPage() {
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [recaptchaError, setRecaptchaError] = useState<string>("")
   const [isPendingTransition, startTransition] = useTransition()
+  const [isRecaptchaConfigured, setIsRecaptchaConfigured] = useState(false)
 
-  // Check if reCAPTCHA is configured
-  const isRecaptchaConfigured = !!(
-    typeof window !== "undefined" &&
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim() !== "" &&
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY !== "your_recaptcha_site_key_here"
-  )
+  // Fetch reCAPTCHA configuration on component mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/recaptcha-config")
+        const config = await response.json()
+        setIsRecaptchaConfigured(config.isConfigured)
+      } catch (error) {
+        console.error("Error fetching reCAPTCHA config:", error)
+        setIsRecaptchaConfigured(false)
+      }
+    }
+
+    fetchConfig()
+  }, [])
 
   const handleRecaptchaVerify = (token: string) => {
     setRecaptchaToken(token)
