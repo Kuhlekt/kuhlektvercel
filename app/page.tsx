@@ -210,26 +210,44 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Dashboard Section - Added back */}
+      {/* Dashboard Section - Two column layout */}
       <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-4">Platform</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">See Your AR Performance at a Glance</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Get real-time insights into your receivables with our comprehensive dashboard and reporting tools.
-            </p>
-          </div>
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Text Content */}
+            <div className="space-y-6">
+              <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full">Platform</Badge>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">See Your AR Performance at a Glance</h2>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Get real-time insights into your receivables with our comprehensive dashboard and reporting tools.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Real-time AR performance metrics</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Workload management and prioritization</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Comprehensive analytics and reporting</p>
+                </div>
+              </div>
+            </div>
 
-          <div className="relative max-w-3xl mx-auto">
-            <Image
-              src="/images/kuhlekt-dashboard.png"
-              alt="Kuhlekt Dashboard showing accounts receivable metrics, workload management, and performance analytics"
-              width={1200}
-              height={800}
-              className="w-full h-auto rounded-lg shadow-2xl"
-              loading="lazy"
-            />
+            {/* Right Column - Dashboard Image */}
+            <div className="relative">
+              <Image
+                src="/images/kuhlekt-dashboard.png"
+                alt="Kuhlekt Dashboard showing accounts receivable metrics, workload management, and performance analytics"
+                width={600}
+                height={400}
+                className="w-full h-auto rounded-lg shadow-2xl"
+                loading="lazy"
+              />
+            </div>
           </div>
         </div>
       </section>
