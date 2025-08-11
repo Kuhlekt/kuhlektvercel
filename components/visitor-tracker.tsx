@@ -13,31 +13,39 @@ interface VisitorData {
   pageViews: number
   referrer: string
   userAgent: string
+  currentPage: string
   utmSource?: string
   utmMedium?: string
   utmCampaign?: string
   utmTerm?: string
   utmContent?: string
   affiliate?: string
-  ipAddress?: string
 }
 
 export function VisitorTracker() {
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return
+
     try {
       // Generate unique IDs
-      const generateId = () => Math.random().toString(36).substr(2, 9)
+      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
       // Get or create visitor ID (persistent across sessions)
       let visitorId = localStorage.getItem("kuhlekt_visitor_id")
       if (!visitorId) {
         visitorId = generateId()
         localStorage.setItem("kuhlekt_visitor_id", visitorId)
+        console.log("New visitor ID created:", visitorId)
       }
 
       // Generate session ID (new for each session)
-      const sessionId = generateId()
-      sessionStorage.setItem("kuhlekt_session_id", sessionId)
+      let sessionId = sessionStorage.getItem("kuhlekt_session_id")
+      if (!sessionId) {
+        sessionId = generateId()
+        sessionStorage.setItem("kuhlekt_session_id", sessionId)
+        console.log("New session ID created:", sessionId)
+      }
 
       // Get URL parameters
       const urlParams = new URLSearchParams(window.location.search)
@@ -48,23 +56,40 @@ export function VisitorTracker() {
         affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : undefined
 
       // Get existing visitor data or create new
-      const existingData = localStorage.getItem("kuhlekt_visitor_data")
+      const existingDataStr = localStorage.getItem("kuhlekt_visitor_data")
       let visitorData: VisitorData
 
-      if (existingData) {
-        visitorData = JSON.parse(existingData)
-        visitorData.lastVisit = new Date().toISOString()
-        visitorData.pageViews += 1
-        visitorData.sessionId = sessionId
+      const currentTime = new Date().toISOString()
+      const currentPage = window.location.pathname + window.location.search
+
+      if (existingDataStr) {
+        try {
+          visitorData = JSON.parse(existingDataStr)
+          visitorData.lastVisit = currentTime
+          visitorData.pageViews += 1
+          visitorData.sessionId = sessionId
+          visitorData.currentPage = currentPage
+          console.log("Updated existing visitor data")
+        } catch (parseError) {
+          console.error("Error parsing existing visitor data:", parseError)
+          // Create new data if parsing fails
+          visitorData = createNewVisitorData()
+        }
       } else {
-        visitorData = {
-          visitorId,
-          sessionId,
-          firstVisit: new Date().toISOString(),
-          lastVisit: new Date().toISOString(),
+        visitorData = createNewVisitorData()
+        console.log("Created new visitor data")
+      }
+
+      function createNewVisitorData(): VisitorData {
+        return {
+          visitorId: visitorId!,
+          sessionId: sessionId!,
+          firstVisit: currentTime,
+          lastVisit: currentTime,
           pageViews: 1,
           referrer: document.referrer || "direct",
           userAgent: navigator.userAgent,
+          currentPage: currentPage,
           utmSource: urlParams.get("utm_source") || undefined,
           utmMedium: urlParams.get("utm_medium") || undefined,
           utmCampaign: urlParams.get("utm_campaign") || undefined,
@@ -77,29 +102,71 @@ export function VisitorTracker() {
       // Update affiliate if new valid one is provided
       if (validAffiliate && (!visitorData.affiliate || visitorData.affiliate !== validAffiliate)) {
         visitorData.affiliate = validAffiliate
+        console.log("Updated affiliate code:", validAffiliate)
       }
 
       // Store updated visitor data
       localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
 
-      // Log for debugging (remove in production)
-      console.log("Visitor tracking data:", visitorData)
+      // Log tracking data for debugging
+      console.log("Visitor tracking active:", {
+        visitorId: visitorData.visitorId,
+        sessionId: visitorData.sessionId,
+        pageViews: visitorData.pageViews,
+        currentPage: visitorData.currentPage,
+        affiliate: visitorData.affiliate,
+        utm: {
+          source: visitorData.utmSource,
+          medium: visitorData.utmMedium,
+          campaign: visitorData.utmCampaign,
+        },
+      })
 
-      // Clean up old session data (optional)
-      const cleanupOldSessions = () => {
-        const keys = Object.keys(localStorage)
-        keys.forEach((key) => {
-          if (key.startsWith("kuhlekt_session_") && key !== `kuhlekt_session_${sessionId}`) {
-            localStorage.removeItem(key)
-          }
-        })
+      // Store page visit history
+      const pageHistory = JSON.parse(localStorage.getItem("kuhlekt_page_history") || "[]")
+      pageHistory.push({
+        page: currentPage,
+        timestamp: currentTime,
+        sessionId: sessionId,
+      })
+
+      // Keep only last 50 page visits
+      if (pageHistory.length > 50) {
+        pageHistory.splice(0, pageHistory.length - 50)
       }
-      cleanupOldSessions()
+
+      localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
     } catch (error) {
       console.error("Error in visitor tracking:", error)
     }
-  }, [])
+  }, []) // Empty dependency array - only run once on mount
 
   // This component doesn't render anything
   return null
+}
+
+// Helper function to get visitor data (can be used by forms)
+export function getVisitorData() {
+  if (typeof window === "undefined") return null
+
+  try {
+    const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
+    return visitorDataStr ? JSON.parse(visitorDataStr) : null
+  } catch (error) {
+    console.error("Error getting visitor data:", error)
+    return null
+  }
+}
+
+// Helper function to get page history
+export function getPageHistory() {
+  if (typeof window === "undefined") return []
+
+  try {
+    const historyStr = localStorage.getItem("kuhlekt_page_history")
+    return historyStr ? JSON.parse(historyStr) : []
+  } catch (error) {
+    console.error("Error getting page history:", error)
+    return []
+  }
 }

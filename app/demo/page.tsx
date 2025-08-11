@@ -37,6 +37,23 @@ export default function DemoPage() {
     if (recaptchaToken) {
       formData.append("recaptchaToken", recaptchaToken)
     }
+
+    // Add visitor tracking data if available
+    if (typeof window !== "undefined") {
+      try {
+        const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
+        if (visitorDataStr) {
+          const visitorData = JSON.parse(visitorDataStr)
+          formData.append("referrer", visitorData.referrer || "")
+          formData.append("utmSource", visitorData.utmSource || "")
+          formData.append("utmCampaign", visitorData.utmCampaign || "")
+          formData.append("pageViews", visitorData.pageViews?.toString() || "")
+        }
+      } catch (error) {
+        console.error("Error adding visitor data to form:", error)
+      }
+    }
+
     formAction(formData)
     setIsPending(false)
   }

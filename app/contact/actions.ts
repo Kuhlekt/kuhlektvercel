@@ -17,6 +17,10 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const affiliate = formData.get("affiliate") as string
     const message = formData.get("message") as string
     const recaptchaToken = formData.get("recaptchaToken") as string
+    const referrer = formData.get("referrer") as string
+    const utmSource = formData.get("utmSource") as string
+    const utmCampaign = formData.get("utmCampaign") as string
+    const pageViews = formData.get("pageViews") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
@@ -52,6 +56,12 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       Phone: ${phone || "Not provided"}
       ${validAffiliate ? `Affiliate: ${validAffiliate}` : ""}
       Message: ${message || "No message provided"}
+      
+      Visitor Tracking:
+      - Referrer: ${referrer || "Not available"}
+      - UTM Source: ${utmSource || "Not available"}
+      - UTM Campaign: ${utmCampaign || "Not available"}
+      - Page Views: ${pageViews || "Not available"}
       
       Submitted at: ${new Date().toISOString()}
     `
