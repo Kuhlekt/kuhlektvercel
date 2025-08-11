@@ -10,10 +10,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Phone, Mail, Clock } from "lucide-react"
 import { submitContactForm } from "./actions"
+import { Recaptcha } from "@/components/recaptcha"
 
 export default function ContactPage() {
   const [state, formAction, isPending] = useActionState(submitContactForm, null)
   const [companySize, setCompanySize] = useState("")
+  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [recaptchaError, setRecaptchaError] = useState<string>("")
+
+  const handleRecaptchaVerify = (token: string) => {
+    setRecaptchaToken(token)
+    setRecaptchaError("")
+  }
+
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken("")
+    setRecaptchaError("reCAPTCHA expired. Please verify again.")
+  }
+
+  const handleRecaptchaError = () => {
+    setRecaptchaToken("")
+    setRecaptchaError("reCAPTCHA error. Please try again.")
+  }
+
+  const handleSubmit = (formData: FormData) => {
+    if (!recaptchaToken) {
+      setRecaptchaError("Please complete the reCAPTCHA verification.")
+      return
+    }
+
+    // Add recaptcha token to form data
+    formData.append("recaptchaToken", recaptchaToken)
+    formAction(formData)
+  }
 
   // Track affiliate when form is successfully submitted
   useEffect(() => {
@@ -169,7 +198,13 @@ export default function ContactPage() {
               <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={formAction} className="space-y-6">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleSubmit(new FormData(e.target))
+                }}
+                className="space-y-6"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
@@ -229,7 +264,17 @@ export default function ContactPage() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isPending}>
+                {/* reCAPTCHA */}
+                <div className="space-y-2">
+                  <Recaptcha
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                    onError={handleRecaptchaError}
+                  />
+                  {recaptchaError && <p className="text-red-600 text-sm text-center">{recaptchaError}</p>}
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isPending || !recaptchaToken}>
                   {isPending ? "Sending..." : "Send Message"}
                 </Button>
 

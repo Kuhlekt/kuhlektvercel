@@ -2,6 +2,7 @@
 
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
 import { trackAffiliateActivity } from "@/lib/affiliate-management"
+import { verifyRecaptcha } from "@/lib/recaptcha"
 import crypto from "crypto"
 
 interface DemoFormData {
@@ -12,6 +13,7 @@ interface DemoFormData {
   role: string
   challenges: string
   affiliate?: string
+  recaptchaToken: string
 }
 
 function createSignature(
@@ -133,6 +135,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       role: formData.get("role")?.toString() || "",
       challenges: formData.get("challenges")?.toString() || "",
       affiliate: formData.get("affiliate")?.toString() || undefined,
+      recaptchaToken: formData.get("recaptchaToken")?.toString() || "",
     }
 
     // Validate required fields
@@ -140,6 +143,22 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       return {
         success: false,
         message: "Please fill in all required fields.",
+      }
+    }
+
+    // Verify reCAPTCHA
+    if (!data.recaptchaToken) {
+      return {
+        success: false,
+        message: "Please complete the reCAPTCHA verification.",
+      }
+    }
+
+    const recaptchaValid = await verifyRecaptcha(data.recaptchaToken)
+    if (!recaptchaValid) {
+      return {
+        success: false,
+        message: "reCAPTCHA verification failed. Please try again.",
       }
     }
 

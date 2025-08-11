@@ -2,6 +2,7 @@
 
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
 import { trackAffiliateActivity } from "@/lib/affiliate-management"
+import { verifyRecaptcha } from "@/lib/recaptcha"
 import crypto from "crypto"
 
 async function sendEmailWithSES(to: string, subject: string, body: string): Promise<boolean> {
@@ -104,6 +105,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       companySize: formData.get("companySize")?.toString() || "",
       message: formData.get("message")?.toString() || "",
       affiliate: formData.get("affiliate")?.toString() || undefined,
+      recaptchaToken: formData.get("recaptchaToken")?.toString() || "",
     }
 
     // Validate required fields
@@ -111,6 +113,22 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       return {
         success: false,
         message: "Please fill in all required fields.",
+      }
+    }
+
+    // Verify reCAPTCHA
+    if (!data.recaptchaToken) {
+      return {
+        success: false,
+        message: "Please complete the reCAPTCHA verification.",
+      }
+    }
+
+    const recaptchaValid = await verifyRecaptcha(data.recaptchaToken)
+    if (!recaptchaValid) {
+      return {
+        success: false,
+        message: "reCAPTCHA verification failed. Please try again.",
       }
     }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,10 +8,39 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { submitDemoRequest } from "./actions"
+import { Recaptcha } from "@/components/recaptcha"
 import Image from "next/image"
 
 export default function DemoPage() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
+  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [recaptchaError, setRecaptchaError] = useState<string>("")
+
+  const handleRecaptchaVerify = (token: string) => {
+    setRecaptchaToken(token)
+    setRecaptchaError("")
+  }
+
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken("")
+    setRecaptchaError("reCAPTCHA expired. Please verify again.")
+  }
+
+  const handleRecaptchaError = () => {
+    setRecaptchaToken("")
+    setRecaptchaError("reCAPTCHA error. Please try again.")
+  }
+
+  const handleSubmit = (formData: FormData) => {
+    if (!recaptchaToken) {
+      setRecaptchaError("Please complete the reCAPTCHA verification.")
+      return
+    }
+
+    // Add recaptcha token to form data
+    formData.append("recaptchaToken", recaptchaToken)
+    formAction(formData)
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -88,7 +117,13 @@ export default function DemoPage() {
                 </div>
               )}
 
-              <form action={formAction} className="space-y-6">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleSubmit(new FormData(e.target))
+                }}
+                className="space-y-6"
+              >
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -179,7 +214,7 @@ export default function DemoPage() {
                   />
                 </div>
 
-                {/* Add after the challenges field */}
+                {/* Affiliate Code */}
                 <div className="space-y-2">
                   <Label htmlFor="affiliate" className="text-sm font-medium text-gray-900">
                     Affiliate Code
@@ -194,10 +229,20 @@ export default function DemoPage() {
                   />
                 </div>
 
+                {/* reCAPTCHA */}
+                <div className="space-y-2">
+                  <Recaptcha
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                    onError={handleRecaptchaError}
+                  />
+                  {recaptchaError && <p className="text-red-600 text-sm text-center">{recaptchaError}</p>}
+                </div>
+
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || !recaptchaToken}
                   className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? "Submitting..." : "Request Demo"}
