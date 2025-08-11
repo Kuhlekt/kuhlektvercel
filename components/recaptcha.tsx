@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Script from "next/script"
+import { getRecaptchaConfig } from "@/lib/recaptcha-actions"
 
 interface RecaptchaProps {
   onVerify: (token: string) => void
@@ -19,13 +20,7 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    fetch("/api/recaptcha-config")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch config")
-        }
-        return res.json()
-      })
+    getRecaptchaConfig()
       .then(setConfig)
       .catch((error) => {
         console.error("Failed to load reCAPTCHA config:", error)
