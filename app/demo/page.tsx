@@ -1,249 +1,223 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useFormState } from "react-dom"
+import { submitDemoForm } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle, AlertCircle } from "lucide-react"
-import { submitDemoRequest } from "./actions"
-import Image from "next/image"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
+import { VisitorTracker } from "@/components/visitor-tracker"
+
+const initialState = {
+  success: false,
+  message: "",
+  errors: {},
+}
 
 export default function DemoPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [captchaToken, setCaptchaToken] = useState("")
+  const [state, formAction] = useFormState(submitDemoForm, initialState)
+  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [isPending, setIsPending] = useState(false)
+
+  // Reset form on successful submission
+  useEffect(() => {
+    if (state?.success) {
+      const form = document.getElementById("demo-form") as HTMLFormElement
+      if (form) {
+        form.reset()
+        setRecaptchaToken("")
+        // Reset recaptcha
+        if (typeof window !== "undefined" && window.grecaptcha) {
+          window.grecaptcha.reset()
+        }
+      }
+    }
+  }, [state?.success])
 
   const handleSubmit = async (formData: FormData) => {
-    setIsSubmitting(true)
-    setSubmitResult(null)
-
-    try {
-      const result = await submitDemoRequest(null, formData)
-      setSubmitResult(result)
-    } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: "An error occurred. Please try again.",
-      })
-    } finally {
-      setIsSubmitting(false)
+    setIsPending(true)
+    if (recaptchaToken) {
+      formData.append("recaptchaToken", recaptchaToken)
     }
+
+    // Add visitor tracking data if available
+    if (typeof window !== "undefined") {
+      try {
+        const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
+        if (visitorDataStr) {
+          const visitorData = JSON.parse(visitorDataStr)
+          formData.append("referrer", visitorData.referrer || "")
+          formData.append("utmSource", visitorData.utmSource || "")
+          formData.append("utmCampaign", visitorData.utmCampaign || "")
+          formData.append("pageViews", visitorData.pageViews?.toString() || "")
+        }
+      } catch (error) {
+        console.error("Error adding visitor data to form:", error)
+      }
+    }
+
+    formAction(formData)
+    setIsPending(false)
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Main Demo Section */}
-      <section id="top" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            {/* Left Column - Content */}
-            <div className="space-y-8">
+    <div className="min-h-screen bg-gray-50">
+      <VisitorTracker />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-4">Request Demo</Badge>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">See Kuhlekt in Action</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Schedule a personalized demo to see how Kuhlekt can transform your accounts receivable process.
+          </p>
+        </div>
+
+        <Card className="shadow-xl max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Request Your Demo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form id="demo-form" action={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input id="firstName" name="firstName" type="text" required className="mt-1" disabled={isPending} />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input id="lastName" name="lastName" type="text" required className="mt-1" disabled={isPending} />
+                </div>
+              </div>
+
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">Schedule a Demonstration</h1>
-                <p className="text-xl text-gray-600 leading-relaxed">
-                  See how Kuhlekt can transform your accounts receivable process with a personalized demo.
-                </p>
+                <Label htmlFor="email">Work Email *</Label>
+                <Input id="email" name="email" type="email" required className="mt-1" disabled={isPending} />
               </div>
 
-              {/* Benefits List */}
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">See how to automate your collections process</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Learn how to reduce DSO by 30%</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Discover how to eliminate 80% of manual tasks</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Get a personalized walkthrough of our platform</p>
-                </div>
+              <div>
+                <Label htmlFor="company">Company *</Label>
+                <Input id="company" name="company" type="text" required className="mt-1" disabled={isPending} />
               </div>
 
-              {/* Steps */}
-              <div className="flex items-center gap-4 pt-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                    1
-                  </div>
-                  <div className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    2
-                  </div>
-                  <div className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    3
-                  </div>
-                </div>
-                <p className="text-gray-600">Join 500+ finance teams already using Kuhlekt</p>
+              <div>
+                <Label htmlFor="jobTitle">Job Title *</Label>
+                <Input id="jobTitle" name="jobTitle" type="text" required className="mt-1" disabled={isPending} />
               </div>
-            </div>
 
-            {/* Right Column - Form */}
-            <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-              {/* Kuhlekt Logo */}
-              <div className="mb-8 text-center">
-                <Image
-                  id="kuhlekt-logo"
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
-                  alt="Kuhlekt Logo"
-                  width={150}
-                  height={50}
-                  className="h-10 w-auto mx-auto mb-6"
-                  loading="lazy"
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" name="phone" type="tel" className="mt-1" disabled={isPending} />
+              </div>
+
+              <div>
+                <Label htmlFor="companySize">Company Size *</Label>
+                <Select name="companySize" disabled={isPending}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select company size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-10">1-10 employees</SelectItem>
+                    <SelectItem value="11-50">11-50 employees</SelectItem>
+                    <SelectItem value="51-200">51-200 employees</SelectItem>
+                    <SelectItem value="201-1000">201-1000 employees</SelectItem>
+                    <SelectItem value="1000+">1000+ employees</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="industry">Industry *</Label>
+                <Select name="industry" required disabled={isPending}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select your industry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="technology">Technology</SelectItem>
+                    <SelectItem value="financial-services">Financial Services</SelectItem>
+                    <SelectItem value="professional-services">Professional Services</SelectItem>
+                    <SelectItem value="construction">Construction</SelectItem>
+                    <SelectItem value="education">Education</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="currentArVolume">Current Monthly AR Volume</Label>
+                <Select name="currentArVolume" disabled={isPending}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select monthly AR volume" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="under-100k">Under $100K</SelectItem>
+                    <SelectItem value="100k-500k">$100K - $500K</SelectItem>
+                    <SelectItem value="500k-1m">$500K - $1M</SelectItem>
+                    <SelectItem value="1m-5m">$1M - $5M</SelectItem>
+                    <SelectItem value="5m-10m">$5M - $10M</SelectItem>
+                    <SelectItem value="over-10m">Over $10M</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="currentChallenges">Current AR Challenges (Optional)</Label>
+                <Textarea
+                  id="currentChallenges"
+                  name="currentChallenges"
+                  rows={3}
+                  placeholder="Tell us about your current accounts receivable challenges..."
+                  className="mt-1"
+                  disabled={isPending}
                 />
               </div>
 
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Your Demo</h2>
-                <p className="text-gray-600">
-                  Fill out the form below and we'll contact you to schedule a personalized demo.
-                </p>
+              <div>
+                <Label htmlFor="timeframe">Implementation Timeframe</Label>
+                <Select name="timeframe" disabled={isPending}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="When are you looking to implement?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immediate">Immediate (within 30 days)</SelectItem>
+                    <SelectItem value="1-3-months">1-3 months</SelectItem>
+                    <SelectItem value="3-6-months">3-6 months</SelectItem>
+                    <SelectItem value="6-12-months">6-12 months</SelectItem>
+                    <SelectItem value="exploring">Just exploring options</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Success/Error Message */}
-              {submitResult && (
-                <div
-                  className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                    submitResult.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-                  }`}
-                >
-                  {submitResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  )}
-                  <p className={`text-sm ${submitResult.success ? "text-green-700" : "text-red-700"}`}>
-                    {submitResult.message}
-                  </p>
-                </div>
-              )}
+              <Recaptcha
+                onVerify={setRecaptchaToken}
+                onExpire={() => setRecaptchaToken("")}
+                onError={() => setRecaptchaToken("")}
+              />
 
-              <form action={handleSubmit} className="space-y-6">
-                {/* Name Fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName" className="text-sm font-medium text-gray-900">
-                      First name *
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      placeholder="John"
-                      required
-                      className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName" className="text-sm font-medium text-gray-900">
-                      Last name *
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      placeholder="Doe"
-                      required
-                      className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+              >
+                {isPending ? "Scheduling..." : "Schedule Demo"}
+              </Button>
 
-                {/* Email */}
-                <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-900">
-                    Email *
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="john.doe@company.com"
-                    required
-                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
-                  />
-                </div>
+              {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
 
-                {/* Company */}
-                <div>
-                  <Label htmlFor="company" className="text-sm font-medium text-gray-900">
-                    Company *
-                  </Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    placeholder="Acme Inc."
-                    required
-                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {/* Role */}
-                <div>
-                  <Label htmlFor="role" className="text-sm font-medium text-gray-900">
-                    Role
-                  </Label>
-                  <Input
-                    id="role"
-                    name="role"
-                    placeholder="Finance Manager"
-                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {/* Challenges */}
-                <div>
-                  <Label htmlFor="challenges" className="text-sm font-medium text-gray-900">
-                    What are your biggest AR challenges?
-                  </Label>
-                  <Textarea
-                    id="challenges"
-                    name="challenges"
-                    placeholder="Tell us about your current process and challenges..."
-                    rows={4}
-                    className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500 resize-none"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <input type="hidden" name="captcha-token" value={captchaToken} />
-
-                {/* CAPTCHA */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-900">Security Verification</Label>
-                  <Recaptcha
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken("")}
-                    onError={() => setCaptchaToken("")}
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !captchaToken}
-                  className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Submitting..." : "Request Demo"}
-                </Button>
-              </form>
-
-              <p className="text-xs text-gray-500 mt-4 text-center">
-                * Required fields. We'll contact you within 24 hours.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+              {state?.error && <div className="text-red-600 text-center">{state.message}</div>}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

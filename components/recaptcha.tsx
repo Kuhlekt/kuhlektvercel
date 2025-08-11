@@ -1,13 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-
-declare global {
-  interface Window {
-    grecaptcha: any
-    onRecaptchaLoad: () => void
-  }
-}
+import { useEffect, useState } from "react"
+import Script from "next/script"
+import { getRecaptchaConfig } from "@/lib/recaptcha-actions"
 
 interface RecaptchaProps {
   onVerify: (token: string) => void
@@ -15,104 +10,67 @@ interface RecaptchaProps {
   onError?: () => void
 }
 
+interface RecaptchaConfig {
+  siteKey: string
+  isEnabled: boolean
+}
+
 export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
-  const recaptchaRef = useRef<HTMLDivElement>(null)
-  const widgetId = useRef<number | null>(null)
-  const [siteKey, setSiteKey] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [config, setConfig] = useState<RecaptchaConfig | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  // Fetch site key from server
   useEffect(() => {
-    const fetchSiteKey = async () => {
-      try {
-        const response = await fetch("/api/recaptcha-config")
-        const data = await response.json()
-        setSiteKey(data.siteKey)
-      } catch (error) {
-        console.error("Error fetching reCAPTCHA config:", error)
-        // Use test key as fallback
-        setSiteKey("6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchSiteKey()
+    getRecaptchaConfig()
+      .then(setConfig)
+      .catch((error) => {
+        console.error("Failed to load reCAPTCHA config:", error)
+        setConfig({ siteKey: "", isEnabled: false })
+      })
   }, [])
 
   useEffect(() => {
-    if (!siteKey || isLoading) return
+    if (isLoaded && config?.isEnabled && config.siteKey && typeof window !== "undefined" && window.grecaptcha) {
+      try {
+        const widgetId = window.grecaptcha.render("recaptcha-container", {
+          sitekey: config.siteKey,
+          callback: onVerify,
+          "expired-callback": onExpire,
+          "error-callback": onError,
+        })
 
-    const loadRecaptcha = () => {
-      if (window.grecaptcha && recaptchaRef.current && !widgetId.current) {
-        try {
-          widgetId.current = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: siteKey,
-            callback: onVerify,
-            "expired-callback": onExpire,
-            "error-callback": onError,
-            theme: "light",
-            size: "normal",
-          })
-        } catch (error) {
-          console.error("Error rendering reCAPTCHA:", error)
+        return () => {
+          if (typeof window !== "undefined" && window.grecaptcha && widgetId !== undefined) {
+            try {
+              window.grecaptcha.reset(widgetId)
+            } catch (e) {
+              // Ignore reset errors
+            }
+          }
         }
+      } catch (error) {
+        console.error("reCAPTCHA render error:", error)
       }
     }
+  }, [isLoaded, config, onVerify, onExpire, onError])
 
-    // Load reCAPTCHA script if not already loaded
-    if (!window.grecaptcha) {
-      const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit"
-      script.async = true
-      script.defer = true
-
-      window.onRecaptchaLoad = loadRecaptcha
-
-      document.head.appendChild(script)
-
-      return () => {
-        if (document.head.contains(script)) {
-          document.head.removeChild(script)
-        }
-        delete window.onRecaptchaLoad
-      }
-    } else {
-      loadRecaptcha()
-    }
-
-    return () => {
-      if (widgetId.current !== null && window.grecaptcha) {
-        try {
-          window.grecaptcha.reset(widgetId.current)
-        } catch (error) {
-          console.error("Error resetting reCAPTCHA:", error)
-        }
-      }
-    }
-  }, [siteKey, isLoading, onVerify, onExpire, onError])
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center my-4">
-        <div className="animate-pulse bg-gray-200 h-20 w-80 rounded"></div>
-      </div>
-    )
+  if (!config?.isEnabled || !config.siteKey) {
+    return null
   }
 
-  return <div ref={recaptchaRef} className="flex justify-center my-4" />
+  return (
+    <>
+      <Script
+        src="https://www.google.com/recaptcha/api.js"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => console.error("Failed to load reCAPTCHA script")}
+      />
+      <div id="recaptcha-container" />
+    </>
+  )
 }
 
-export function resetRecaptcha(widgetId?: number) {
-  if (window.grecaptcha) {
-    try {
-      if (widgetId !== undefined) {
-        window.grecaptcha.reset(widgetId)
-      } else {
-        window.grecaptcha.reset()
-      }
-    } catch (error) {
-      console.error("Error resetting reCAPTCHA:", error)
-    }
+declare global {
+  interface Window {
+    grecaptcha: any
   }
 }

@@ -11,7 +11,11 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
-    const captchaToken = formData.get("captcha-token") as string
+    const captchaToken = formData.get("recaptchaToken") as string
+    const referrer = formData.get("referrer") as string
+    const utmSource = formData.get("utmSource") as string
+    const utmCampaign = formData.get("utmCampaign") as string
+    const pageViews = formData.get("pageViews") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -31,7 +35,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     }
 
     // Verify CAPTCHA
-    const captchaResult = await verifyCaptcha(captchaToken)
+    const captchaResult = await verifyCaptcha(captchaToken || "")
     if (!captchaResult.success) {
       return {
         success: false,
@@ -48,6 +52,10 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       challenges: challenges || "Not specified",
       timestamp: new Date().toISOString(),
       captchaVerified: true,
+      referrer: referrer || "Not available",
+      utmSource: utmSource || "Not available",
+      utmCampaign: utmCampaign || "Not available",
+      pageViews: pageViews || "Not available",
     }
 
     console.log("Processing demo request:", {
@@ -73,6 +81,12 @@ Contact Information:
 
 Challenges:
 ${challenges || "Not specified"}
+
+Visitor Tracking:
+- Referrer: ${referrer || "Not available"}
+- UTM Source: ${utmSource || "Not available"}
+- UTM Campaign: ${utmCampaign || "Not available"}
+- Page Views: ${pageViews || "Not available"}
 
 Security:
 - CAPTCHA Verified: Yes
