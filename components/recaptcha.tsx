@@ -29,29 +29,41 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
   }, [])
 
   useEffect(() => {
-    if (isLoaded && config?.isEnabled && typeof window !== "undefined" && window.grecaptcha) {
-      const widgetId = window.grecaptcha.render("recaptcha-container", {
-        sitekey: config.siteKey,
-        callback: onVerify,
-        "expired-callback": onExpire,
-        "error-callback": onError,
-      })
+    if (isLoaded && config?.isEnabled && config.siteKey && typeof window !== "undefined" && window.grecaptcha) {
+      try {
+        const widgetId = window.grecaptcha.render("recaptcha-container", {
+          sitekey: config.siteKey,
+          callback: onVerify,
+          "expired-callback": onExpire,
+          "error-callback": onError,
+        })
 
-      return () => {
-        if (typeof window !== "undefined" && window.grecaptcha && widgetId !== undefined) {
-          window.grecaptcha.reset(widgetId)
+        return () => {
+          if (typeof window !== "undefined" && window.grecaptcha && widgetId !== undefined) {
+            try {
+              window.grecaptcha.reset(widgetId)
+            } catch (e) {
+              // Ignore reset errors
+            }
+          }
         }
+      } catch (error) {
+        console.error("reCAPTCHA render error:", error)
       }
     }
   }, [isLoaded, config, onVerify, onExpire, onError])
 
-  if (!config?.isEnabled) {
+  if (!config?.isEnabled || !config.siteKey) {
     return null
   }
 
   return (
     <>
-      <Script src="https://www.google.com/recaptcha/api.js" onLoad={() => setIsLoaded(true)} />
+      <Script
+        src="https://www.google.com/recaptcha/api.js"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => console.error("Failed to load reCAPTCHA script")}
+      />
       <div id="recaptcha-container" />
     </>
   )
