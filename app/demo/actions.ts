@@ -1,246 +1,111 @@
 "use server"
 
-import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
-import { verifyRecaptcha } from "@/lib/recaptcha"
-import crypto from "crypto"
-
-interface DemoFormData {
-  firstName: string
-  lastName: string
-  email: string
-  company: string
-  role: string
-  challenges: string
-  affiliate?: string
-  recaptchaToken?: string
-}
-
-function createSignature(
-  method: string,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-  secretKey: string,
-): string {
-  const canonicalRequest = [
-    method,
-    url,
-    Object.keys(headers)
-      .sort()
-      .map((key) => `${key}:${headers[key]}`)
-      .join("\n"),
-    body,
-  ].join("\n")
-
-  return crypto.createHmac("sha256", secretKey).update(canonicalRequest).digest("base64")
-}
-
-async function sendEmailWithSES(to: string, subject: string, body: string): Promise<boolean> {
-  try {
-    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-    const region = process.env.AWS_SES_REGION
-    const fromEmail = process.env.AWS_SES_FROM_EMAIL
-
-    if (!accessKeyId || !secretAccessKey || !region || !fromEmail) {
-      console.error("Missing AWS SES configuration")
-      return false
-    }
-
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
-    const date = timestamp.substr(0, 8)
-
-    const params = new URLSearchParams({
-      Action: "SendEmail",
-      Source: fromEmail,
-      "Destination.ToAddresses.member.1": to,
-      "Message.Subject.Data": subject,
-      "Message.Body.Text.Data": body,
-      Version: "2010-12-01",
-    })
-
-    const payload = params.toString()
-    const host = `email.${region}.amazonaws.com`
-    const url = `https://${host}/`
-
-    // Create AWS Signature Version 4
-    const algorithm = "AWS4-HMAC-SHA256"
-    const credentialScope = `${date}/${region}/ses/aws4_request`
-
-    const canonicalHeaders = [`host:${host}`, `x-amz-date:${timestamp}`].join("\n") + "\n"
-
-    const signedHeaders = "host;x-amz-date"
-
-    const payloadHash = crypto.createHash("sha256").update(payload).digest("hex")
-
-    const canonicalRequest = ["POST", "/", "", canonicalHeaders, signedHeaders, payloadHash].join("\n")
-
-    const stringToSign = [
-      algorithm,
-      timestamp,
-      credentialScope,
-      crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
-    ].join("\n")
-
-    const kDate = crypto.createHmac("sha256", `AWS4${secretAccessKey}`).update(date).digest()
-    const kRegion = crypto.createHmac("sha256", kDate).update(region).digest()
-    const kService = crypto.createHmac("sha256", kRegion).update("ses").digest()
-    const kSigning = crypto.createHmac("sha256", kService).update("aws4_request").digest()
-
-    const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex")
-
-    const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: authorizationHeader,
-        "X-Amz-Date": timestamp,
-        Host: host,
-      },
-      body: payload,
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("SES API Error:", response.status, errorText)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error("Error sending email:", error)
-    return false
-  }
-}
+import { sendEmailWithSES } from "@/lib/aws-ses"
+import { verifyCaptcha } from "@/lib/captcha"
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    // Check if formData is valid
-    if (!formData || typeof formData.get !== "function") {
-      console.error("Invalid formData received")
-      return {
-        success: false,
-        message: "Invalid form data. Please try again.",
-      }
-    }
-
-    const data: DemoFormData = {
-      firstName: formData.get("firstName")?.toString() || "",
-      lastName: formData.get("lastName")?.toString() || "",
-      email: formData.get("email")?.toString() || "",
-      company: formData.get("company")?.toString() || "",
-      role: formData.get("role")?.toString() || "",
-      challenges: formData.get("challenges")?.toString() || "",
-      affiliate: formData.get("affiliate")?.toString() || undefined,
-      recaptchaToken: formData.get("recaptchaToken")?.toString() || undefined,
-    }
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const role = formData.get("role") as string
+    const challenges = formData.get("challenges") as string
+    const captchaToken = formData.get("captcha-token") as string
 
     // Validate required fields
-    if (!data.firstName || !data.lastName || !data.email || !data.company) {
+    if (!firstName || !lastName || !email || !company) {
       return {
         success: false,
         message: "Please fill in all required fields.",
       }
     }
 
-    // Verify reCAPTCHA only if configured and token provided
-    const isRecaptchaConfigured = !!process.env.RECAPTCHA_SECRET_KEY
-    if (isRecaptchaConfigured && data.recaptchaToken) {
-      const recaptchaValid = await verifyRecaptcha(data.recaptchaToken)
-      if (!recaptchaValid) {
-        return {
-          success: false,
-          message: "reCAPTCHA verification failed. Please try again.",
-        }
-      }
-    }
-
-    // Get client IP and user agent for tracking
-    let ip = "unknown"
-    let userAgent = "unknown"
-
-    try {
-      const headers = await import("next/headers")
-      const headersList = headers.headers()
-
-      if (headersList) {
-        const forwarded = headersList.get("x-forwarded-for")
-        ip = forwarded ? forwarded.split(",")[0] : headersList.get("x-real-ip") || "unknown"
-        userAgent = headersList.get("user-agent") || "unknown"
-      }
-    } catch (error) {
-      console.error("Error getting headers:", error)
-      // Continue with default values
-    }
-
-    // Validate affiliate code if provided
-    let affiliateData = null
-    if (data.affiliate && data.affiliate.trim().length > 0) {
-      try {
-        const { validateAffiliateFromTable } = await import("@/lib/visitor-tracking")
-        const result = validateAffiliateFromTable(data.affiliate.trim())
-
-        if (result.valid) {
-          affiliateData = result.affiliate
-          console.log("Valid affiliate code:", affiliateData.code)
-        } else {
-          console.warn("Invalid affiliate code:", data.affiliate)
-        }
-      } catch (error) {
-        console.warn("Affiliate validation error:", error)
-      }
-    }
-
-    // Track form submission before attempting to send email
-    const submissionId = await trackFormSubmission(ip, userAgent, "demo", {
-      ...data,
-      affiliate: affiliateData?.code || data.affiliate,
-      affiliateValid: !!affiliateData,
-    })
-
-    // Send email notification
-    const subject = `New Demo Request from ${data.firstName} ${data.lastName} at ${data.company}`
-    const body = `
-New demo request submission:
-
-Name: ${data.firstName} ${data.lastName}
-Email: ${data.email}
-Company: ${data.company}
-Role: ${data.role}
-${data.affiliate ? `Affiliate Code: ${data.affiliate}${affiliateData ? ` (Valid - ${affiliateData.name})` : " (Invalid)"}` : ""}
-
-Challenges:
-${data.challenges}
-
-Submitted at: ${new Date().toISOString()}
-IP Address: ${ip}
-    `.trim()
-
-    const emailSent = await sendEmailWithSES("enquiries@kuhlekt.com", subject, body)
-
-    // Update submission status based on email result
-    await updateFormSubmissionStatus(submissionId, emailSent ? "completed" : "failed")
-
-    if (emailSent) {
-      return {
-        success: true,
-        message:
-          "Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration.",
-        affiliate: affiliateData?.code,
-      }
-    } else {
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
       return {
         success: false,
-        message: "There was an error processing your demo request. Please try again.",
+        message: "Please enter a valid email address.",
       }
     }
+
+    // Verify CAPTCHA
+    const captchaResult = await verifyCaptcha(captchaToken)
+    if (!captchaResult.success) {
+      return {
+        success: false,
+        message: captchaResult.error || "Please complete the CAPTCHA verification.",
+      }
+    }
+
+    const demoData = {
+      firstName,
+      lastName,
+      email,
+      company,
+      role: role || "Not specified",
+      challenges: challenges || "Not specified",
+      timestamp: new Date().toISOString(),
+      captchaVerified: true,
+    }
+
+    console.log("Processing demo request:", {
+      name: `${firstName} ${lastName}`,
+      email,
+      company,
+      captchaVerified: true,
+    })
+
+    // Try to send email using AWS SDK
+    try {
+      const emailResult = await sendEmailWithSES({
+        to: ["enquiries@kuhlekt.com"],
+        subject: `New Demo Request from ${firstName} ${lastName}`,
+        body: `
+New Demo Request from Kuhlekt Website
+
+Contact Information:
+- Name: ${firstName} ${lastName}
+- Email: ${email}
+- Company: ${company}
+- Role: ${role || "Not specified"}
+
+Challenges:
+${challenges || "Not specified"}
+
+Security:
+- CAPTCHA Verified: Yes
+- Timestamp: ${demoData.timestamp}
+
+Please follow up with this prospect to schedule a demo.
+        `,
+        replyTo: email,
+      })
+
+      if (emailResult.success) {
+        console.log("Demo request email sent successfully via AWS SDK:", emailResult.messageId)
+      } else {
+        console.log("Email sending failed, logging demo data:", demoData)
+        console.error("Email error:", emailResult.message)
+      }
+    } catch (emailError) {
+      console.error("Error with AWS SDK email service:", emailError)
+      console.log("Logging demo data for manual follow-up:", demoData)
+    }
+
+    // Always return success to user
+    return {
+      success: true,
+      message:
+        "Thank you! Your demo request has been submitted. We'll contact you within 24 hours to schedule your personalized demo.",
+    }
   } catch (error) {
-    console.error("Demo form submission error:", error)
+    console.error("Error submitting demo request:", error)
     return {
       success: false,
-      message: "There was an error processing your request. Please try again.",
+      message:
+        "Sorry, there was an error submitting your request. Please try again or contact us directly at enquiries@kuhlekt.com",
     }
   }
 }

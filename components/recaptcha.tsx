@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
+import Script from "next/script"
 
 interface RecaptchaProps {
   onVerify: (token: string) => void
@@ -8,129 +9,53 @@ interface RecaptchaProps {
   onError?: () => void
 }
 
-declare global {
-  interface Window {
-    grecaptcha: any
-    onRecaptchaLoad: () => void
-  }
+interface RecaptchaConfig {
+  siteKey: string
+  isEnabled: boolean
 }
 
 export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
-  const recaptchaRef = useRef<HTMLDivElement>(null)
-  const widgetId = useRef<number | null>(null)
-  const [isConfigured, setIsConfigured] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [siteKey, setSiteKey] = useState<string | null>(null)
+  const [config, setConfig] = useState<RecaptchaConfig | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    // Fetch reCAPTCHA configuration from server
-    const fetchConfig = async () => {
-      try {
-        const response = await fetch("/api/recaptcha-config")
-        const config = await response.json()
-
-        if (config.isConfigured && config.siteKey) {
-          setIsConfigured(true)
-          setSiteKey(config.siteKey)
-          console.log("reCAPTCHA configured with site key:", config.siteKey.substring(0, 10) + "...")
-        } else {
-          setIsConfigured(false)
-          setIsLoading(false)
-          console.log("reCAPTCHA not configured - site key missing or placeholder")
-        }
-      } catch (error) {
-        console.error("Error fetching reCAPTCHA config:", error)
-        setIsConfigured(false)
-        setIsLoading(false)
-      }
-    }
-
-    fetchConfig()
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then(setConfig)
+      .catch(console.error)
   }, [])
 
   useEffect(() => {
-    if (!isConfigured || !siteKey) {
-      return
-    }
+    if (isLoaded && config?.isEnabled && window.grecaptcha) {
+      const widgetId = window.grecaptcha.render("recaptcha-container", {
+        sitekey: config.siteKey,
+        callback: onVerify,
+        "expired-callback": onExpire,
+        "error-callback": onError,
+      })
 
-    const loadRecaptcha = () => {
-      console.log("Loading reCAPTCHA...")
-      if (window.grecaptcha && window.grecaptcha.render && recaptchaRef.current) {
-        try {
-          console.log("Rendering reCAPTCHA widget...")
-          widgetId.current = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: siteKey,
-            callback: onVerify,
-            "expired-callback": onExpire,
-            "error-callback": onError,
-          })
-          setIsLoading(false)
-          console.log("reCAPTCHA widget rendered successfully")
-        } catch (error) {
-          console.error("Error rendering reCAPTCHA:", error)
-          setIsLoading(false)
-          if (onError) onError()
-        }
-      } else {
-        console.log("reCAPTCHA API not ready yet...")
-      }
-    }
-
-    if (window.grecaptcha && window.grecaptcha.render) {
-      loadRecaptcha()
-    } else {
-      window.onRecaptchaLoad = loadRecaptcha
-
-      // Check if script is already loaded
-      const existingScript = document.querySelector('script[src*="recaptcha"]')
-      if (!existingScript) {
-        console.log("Loading reCAPTCHA script...")
-        // Load reCAPTCHA script
-        const script = document.createElement("script")
-        script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit"
-        script.async = true
-        script.defer = true
-        script.onload = () => {
-          console.log("reCAPTCHA script loaded successfully")
-        }
-        script.onerror = () => {
-          console.error("Failed to load reCAPTCHA script")
-          setIsLoading(false)
-          if (onError) onError()
-        }
-        document.head.appendChild(script)
-      } else {
-        console.log("reCAPTCHA script already exists")
-      }
-    }
-
-    return () => {
-      if (widgetId.current !== null && window.grecaptcha && window.grecaptcha.reset) {
-        try {
-          window.grecaptcha.reset(widgetId.current)
-        } catch (error) {
-          console.warn("Error resetting reCAPTCHA:", error)
+      return () => {
+        if (window.grecaptcha && widgetId !== undefined) {
+          window.grecaptcha.reset(widgetId)
         }
       }
     }
-  }, [isConfigured, siteKey, onVerify, onExpire, onError])
+  }, [isLoaded, config, onVerify, onExpire, onError])
 
-  // If not configured, don't render anything
-  if (!isConfigured) {
-    console.log("reCAPTCHA component not rendering - not configured")
+  if (!config?.isEnabled) {
     return null
   }
 
-  // Show loading state
-  if (isLoading) {
-    console.log("reCAPTCHA component showing loading state")
-    return (
-      <div className="flex justify-center my-4 p-4">
-        <div className="text-sm text-gray-600">Loading verification...</div>
-      </div>
-    )
-  }
+  return (
+    <>
+      <Script src="https://www.google.com/recaptcha/api.js" onLoad={() => setIsLoaded(true)} />
+      <div id="recaptcha-container" />
+    </>
+  )
+}
 
-  console.log("reCAPTCHA component rendering widget container")
-  return <div ref={recaptchaRef} className="flex justify-center my-4" />
+declare global {
+  interface Window {
+    grecaptcha: any
+  }
 }

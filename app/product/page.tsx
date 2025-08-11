@@ -1,17 +1,13 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, ArrowRight } from "lucide-react"
+import { CheckCircle, ArrowRight } from 'lucide-react'
 import Image from "next/image"
 import Link from "next/link"
 
 export default function ProductPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       {/* Hero Section */}
       <section id="ar-automation" className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -264,8 +260,6 @@ export default function ProductPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   )
 }

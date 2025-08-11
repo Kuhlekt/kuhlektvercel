@@ -1,67 +1,105 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
+
+// Predefined affiliate table for validation
+const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
+
+interface VisitorData {
+  visitorId: string
+  sessionId: string
+  firstVisit: string
+  lastVisit: string
+  pageViews: number
+  referrer: string
+  userAgent: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmTerm?: string
+  utmContent?: string
+  affiliate?: string
+  ipAddress?: string
+}
 
 export function VisitorTracker() {
-  const hasTracked = useRef(false)
-
   useEffect(() => {
-    // Prevent double tracking in development mode
-    if (hasTracked.current) {
-      return
-    }
+    try {
+      // Generate unique IDs
+      const generateId = () => Math.random().toString(36).substr(2, 9)
 
-    const trackVisitor = async () => {
-      try {
-        // Wait a bit to ensure the page is fully loaded
-        await new Promise((resolve) => setTimeout(resolve, 100))
+      // Get or create visitor ID (persistent across sessions)
+      let visitorId = localStorage.getItem("kuhlekt_visitor_id")
+      if (!visitorId) {
+        visitorId = generateId()
+        localStorage.setItem("kuhlekt_visitor_id", visitorId)
+      }
 
-        const trackingData = {
-          page: window.location.pathname,
-          referrer: document.referrer || null,
+      // Generate session ID (new for each session)
+      const sessionId = generateId()
+      sessionStorage.setItem("kuhlekt_session_id", sessionId)
+
+      // Get URL parameters
+      const urlParams = new URLSearchParams(window.location.search)
+      const affiliate = urlParams.get("affiliate") || urlParams.get("aff") || urlParams.get("ref")
+
+      // Validate affiliate against predefined table
+      const validAffiliate =
+        affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : undefined
+
+      // Get existing visitor data or create new
+      const existingData = localStorage.getItem("kuhlekt_visitor_data")
+      let visitorData: VisitorData
+
+      if (existingData) {
+        visitorData = JSON.parse(existingData)
+        visitorData.lastVisit = new Date().toISOString()
+        visitorData.pageViews += 1
+        visitorData.sessionId = sessionId
+      } else {
+        visitorData = {
+          visitorId,
+          sessionId,
+          firstVisit: new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          pageViews: 1,
+          referrer: document.referrer || "direct",
           userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
+          utmSource: urlParams.get("utm_source") || undefined,
+          utmMedium: urlParams.get("utm_medium") || undefined,
+          utmCampaign: urlParams.get("utm_campaign") || undefined,
+          utmTerm: urlParams.get("utm_term") || undefined,
+          utmContent: urlParams.get("utm_content") || undefined,
+          affiliate: validAffiliate,
         }
+      }
 
-        console.log("Attempting to track visitor:", trackingData)
+      // Update affiliate if new valid one is provided
+      if (validAffiliate && (!visitorData.affiliate || visitorData.affiliate !== validAffiliate)) {
+        visitorData.affiliate = validAffiliate
+      }
 
-        const response = await fetch("/api/track-visitor", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(trackingData),
+      // Store updated visitor data
+      localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
+
+      // Log for debugging (remove in production)
+      console.log("Visitor tracking data:", visitorData)
+
+      // Clean up old session data (optional)
+      const cleanupOldSessions = () => {
+        const keys = Object.keys(localStorage)
+        keys.forEach((key) => {
+          if (key.startsWith("kuhlekt_session_") && key !== `kuhlekt_session_${sessionId}`) {
+            localStorage.removeItem(key)
+          }
         })
-
-        if (response.ok) {
-          const result = await response.json()
-          console.log("Visitor tracking successful:", result)
-          hasTracked.current = true
-        } else {
-          const errorText = await response.text()
-          console.error("Failed to track visitor:", response.status, errorText)
-        }
-      } catch (error) {
-        console.error("Error tracking visitor:", error)
       }
-    }
-
-    // Track visitor on component mount
-    trackVisitor()
-
-    // Also track on page visibility change (when user returns to tab)
-    const handleVisibilityChange = () => {
-      if (!document.hidden && !hasTracked.current) {
-        trackVisitor()
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      cleanupOldSessions()
+    } catch (error) {
+      console.error("Error in visitor tracking:", error)
     }
   }, [])
 
+  // This component doesn't render anything
   return null
 }
