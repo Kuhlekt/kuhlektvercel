@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
 import { submitContactForm } from "./actions"
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function ContactPage() {
-  const [state, formAction] = useActionState(submitContactForm, null)
+  const [state, formAction] = useFormState(submitContactForm, null)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [isPending, setIsPending] = useState(false)
 
