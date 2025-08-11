@@ -108,6 +108,29 @@ export function VisitorTracker() {
       // Store updated visitor data
       localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
 
+      // Store in all visitors array for admin tracking
+      try {
+        const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
+        let allVisitors: VisitorData[] = allVisitorsStr ? JSON.parse(allVisitorsStr) : []
+
+        // Find existing visitor or add new one
+        const existingIndex = allVisitors.findIndex((v) => v.visitorId === visitorData.visitorId)
+        if (existingIndex >= 0) {
+          allVisitors[existingIndex] = visitorData
+        } else {
+          allVisitors.push(visitorData)
+        }
+
+        // Keep only last 100 visitors to prevent storage bloat
+        if (allVisitors.length > 100) {
+          allVisitors = allVisitors.slice(-100)
+        }
+
+        localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
+      } catch (error) {
+        console.error("Error updating all visitors data:", error)
+      }
+
       // Log tracking data for debugging
       console.log("Visitor tracking active:", {
         visitorId: visitorData.visitorId,
@@ -167,6 +190,19 @@ export function getPageHistory() {
     return historyStr ? JSON.parse(historyStr) : []
   } catch (error) {
     console.error("Error getting page history:", error)
+    return []
+  }
+}
+
+// Helper function to get all visitors (for admin)
+export function getAllVisitors() {
+  if (typeof window === "undefined") return []
+
+  try {
+    const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
+    return allVisitorsStr ? JSON.parse(allVisitorsStr) : []
+  } catch (error) {
+    console.error("Error getting all visitors:", error)
     return []
   }
 }
