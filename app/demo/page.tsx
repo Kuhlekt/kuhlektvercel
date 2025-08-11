@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
 import { submitDemoRequest } from "./actions"
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
-  const [state, formAction] = useFormState(submitDemoRequest, null)
+  const [state, formAction] = useActionState(submitDemoRequest, null)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [isPending, setIsPending] = useState(false)
 
