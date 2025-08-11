@@ -1,6 +1,8 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import type React from "react"
+
+import { useActionState, useState, useTransition } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,9 +17,13 @@ export default function DemoPage() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [recaptchaError, setRecaptchaError] = useState<string>("")
+  const [isPendingTransition, startTransition] = useTransition()
 
   // Check if reCAPTCHA is configured
-  const isRecaptchaConfigured = !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const isRecaptchaConfigured =
+    typeof window !== "undefined" &&
+    !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim() !== ""
 
   const handleRecaptchaVerify = (token: string) => {
     setRecaptchaToken(token)
@@ -34,18 +40,28 @@ export default function DemoPage() {
     setRecaptchaError("reCAPTCHA error. Please try again.")
   }
 
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
     if (isRecaptchaConfigured && !recaptchaToken) {
       setRecaptchaError("Please complete the reCAPTCHA verification.")
       return
     }
 
+    const formData = new FormData(e.currentTarget)
+
     // Add recaptcha token to form data if configured
-    if (isRecaptchaConfigured) {
+    if (isRecaptchaConfigured && recaptchaToken) {
       formData.append("recaptchaToken", recaptchaToken)
     }
-    formAction(formData)
+
+    // Use startTransition to properly handle the async action
+    startTransition(() => {
+      formAction(formData)
+    })
   }
+
+  const isFormPending = isPending || isPendingTransition
 
   return (
     <div className="min-h-screen bg-white">
@@ -122,13 +138,7 @@ export default function DemoPage() {
                 </div>
               )}
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  handleSubmit(new FormData(e.target))
-                }}
-                className="space-y-6"
-              >
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -141,7 +151,7 @@ export default function DemoPage() {
                       placeholder="John"
                       required
                       className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isPending}
+                      disabled={isFormPending}
                     />
                   </div>
                   <div>
@@ -154,7 +164,7 @@ export default function DemoPage() {
                       placeholder="Doe"
                       required
                       className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                      disabled={isPending}
+                      disabled={isFormPending}
                     />
                   </div>
                 </div>
@@ -171,7 +181,7 @@ export default function DemoPage() {
                     placeholder="john.doe@company.com"
                     required
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isPending}
+                    disabled={isFormPending}
                   />
                 </div>
 
@@ -186,7 +196,7 @@ export default function DemoPage() {
                     placeholder="Acme Inc."
                     required
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isPending}
+                    disabled={isFormPending}
                   />
                 </div>
 
@@ -200,7 +210,7 @@ export default function DemoPage() {
                     name="role"
                     placeholder="Finance Manager"
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isPending}
+                    disabled={isFormPending}
                   />
                 </div>
 
@@ -215,7 +225,7 @@ export default function DemoPage() {
                     placeholder="Tell us about your current process and challenges..."
                     rows={4}
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500 resize-none"
-                    disabled={isPending}
+                    disabled={isFormPending}
                   />
                 </div>
 
@@ -229,7 +239,7 @@ export default function DemoPage() {
                     name="affiliate"
                     placeholder="Enter affiliate code (optional)"
                     className="mt-1 border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                    disabled={isPending}
+                    disabled={isFormPending}
                     maxLength={20}
                   />
                 </div>
@@ -249,10 +259,10 @@ export default function DemoPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={isPending || (isRecaptchaConfigured && !recaptchaToken)}
+                  disabled={isFormPending || (isRecaptchaConfigured && !recaptchaToken)}
                   className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isPending ? "Submitting..." : "Request Demo"}
+                  {isFormPending ? "Submitting..." : "Request Demo"}
                 </Button>
               </form>
 

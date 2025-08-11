@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useTransition } from "react"
 import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +19,13 @@ export default function ContactPage() {
   const [companySize, setCompanySize] = useState("")
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [recaptchaError, setRecaptchaError] = useState<string>("")
+  const [isPendingTransition, startTransition] = useTransition()
 
   // Check if reCAPTCHA is configured
-  const isRecaptchaConfigured = !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  const isRecaptchaConfigured =
+    typeof window !== "undefined" &&
+    !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim() !== ""
 
   const handleRecaptchaVerify = (token: string) => {
     setRecaptchaToken(token)
@@ -36,17 +42,25 @@ export default function ContactPage() {
     setRecaptchaError("reCAPTCHA error. Please try again.")
   }
 
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
     if (isRecaptchaConfigured && !recaptchaToken) {
       setRecaptchaError("Please complete the reCAPTCHA verification.")
       return
     }
 
+    const formData = new FormData(e.currentTarget)
+
     // Add recaptcha token to form data if configured
-    if (isRecaptchaConfigured) {
+    if (isRecaptchaConfigured && recaptchaToken) {
       formData.append("recaptchaToken", recaptchaToken)
     }
-    formAction(formData)
+
+    // Use startTransition to properly handle the async action
+    startTransition(() => {
+      formAction(formData)
+    })
   }
 
   // Track affiliate when form is successfully submitted
@@ -68,6 +82,8 @@ export default function ContactPage() {
       }
     }
   }, [state])
+
+  const isFormPending = isPending || isPendingTransition
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -203,43 +219,75 @@ export default function ContactPage() {
               <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  const formData = new FormData(e.currentTarget)
-                  handleSubmit(formData)
-                }}
-                className="space-y-6"
-              >
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
-                    <Input id="firstName" name="firstName" type="text" required placeholder="John" />
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      required
+                      placeholder="John"
+                      disabled={isFormPending}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name *</Label>
-                    <Input id="lastName" name="lastName" type="text" required placeholder="Smith" />
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      required
+                      placeholder="Smith"
+                      disabled={isFormPending}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address *</Label>
-                  <Input id="email" name="email" type="email" required placeholder="john.smith@company.com" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="john.smith@company.com"
+                    disabled={isFormPending}
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="company">Company Name *</Label>
-                  <Input id="company" name="company" type="text" required placeholder="Your Company" />
+                  <Input
+                    id="company"
+                    name="company"
+                    type="text"
+                    required
+                    placeholder="Your Company"
+                    disabled={isFormPending}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="role">Your Role</Label>
-                    <Input id="role" name="role" type="text" placeholder="CFO, Finance Manager, etc." />
+                    <Input
+                      id="role"
+                      name="role"
+                      type="text"
+                      placeholder="CFO, Finance Manager, etc."
+                      disabled={isFormPending}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companySize">Company Size</Label>
-                    <Select name="companySize" value={companySize} onValueChange={setCompanySize}>
+                    <Select
+                      name="companySize"
+                      value={companySize}
+                      onValueChange={setCompanySize}
+                      disabled={isFormPending}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select company size" />
                       </SelectTrigger>
@@ -256,7 +304,14 @@ export default function ContactPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="affiliate">Affiliate</Label>
-                  <Input id="affiliate" name="affiliate" type="text" placeholder="Affiliate code" maxLength={10} />
+                  <Input
+                    id="affiliate"
+                    name="affiliate"
+                    type="text"
+                    placeholder="Affiliate code"
+                    maxLength={10}
+                    disabled={isFormPending}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -267,6 +322,7 @@ export default function ContactPage() {
                     required
                     placeholder="Tell us about your accounts receivable challenges and how we can help..."
                     rows={5}
+                    disabled={isFormPending}
                   />
                 </div>
 
@@ -285,9 +341,9 @@ export default function ContactPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isPending || (isRecaptchaConfigured && !recaptchaToken)}
+                  disabled={isFormPending || (isRecaptchaConfigured && !recaptchaToken)}
                 >
-                  {isPending ? "Sending..." : "Send Message"}
+                  {isFormPending ? "Sending..." : "Send Message"}
                 </Button>
 
                 {state && (

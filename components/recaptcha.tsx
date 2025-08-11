@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface RecaptchaProps {
   onVerify: (token: string) => void
@@ -18,15 +18,28 @@ declare global {
 export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
   const recaptchaRef = useRef<HTMLDivElement>(null)
   const widgetId = useRef<number | null>(null)
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    // Check if reCAPTCHA is configured on the client side
+    const checkConfiguration = () => {
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+      if (!siteKey || siteKey.trim() === "") {
+        setIsConfigured(false)
+        setIsLoading(false)
+        console.warn("reCAPTCHA site key not configured")
+        return false
+      }
+      setIsConfigured(true)
+      return true
+    }
 
-    if (!siteKey) {
-      console.error("NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not configured")
-      if (onError) onError()
+    if (!checkConfiguration()) {
       return
     }
+
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!
 
     const loadRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.render && recaptchaRef.current) {
@@ -37,8 +50,10 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
             "expired-callback": onExpire,
             "error-callback": onError,
           })
+          setIsLoading(false)
         } catch (error) {
           console.error("Error rendering reCAPTCHA:", error)
+          setIsLoading(false)
           if (onError) onError()
         }
       }
@@ -57,8 +72,12 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
         script.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit"
         script.async = true
         script.defer = true
+        script.onload = () => {
+          // Script loaded, loadRecaptcha will be called via onRecaptchaLoad
+        }
         script.onerror = () => {
           console.error("Failed to load reCAPTCHA script")
+          setIsLoading(false)
           if (onError) onError()
         }
         document.head.appendChild(script)
@@ -76,11 +95,16 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
     }
   }, [onVerify, onExpire, onError])
 
-  // If no site key is configured, show a message instead of breaking
-  if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
+  // If not configured, don't render anything
+  if (!isConfigured) {
+    return null
+  }
+
+  // Show loading state
+  if (isLoading) {
     return (
-      <div className="flex justify-center my-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-        <p className="text-sm text-yellow-800">reCAPTCHA configuration required</p>
+      <div className="flex justify-center my-4 p-4">
+        <div className="text-sm text-gray-600">Loading verification...</div>
       </div>
     )
   }
