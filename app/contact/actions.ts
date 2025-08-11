@@ -1,6 +1,6 @@
 "use server"
 
-import { sendEmail } from "@/lib/email-service"
+import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
 
 // Predefined affiliate table for validation
@@ -57,10 +57,11 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     `
 
     // Send email
-    await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com",
+    await sendEmailWithSES({
+      to: [process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com"],
       subject: emailSubject,
       body: emailBody,
+      replyTo: email,
     })
 
     return {

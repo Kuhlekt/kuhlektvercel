@@ -11,7 +11,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
-    const captchaToken = formData.get("captcha-token") as string
+    const captchaToken = formData.get("recaptchaToken") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
