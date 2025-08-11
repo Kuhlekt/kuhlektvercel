@@ -1,7 +1,6 @@
 "use server"
 
 import { trackFormSubmission, updateFormSubmissionStatus } from "@/lib/visitor-tracking"
-import { trackAffiliateActivity } from "@/lib/affiliate-management"
 import { verifyRecaptcha } from "@/lib/recaptcha"
 import crypto from "crypto"
 
@@ -180,33 +179,17 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     let affiliateData = null
     if (data.affiliate && data.affiliate.trim().length > 0) {
       try {
-        // Use relative URL for internal API calls
-        const baseUrl = process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+        const { validateAffiliateFromTable } = await import("@/lib/visitor-tracking")
+        const result = validateAffiliateFromTable(data.affiliate.trim())
 
-        const affiliateResponse = await fetch(`${baseUrl}/api/validate-affiliate`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Kuhlekt-Internal/1.0",
-          },
-          body: JSON.stringify({ code: data.affiliate.trim() }),
-        })
-
-        if (affiliateResponse.ok) {
-          const result = await affiliateResponse.json()
-          if (result.valid) {
-            affiliateData = result.affiliate
-            // Track affiliate demo form submission
-            trackAffiliateActivity(result.affiliate.code, "demo")
-          }
+        if (result.valid) {
+          affiliateData = result.affiliate
+          console.log("Valid affiliate code:", affiliateData.code)
         } else {
-          console.warn(`Affiliate validation failed with status: ${affiliateResponse.status}`)
+          console.warn("Invalid affiliate code:", data.affiliate)
         }
       } catch (error) {
-        console.warn("Affiliate validation unavailable, continuing without validation:", error)
-        // Continue processing the form even if affiliate validation fails
+        console.warn("Affiliate validation error:", error)
       }
     }
 

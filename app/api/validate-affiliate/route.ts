@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { validateAffiliateCode, trackAffiliateActivity } from "@/lib/affiliate-management"
+import { validateAffiliateFromTable } from "@/lib/visitor-tracking"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,23 +10,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false, message: "Invalid affiliate code format" })
     }
 
-    const affiliate = validateAffiliateCode(code.trim())
+    const result = validateAffiliateFromTable(code.trim())
 
-    if (!affiliate) {
+    if (!result.valid) {
       return NextResponse.json({ valid: false, message: "Invalid or inactive affiliate code" })
     }
 
-    // Track affiliate activity
-    trackAffiliateActivity(affiliate.code, "visitor")
-
     return NextResponse.json({
       valid: true,
-      affiliate: {
-        id: affiliate.id,
-        name: affiliate.name,
-        code: affiliate.code,
-        commissionRate: affiliate.commissionRate,
-      },
+      affiliate: result.affiliate,
       message: "Valid affiliate code",
     })
   } catch (error) {

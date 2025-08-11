@@ -29,9 +29,41 @@ interface VisitorData {
   affiliate?: string
 }
 
+// Affiliate data table for validation
+const affiliateTable = [
+  { code: "JOHN2024", name: "John Smith", email: "john@example.com", status: "active" },
+  { code: "SARAH15", name: "Sarah Johnson", email: "sarah@marketing.com", status: "active" },
+  { code: "MIKE10", name: "Mike Chen", email: "mike@consulting.co", status: "active" },
+  { code: "TEST123", name: "Test Affiliate", email: "test@test.com", status: "active" },
+  { code: "DEMO2024", name: "Demo Partner", email: "demo@partner.com", status: "active" },
+]
+
 // In-memory storage for demo purposes
 // In production, this would be replaced with a database
 const visitors: Visitor[] = []
+
+export function validateAffiliateFromTable(code: string): { valid: boolean; affiliate?: any } {
+  if (!code || typeof code !== "string" || code.trim().length === 0) {
+    return { valid: false }
+  }
+
+  const affiliate = affiliateTable.find(
+    (a) => a.code.toUpperCase() === code.trim().toUpperCase() && a.status === "active",
+  )
+
+  if (affiliate) {
+    return {
+      valid: true,
+      affiliate: {
+        code: affiliate.code,
+        name: affiliate.name,
+        email: affiliate.email,
+      },
+    }
+  }
+
+  return { valid: false }
+}
 
 export async function trackVisitor(data: VisitorData): Promise<void> {
   try {
@@ -58,7 +90,10 @@ export async function trackVisitor(data: VisitorData): Promise<void> {
 
       // Update affiliate if provided
       if (data.affiliate && !existingVisitor.affiliate) {
-        existingVisitor.affiliate = data.affiliate
+        const affiliateValidation = validateAffiliateFromTable(data.affiliate)
+        if (affiliateValidation.valid) {
+          existingVisitor.affiliate = affiliateValidation.affiliate.code
+        }
       }
 
       console.log("Updated existing visitor:", {
@@ -78,7 +113,7 @@ export async function trackVisitor(data: VisitorData): Promise<void> {
         pages: [data.page],
         referrer: data.referrer,
         formSubmissions: [],
-        affiliate: data.affiliate,
+        affiliate: data.affiliate ? validateAffiliateFromTable(data.affiliate).affiliate?.code : undefined,
       }
 
       visitors.push(newVisitor)
@@ -115,14 +150,17 @@ export async function trackFormSubmission(
       timestamp: new Date(),
       data,
       status: "pending",
-      affiliate: data.affiliate,
+      affiliate: data.affiliate ? validateAffiliateFromTable(data.affiliate).affiliate?.code : undefined,
     }
 
     if (visitor) {
       visitor.formSubmissions.push(submission)
       // Update visitor affiliate if provided in form
       if (data.affiliate && !visitor.affiliate) {
-        visitor.affiliate = data.affiliate
+        const affiliateValidation = validateAffiliateFromTable(data.affiliate)
+        if (affiliateValidation.valid) {
+          visitor.affiliate = affiliateValidation.affiliate.code
+        }
       }
       console.log("Added form submission to existing visitor:", {
         visitorId: visitor.id,
@@ -140,7 +178,7 @@ export async function trackFormSubmission(
         pageViews: 1,
         pages: [type === "contact" ? "/contact" : "/demo"],
         formSubmissions: [submission],
-        affiliate: data.affiliate,
+        affiliate: data.affiliate ? validateAffiliateFromTable(data.affiliate).affiliate?.code : undefined,
       }
       visitors.push(newVisitor)
 
@@ -199,11 +237,18 @@ export function getVisitorStats() {
     0,
   )
 
+  const affiliateConversions = visitors.reduce((sum, v) => sum + (v.affiliate ? v.formSubmissions.length : 0), 0)
+
   console.log("Current visitor stats:", {
     totalVisitors,
+    recentVisitors,
     totalPageViews,
     totalFormSubmissions,
-    recentVisitors,
+    totalDemoForms,
+    totalContactForms,
+    visitorsWithAffiliates,
+    affiliateFormSubmissions,
+    affiliateConversions,
   })
 
   return {
@@ -215,6 +260,7 @@ export function getVisitorStats() {
     totalContactForms,
     visitorsWithAffiliates,
     affiliateFormSubmissions,
+    affiliateConversions,
   }
 }
 
