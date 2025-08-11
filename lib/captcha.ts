@@ -2,6 +2,7 @@
 
 // Server-side CAPTCHA verification
 export async function verifyCaptcha(token: string): Promise<{ success: boolean; error?: string }> {
+  // Access secret key directly here instead of importing from config
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
   if (!secretKey) {
@@ -35,9 +36,4 @@ export async function verifyCaptcha(token: string): Promise<{ success: boolean; 
     console.error("CAPTCHA verification error:", error)
     return { success: false, error: "CAPTCHA verification error" }
   }
-}
-
-// Helper function to get site key (server-side only)
-export async function getRecaptchaSiteKey(): Promise<string> {
-  return process.env.RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // Test key fallback
 }

@@ -1,271 +1,167 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useFormState } from "react-dom"
+import { submitContactForm } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Phone, Mail, Clock, AlertCircle, CheckCircle } from "lucide-react"
-import { submitContactForm } from "./actions"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Recaptcha } from "@/components/recaptcha"
+import { VisitorTracker } from "@/components/visitor-tracker"
+
+const initialState = {
+  success: false,
+  message: "",
+  errors: {},
+}
 
 export default function ContactPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [companySize, setCompanySize] = useState("")
-  const [captchaToken, setCaptchaToken] = useState("")
+  const [state, formAction] = useFormState(submitContactForm, initialState)
+  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [isPending, setIsPending] = useState(false)
+
+  // Reset form on successful submission
+  useEffect(() => {
+    if (state?.success) {
+      const form = document.getElementById("contact-form") as HTMLFormElement
+      if (form) {
+        form.reset()
+        setRecaptchaToken("")
+        // Reset recaptcha
+        if (typeof window !== "undefined" && window.grecaptcha) {
+          window.grecaptcha.reset()
+        }
+      }
+    }
+  }, [state?.success])
 
   const handleSubmit = async (formData: FormData) => {
-    setIsSubmitting(true)
-    setSubmitResult(null)
-
-    try {
-      const result = await submitContactForm(null, formData)
-      setSubmitResult(result)
-    } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: "An error occurred. Please try again.",
-      })
-    } finally {
-      setIsSubmitting(false)
+    setIsPending(true)
+    if (recaptchaToken) {
+      formData.append("recaptchaToken", recaptchaToken)
     }
+
+    // Add visitor tracking data if available
+    if (typeof window !== "undefined") {
+      try {
+        const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
+        if (visitorDataStr) {
+          const visitorData = JSON.parse(visitorDataStr)
+          formData.append("referrer", visitorData.referrer || "")
+          formData.append("utmSource", visitorData.utmSource || "")
+          formData.append("utmCampaign", visitorData.utmCampaign || "")
+          formData.append("pageViews", visitorData.pageViews?.toString() || "")
+        }
+      } catch (error) {
+        console.error("Error adding visitor data to form:", error)
+      }
+    }
+
+    formAction(formData)
+    setIsPending(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-gray-50">
+      <VisitorTracker />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Get in Touch</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Ready to transform your accounts receivable process? Contact our team to learn how Kuhlekt can help your
-            business.
+          <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-4">Get in Touch</Badge>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Have questions about Kuhlekt? We're here to help. Send us a message and we'll get back to you within 24
+            hours.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-blue-600" />
-                  Our Offices
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
+        <Card className="shadow-xl max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Send us a Message</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form id="contact-form" action={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">United States Office</h3>
-                  <p className="text-gray-600">
-                    Houston, TX 77002
-                    <br />
-                    United States
-                  </p>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input id="firstName" name="firstName" type="text" required className="mt-1" disabled={isPending} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Australia Office</h3>
-                  <p className="text-gray-600">
-                    Hope Island, QLD
-                    <br />
-                    Australia
-                  </p>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input id="lastName" name="lastName" type="text" required className="mt-1" disabled={isPending} />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-blue-600" />
-                  Phone Numbers
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="font-medium text-gray-900">US: +1 832 888 8575</p>
-                  <p className="text-sm text-gray-600">Monday - Friday, 8:00 AM - 6:00 PM CST</p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">AU: +61 452 155 532</p>
-                  <p className="text-sm text-gray-600">Monday - Friday, 9:00 AM - 5:00 PM AEST</p>
-                </div>
-              </CardContent>
-            </Card>
+              <div>
+                <Label htmlFor="email">Email Address *</Label>
+                <Input id="email" name="email" type="email" required className="mt-1" disabled={isPending} />
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  Email
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-900 font-medium">enquiries@kuhlekt.com</p>
-                <p className="text-sm text-gray-600 mt-1">We typically respond within 24 hours</p>
-              </CardContent>
-            </Card>
+              <div>
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" name="company" type="text" className="mt-1" disabled={isPending} />
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  Business Hours
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="font-medium text-gray-900">United States (CST)</p>
-                  <p className="text-gray-600">Monday - Friday: 8:00 AM - 6:00 PM</p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Australia (AEST)</p>
-                  <p className="text-gray-600">Monday - Friday: 9:00 AM - 5:00 PM</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" name="phone" type="tel" className="mt-1" disabled={isPending} />
+              </div>
 
-          {/* Contact Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
-              <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Success/Error Message */}
-              {submitResult && (
-                <div
-                  className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                    submitResult.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-                  }`}
-                >
-                  {submitResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  )}
-                  <p className={`text-sm ${submitResult.success ? "text-green-700" : "text-red-700"}`}>
-                    {submitResult.message}
-                  </p>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="subject">Subject *</Label>
+                <Select name="subject" required disabled={isPending}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="What can we help you with?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general-inquiry">General Inquiry</SelectItem>
+                    <SelectItem value="product-demo">Product Demo</SelectItem>
+                    <SelectItem value="pricing">Pricing Information</SelectItem>
+                    <SelectItem value="technical-support">Technical Support</SelectItem>
+                    <SelectItem value="partnership">Partnership Opportunities</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <form action={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      required
-                      placeholder="John"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      required
-                      placeholder="Smith"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="message">Message *</Label>
+                <Textarea
+                  id="message"
+                  name="message"
+                  rows={5}
+                  required
+                  placeholder="Tell us more about how we can help you..."
+                  className="mt-1"
+                  disabled={isPending}
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="john.smith@company.com"
-                    disabled={isSubmitting}
-                  />
-                </div>
+              <Recaptcha
+                onVerify={setRecaptchaToken}
+                onExpire={() => setRecaptchaToken("")}
+                onError={() => setRecaptchaToken("")}
+              />
 
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    type="text"
-                    required
-                    placeholder="Your Company"
-                    disabled={isSubmitting}
-                  />
-                </div>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+              >
+                {isPending ? "Sending..." : "Send Message"}
+              </Button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Your Role</Label>
-                    <Input
-                      id="role"
-                      name="role"
-                      type="text"
-                      placeholder="CFO, Finance Manager, etc."
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="companySize">Company Size</Label>
-                    <Select
-                      name="companySize"
-                      value={companySize}
-                      onValueChange={setCompanySize}
-                      disabled={isSubmitting}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select company size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-10">1-10 employees</SelectItem>
-                        <SelectItem value="11-50">11-50 employees</SelectItem>
-                        <SelectItem value="51-200">51-200 employees</SelectItem>
-                        <SelectItem value="201-1000">201-1000 employees</SelectItem>
-                        <SelectItem value="1000+">1000+ employees</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    required
-                    placeholder="Tell us about your accounts receivable challenges and how we can help..."
-                    rows={5}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <input type="hidden" name="captcha-token" value={captchaToken} />
-
-                {/* CAPTCHA */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-900">Security Verification</Label>
-                  <Recaptcha
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken("")}
-                    onError={() => setCaptchaToken("")}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isSubmitting || !captchaToken}>
-                  {isSubmitting ? "Sending..." : "Send Message"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+              {state?.error && <div className="text-red-600 text-center">{state.message}</div>}
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

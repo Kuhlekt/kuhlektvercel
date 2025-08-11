@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Star, Play } from "lucide-react"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
+      <VisitorTracker />
+
       {/* Hero Section */}
       <section className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -53,12 +56,31 @@ export default function HomePage() {
 
             <div className="relative">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-FGHYnnjZ43yqXOEZXmLE5ucaRE1EHG.png"
+                src="/images/businesswoman.png"
                 alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
-                width={600}
-                height={400}
-                className="rounded-lg w-full h-auto"
+                width={500}
+                height={350}
+                className="rounded-lg w-full h-auto max-w-lg"
               />
+
+              {/* Testimonial Card positioned exactly as in screenshot */}
+              <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-1 mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <blockquote className="text-sm text-gray-700 mb-4 italic leading-relaxed">
+                    "Kuhlekt transformed our accounts receivable process. We reduced DSO by 30% and our team now spends
+                    80% less time on manual collections. The ROI was immediate and substantial."
+                  </blockquote>
+                  <div>
+                    <div className="font-semibold text-gray-900">Maria Rodriguez</div>
+                    <div className="text-xs text-gray-500">CFO at TechStream</div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -160,17 +182,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Dashboard Preview */}
+      {/* Dashboard Preview - Two column layout with text on left, image on right */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Image
-              src="/images/kuhlekt-dashboard-interface.png"
-              alt="Kuhlekt Dashboard Interface showing comprehensive AR management with accounts tracking, PTPs, disputes, workload management, and performance metrics"
-              width={1200}
-              height={800}
-              className="rounded-lg shadow-2xl mx-auto"
-            />
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Text Content */}
+            <div className="space-y-6">
+              <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full">Platform</Badge>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">See Your AR Performance at a Glance</h2>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Get real-time insights into your receivables with our comprehensive dashboard and reporting tools.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Real-time AR performance metrics</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Workload management and prioritization</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <p className="text-lg text-gray-700">Comprehensive analytics and reporting</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Dashboard Image (Half Size) */}
+            <div className="relative">
+              <Image
+                src="/images/kuhlekt-dashboard-interface.png"
+                alt="Kuhlekt Dashboard Interface showing comprehensive AR management with accounts tracking, PTPs, disputes, workload management, and performance metrics"
+                width={600}
+                height={400}
+                className="rounded-lg shadow-2xl mx-auto w-full h-auto max-w-md"
+              />
+            </div>
           </div>
         </div>
       </section>
