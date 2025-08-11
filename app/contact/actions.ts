@@ -122,14 +122,19 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     let affiliateData = null
     if (data.affiliate && data.affiliate.trim().length > 0) {
       try {
-        const affiliateResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/validate-affiliate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code: data.affiliate.trim() }),
+        // Use relative URL for internal API calls
+        const baseUrl = process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+
+        const affiliateResponse = await fetch(`${baseUrl}/api/validate-affiliate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Kuhlekt-Internal/1.0",
           },
-        )
+          body: JSON.stringify({ code: data.affiliate.trim() }),
+        })
 
         if (affiliateResponse.ok) {
           const result = await affiliateResponse.json()
@@ -138,9 +143,12 @@ export async function submitContactForm(prevState: any, formData: FormData) {
             // Track affiliate contact form submission
             trackAffiliateActivity(result.affiliate.code, "contact")
           }
+        } else {
+          console.warn(`Affiliate validation failed with status: ${affiliateResponse.status}`)
         }
       } catch (error) {
-        console.error("Error validating affiliate:", error)
+        console.warn("Affiliate validation unavailable, continuing without validation:", error)
+        // Continue processing the form even if affiliate validation fails
       }
     }
 
