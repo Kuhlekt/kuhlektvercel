@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
-import { getRecaptchaConfig } from "@/lib/recaptcha-config"
 
 export async function GET() {
-  const config = getRecaptchaConfig()
+  // Access environment variables directly in the API route
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY
+  const isEnabled = !!(siteKey && secretKey)
 
   return NextResponse.json({
-    siteKey: config.siteKey,
-    isEnabled: config.isEnabled,
+    siteKey,
+    isEnabled,
   })
 }
