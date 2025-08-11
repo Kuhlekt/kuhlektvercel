@@ -54,8 +54,57 @@ export default function DemoPage() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Left Column - Empty as requested */}
-          <div></div>
+          {/* Left Column - Demo Information */}
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Schedule a Demonstration</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                See how Kuhlekt can transform your accounts receivable process with a personalized demo.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  1
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">See how to automate your collections process</h3>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  2
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Learn how to reduce DSO by 30%</h3>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Discover how to eliminate 80% of manual tasks</h3>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                  4
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Get a personalized walkthrough of our platform</h3>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-8">
+              <p className="text-gray-600 font-medium">Join 500+ finance teams already using Kuhlekt</p>
+            </div>
+          </div>
 
           {/* Right Column - Demo Form */}
           <Card className="shadow-xl">
