@@ -20,10 +20,12 @@ export default function DemoPage() {
   const [isPendingTransition, startTransition] = useTransition()
 
   // Check if reCAPTCHA is configured
-  const isRecaptchaConfigured =
+  const isRecaptchaConfigured = !!(
     typeof window !== "undefined" &&
-    !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
-    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim() !== ""
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.trim() !== "" &&
+    process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY !== "your_recaptcha_site_key_here"
+  )
 
   const handleRecaptchaVerify = (token: string) => {
     setRecaptchaToken(token)
