@@ -72,29 +72,10 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="totpCode">2FA Code</Label>
-              <Input
-                id="totpCode"
-                name="totpCode"
-                type="text"
-                required
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                pattern="[0-9]{6}"
-              />
-            </div>
-
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <a href="/admin/setup-2fa" className="text-sm text-blue-600 hover:text-blue-500">
-              Need to set up 2FA?
-            </a>
-          </div>
         </CardContent>
       </Card>
     </div>

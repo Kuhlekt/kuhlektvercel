@@ -71,28 +71,16 @@ async function verifyTOTP(token: string, secret: string): Promise<boolean> {
   }
 }
 
-export async function loginAdmin(formData: FormData) {
+export async function adminLogin(formData: FormData) {
   const password = formData.get("password") as string
-  const totpCode = formData.get("totpCode") as string
 
-  if (!password || !totpCode) {
-    return { error: "Password and TOTP code are required" }
+  if (!password) {
+    return { error: "Password is required" }
   }
 
   // Verify password
   if (password !== process.env.ADMIN_PASSWORD) {
-    return { error: "Invalid credentials" }
-  }
-
-  // Verify TOTP
-  const secret = process.env.ADMIN_2FA_SECRET
-  if (!secret) {
-    return { error: "TOTP not configured" }
-  }
-
-  const isValidTOTP = await verifyTOTP(totpCode, secret)
-  if (!isValidTOTP) {
-    return { error: "Invalid TOTP code" }
+    return { error: "Invalid password" }
   }
 
   // Set session cookie
@@ -107,7 +95,7 @@ export async function loginAdmin(formData: FormData) {
   redirect("/admin/tracking")
 }
 
-export async function logoutAdmin() {
+export async function adminLogout() {
   const cookieStore = await cookies()
   cookieStore.delete("admin-session")
   redirect("/admin/login")

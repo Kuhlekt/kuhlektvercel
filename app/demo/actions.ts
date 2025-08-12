@@ -1,6 +1,6 @@
 "use server"
 
-import { sendEmail } from "@/lib/email-service"
+import { sendEmail } from "@/lib/aws-ses"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 interface DemoFormData {
@@ -13,66 +13,60 @@ interface DemoFormData {
   challenges: string
 }
 
-interface ValidationError {
-  field: string
-  message: string
-}
-
 function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
-function validateFormData(data: DemoFormData): ValidationError[] {
-  const errors: ValidationError[] = []
+function validateForm(data: DemoFormData): { isValid: boolean; errors: string[] } {
+  const errors: string[] = []
 
   if (!data.firstName.trim()) {
-    errors.push({ field: "firstName", message: "First name is required" })
+    errors.push("First name is required")
   }
 
   if (!data.lastName.trim()) {
-    errors.push({ field: "lastName", message: "Last name is required" })
+    errors.push("Last name is required")
   }
 
   if (!data.email.trim()) {
-    errors.push({ field: "email", message: "Email is required" })
+    errors.push("Email is required")
   } else if (!validateEmail(data.email)) {
-    errors.push({ field: "email", message: "Please enter a valid email address" })
+    errors.push("Please enter a valid email address")
   }
 
   if (!data.company.trim()) {
-    errors.push({ field: "company", message: "Company is required" })
-  }
-
-  if (!data.role.trim()) {
-    errors.push({ field: "role", message: "Role is required" })
+    errors.push("Company is required")
   }
 
   if (!data.challenges.trim()) {
-    errors.push({ field: "challenges", message: "Please describe your AR challenges" })
+    errors.push("Please describe your AR challenges")
   }
 
-  return errors
+  return {
+    isValid: errors.length === 0,
+    errors,
+  }
 }
 
 export async function submitDemoRequest(formData: FormData) {
   try {
     const data: DemoFormData = {
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      company: formData.get("company") as string,
-      role: formData.get("role") as string,
-      affiliateCode: (formData.get("affiliateCode") as string) || undefined,
-      challenges: formData.get("challenges") as string,
+      firstName: (formData.get("firstName") as string) || "",
+      lastName: (formData.get("lastName") as string) || "",
+      email: (formData.get("email") as string) || "",
+      company: (formData.get("company") as string) || "",
+      role: (formData.get("role") as string) || "",
+      affiliateCode: (formData.get("affiliateCode") as string) || "",
+      challenges: (formData.get("challenges") as string) || "",
     }
 
     // Validate form data
-    const validationErrors = validateFormData(data)
-    if (validationErrors.length > 0) {
+    const validation = validateForm(data)
+    if (!validation.isValid) {
       return {
         success: false,
-        errors: validationErrors,
+        error: validation.errors.join(", "),
       }
     }
 
@@ -82,13 +76,13 @@ export async function submitDemoRequest(formData: FormData) {
       if (!isValidAffiliate) {
         return {
           success: false,
-          errors: [{ field: "affiliateCode", message: "Invalid affiliate code" }],
+          error: "Invalid affiliate code",
         }
       }
     }
 
-    // Send email notification
-    const emailSubject = "New Demo Request - Kuhlekt"
+    // Prepare email content
+    const emailSubject = `New Demo Request from ${data.firstName} ${data.lastName}`
     const emailBody = `
       New demo request received:
       
@@ -101,13 +95,20 @@ export async function submitDemoRequest(formData: FormData) {
       AR Challenges:
       ${data.challenges}
       
-      Please follow up within 24 hours.
+      Please contact this prospect within 24 hours.
     `
 
+    // Send email notification
+    const adminEmail = process.env.ADMIN_EMAIL
+    if (!adminEmail) {
+      throw new Error("Admin email not configured")
+    }
+
     await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      to: adminEmail,
       subject: emailSubject,
       body: emailBody,
+      replyTo: data.email,
     })
 
     return {
@@ -115,10 +116,10 @@ export async function submitDemoRequest(formData: FormData) {
       message: "Demo request submitted successfully! We'll contact you within 24 hours.",
     }
   } catch (error) {
-    console.error("Error submitting demo request:", error)
+    console.error("Demo request submission error:", error)
     return {
       success: false,
-      errors: [{ field: "general", message: "An error occurred. Please try again." }],
+      error: "Failed to submit demo request. Please try again.",
     }
   }
 }
