@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
 
     // If a custom secret is provided (during setup), verify against that secret
     if (secret) {
-      isValid = verifyTwoFactorToken(verificationCode, secret)
+      isValid = await verifyTwoFactorToken(verificationCode, secret)
     } else {
       // Otherwise, verify against the environment variable secret
-      isValid = verifyTwoFactorCode(verificationCode)
+      isValid = await verifyTwoFactorCode(verificationCode)
     }
 
     return NextResponse.json({
