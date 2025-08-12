@@ -69,6 +69,11 @@ export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
   )
 }
 
+// Default export for compatibility
+export default function ReCAPTCHA({ onVerify, onExpire, onError }: RecaptchaProps) {
+  return <Recaptcha onVerify={onVerify} onExpire={onExpire} onError={onError} />
+}
+
 declare global {
   interface Window {
     grecaptcha: any

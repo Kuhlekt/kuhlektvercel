@@ -85,64 +85,120 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
 
     // Prepare email content
     const adminEmailContent = `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Company:</strong> ${company || "Not provided"}</p>
-      <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-      ${
-        affiliateInfo?.isValid
-          ? `
-        <div style="background-color: #f0f9ff; padding: 15px; border-left: 4px solid #3b82f6; margin: 15px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 Affiliate Information</h3>
-          <p style="margin: 5px 0;"><strong>Code:</strong> ${affiliateInfo.code}</p>
-          <p style="margin: 5px 0;"><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
-          <p style="margin: 5px 0;"><strong>Type:</strong> ${affiliateInfo.type}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">New Contact Form Submission</h2>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 15px 0;">Contact Information</h3>
+          <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+          <p><strong>Company:</strong> ${company || "Not provided"}</p>
+          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
         </div>
-      `
-          : ""
-      }
-      <p><strong>Message:</strong></p>
-      <p>${message || "No message provided"}</p>
-      
-      <hr style="margin: 20px 0;">
-      <h3>Visitor Tracking Information</h3>
-      <p><strong>Referrer:</strong> ${referrer || "Direct"}</p>
-      <p><strong>UTM Source:</strong> ${utmSource || "None"}</p>
-      <p><strong>UTM Campaign:</strong> ${utmCampaign || "None"}</p>
-      <p><strong>Page Views:</strong> ${pageViews || "Unknown"}</p>
-      <p><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+
+        ${
+          affiliateInfo?.isValid
+            ? `
+          <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+            <h3 style="color: #1e40af; margin: 0 0 15px 0;">🎯 Affiliate Information</h3>
+            <p style="margin: 5px 0;"><strong>Code:</strong> ${affiliateInfo.code}</p>
+            <p style="margin: 5px 0;"><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
+            <p style="margin: 5px 0;"><strong>Type:</strong> ${affiliateInfo.type}</p>
+            <p style="margin: 5px 0;"><strong>Description:</strong> ${affiliateInfo.description}</p>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          message
+            ? `
+          <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #92400e; margin: 0 0 15px 0;">Message</h3>
+            <p style="white-space: pre-wrap;">${message}</p>
+          </div>
+        `
+            : ""
+        }
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px;">
+          <h3 style="color: #374151; margin: 0 0 10px 0;">Visitor Tracking Information</h3>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>Referrer:</strong> ${referrer || "Direct"}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>UTM Source:</strong> ${utmSource || "None"}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>UTM Campaign:</strong> ${utmCampaign || "None"}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>Page Views:</strong> ${pageViews || "Unknown"}</p>
+          <p style="margin: 5px 0; font-size: 14px;"><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        ${
+          affiliateInfo?.isValid
+            ? `
+          <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #166534; margin: 0 0 15px 0;">⚠️ Action Required</h3>
+            <p style="margin: 0;"><strong>Apply ${affiliateInfo.discount}% affiliate discount to any proposals for this prospect.</strong></p>
+          </div>
+        `
+            : ""
+        }
+      </div>
     `
 
     const userEmailContent = `
-      <h2>Thank you for contacting Kuhlekt!</h2>
-      <p>Dear ${firstName},</p>
-      <p>Thank you for reaching out to us. We have received your message and will get back to you within 24 hours.</p>
-      
-      ${
-        affiliateInfo?.isValid
-          ? `
-        <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #22c55e; margin: 15px 0;">
-          <h3 style="color: #16a34a; margin: 0 0 10px 0;">🎉 Affiliate Discount Applied!</h3>
-          <p style="margin: 5px 0;">Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated.</p>
-          <p style="margin: 5px 0;">You're eligible for a <strong>${affiliateInfo.discount}% discount</strong> on our services!</p>
-          <p style="margin: 5px 0;">Our team will include this discount in your personalized quote.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e40af;">Thank you for contacting Kuhlekt!</h2>
+        
+        <p>Dear ${firstName},</p>
+        
+        <p>Thank you for reaching out to us. We have received your message and will get back to you within 24 hours with a personalized response.</p>
+        
+        ${
+          affiliateInfo?.isValid
+            ? `
+          <div style="background-color: #f0fdf4; padding: 20px; border-left: 4px solid #22c55e; margin: 20px 0;">
+            <h3 style="color: #16a34a; margin: 0 0 15px 0;">🎉 Affiliate Discount Applied!</h3>
+            <p style="margin: 5px 0;">Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated.</p>
+            <p style="margin: 5px 0;">You're eligible for a <strong>${affiliateInfo.discount}% discount</strong> on our services!</p>
+            <p style="margin: 5px 0;">${affiliateInfo.description}</p>
+            <p style="margin: 5px 0;">Our team will include this discount in your personalized quote.</p>
+          </div>
+        `
+            : ""
+        }
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 15px 0;">Your Submission Summary</h3>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li><strong>Name:</strong> ${firstName} ${lastName}</li>
+            <li><strong>Email:</strong> ${email}</li>
+            <li><strong>Company:</strong> ${company || "Not provided"}</li>
+            <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
+          </ul>
         </div>
-      `
-          : ""
-      }
-      
-      <p>Here's a summary of your submission:</p>
-      <ul>
-        <li><strong>Name:</strong> ${firstName} ${lastName}</li>
-        <li><strong>Email:</strong> ${email}</li>
-        <li><strong>Company:</strong> ${company || "Not provided"}</li>
-        <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
-      </ul>
-      
-      <p>In the meantime, feel free to explore our website to learn more about our AR automation solutions.</p>
-      
-      <p>Best regards,<br>The Kuhlekt Team</p>
+        
+        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0;">What Happens Next?</h3>
+          <ol style="margin: 0; padding-left: 20px;">
+            <li>Our team will review your inquiry within 24 hours</li>
+            <li>We'll prepare a personalized response based on your needs</li>
+            <li>You'll receive a detailed follow-up with next steps</li>
+            <li>We can schedule a demo or consultation if appropriate</li>
+          </ol>
+        </div>
+        
+        <p>In the meantime, feel free to explore our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/solutions" style="color: #3b82f6;">solutions page</a> to learn more about our AR automation capabilities.</p>
+        
+        <p>Best regards,<br>
+        <strong>The Kuhlekt Team</strong></p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <div style="text-align: center; color: #6b7280; font-size: 12px;">
+          <p>Kuhlekt - AR Automation Solutions</p>
+          <p>This email was sent in response to your contact form submission.</p>
+        </div>
+      </div>
     `
 
     // Send emails
@@ -155,7 +211,7 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }),
       sendEmailWithSES({
         to: [email],
-        subject: "Thank you for contacting Kuhlekt!",
+        subject: `Thank you for contacting Kuhlekt!${affiliateInfo?.isValid ? ` (${affiliateInfo.discount}% Discount Applied)` : ""}`,
         body: userEmailContent,
       }),
     ])
@@ -171,7 +227,8 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      message: "There was an error sending your message. Please try again.",
+      message:
+        "There was an error sending your message. Please try again later or contact us directly at contact@kuhlekt.com.",
       errors: {},
     }
   }
