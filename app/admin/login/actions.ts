@@ -2,10 +2,9 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import bcrypt from "bcryptjs"
-import { createHmac } from "crypto"
 
-function base32Decode(encoded: string): Buffer {
+// Simple base32 decode function
+function base32Decode(encoded: string): Uint8Array {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
   let bits = 0
   let value = 0
@@ -25,69 +24,94 @@ function base32Decode(encoded: string): Buffer {
     }
   }
 
-  return Buffer.from(output)
+  return new Uint8Array(output)
 }
 
-function verifyTOTP(token: string, secret: string): boolean {
-  const timeStep = 30
-  const currentTime = Math.floor(Date.now() / 1000 / timeStep)
+// HMAC-SHA1 implementation
+async function hmacSha1(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-1" }, false, ["sign"])
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, data)
+  return new Uint8Array(signature)
+}
 
-  // Check current time window and previous/next windows for clock drift
+// Generate TOTP token
+async function generateTOTP(secret: string, timeStep = 30): Promise<string> {
+  const key = base32Decode(secret)
+  const time = Math.floor(Date.now() / 1000 / timeStep)
+
+  // Convert time to 8-byte array
+  const timeBytes = new Uint8Array(8)
+  for (let i = 7; i >= 0; i--) {
+    timeBytes[i] = time & 0xff
+    time >>> 8
+  }
+
+  const hmac = await hmacSha1(key, timeBytes)
+  const offset = hmac[hmac.length - 1] & 0xf
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff)
+
+  return (code % 1000000).toString().padStart(6, "0")
+}
+
+// Verify TOTP token
+async function verifyTOTP(token: string, secret: string): Promise<boolean> {
+  // Check current time window and adjacent windows for clock drift
   for (let i = -1; i <= 1; i++) {
-    const time = currentTime + i
-    const timeBuffer = Buffer.alloc(8)
-    timeBuffer.writeUInt32BE(0, 0)
-    timeBuffer.writeUInt32BE(time, 4)
+    const timeStep = Math.floor(Date.now() / 1000 / 30) + i
+    const key = base32Decode(secret)
 
-    const secretBuffer = base32Decode(secret)
-    const hash = createHmac("sha1", secretBuffer).update(timeBuffer).digest()
+    // Convert time to 8-byte array
+    const timeBytes = new Uint8Array(8)
+    let time = timeStep
+    for (let j = 7; j >= 0; j--) {
+      timeBytes[j] = time & 0xff
+      time = Math.floor(time / 256)
+    }
 
-    const offset = hash[hash.length - 1] & 0xf
+    const hmac = await hmacSha1(key, timeBytes)
+    const offset = hmac[hmac.length - 1] & 0xf
     const code =
-      (((hash[offset] & 0x7f) << 24) |
-        ((hash[offset + 1] & 0xff) << 16) |
-        ((hash[offset + 2] & 0xff) << 8) |
-        (hash[offset + 3] & 0xff)) %
-      1000000
+      ((hmac[offset] & 0x7f) << 24) |
+      ((hmac[offset + 1] & 0xff) << 16) |
+      ((hmac[offset + 2] & 0xff) << 8) |
+      (hmac[offset + 3] & 0xff)
 
-    if (code.toString().padStart(6, "0") === token) {
+    const expectedToken = (code % 1000000).toString().padStart(6, "0")
+    if (token === expectedToken) {
       return true
     }
   }
-
   return false
 }
 
-export async function adminLogin(formData: FormData) {
+export async function loginAction(formData: FormData) {
   const password = formData.get("password") as string
   const totpCode = formData.get("totpCode") as string
 
-  if (!password || !totpCode) {
-    return { error: "Password and 2FA code are required" }
-  }
-
-  // Verify password
-  const isPasswordValid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD || "")
-
-  if (!isPasswordValid) {
+  // Check password
+  if (password !== process.env.ADMIN_PASSWORD) {
     return { error: "Invalid credentials" }
   }
 
-  // Verify TOTP
-  const secret = process.env.ADMIN_2FA_SECRET
-  if (!secret) {
-    return { error: "2FA not configured" }
+  // Check TOTP if secret is configured
+  if (process.env.ADMIN_2FA_SECRET) {
+    if (!totpCode) {
+      return { error: "2FA code is required" }
+    }
+
+    const isValidTOTP = await verifyTOTP(totpCode, process.env.ADMIN_2FA_SECRET)
+    if (!isValidTOTP) {
+      return { error: "Invalid 2FA code" }
+    }
   }
 
-  const isValidToken = verifyTOTP(totpCode, secret)
-
-  if (!isValidToken) {
-    return { error: "Invalid 2FA code" }
-  }
-
-  // Set session cookie
-  const cookieStore = cookies()
-  cookieStore.set("admin-session", "authenticated", {
+  // Set authentication cookie
+  const cookieStore = await cookies()
+  cookieStore.set("admin-auth", "authenticated", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -95,4 +119,10 @@ export async function adminLogin(formData: FormData) {
   })
 
   redirect("/admin/tracking")
+}
+
+export async function logoutAction() {
+  const cookieStore = await cookies()
+  cookieStore.delete("admin-auth")
+  redirect("/admin/login")
 }

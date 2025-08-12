@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, Loader2 } from "lucide-react"
 import { submitDemoRequest } from "./actions"
-import { ReCaptcha } from "@/components/recaptcha"
+import ReCAPTCHA from "@/components/recaptcha"
 import Image from "next/image"
 
 export default function DemoPage() {
@@ -19,7 +21,9 @@ export default function DemoPage() {
   } | null>(null)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
     if (!captchaToken) {
       setSubmitStatus({
         type: "error",
@@ -32,22 +36,23 @@ export default function DemoPage() {
     setSubmitStatus(null)
 
     try {
+      const formData = new FormData(event.currentTarget)
       formData.append("captchaToken", captchaToken)
+
       const result = await submitDemoRequest(formData)
 
       if (result.success) {
         setSubmitStatus({
           type: "success",
-          message: result.message || "Demo request submitted successfully! We'll contact you within 24 hours.",
+          message: result.message,
         })
         // Reset form
-        const form = document.getElementById("demo-form") as HTMLFormElement
-        form?.reset()
+        event.currentTarget.reset()
         setCaptchaToken(null)
       } else {
         setSubmitStatus({
           type: "error",
-          message: result.message || "Failed to submit demo request. Please try again.",
+          message: result.message,
         })
       }
     } catch (error) {
@@ -132,7 +137,7 @@ export default function DemoPage() {
                 </Alert>
               )}
 
-              <form id="demo-form" action={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
@@ -202,7 +207,9 @@ export default function DemoPage() {
                   />
                 </div>
 
-                <ReCaptcha onVerify={setCaptchaToken} />
+                <div className="flex justify-center">
+                  <ReCAPTCHA onVerify={setCaptchaToken} />
+                </div>
 
                 <Button
                   type="submit"
