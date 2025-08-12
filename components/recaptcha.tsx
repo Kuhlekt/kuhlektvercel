@@ -31,7 +31,6 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
   const [isEnabled, setIsEnabled] = useState(false)
 
   useEffect(() => {
-    // Fetch site key from server action
     async function fetchSiteKey() {
       try {
         const response = await fetch("/api/recaptcha-config")
@@ -81,7 +80,6 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
     }
   }, [siteKey, isEnabled, onVerify])
 
-  // If reCAPTCHA is not enabled, automatically call onVerify with a dummy token
   useEffect(() => {
     if (!isEnabled) {
       onVerify("development-mode")
