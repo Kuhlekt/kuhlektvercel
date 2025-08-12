@@ -167,6 +167,20 @@ export default function AdminDashboard() {
                 <span className="text-sm text-muted-foreground">Detailed reports</span>
               </Button>
             </Link>
+
+            <Link href="/admin/users">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <span className="font-semibold">User Management</span>
+                <span className="text-sm text-muted-foreground">Manage admin users</span>
+              </Button>
+            </Link>
+
+            <Link href="/admin/password">
+              <Button variant="outline" className="w-full h-20 flex flex-col bg-transparent">
+                <span className="font-semibold">Change Password</span>
+                <span className="text-sm text-muted-foreground">Update your password</span>
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

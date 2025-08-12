@@ -6,19 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Lock } from "lucide-react"
-import { loginWithPassword } from "./actions"
+import { Shield, Lock, User } from "lucide-react"
+import { loginWithCredentials } from "./actions"
 
 export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handlePasswordSubmit = async (formData: FormData) => {
+  const handleLoginSubmit = async (formData: FormData) => {
     setLoading(true)
     setError("")
 
     try {
-      const result = await loginWithPassword(formData)
+      const result = await loginWithCredentials(formData)
 
       if (!result.success) {
         setError(result.error || "Login failed")
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
             <Shield className="w-6 h-6 text-cyan-600" />
           </div>
           <CardTitle className="text-2xl">Admin Access</CardTitle>
-          <p className="text-gray-600">Enter your admin password</p>
+          <p className="text-gray-600">Enter your admin credentials</p>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -48,16 +48,31 @@ export default function AdminLoginPage() {
             </Alert>
           )}
 
-          <form action={handlePasswordSubmit} className="space-y-4">
+          <form action={handleLoginSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="password">Admin Password</Label>
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter username"
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <Input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Enter admin password"
+                  placeholder="Enter password"
                   className="pl-10"
                   required
                 />
