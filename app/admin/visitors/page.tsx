@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Eye, Users, MousePointer, Clock, Search, Download, RefreshCw, Calendar, Globe, Smartphone } from "lucide-react"
+import Link from "next/link"
 
 interface VisitorData {
   visitorId: string
@@ -160,6 +161,9 @@ export default function TrackingAdminPage() {
               <p className="text-gray-600">Monitor and analyze visitor behavior and tracking data</p>
             </div>
             <div className="flex gap-2">
+              <Link href="/admin/dashboard">
+                <Button variant="outline">← Back to Dashboard</Button>
+              </Link>
               <Button onClick={refreshData} variant="outline">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminHeader } from "@/components/admin-header"
+import Link from "next/link"
 import {
   Users,
   FileText,
@@ -163,10 +164,15 @@ export default function DatabaseAdminPage() {
                 <h1 className="text-3xl font-bold text-gray-900">Database Admin</h1>
                 <p className="text-gray-600">Manage visitor tracking, form submissions, and affiliates</p>
               </div>
-              <Button onClick={loadData} variant="outline">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh Data
-              </Button>
+              <div className="flex gap-2">
+                <Link href="/admin/dashboard">
+                  <Button variant="outline">← Back to Dashboard</Button>
+                </Link>
+                <Button onClick={loadData} variant="outline">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh Data
+                </Button>
+              </div>
             </div>
 
             {error && (
