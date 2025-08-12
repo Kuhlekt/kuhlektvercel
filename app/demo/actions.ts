@@ -1,10 +1,16 @@
 "use server"
 
-import { sendEmail } from "@/lib/email-service"
 import { verifyCaptcha } from "@/lib/captcha"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { sendEmail } from "@/lib/email-service"
+import { validateAffiliate } from "@/lib/affiliate-validation"
 
-export async function submitDemoForm(prevState: any, formData: FormData) {
+interface DemoFormState {
+  success: boolean
+  message: string
+  errors: Record<string, string>
+}
+
+export async function submitDemoForm(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
     // Extract form data
     const firstName = formData.get("firstName") as string
@@ -27,38 +33,74 @@ export async function submitDemoForm(prevState: any, formData: FormData) {
     const utmCampaign = formData.get("utmCampaign") as string
     const pageViews = formData.get("pageViews") as string
 
-    // Validate required fields
+    // Validation
     const errors: Record<string, string> = {}
 
-    if (!firstName?.trim()) errors.firstName = "First name is required"
-    if (!lastName?.trim()) errors.lastName = "Last name is required"
-    if (!email?.trim()) errors.email = "Email is required"
-    if (!company?.trim()) errors.company = "Company is required"
-    if (!jobTitle?.trim()) errors.jobTitle = "Job title is required"
-    if (!industry?.trim()) errors.industry = "Industry is required"
+    if (!firstName?.trim()) {
+      errors.firstName = "First name is required"
+    }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!lastName?.trim()) {
+      errors.lastName = "Last name is required"
+    }
+
+    if (!email?.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
+    if (!company?.trim()) {
+      errors.company = "Company is required"
+    }
+
+    if (!jobTitle?.trim()) {
+      errors.jobTitle = "Job title is required"
+    }
+
+    if (!companySize?.trim()) {
+      errors.companySize = "Company size is required"
+    }
+
+    if (!industry?.trim()) {
+      errors.industry = "Industry is required"
+    }
+
+    if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
+      errors.phone = "Please enter a valid phone number"
+    }
+
     if (Object.keys(errors).length > 0) {
-      return { success: false, message: "Please fix the errors below", errors }
+      return {
+        success: false,
+        message: "Please correct the errors below",
+        errors,
+      }
     }
 
     // Verify reCAPTCHA
     if (recaptchaToken) {
       const captchaResult = await verifyCaptcha(recaptchaToken)
       if (!captchaResult.success) {
-        return { success: false, message: "reCAPTCHA verification failed. Please try again." }
+        return {
+          success: false,
+          message: "reCAPTCHA verification failed. Please try again.",
+          errors: {},
+        }
       }
     }
 
     // Validate affiliate code if provided
     let affiliateInfo = null
     if (affiliate?.trim()) {
-      const validation = validateAffiliateCode(affiliate.trim())
-      if (validation.isValid && validation.info) {
-        affiliateInfo = validation.info
+      affiliateInfo = validateAffiliate(affiliate.trim())
+      if (!affiliateInfo.isValid) {
+        errors.affiliate = "Invalid affiliate code"
+        return {
+          success: false,
+          message: "Invalid affiliate code provided",
+          errors,
+        }
       }
     }
 
@@ -70,26 +112,26 @@ export async function submitDemoForm(prevState: any, formData: FormData) {
       <p><strong>Company:</strong> ${company}</p>
       <p><strong>Job Title:</strong> ${jobTitle}</p>
       <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-      <p><strong>Company Size:</strong> ${companySize || "Not specified"}</p>
+      <p><strong>Company Size:</strong> ${companySize}</p>
       <p><strong>Industry:</strong> ${industry}</p>
       <p><strong>Current AR Volume:</strong> ${currentArVolume || "Not specified"}</p>
       <p><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</p>
       
       ${
-        affiliateInfo
+        affiliateInfo?.isValid
           ? `
-        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;">
-          <h3 style="color: #1976d2; margin: 0 0 10px 0;">🎯 Affiliate Code Used</h3>
-          <p><strong>Code:</strong> ${affiliate.trim().toUpperCase()}</p>
-          <p><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
-          <p><strong>Description:</strong> ${affiliateInfo.description}</p>
+        <div style="background-color: #f0f9ff; padding: 15px; border-left: 4px solid #3b82f6; margin: 15px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 Affiliate Information</h3>
+          <p style="margin: 5px 0;"><strong>Code:</strong> ${affiliateInfo.code}</p>
+          <p style="margin: 5px 0;"><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
+          <p style="margin: 5px 0;"><strong>Type:</strong> ${affiliateInfo.type}</p>
         </div>
       `
           : ""
       }
       
-      <p><strong>Current Challenges:</strong></p>
-      <p>${currentChallenges || "None specified"}</p>
+      <p><strong>Current AR Challenges:</strong></p>
+      <p>${currentChallenges || "Not specified"}</p>
       
       <hr style="margin: 20px 0;">
       <h3>Visitor Tracking Information</h3>
@@ -101,43 +143,45 @@ export async function submitDemoForm(prevState: any, formData: FormData) {
     `
 
     const userEmailContent = `
-      <h2>Thank you for requesting a Kuhlekt demo!</h2>
+      <h2>Thank you for requesting a demo!</h2>
       <p>Dear ${firstName},</p>
       <p>Thank you for your interest in Kuhlekt's AR automation solutions. We have received your demo request and will contact you within 24 hours to schedule your personalized demonstration.</p>
       
       ${
-        affiliateInfo
+        affiliateInfo?.isValid
           ? `
-        <div style="background-color: #e8f5e8; padding: 15px; border-radius: 5px; margin: 15px 0;">
-          <h3 style="color: #2e7d32; margin: 0 0 10px 0;">🎉 Affiliate Discount Applied!</h3>
-          <p>Excellent! Your affiliate code <strong>${affiliate.trim().toUpperCase()}</strong> is valid and provides a <strong>${affiliateInfo.discount}% discount</strong> on our services.</p>
-          <p>${affiliateInfo.description}</p>
-          <p>We'll make sure to apply this discount to any proposals we prepare for ${company}.</p>
+        <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #22c55e; margin: 15px 0;">
+          <h3 style="color: #16a34a; margin: 0 0 10px 0;">🎉 Affiliate Discount Applied!</h3>
+          <p style="margin: 5px 0;">Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated.</p>
+          <p style="margin: 5px 0;">You're eligible for a <strong>${affiliateInfo.discount}% discount</strong> on our services!</p>
+          <p style="margin: 5px 0;">Our team will include this discount in your personalized quote during the demo.</p>
         </div>
       `
           : ""
       }
       
-      <p><strong>Your demo request details:</strong></p>
+      <p>Here's a summary of your demo request:</p>
       <ul>
-        <li>Name: ${firstName} ${lastName}</li>
-        <li>Company: ${company}</li>
-        <li>Job Title: ${jobTitle}</li>
-        <li>Industry: ${industry}</li>
-        <li>Company Size: ${companySize || "Not specified"}</li>
-        <li>Implementation Timeframe: ${timeframe || "Not specified"}</li>
+        <li><strong>Name:</strong> ${firstName} ${lastName}</li>
+        <li><strong>Company:</strong> ${company}</li>
+        <li><strong>Job Title:</strong> ${jobTitle}</li>
+        <li><strong>Email:</strong> ${email}</li>
+        <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
+        <li><strong>Company Size:</strong> ${companySize}</li>
+        <li><strong>Industry:</strong> ${industry}</li>
+        <li><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</li>
       </ul>
       
-      <p>During the demo, we'll show you how Kuhlekt can help:</p>
+      <p>During the demo, we'll show you how Kuhlekt can:</p>
       <ul>
         <li>Automate your accounts receivable processes</li>
         <li>Reduce DSO (Days Sales Outstanding)</li>
         <li>Improve cash flow management</li>
-        <li>Streamline collections workflows</li>
+        <li>Streamline customer communications</li>
         <li>Provide real-time AR analytics and reporting</li>
       </ul>
       
-      <p>If you have any questions before our call, feel free to reply to this email or visit our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/help">help center</a>.</p>
+      <p>We look forward to showing you how Kuhlekt can transform your AR operations!</p>
       
       <p>Best regards,<br>The Kuhlekt Team</p>
     `
@@ -146,27 +190,29 @@ export async function submitDemoForm(prevState: any, formData: FormData) {
     await Promise.all([
       sendEmail({
         to: process.env.AWS_SES_FROM_EMAIL!,
-        subject: `New Demo Request from ${firstName} ${lastName} at ${company}${affiliateInfo ? " (Affiliate Code Used)" : ""}`,
+        subject: `New Demo Request - ${firstName} ${lastName} (${company})${affiliateInfo?.isValid ? ` - ${affiliateInfo.code} (${affiliateInfo.discount}% discount)` : ""}`,
         html: adminEmailContent,
       }),
       sendEmail({
         to: email,
-        subject: `Your Kuhlekt Demo Request Confirmation${affiliateInfo ? " - Discount Applied!" : ""}`,
+        subject: "Your Kuhlekt Demo Request Confirmation",
         html: userEmailContent,
       }),
     ])
 
     return {
       success: true,
-      message: affiliateInfo
-        ? `Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration. Your ${affiliateInfo.discount}% affiliate discount has been noted.`
+      message: affiliateInfo?.isValid
+        ? `Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration. Your affiliate code ${affiliateInfo.code} has been applied for a ${affiliateInfo.discount}% discount.`
         : "Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration.",
+      errors: {},
     }
   } catch (error) {
     console.error("Demo form submission error:", error)
     return {
       success: false,
-      message: "There was an error processing your demo request. Please try again later.",
+      message: "There was an error processing your demo request. Please try again.",
+      errors: {},
     }
   }
 }

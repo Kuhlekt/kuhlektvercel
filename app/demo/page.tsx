@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { submitDemoForm } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ const initialState = {
 }
 
 export default function DemoPage() {
-  const [state, formAction] = useFormState(submitDemoForm, initialState)
+  const [state, formAction] = useActionState(submitDemoForm, initialState)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [isPending, setIsPending] = useState(false)
 

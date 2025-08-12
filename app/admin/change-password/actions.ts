@@ -1,48 +1,50 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
-export async function changeAdminPassword(prevState: any, formData: FormData) {
-  try {
-    // Check if user is authenticated
-    const cookieStore = cookies()
-    const adminSession = cookieStore.get("admin_session")
+interface ChangePasswordState {
+  error?: string
+  success?: string
+}
 
-    if (!adminSession) {
-      redirect("/admin/login")
-    }
+export async function changeAdminPassword(
+  prevState: ChangePasswordState | null,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  // Check if user is authenticated
+  const cookieStore = await cookies()
+  const session = cookieStore.get("admin_session")
 
-    const currentPassword = formData.get("currentPassword") as string
-    const newPassword = formData.get("newPassword") as string
-    const confirmPassword = formData.get("confirmPassword") as string
+  if (!session || session.value !== "authenticated") {
+    redirect("/admin/login")
+  }
 
-    // Validate inputs
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return { error: "All fields are required" }
-    }
+  const currentPassword = formData.get("currentPassword") as string
+  const newPassword = formData.get("newPassword") as string
+  const confirmPassword = formData.get("confirmPassword") as string
 
-    if (newPassword.length < 8) {
-      return { error: "New password must be at least 8 characters long" }
-    }
+  // Validation
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { error: "All fields are required" }
+  }
 
-    if (newPassword !== confirmPassword) {
-      return { error: "New passwords do not match" }
-    }
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords do not match" }
+  }
 
-    // Verify current password
-    const adminPassword = process.env.ADMIN_PASSWORD
-    if (currentPassword !== adminPassword) {
-      return { error: "Current password is incorrect" }
-    }
+  if (newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters long" }
+  }
 
-    // In a real application, you would update the password in a database
-    // For this demo, we'll just show a success message with instructions
-    return {
-      success: `Password change successful! Please update your ADMIN_PASSWORD environment variable to: ${newPassword}`,
-    }
-  } catch (error) {
-    console.error("Password change error:", error)
-    return { error: "An error occurred while changing the password" }
+  // Verify current password
+  if (currentPassword !== process.env.ADMIN_PASSWORD) {
+    return { error: "Current password is incorrect" }
+  }
+
+  // In a real application, you would update the password in a database
+  // For this demo, we'll just show a success message with instructions
+  return {
+    success: `Password change validated! To complete the change, please update your ADMIN_PASSWORD environment variable to: ${newPassword}`,
   }
 }
