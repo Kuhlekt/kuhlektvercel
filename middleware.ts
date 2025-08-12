@@ -8,9 +8,14 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
-    // Check for admin session
     const adminSession = request.cookies.get("admin-session")
     const sessionExpires = request.cookies.get("admin-session-expires")
+    const fallbackSession = request.cookies.get("admin-session-fallback")
+
+    // Allow access if either session type exists
+    if (fallbackSession) {
+      return NextResponse.next()
+    }
 
     if (!adminSession || !sessionExpires) {
       return NextResponse.redirect(new URL("/admin/login", request.url))
