@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  // Only use the non-public environment variable on the server
+  // Use only server-side environment variable
   const siteKey = process.env.RECAPTCHA_SITE_KEY
-  const isEnabled = !!siteKey
 
   return NextResponse.json({
-    siteKey: siteKey || "",
-    isEnabled,
+    siteKey: siteKey || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI", // Google's test key
+    isEnabled: !!siteKey,
   })
 }

@@ -17,9 +17,15 @@ const contactSchema = z.object({
 })
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
   if (!process.env.RECAPTCHA_SECRET_KEY) {
-    console.warn("RECAPTCHA_SECRET_KEY not configured")
-    return true // Allow in development
+    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
+    return true
+  }
+
+  // If it's the development token, allow it
+  if (token === "development-mode") {
+    return true
   }
 
   try {
