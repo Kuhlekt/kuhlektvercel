@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Block all admin areas from crawling
+Disallow: /admin/
+Disallow: /admin/*
+
+# Block API routes that might contain sensitive data
+Disallow: /api/admin/
+Disallow: /api/admin/*
+
+# Allow specific public pages
+Allow: /
+Allow: /about
+Allow: /contact
+Allow: /demo
+Allow: /product
+Allow: /solutions
+Allow: /pricing-table
+Allow: /help
+
+# Sitemap location
+Sitemap: https://kuhlekt.com/sitemap.xml
