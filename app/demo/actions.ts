@@ -123,3 +123,6 @@ Please follow up with this prospect to schedule a demo.
     }
   }
 }
+
+// Add this export alias at the end of the file
+export { submitDemoRequest as submitDemoForm }
