@@ -1,15 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyTwoFactorCode } from "@/lib/auth/admin-auth"
+import { verifyTwoFactorCode, verifyTwoFactorToken } from "@/lib/auth/admin-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { code } = await request.json()
+    const body = await request.json()
+    const { code, token, secret } = body
 
-    if (!code) {
-      return NextResponse.json({ error: "Code is required" }, { status: 400 })
+    // Use either 'code' or 'token' for the 6-digit value
+    const verificationCode = code || token
+
+    if (!verificationCode) {
+      return NextResponse.json({ error: "Verification code is required" }, { status: 400 })
     }
 
-    const isValid = verifyTwoFactorCode(code)
+    let isValid = false
+
+    // If a custom secret is provided (during setup), verify against that secret
+    if (secret) {
+      isValid = verifyTwoFactorToken(verificationCode, secret)
+    } else {
+      // Otherwise, verify against the environment variable secret
+      isValid = verifyTwoFactorCode(verificationCode)
+    }
 
     return NextResponse.json({
       valid: isValid,
