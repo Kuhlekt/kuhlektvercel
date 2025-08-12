@@ -1,18 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import { useFormState } from "react-dom"
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, Info, Phone, Mail, Clock } from "lucide-react"
-import { submitContactForm } from "./actions"
-import { VisitorTracker } from "@/components/visitor-tracker"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import ReCAPTCHA from "@/components/recaptcha"
+import { submitContactForm } from "./actions"
+import { validateAffiliateCode, formatDiscountText } from "@/lib/affiliate-validation"
+import { CheckCircle, XCircle, Users, Building, Star, Gift, Crown } from "lucide-react"
 
 const initialState = {
   success: false,
@@ -23,226 +24,298 @@ const initialState = {
 export default function ContactPage() {
   const [state, formAction] = useFormState(submitContactForm, initialState)
   const [isPending, setIsPending] = useState(false)
-  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [recaptchaToken, setRecaptchaToken] = useState("")
   const [affiliateCode, setAffiliateCode] = useState("")
-  const [affiliateStatus, setAffiliateStatus] = useState<"valid" | "invalid" | null>(null)
-
-  // Reset form state on successful submission
-  useEffect(() => {
-    if (state.success) {
-      setRecaptchaToken("")
-      setAffiliateCode("")
-      setAffiliateStatus(null)
-      setIsPending(false)
-      // Reset form
-      const form = document.getElementById("contact-form") as HTMLFormElement
-      if (form) {
-        form.reset()
-      }
-    }
-  }, [state.success])
-
-  // Validate affiliate code on change
-  useEffect(() => {
-    if (affiliateCode.trim()) {
-      // Simple client-side validation for immediate feedback
-      const validCodes = [
-        "STARTUP50",
-        "DISCOUNT20",
-        "HEALTHCARE",
-        "MANUFACTURING",
-        "VIP30",
-        "PARTNER001",
-        "PARTNER002",
-        "RESELLER01",
-        "CHANNEL01",
-        "AFFILIATE01",
-        "PROMO2024",
-        "SPECIAL01",
-        "WELCOME15",
-        "GROWTH25",
-        "PREMIUM15",
-        "ENTERPRISE",
-        "SMB40",
-        "NONPROFIT",
-        "EDUCATION",
-        "GOVERNMENT",
-        "REFERRAL10",
-        "LOYALTY25",
-        "BETA35",
-        "EARLY45",
-      ]
-
-      const isValid = validCodes.includes(affiliateCode.trim().toUpperCase())
-      setAffiliateStatus(isValid ? "valid" : "invalid")
-    } else {
-      setAffiliateStatus(null)
-    }
-  }, [affiliateCode])
+  const [affiliateValidation, setAffiliateValidation] = useState<{
+    isValid: boolean
+    discount: number
+    category?: string
+    description?: string
+  } | null>(null)
 
   const handleSubmit = async (formData: FormData) => {
     setIsPending(true)
+    formData.append("recaptchaToken", recaptchaToken)
     await formAction(formData)
     setIsPending(false)
   }
 
+  const handleAffiliateChange = (value: string) => {
+    setAffiliateCode(value)
+    if (value.trim()) {
+      const validation = validateAffiliateCode(value)
+      if (validation) {
+        setAffiliateValidation({
+          isValid: true,
+          discount: validation.discount,
+          category: validation.category,
+          description: validation.description,
+        })
+      } else {
+        setAffiliateValidation({
+          isValid: false,
+          discount: 0,
+        })
+      }
+    } else {
+      setAffiliateValidation(null)
+    }
+  }
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "startup":
+        return <Users className="w-4 h-4" />
+      case "industry":
+        return <Building className="w-4 h-4" />
+      case "partner":
+        return <Star className="w-4 h-4" />
+      case "promotional":
+        return <Gift className="w-4 h-4" />
+      case "vip":
+        return <Crown className="w-4 h-4" />
+      default:
+        return null
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "startup":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "industry":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "partner":
+        return "bg-purple-100 text-purple-800 border-purple-200"
+      case "promotional":
+        return "bg-orange-100 text-orange-800 border-orange-200"
+      case "vip":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <VisitorTracker />
-
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Ready to transform your accounts receivable process? Get in touch with our team and discover how Kuhlekt can
-            streamline your AR operations.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Contact Form */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12">
+      <div className="container mx-auto px-4">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {/* Main Contact Form */}
           <div className="lg:col-span-2">
-            <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-2xl">Get Started Today</CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll get back to you within 24 hours with a personalized solution.
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="text-center pb-8">
+                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Get in Touch
+                </CardTitle>
+                <CardDescription className="text-lg text-gray-600">
+                  Ready to transform your accounts receivable process? Let's discuss your needs.
                 </CardDescription>
               </CardHeader>
-
-              <CardContent>
-                {state.message && (
-                  <Alert
-                    className={`mb-6 ${state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-                  >
-                    {state.success ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                    )}
-                    <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
-                      {state.message}
-                    </AlertDescription>
+              <CardContent className="space-y-6">
+                {state.success && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">{state.message}</AlertDescription>
                   </Alert>
                 )}
 
-                <form id="contact-form" action={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="firstName">First Name *</Label>
+                {state.message && !state.success && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800">{state.message}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form action={handleSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                        First Name *
+                      </Label>
                       <Input
                         id="firstName"
                         name="firstName"
-                        type="text"
                         required
-                        className={`mt-1 ${state.errors?.firstName ? "border-red-500" : ""}`}
-                        disabled={isPending}
+                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="John"
                       />
-                      {state.errors?.firstName && <p className="text-red-500 text-sm mt-1">{state.errors.firstName}</p>}
+                      {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
-
-                    <div>
-                      <Label htmlFor="lastName">Last Name *</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                        Last Name *
+                      </Label>
                       <Input
                         id="lastName"
                         name="lastName"
-                        type="text"
                         required
-                        className={`mt-1 ${state.errors?.lastName ? "border-red-500" : ""}`}
-                        disabled={isPending}
+                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Doe"
                       />
-                      {state.errors?.lastName && <p className="text-red-500 text-sm mt-1">{state.errors.lastName}</p>}
+                      {state.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="email">Email Address *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Business Email *
+                    </Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
                       required
-                      className={`mt-1 ${state.errors?.email ? "border-red-500" : ""}`}
-                      disabled={isPending}
+                      className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      placeholder="john@company.com"
                     />
-                    {state.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email}</p>}
+                    {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="company">Company</Label>
-                      <Input id="company" name="company" type="text" className="mt-1" disabled={isPending} />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company" className="text-sm font-medium text-gray-700">
+                        Company Name *
+                      </Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        required
+                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="Acme Corp"
+                      />
+                      {state.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
                     </div>
-
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                        Phone Number
+                      </Label>
                       <Input
                         id="phone"
                         name="phone"
                         type="tel"
-                        className={`mt-1 ${state.errors?.phone ? "border-red-500" : ""}`}
-                        disabled={isPending}
+                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        placeholder="+1 (555) 123-4567"
                       />
-                      {state.errors?.phone && <p className="text-red-500 text-sm mt-1">{state.errors.phone}</p>}
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="affiliate">Affiliate Code (Optional)</Label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Input
-                        id="affiliate"
-                        name="affiliate"
-                        type="text"
-                        placeholder="Enter your affiliate code"
-                        value={affiliateCode}
-                        onChange={(e) => setAffiliateCode(e.target.value)}
-                        className={`${state.errors?.affiliate ? "border-red-500" : ""} ${
-                          affiliateStatus === "valid"
-                            ? "border-green-500"
-                            : affiliateStatus === "invalid"
-                              ? "border-red-500"
-                              : ""
-                        }`}
-                        disabled={isPending}
-                      />
-                      {affiliateStatus === "valid" && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Valid
-                        </Badge>
-                      )}
-                      {affiliateStatus === "invalid" && <Badge variant="destructive">Invalid</Badge>}
-                    </div>
-                    {state.errors?.affiliate && <p className="text-red-500 text-sm mt-1">{state.errors.affiliate}</p>}
-                    <div className="mt-2">
-                      <Alert className="border-blue-200 bg-blue-50">
-                        <Info className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-blue-800 text-sm">
-                          Have an affiliate code? Enter it here to receive special pricing on our services.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      rows={4}
-                      placeholder="Tell us about your current AR challenges and what you're looking to achieve..."
-                      className="mt-1"
-                      disabled={isPending}
+                  <div className="space-y-2">
+                    <Label htmlFor="jobTitle" className="text-sm font-medium text-gray-700">
+                      Job Title
+                    </Label>
+                    <Input
+                      id="jobTitle"
+                      name="jobTitle"
+                      className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      placeholder="CFO, Finance Manager, etc."
                     />
                   </div>
 
-                  <ReCAPTCHA onVerify={setRecaptchaToken} />
-                  <input type="hidden" name="recaptchaToken" value={recaptchaToken} />
+                  <div className="space-y-2">
+                    <Label htmlFor="companySize" className="text-sm font-medium text-gray-700">
+                      Company Size
+                    </Label>
+                    <Select name="companySize">
+                      <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="Select company size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-10">1-10 employees</SelectItem>
+                        <SelectItem value="11-50">11-50 employees</SelectItem>
+                        <SelectItem value="51-200">51-200 employees</SelectItem>
+                        <SelectItem value="201-1000">201-1,000 employees</SelectItem>
+                        <SelectItem value="1000+">1,000+ employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="industry" className="text-sm font-medium text-gray-700">
+                      Industry
+                    </Label>
+                    <Select name="industry">
+                      <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="Select your industry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="healthcare">Healthcare</SelectItem>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="financial-services">Financial Services</SelectItem>
+                        <SelectItem value="professional-services">Professional Services</SelectItem>
+                        <SelectItem value="construction">Construction</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="affiliateCode" className="text-sm font-medium text-gray-700">
+                      Affiliate/Promo Code
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="affiliateCode"
+                        name="affiliateCode"
+                        value={affiliateCode}
+                        onChange={(e) => handleAffiliateChange(e.target.value)}
+                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                        placeholder="Enter code for special pricing"
+                      />
+                      {affiliateValidation && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          {affiliateValidation.isValid ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {affiliateValidation && (
+                      <div className="mt-2">
+                        {affiliateValidation.isValid ? (
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              className={`${getCategoryColor(affiliateValidation.category || "")} flex items-center gap-1`}
+                            >
+                              {getCategoryIcon(affiliateValidation.category || "")}
+                              {formatDiscountText(affiliateValidation.discount)}
+                            </Badge>
+                            <span className="text-sm text-green-600">{affiliateValidation.description}</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-red-600">Invalid affiliate code</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="message" className="text-sm font-medium text-gray-700">
+                      Message *
+                    </Label>
+                    <Textarea
+                      id="message"
+                      name="message"
+                      required
+                      rows={4}
+                      className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                      placeholder="Tell us about your current AR challenges and what you're looking to achieve..."
+                    />
+                    {state.errors?.message && <p className="text-sm text-red-600">{state.errors.message}</p>}
+                  </div>
+
+                  <div className="space-y-4">
+                    <ReCAPTCHA onVerify={setRecaptchaToken} />
+                    {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
+                  </div>
 
                   <Button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
                     disabled={isPending || !recaptchaToken}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isPending ? "Sending..." : "Send Message"}
                   </Button>
@@ -251,89 +324,110 @@ export default function ContactPage() {
             </Card>
           </div>
 
-          {/* Contact Information Sidebar */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            <Card>
+            {/* Contact Information */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Get in Touch</CardTitle>
+                <CardTitle className="text-xl font-semibold text-gray-800">Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h4 className="font-medium text-gray-700">Sales Team</h4>
+                  <p className="text-gray-600">sales@kuhlekt.com</p>
+                  <p className="text-gray-600">+1 (555) 123-4567</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-700">Support Team</h4>
+                  <p className="text-gray-600">support@kuhlekt.com</p>
+                  <p className="text-gray-600">+1 (555) 123-4568</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-700">Business Hours</h4>
+                  <p className="text-gray-600">Monday - Friday</p>
+                  <p className="text-gray-600">9:00 AM - 6:00 PM EST</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Benefits */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-gray-800">Why Choose Kuhlekt?</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Email</p>
-                    <p className="text-gray-600">contact@kuhlekt.com</p>
+                    <h4 className="font-medium text-gray-700">Reduce DSO by 40%</h4>
+                    <p className="text-sm text-gray-600">Accelerate cash flow with automated collections</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-blue-600" />
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Phone</p>
-                    <p className="text-gray-600">1-800-KUHLEKT</p>
+                    <h4 className="font-medium text-gray-700">Save 75% Time</h4>
+                    <p className="text-sm text-gray-600">Automate manual AR processes</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Clock className="h-5 w-5 text-blue-600" />
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900">Response Time</p>
-                    <p className="text-gray-600">Within 24 hours</p>
+                    <h4 className="font-medium text-gray-700">Improve Collections by 60%</h4>
+                    <p className="text-sm text-gray-600">AI-powered dunning strategies</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-gray-700">Enterprise Security</h4>
+                    <p className="text-sm text-gray-600">SOC 2 compliant with bank-level encryption</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Affiliate Code Categories */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Why Choose Kuhlekt?</CardTitle>
+                <CardTitle className="text-xl font-semibold text-gray-800">Special Offers</CardTitle>
+                <CardDescription>Have a promo code? Enter it above for special pricing!</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Reduce DSO by up to 40%</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Automate 80% of AR processes</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Improve cash flow visibility</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Seamless ERP integration</span>
-                  </li>
-                  <li className="flex items-start space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>24/7 customer support</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Popular Affiliate Codes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-mono">STARTUP50</span>
-                    <Badge variant="secondary">50% off</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-mono">HEALTHCARE</span>
-                    <Badge variant="secondary">15% off</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-mono">MANUFACTURING</span>
-                    <Badge variant="secondary">20% off</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-mono">NONPROFIT</span>
-                    <Badge variant="secondary">30% off</Badge>
-                  </div>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium">Startup Discounts</span>
+                  <Badge variant="outline" className="text-xs">
+                    10-15% off
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium">Industry Rates</span>
+                  <Badge variant="outline" className="text-xs">
+                    15-25% off
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium">Partner Pricing</span>
+                  <Badge variant="outline" className="text-xs">
+                    20-30% off
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm font-medium">Promotional Offers</span>
+                  <Badge variant="outline" className="text-xs">
+                    15-35% off
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm font-medium">VIP Rates</span>
+                  <Badge variant="outline" className="text-xs">
+                    30-50% off
+                  </Badge>
                 </div>
               </CardContent>
             </Card>

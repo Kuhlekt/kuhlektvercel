@@ -1,9 +1,14 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface ReCAPTCHAProps {
   onVerify: (token: string) => void
+}
+
+interface ReCAPTCHAConfig {
+  siteKey: string
+  isEnabled: boolean
 }
 
 declare global {
@@ -27,12 +32,23 @@ declare global {
 export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
   const recaptchaRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<number | null>(null)
+  const [config, setConfig] = useState<ReCAPTCHAConfig | null>(null)
 
   useEffect(() => {
+    // Fetch ReCAPTCHA config from server
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then(setConfig)
+      .catch(console.error)
+  }, [])
+
+  useEffect(() => {
+    if (!config?.isEnabled || !config.siteKey) return
+
     const loadRecaptcha = () => {
       if (window.grecaptcha && recaptchaRef.current) {
         widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI", // Test key
+          sitekey: config.siteKey,
           callback: onVerify,
           "expired-callback": () => onVerify(""),
           "error-callback": () => onVerify(""),
@@ -59,7 +75,11 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
         window.grecaptcha.reset(widgetIdRef.current)
       }
     }
-  }, [onVerify])
+  }, [config, onVerify])
+
+  if (!config?.isEnabled) {
+    return null
+  }
 
   return <div ref={recaptchaRef} className="flex justify-center" />
 }

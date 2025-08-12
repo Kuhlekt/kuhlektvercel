@@ -1,245 +1,259 @@
 "use server"
 
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { z } from "zod"
 import { sendEmail } from "@/lib/email-service"
-import { verifyCaptcha } from "@/lib/captcha"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-interface DemoFormState {
-  success: boolean
-  message: string
-  errors: Record<string, string>
+const demoSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50),
+  lastName: z.string().min(1, "Last name is required").max(50),
+  email: z.string().email("Invalid email address"),
+  company: z.string().min(1, "Company name is required").max(100),
+  phone: z.string().min(1, "Phone number is required"),
+  jobTitle: z.string().min(1, "Job title is required").max(100),
+  companySize: z.string().min(1, "Company size is required"),
+  industry: z.string().min(1, "Industry is required"),
+  currentArVolume: z.string().min(1, "AR volume is required"),
+  preferredTime: z.string().optional(),
+  affiliateCode: z.string().optional(),
+  specificInterests: z.string().optional(),
+  recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
+})
+
+async function verifyRecaptcha(token: string): Promise<boolean> {
+  if (!process.env.RECAPTCHA_SECRET_KEY) {
+    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
+    return true // Allow in development
+  }
+
+  try {
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+    })
+
+    const data = await response.json()
+    return data.success
+  } catch (error) {
+    console.error("reCAPTCHA verification error:", error)
+    return false
+  }
 }
 
-export async function submitDemoForm(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
+export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const jobTitle = formData.get("jobTitle") as string
-    const phone = formData.get("phone") as string
-    const companySize = formData.get("companySize") as string
-    const industry = formData.get("industry") as string
-    const affiliate = formData.get("affiliate") as string
-    const currentSolution = formData.get("currentSolution") as string
-    const challenges = formData.get("challenges") as string
-    const preferredTime = formData.get("preferredTime") as string
-    const recaptchaToken = formData.get("recaptchaToken") as string
-
-    // Validation
-    const errors: Record<string, string> = {}
-
-    if (!firstName?.trim()) {
-      errors.firstName = "First name is required"
+    const rawData = {
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      email: formData.get("email"),
+      company: formData.get("company"),
+      phone: formData.get("phone"),
+      jobTitle: formData.get("jobTitle"),
+      companySize: formData.get("companySize"),
+      industry: formData.get("industry"),
+      currentArVolume: formData.get("currentArVolume"),
+      preferredTime: formData.get("preferredTime"),
+      affiliateCode: formData.get("affiliateCode"),
+      specificInterests: formData.get("specificInterests"),
+      recaptchaToken: formData.get("recaptchaToken"),
     }
 
-    if (!lastName?.trim()) {
-      errors.lastName = "Last name is required"
-    }
+    const validatedData = demoSchema.parse(rawData)
 
-    if (!email?.trim()) {
-      errors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address"
-    }
-
-    if (!company?.trim()) {
-      errors.company = "Company name is required"
-    }
-
-    if (!jobTitle?.trim()) {
-      errors.jobTitle = "Job title is required"
-    }
-
-    if (!phone?.trim()) {
-      errors.phone = "Phone number is required"
-    } else if (!/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
-      errors.phone = "Please enter a valid phone number"
-    }
-
-    if (!companySize?.trim()) {
-      errors.companySize = "Company size is required"
-    }
-
-    if (!industry?.trim()) {
-      errors.industry = "Industry is required"
-    }
-
-    // Validate reCAPTCHA
-    if (!recaptchaToken) {
-      return {
-        success: false,
-        message: "Please complete the reCAPTCHA verification",
-        errors: {},
-      }
-    }
-
-    const captchaValid = await verifyCaptcha(recaptchaToken)
-    if (!captchaValid) {
+    // Verify reCAPTCHA
+    const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
+    if (!isRecaptchaValid) {
       return {
         success: false,
         message: "reCAPTCHA verification failed. Please try again.",
-        errors: {},
+        errors: { recaptcha: "Verification failed" },
       }
     }
 
     // Validate affiliate code if provided
     let affiliateInfo = null
-    if (affiliate?.trim()) {
-      affiliateInfo = validateAffiliateCode(affiliate.trim())
-      if (!affiliateInfo) {
-        errors.affiliate = "Invalid affiliate code"
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return {
-        success: false,
-        message: "Please correct the errors below",
-        errors,
-      }
+    if (validatedData.affiliateCode) {
+      affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
     }
 
     // Prepare email content
-    const emailSubject = `New Demo Request from ${firstName} ${lastName} at ${company}`
-
-    const emailContent = `
-      <h2>New Demo Request</h2>
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin: 0 0 15px 0;">Contact Information</h3>
-        <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Company:</strong> ${company}</p>
-        <p><strong>Job Title:</strong> ${jobTitle}</p>
-      </div>
-      
-      <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin: 0 0 15px 0;">Company Details</h3>
-        <p><strong>Company Size:</strong> ${companySize}</p>
-        <p><strong>Industry:</strong> ${industry}</p>
-        ${currentSolution ? `<p><strong>Current AR Solution:</strong> ${currentSolution}</p>` : ""}
-        ${preferredTime ? `<p><strong>Preferred Demo Time:</strong> ${preferredTime}</p>` : ""}
-      </div>
-      
-      ${
-        challenges
-          ? `
-        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #92400e; margin: 0 0 15px 0;">Current Challenges</h3>
-          <p>${challenges.replace(/\n/g, "<br>")}</p>
+    const affiliateSection = affiliateInfo
+      ? `
+        <div style="background-color: #f0f9ff; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+          <h3 style="color: #1e40af; margin: 0 0 8px 0; font-size: 16px;">🎉 Affiliate Code Applied</h3>
+          <p style="margin: 4px 0; color: #1e40af;"><strong>Code:</strong> ${affiliateInfo.code}</p>
+          <p style="margin: 4px 0; color: #1e40af;"><strong>Discount:</strong> ${affiliateInfo.discount}% off</p>
+          <p style="margin: 4px 0; color: #1e40af;"><strong>Category:</strong> ${affiliateInfo.category.charAt(0).toUpperCase() + affiliateInfo.category.slice(1)}</p>
+          <p style="margin: 4px 0; color: #1e40af;"><strong>Description:</strong> ${affiliateInfo.description}</p>
         </div>
       `
-          : ""
-      }
-      
-      ${
-        affiliateInfo
-          ? `
-        <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #166534; margin: 0 0 15px 0;">🎯 Affiliate Code Applied</h3>
-          <p><strong>Code:</strong> ${affiliateInfo.code}</p>
-          <p><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
-          <p><strong>Category:</strong> ${affiliateInfo.category}</p>
-          <p><strong>Description:</strong> ${affiliateInfo.description}</p>
-          <p style="color: #166534; font-weight: bold;">⚠️ Remember to apply this discount in the proposal!</p>
-        </div>
-      `
-          : ""
-      }
-      
-      <hr style="margin: 30px 0;">
-      <p style="color: #666; font-size: 12px;">
-        Submitted at: ${new Date().toLocaleString()}<br>
-        IP: ${process.env.VERCEL_FORWARDED_FOR || "Unknown"}
-      </p>
-    `
-
-    // Send email notification to sales team
-    await sendEmail({
-      to: "demos@kuhlekt.com",
-      subject: emailSubject,
-      html: emailContent,
-    })
-
-    // Send confirmation email to user
-    const confirmationSubject = "Your Kuhlekt Demo is Being Scheduled!"
-    const confirmationContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #16a34a;">Thank you for requesting a demo!</h2>
-        
-        <p>Dear ${firstName},</p>
-        
-        <p>We're excited to show you how Kuhlekt can transform your accounts receivable process at ${company}!</p>
-        
-        ${
-          affiliateInfo
-            ? `
-          <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #166534; margin: 0 0 10px 0;">🎉 Excellent news!</h3>
-            <p>Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated and you're eligible for <strong>${affiliateInfo.discount}% off</strong> our services!</p>
-            <p>We'll make sure to include this special pricing in your custom proposal after the demo.</p>
+      : validatedData.affiliateCode
+        ? `
+          <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #ef4444;">
+            <h3 style="color: #dc2626; margin: 0 0 8px 0; font-size: 16px;">❌ Invalid Affiliate Code</h3>
+            <p style="margin: 4px 0; color: #dc2626;">Code entered: <strong>${validatedData.affiliateCode}</strong></p>
+            <p style="margin: 4px 0; color: #dc2626;">This code is not valid or has expired.</p>
           </div>
         `
-            : ""
-        }
-        
-        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 15px 0;">What happens next?</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>Our demo specialist will contact you within 24 hours</li>
-            <li>We'll schedule a 30-45 minute personalized demo</li>
-            <li>You'll see exactly how Kuhlekt fits your ${industry.toLowerCase()} business</li>
-            <li>We'll provide a custom proposal with ROI projections</li>
-          </ul>
-        </div>
-        
-        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #92400e; margin: 0 0 15px 0;">Demo Highlights</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>Automated invoice processing and payment reminders</li>
-            <li>Real-time AR analytics and reporting</li>
-            <li>Seamless integration with your current systems</li>
-            <li>Customer portal and self-service options</li>
-            <li>Collections workflow automation</li>
-          </ul>
-        </div>
-        
-        <p>In the meantime, feel free to explore our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/solutions" style="color: #16a34a;">solutions page</a> to learn more about our AR automation capabilities.</p>
-        
-        <p>Looking forward to showing you how we can help reduce your DSO and improve cash flow!</p>
-        
-        <p>Best regards,<br>
-        The Kuhlekt Demo Team</p>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="color: #6b7280; font-size: 14px;">
-          Kuhlekt - AR Automation & Digital Collections<br>
-          Email: demos@kuhlekt.com | Phone: 1-800-KUHLEKT<br>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #16a34a;">Visit our website</a>
-        </p>
-      </div>
+        : ""
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>New Demo Request</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
+            <h1 style="color: white; margin: 0; text-align: center; font-size: 28px;">New Demo Request</h1>
+            <p style="color: #f0f0f0; text-align: center; margin: 10px 0 0 0; font-size: 16px;">Kuhlekt AR Automation Platform</p>
+          </div>
+          
+          ${affiliateSection}
+          
+          <div style="background-color: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #2d3748; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Contact Information</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568; width: 140px;">Name:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.firstName} ${validatedData.lastName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Email:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Phone:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.phone}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Company:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.company}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Job Title:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.jobTitle}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Company Size:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.companySize}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Industry:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.industry}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">AR Volume:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.currentArVolume}</td>
+              </tr>
+              ${
+                validatedData.preferredTime
+                  ? `
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #4a5568;">Preferred Time:</td>
+                <td style="padding: 8px 0; color: #2d3748;">${validatedData.preferredTime}</td>
+              </tr>
+              `
+                  : ""
+              }
+            </table>
+          </div>
+          
+          ${
+            validatedData.specificInterests
+              ? `
+          <div style="background-color: #f7fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #2d3748; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Specific Interests</h2>
+            <div style="background-color: white; padding: 20px; border-radius: 6px; border-left: 4px solid #4299e1;">
+              <p style="margin: 0; color: #2d3748; white-space: pre-wrap;">${validatedData.specificInterests}</p>
+            </div>
+          </div>
+          `
+              : ""
+          }
+          
+          <div style="background-color: #edf2f7; padding: 20px; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #4a5568; font-size: 14px;">
+              This demo request was submitted on ${new Date().toLocaleString()}
+            </p>
+            ${
+              affiliateInfo
+                ? `
+              <p style="margin: 8px 0 0 0; color: #2b6cb0; font-weight: bold; font-size: 14px;">
+                ⭐ Priority Demo - ${affiliateInfo.discount}% discount applied
+              </p>
+            `
+                : ""
+            }
+          </div>
+        </body>
+      </html>
     `
 
+    const emailText = `
+New Demo Request - Kuhlekt AR Automation
+
+${affiliateInfo ? `🎉 AFFILIATE CODE APPLIED: ${affiliateInfo.code} (${affiliateInfo.discount}% off - ${affiliateInfo.description})` : ""}
+${validatedData.affiliateCode && !affiliateInfo ? `❌ INVALID AFFILIATE CODE: ${validatedData.affiliateCode}` : ""}
+
+Contact Information:
+- Name: ${validatedData.firstName} ${validatedData.lastName}
+- Email: ${validatedData.email}
+- Phone: ${validatedData.phone}
+- Company: ${validatedData.company}
+- Job Title: ${validatedData.jobTitle}
+- Company Size: ${validatedData.companySize}
+- Industry: ${validatedData.industry}
+- AR Volume: ${validatedData.currentArVolume}
+${validatedData.preferredTime ? `- Preferred Time: ${validatedData.preferredTime}` : ""}
+
+${validatedData.specificInterests ? `Specific Interests:\n${validatedData.specificInterests}` : ""}
+
+---
+Submitted: ${new Date().toLocaleString()}
+${affiliateInfo ? `Priority Demo - ${affiliateInfo.discount}% discount applied` : ""}
+    `
+
+    // Send email
     await sendEmail({
-      to: email,
-      subject: confirmationSubject,
-      html: confirmationContent,
+      to: process.env.AWS_SES_FROM_EMAIL || "demos@kuhlekt.com",
+      subject: `Demo Request: ${validatedData.firstName} ${validatedData.lastName} from ${validatedData.company}${affiliateInfo ? ` (${affiliateInfo.discount}% discount)` : ""}`,
+      html: emailHtml,
+      text: emailText,
     })
 
     return {
       success: true,
       message: affiliateInfo
-        ? `Thank you for requesting a demo! We've validated your affiliate code ${affiliateInfo.code} for ${affiliateInfo.discount}% off. Our team will contact you within 24 hours to schedule your personalized demo.`
-        : "Thank you for requesting a demo! Our team will contact you within 24 hours to schedule your personalized demo.",
+        ? `Thank you for your demo request! We've received your request with your ${affiliateInfo.discount}% discount code. Our team will contact you within 24 hours to schedule your personalized demo.`
+        : "Thank you for your demo request! Our team will contact you within 24 hours to schedule your personalized demo.",
       errors: {},
     }
   } catch (error) {
-    console.error("Demo form submission error:", error)
+    console.error("Demo request error:", error)
+
+    if (error instanceof z.ZodError) {
+      const fieldErrors: Record<string, string> = {}
+      error.errors.forEach((err) => {
+        if (err.path) {
+          fieldErrors[err.path[0]] = err.message
+        }
+      })
+
+      return {
+        success: false,
+        message: "Please check the form for errors.",
+        errors: fieldErrors,
+      }
+    }
+
     return {
       success: false,
-      message: "There was an error processing your demo request. Please try again or contact us directly.",
+      message: "An error occurred while submitting your demo request. Please try again.",
       errors: {},
     }
   }
