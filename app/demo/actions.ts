@@ -2,60 +2,32 @@
 
 import { sendEmail } from "@/lib/email-service"
 
-export async function submitDemoRequest(prevState: any, formData: FormData) {
+export async function submitDemoRequest(formData: FormData) {
+  const name = formData.get("name") as string
+  const email = formData.get("email") as string
+  const company = formData.get("company") as string
+  const phone = formData.get("phone") as string
+  const message = formData.get("message") as string
+
   try {
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
-    const message = formData.get("message") as string
-
-    // Validate required fields
-    if (!firstName || !lastName || !email || !company) {
-      return {
-        success: false,
-        message: "Please fill in all required fields.",
-      }
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return {
-        success: false,
-        message: "Please enter a valid email address.",
-      }
-    }
-
     // Send email notification
-    const emailContent = `
-      New Demo Request:
-      
-      Name: ${firstName} ${lastName}
-      Email: ${email}
-      Company: ${company}
-      Phone: ${phone || "Not provided"}
-      Message: ${message || "No message provided"}
-    `
-
     await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "admin@kuhlekt.com",
+      to: "demo@kuhlekt.com",
       subject: "New Demo Request",
-      text: emailContent,
-      html: emailContent.replace(/\n/g, "<br>"),
+      html: `
+        <h2>New Demo Request</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Company:</strong> ${company}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Message:</strong> ${message}</p>
+      `,
     })
 
-    return {
-      success: true,
-      message: "Thank you for your interest! We'll contact you soon to schedule your demo.",
-    }
+    return { success: true, message: "Demo request submitted successfully!" }
   } catch (error) {
     console.error("Demo request error:", error)
-    return {
-      success: false,
-      message: "There was an error submitting your request. Please try again.",
-    }
+    return { success: false, message: "Failed to submit demo request. Please try again." }
   }
 }
 
