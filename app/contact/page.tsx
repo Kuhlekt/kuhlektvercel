@@ -1,85 +1,61 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import ReCAPTCHA from "@/components/recaptcha"
+import { CheckCircle, AlertCircle } from "lucide-react"
 import { submitContactForm } from "./actions"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
-
-const initialState = {
-  success: false,
-  message: "",
-  errors: {},
-}
+import { ReCaptcha } from "@/components/recaptcha"
 
 export default function ContactPage() {
-  const [state, formAction] = useFormState(submitContactForm, initialState)
-  const [isPending, setIsPending] = useState(false)
-  const [recaptchaToken, setRecaptchaToken] = useState("")
+  const [state, formAction, isPending] = useActionState(submitContactForm, null)
   const [affiliateCode, setAffiliateCode] = useState("")
-  const [affiliateInfo, setAffiliateInfo] = useState(null)
+  const [recaptchaToken, setRecaptchaToken] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
 
-  const handleSubmit = async (formData: FormData) => {
-    setIsPending(true)
-    formData.append("recaptchaToken", recaptchaToken)
-    const result = await formAction(formData)
-
-    // Clear form on success
-    if (result?.success) {
-      formRef.current?.reset()
-      setRecaptchaToken("")
-      setAffiliateCode("")
-      setAffiliateInfo(null)
-    }
-
-    setIsPending(false)
-  }
-
-  const handleAffiliateChange = (value: string) => {
-    setAffiliateCode(value)
-    if (value.trim()) {
-      const info = validateAffiliateCode(value.trim())
-      setAffiliateInfo(info)
-    } else {
-      setAffiliateInfo(null)
-    }
+  // Reset form on successful submission
+  if (state?.success && formRef.current) {
+    formRef.current.reset()
+    setAffiliateCode("")
+    setRecaptchaToken("")
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Kuhlekt</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
           <p className="text-xl text-gray-600">
-            Ready to transform your accounts receivable process? Get in touch with our AR automation experts.
+            Get in touch with our team to learn how Kuhlekt can transform your accounts receivable process.
           </p>
         </div>
 
-        <Card className="shadow-xl">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Send us a message</CardTitle>
-            <CardDescription className="text-center">
-              We'll get back to you within 24 hours with a personalized response.
-            </CardDescription>
+            <CardTitle>Send us a message</CardTitle>
+            <CardDescription>Fill out the form below and we'll get back to you within 24 hours.</CardDescription>
           </CardHeader>
           <CardContent>
-            {state.message && (
-              <Alert className={`mb-6 ${state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}`}>
-                <AlertDescription className={state.success ? "text-green-700" : "text-red-700"}>
-                  {state.message}
-                </AlertDescription>
+            {state?.success && (
+              <Alert className="mb-6 border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{state.message}</AlertDescription>
               </Alert>
             )}
 
-            <form ref={formRef} action={handleSubmit} className="space-y-6">
+            {state?.success === false && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">{state.message}</AlertDescription>
+              </Alert>
+            )}
+
+            <form ref={formRef} action={formAction} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>
@@ -88,9 +64,9 @@ export default function ContactPage() {
                     name="firstName"
                     type="text"
                     required
-                    className={state.errors?.firstName ? "border-red-500" : ""}
+                    className={state?.errors?.firstName ? "border-red-500" : ""}
                   />
-                  {state.errors?.firstName && <p className="text-red-500 text-sm mt-1">{state.errors.firstName}</p>}
+                  {state?.errors?.firstName && <p className="text-sm text-red-600 mt-1">{state.errors.firstName}</p>}
                 </div>
 
                 <div>
@@ -100,9 +76,9 @@ export default function ContactPage() {
                     name="lastName"
                     type="text"
                     required
-                    className={state.errors?.lastName ? "border-red-500" : ""}
+                    className={state?.errors?.lastName ? "border-red-500" : ""}
                   />
-                  {state.errors?.lastName && <p className="text-red-500 text-sm mt-1">{state.errors.lastName}</p>}
+                  {state?.errors?.lastName && <p className="text-sm text-red-600 mt-1">{state.errors.lastName}</p>}
                 </div>
               </div>
 
@@ -113,27 +89,27 @@ export default function ContactPage() {
                   name="email"
                   type="email"
                   required
-                  className={state.errors?.email ? "border-red-500" : ""}
+                  className={state?.errors?.email ? "border-red-500" : ""}
                 />
-                {state.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email}</p>}
+                {state?.errors?.email && <p className="text-sm text-red-600 mt-1">{state.errors.email}</p>}
               </div>
 
               <div>
-                <Label htmlFor="company">Company Name *</Label>
+                <Label htmlFor="company">Company *</Label>
                 <Input
                   id="company"
                   name="company"
                   type="text"
                   required
-                  className={state.errors?.company ? "border-red-500" : ""}
+                  className={state?.errors?.company ? "border-red-500" : ""}
                 />
-                {state.errors?.company && <p className="text-red-500 text-sm mt-1">{state.errors.company}</p>}
+                {state?.errors?.company && <p className="text-sm text-red-600 mt-1">{state.errors.company}</p>}
               </div>
 
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" type="tel" className={state.errors?.phone ? "border-red-500" : ""} />
-                {state.errors?.phone && <p className="text-red-500 text-sm mt-1">{state.errors.phone}</p>}
+                <Input id="phone" name="phone" type="tel" className={state?.errors?.phone ? "border-red-500" : ""} />
+                {state?.errors?.phone && <p className="text-sm text-red-600 mt-1">{state.errors.phone}</p>}
               </div>
 
               <div>
@@ -141,11 +117,11 @@ export default function ContactPage() {
                 <Textarea
                   id="message"
                   name="message"
-                  rows={5}
-                  placeholder="Tell us about your current AR challenges and how we can help..."
-                  className={state.errors?.message ? "border-red-500" : ""}
+                  rows={4}
+                  placeholder="Tell us about your current accounts receivable challenges..."
+                  className={state?.errors?.message ? "border-red-500" : ""}
                 />
-                {state.errors?.message && <p className="text-red-500 text-sm mt-1">{state.errors.message}</p>}
+                {state?.errors?.message && <p className="text-sm text-red-600 mt-1">{state.errors.message}</p>}
               </div>
 
               <div>
@@ -155,38 +131,23 @@ export default function ContactPage() {
                   name="affiliateCode"
                   type="text"
                   value={affiliateCode}
-                  onChange={(e) => handleAffiliateChange(e.target.value)}
-                  placeholder="Enter your affiliate code for special pricing"
-                  className={state.errors?.affiliateCode ? "border-red-500" : ""}
+                  onChange={(e) => setAffiliateCode(e.target.value)}
+                  placeholder="Enter your affiliate code if you have one"
+                  className={state?.errors?.affiliateCode ? "border-red-500" : ""}
                 />
-                {state.errors?.affiliateCode && (
-                  <p className="text-red-500 text-sm mt-1">{state.errors.affiliateCode}</p>
-                )}
-                {affiliateInfo && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        ✓ Valid Code
-                      </Badge>
-                      <span className="text-sm font-medium text-green-800">
-                        {affiliateInfo.discount}% discount applied
-                      </span>
-                    </div>
-                    <p className="text-sm text-green-700 mt-1">
-                      Partner: {affiliateInfo.name} | Category: {affiliateInfo.category}
-                    </p>
-                  </div>
+                {state?.errors?.affiliateCode && (
+                  <p className="text-sm text-red-600 mt-1">{state.errors.affiliateCode}</p>
                 )}
               </div>
 
-              <div className="flex justify-center">
-                <ReCAPTCHA onVerify={setRecaptchaToken} />
-              </div>
+              <ReCaptcha onVerify={setRecaptchaToken} error={state?.errors?.recaptcha} />
+
+              <input type="hidden" name="recaptchaToken" value={recaptchaToken} />
 
               <Button
                 type="submit"
+                className="w-full bg-cyan-600 hover:bg-cyan-700"
                 disabled={isPending || !recaptchaToken}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
               >
                 {isPending ? "Sending..." : "Send Message"}
               </Button>

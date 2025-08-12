@@ -1,7 +1,6 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
-import { verifyCaptcha } from "@/lib/captcha"
+import { sendEmailWithSES } from "@/lib/aws-ses"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 interface FormErrors {
@@ -13,6 +12,35 @@ interface FormErrors {
   message?: string
   affiliateCode?: string
   recaptcha?: string
+}
+
+async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
+  if (!process.env.RECAPTCHA_SECRET_KEY) {
+    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
+    return true
+  }
+
+  // If it's the development token, allow it
+  if (token === "development-mode") {
+    return true
+  }
+
+  try {
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+    })
+
+    const data = await response.json()
+    return data.success
+  } catch (error) {
+    console.error("reCAPTCHA verification error:", error)
+    return false
+  }
 }
 
 export async function submitContactForm(prevState: any, formData: FormData) {
@@ -47,7 +75,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
   }
 
   // Validate phone if provided
-  if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
+  if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-()]/g, ""))) {
     errors.phone = "Please enter a valid phone number"
   }
 
@@ -63,7 +91,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
   if (!recaptchaToken) {
     errors.recaptcha = "Please complete the reCAPTCHA verification"
   } else {
-    const captchaValid = await verifyCaptcha(recaptchaToken)
+    const captchaValid = await verifyRecaptcha(recaptchaToken)
     if (!captchaValid) {
       errors.recaptcha = "reCAPTCHA verification failed. Please try again."
     }
@@ -94,12 +122,22 @@ ${affiliateInfo ? `Affiliate Code: ${affiliateCode} (${affiliateInfo.name} - ${a
 Submitted at: ${new Date().toLocaleString()}
     `.trim()
 
-    // Send email
-    await sendEmail({
+    // Send email using AWS SES
+    const result = await sendEmailWithSES({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: `New Contact Form Submission from ${firstName} ${lastName}`,
-      body: emailContent,
+      text: emailContent,
+      html: emailContent.replace(/\n/g, "<br>"),
     })
+
+    if (!result.success) {
+      console.error("Failed to send email:", result.message)
+      return {
+        success: false,
+        message: "There was an error sending your message. Please try again.",
+        errors: {},
+      }
+    }
 
     return {
       success: true,
