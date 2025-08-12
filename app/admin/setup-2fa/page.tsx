@@ -218,16 +218,25 @@ export default function Setup2FAPage() {
             {verificationSuccess ? (
               <div className="text-center space-y-4">
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-700 mb-2">
-                    <strong>Success!</strong> Your 2FA is now configured.
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-yellow-800 mb-2">⚠️ CRITICAL: Update Environment Variable</p>
+                  <p className="text-sm text-yellow-700 mb-2">
+                    Before you can log in, you MUST update your environment variable:
                   </p>
-                  <p className="text-sm text-green-600">
-                    Don't forget to update your ADMIN_2FA_SECRET environment variable with:
-                  </p>
-                  <code className="block mt-2 p-2 bg-green-100 rounded text-xs font-mono break-all">
-                    {twoFactorData?.secret}
-                  </code>
+                  <div className="bg-yellow-100 border rounded p-3 my-2">
+                    <p className="text-xs font-semibold text-yellow-800 mb-1">ADMIN_2FA_SECRET=</p>
+                    <code className="text-xs font-mono break-all text-yellow-900">{twoFactorData?.secret}</code>
+                  </div>
+                  <div className="text-xs text-yellow-600 text-left">
+                    <p className="font-semibold mb-1">Steps to update:</p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Go to Vercel Project Settings</li>
+                      <li>Navigate to Environment Variables</li>
+                      <li>Update ADMIN_2FA_SECRET with the code above</li>
+                      <li>Redeploy your application</li>
+                      <li>Then return to login with your authenticator</li>
+                    </ol>
+                  </div>
                 </div>
                 <p className="text-sm text-gray-600">Redirecting to login page...</p>
               </div>
