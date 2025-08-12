@@ -44,9 +44,9 @@ export async function sendEmail({ to, subject, text, html }: EmailOptions) {
   })
 
   try {
-    const response = await sesClient.send(command)
-    console.log("Email sent successfully:", response.MessageId)
-    return response
+    const result = await sesClient.send(command)
+    console.log("Email sent successfully:", result.MessageId)
+    return result
   } catch (error) {
     console.error("Error sending email:", error)
     throw error
