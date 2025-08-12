@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { trackVisitorToDatabase } from "@/lib/actions/visitor-tracking"
 
 // Predefined affiliate table for validation
 const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
@@ -105,6 +106,29 @@ export function VisitorTracker() {
         console.log("Updated affiliate code:", validAffiliate)
       }
 
+      // Send visitor data to database (async, don't block UI)
+      const sendToDatabase = async () => {
+        try {
+          await trackVisitorToDatabase({
+            sessionId: visitorData.sessionId,
+            visitorId: visitorData.visitorId,
+            currentPage: visitorData.currentPage,
+            referrer: visitorData.referrer,
+            userAgent: visitorData.userAgent,
+            pageViews: visitorData.pageViews,
+            utmSource: visitorData.utmSource,
+            utmMedium: visitorData.utmMedium,
+            utmCampaign: visitorData.utmCampaign,
+            affiliate: visitorData.affiliate,
+          })
+        } catch (error) {
+          console.error("Failed to send visitor data to database:", error)
+        }
+      }
+
+      // Send to database without blocking the UI
+      sendToDatabase()
+
       // Store updated visitor data
       localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
 
@@ -130,20 +154,6 @@ export function VisitorTracker() {
       } catch (error) {
         console.error("Error updating all visitors data:", error)
       }
-
-      // Log tracking data for debugging
-      console.log("Visitor tracking active:", {
-        visitorId: visitorData.visitorId,
-        sessionId: visitorData.sessionId,
-        pageViews: visitorData.pageViews,
-        currentPage: visitorData.currentPage,
-        affiliate: visitorData.affiliate,
-        utm: {
-          source: visitorData.utmSource,
-          medium: visitorData.utmMedium,
-          campaign: visitorData.utmCampaign,
-        },
-      })
 
       // Store page visit history
       const pageHistory = JSON.parse(localStorage.getItem("kuhlekt_page_history") || "[]")

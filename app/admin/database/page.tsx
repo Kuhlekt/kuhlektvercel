@@ -45,6 +45,7 @@ export default function DatabaseAdminPage() {
   const [pageViews, setPageViews] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -52,38 +53,58 @@ export default function DatabaseAdminPage() {
 
   const loadData = async () => {
     setIsLoading(true)
+    setError(null)
+
     try {
-      // Load dashboard stats
+      console.log("Loading admin data...")
+
       const statsResult = await getDashboardStats()
+      console.log("Stats result:", statsResult)
       if (statsResult.success) {
         setStats(statsResult.data)
+      } else {
+        console.error("Stats error:", statsResult.error)
+        setError(`Stats error: ${statsResult.error}`)
       }
 
-      // Load visitors
       const visitorsResult = await getVisitorsData(100, 0)
+      console.log("Visitors result:", visitorsResult)
       if (visitorsResult.success) {
         setVisitors(visitorsResult.data || [])
+      } else {
+        console.error("Visitors error:", visitorsResult.error)
+        setError(`Visitors error: ${visitorsResult.error}`)
       }
 
-      // Load form submissions
       const submissionsResult = await getFormSubmissions(100, 0)
+      console.log("Submissions result:", submissionsResult)
       if (submissionsResult.success) {
         setSubmissions(submissionsResult.data || [])
+      } else {
+        console.error("Submissions error:", submissionsResult.error)
+        setError(`Submissions error: ${submissionsResult.error}`)
       }
 
-      // Load affiliates
       const affiliatesResult = await getAllActiveAffiliates()
+      console.log("Affiliates result:", affiliatesResult)
       if (affiliatesResult.success) {
         setAffiliates(affiliatesResult.data || [])
+      } else {
+        console.error("Affiliates error:", affiliatesResult.error)
+        setError(`Affiliates error: ${affiliatesResult.error}`)
       }
 
-      // Load page views
       const pageViewsResult = await getPageViewsData(undefined, 100)
+      console.log("Page views result:", pageViewsResult)
       if (pageViewsResult.success) {
         setPageViews(pageViewsResult.data || [])
+      } else {
+        console.error("Page views error:", pageViewsResult.error)
+        setError(`Page views error: ${pageViewsResult.error}`)
       }
     } catch (error) {
       console.error("Error loading data:", error)
+      setError(`Unexpected error: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
     setIsLoading(false)
   }
@@ -136,7 +157,6 @@ export default function DatabaseAdminPage() {
       <AdminHeader />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <div>
@@ -149,7 +169,20 @@ export default function DatabaseAdminPage() {
               </Button>
             </div>
 
-            {/* Quick Stats */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-red-800 mb-2">Error Loading Data</h3>
+                <p className="text-red-700 text-sm">{error}</p>
+                <p className="text-red-600 text-xs mt-2">Check browser console for more details.</p>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-blue-700">Loading admin data...</p>
+              </div>
+            )}
+
             {stats && (
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                 <Card>
@@ -236,7 +269,6 @@ export default function DatabaseAdminPage() {
               <TabsTrigger value="pageviews">Page Views</TabsTrigger>
             </TabsList>
 
-            {/* Dashboard Tab */}
             <TabsContent value="dashboard">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
@@ -294,7 +326,6 @@ export default function DatabaseAdminPage() {
               </div>
             </TabsContent>
 
-            {/* Form Submissions Tab */}
             <TabsContent value="submissions">
               <Card>
                 <CardHeader>
@@ -372,7 +403,6 @@ export default function DatabaseAdminPage() {
               </Card>
             </TabsContent>
 
-            {/* Visitors Tab */}
             <TabsContent value="visitors">
               <Card>
                 <CardHeader>
@@ -430,7 +460,6 @@ export default function DatabaseAdminPage() {
               </Card>
             </TabsContent>
 
-            {/* Affiliates Tab */}
             <TabsContent value="affiliates">
               <Card>
                 <CardHeader>
@@ -463,7 +492,6 @@ export default function DatabaseAdminPage() {
               </Card>
             </TabsContent>
 
-            {/* Page Views Tab */}
             <TabsContent value="pageviews">
               <Card>
                 <CardHeader>
