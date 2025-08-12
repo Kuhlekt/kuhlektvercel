@@ -4,164 +4,144 @@ import { z } from "zod"
 import { sendEmail } from "@/lib/email-service"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-const demoRequestSchema = z.object({
+const demoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(1, "Phone number is required"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
   company: z.string().min(1, "Company name is required"),
   jobTitle: z.string().min(1, "Job title is required"),
-  companySize: z.string().min(1, "Please select company size"),
-  currentChallenges: z.string().optional(),
   affiliateCode: z.string().optional(),
-  recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
+  message: z.string().optional(),
 })
 
-async function verifyRecaptcha(token: string): Promise<boolean> {
+export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    // Verify reCAPTCHA
+    const recaptchaToken = formData.get("g-recaptcha-response") as string
+    if (!recaptchaToken) {
+      return {
+        success: false,
+        error: "Please complete the reCAPTCHA verification",
+      }
+    }
+
+    const recaptchaResponse = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
     })
 
-    const data = await response.json()
-    return data.success
-  } catch (error) {
-    console.error("reCAPTCHA verification error:", error)
-    return false
-  }
-}
+    const recaptchaResult = await recaptchaResponse.json()
+    if (!recaptchaResult.success) {
+      return {
+        success: false,
+        error: "reCAPTCHA verification failed. Please try again.",
+      }
+    }
 
-export async function submitDemoRequest(prevState: any, formData: FormData) {
-  try {
-    const rawData = {
+    // Validate form data
+    const validatedData = demoSchema.parse({
       firstName: formData.get("firstName"),
       lastName: formData.get("lastName"),
       email: formData.get("email"),
       phone: formData.get("phone"),
       company: formData.get("company"),
       jobTitle: formData.get("jobTitle"),
-      companySize: formData.get("companySize"),
-      currentChallenges: formData.get("currentChallenges"),
       affiliateCode: formData.get("affiliateCode"),
-      recaptchaToken: formData.get("recaptchaToken"),
-    }
-
-    const validatedData = demoRequestSchema.parse(rawData)
-
-    // Verify reCAPTCHA
-    const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
-    if (!isRecaptchaValid) {
-      return {
-        success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
-        errors: { recaptchaToken: "reCAPTCHA verification failed" },
-      }
-    }
+      message: formData.get("message"),
+    })
 
     // Validate affiliate code if provided
     let affiliateInfo = null
     if (validatedData.affiliateCode) {
       affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
-      if (!affiliateInfo) {
+      if (!affiliateInfo.isValid) {
         return {
           success: false,
-          message: "Invalid affiliate code provided.",
-          errors: { affiliateCode: "Invalid affiliate code" },
+          fieldErrors: {
+            affiliateCode: "Invalid affiliate code",
+          },
         }
       }
     }
 
-    // Prepare email content
-    const emailSubject = `Demo Request from ${validatedData.firstName} ${validatedData.lastName} - ${validatedData.company}`
-
-    const emailBody = `
-New Demo Request Received
-
-Contact Information:
-- Name: ${validatedData.firstName} ${validatedData.lastName}
-- Email: ${validatedData.email}
-- Phone: ${validatedData.phone}
-- Company: ${validatedData.company}
-- Job Title: ${validatedData.jobTitle}
-- Company Size: ${validatedData.companySize}
-
-${validatedData.currentChallenges ? `Current AR Challenges:\n${validatedData.currentChallenges}\n\n` : ""}
-
-${affiliateInfo ? `Affiliate Information:\n- Code: ${validatedData.affiliateCode}\n- Partner: ${affiliateInfo.name}\n- Category: ${affiliateInfo.category}\n- Discount: ${affiliateInfo.discount}%\n\n` : ""}
-
-Please contact this prospect within 2 business hours to schedule their demo.
-
-Submitted at: ${new Date().toLocaleString()}
+    // Send notification email to admin
+    const adminEmailContent = `
+      New Demo Request Received
+      
+      Contact Information:
+      - Name: ${validatedData.firstName} ${validatedData.lastName}
+      - Email: ${validatedData.email}
+      - Phone: ${validatedData.phone}
+      - Company: ${validatedData.company}
+      - Job Title: ${validatedData.jobTitle}
+      
+      ${validatedData.affiliateCode ? `Affiliate Code: ${validatedData.affiliateCode} (${affiliateInfo?.name})` : ""}
+      
+      ${validatedData.message ? `Additional Information:\n${validatedData.message}` : ""}
+      
+      Please follow up within 24 hours to schedule their demo.
     `
 
-    // Send notification email
     await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "demo@kuhlekt.com",
-      subject: emailSubject,
-      body: emailBody,
+      to: process.env.AWS_SES_FROM_EMAIL || "admin@kuhlekt.com",
+      subject: `New Demo Request - ${validatedData.company}`,
+      text: adminEmailContent,
     })
 
     // Send confirmation email to prospect
-    const confirmationSubject = "Demo Request Received - Kuhlekt AR Automation"
-    const confirmationBody = `
-Dear ${validatedData.firstName},
-
-Thank you for your interest in Kuhlekt's AR automation platform!
-
-We have received your demo request and our team will contact you within 2 business hours to schedule your personalized demonstration.
-
-In the meantime, feel free to explore our resources:
-- Visit our website: https://kuhlekt.com
-- Learn about our solutions: https://kuhlekt.com/solutions
-- Read customer success stories: https://kuhlekt.com/about
-
-We look forward to showing you how Kuhlekt can transform your accounts receivable process.
-
-Best regards,
-The Kuhlekt Team
-
----
-This is an automated message. Please do not reply to this email.
+    const confirmationEmailContent = `
+      Hi ${validatedData.firstName},
+      
+      Thank you for your interest in Kuhlekt! We've received your demo request and will contact you within 24 hours to schedule your personalized demonstration.
+      
+      During your demo, we'll show you how Kuhlekt can:
+      • Reduce your Days Sales Outstanding (DSO) by up to 30%
+      • Automate manual AR processes to save 15+ hours per week
+      • Increase collection rates by up to 25%
+      • Provide real-time insights into your receivables
+      
+      If you have any immediate questions, please don't hesitate to reach out to us.
+      
+      Best regards,
+      The Kuhlekt Team
+      
+      ---
+      This email was sent because you requested a demo at kuhlekt.com
     `
 
     await sendEmail({
       to: validatedData.email,
-      subject: confirmationSubject,
-      body: confirmationBody,
+      subject: "Demo Request Confirmed - Kuhlekt",
+      text: confirmationEmailContent,
     })
 
     return {
       success: true,
-      message:
-        "Thank you! Your demo request has been submitted successfully. We'll contact you within 2 business hours to schedule your personalized demonstration.",
-      errors: {},
+      message: "Demo request submitted successfully!",
     }
   } catch (error) {
-    console.error("Demo request submission error:", error)
+    console.error("Demo request error:", error)
 
     if (error instanceof z.ZodError) {
       const fieldErrors: Record<string, string> = {}
       error.errors.forEach((err) => {
-        if (err.path) {
-          fieldErrors[err.path[0]] = err.message
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message
         }
       })
-
       return {
         success: false,
-        message: "Please correct the errors below and try again.",
-        errors: fieldErrors,
+        fieldErrors,
       }
     }
 
     return {
       success: false,
-      message: "An error occurred while submitting your request. Please try again.",
-      errors: {},
+      error: "An error occurred while submitting your request. Please try again.",
     }
   }
 }
