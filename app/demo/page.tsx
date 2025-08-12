@@ -44,6 +44,7 @@ export default function DemoPage() {
       formData.append("recaptchaToken", recaptchaToken)
     }
 
+    // Add visitor tracking data if available
     if (typeof window !== "undefined") {
       try {
         const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
@@ -53,12 +54,7 @@ export default function DemoPage() {
           formData.append("utmSource", visitorData.utmSource || "")
           formData.append("utmCampaign", visitorData.utmCampaign || "")
           formData.append("pageViews", visitorData.pageViews?.toString() || "")
-          formData.append("sessionId", visitorData.sessionId || "")
-          formData.append("landingPage", visitorData.landingPage || "")
         }
-
-        // Add user agent and current page info
-        formData.append("userAgent", navigator.userAgent || "")
       } catch (error) {
         console.error("Error adding visitor data to form:", error)
       }
@@ -170,20 +166,8 @@ export default function DemoPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="role">Job Title</Label>
-                  <Input id="role" name="role" type="text" className="mt-1" disabled={isPending} />
-                </div>
-
-                <div>
-                  <Label htmlFor="challenges">What challenges are you facing? (Optional)</Label>
-                  <Input
-                    id="challenges"
-                    name="challenges"
-                    type="text"
-                    placeholder="e.g., High DSO, manual processes, cash flow issues"
-                    className="mt-1"
-                    disabled={isPending}
-                  />
+                  <Label htmlFor="jobTitle">Job Title</Label>
+                  <Input id="jobTitle" name="jobTitle" type="text" className="mt-1" disabled={isPending} />
                 </div>
 
                 <div>

@@ -35,7 +35,7 @@ export async function createOrUpdateVisitor(visitorData: VisitorData) {
   }
 
   try {
-    // First try to find existing visitor by session_id
+    // First, try to find existing visitor by session_id
     const { data: existingVisitor, error: findError } = await supabase
       .from("visitors")
       .select("id, page_views, session_duration")
@@ -97,12 +97,12 @@ export async function createOrUpdateVisitor(visitorData: VisitorData) {
       return { success: true, data, isNew: true }
     }
   } catch (error) {
-    console.error("Database error:", error)
-    return { success: false, error: "Database operation failed" }
+    console.error("Unexpected error in createOrUpdateVisitor:", error)
+    return { success: false, error: "Unexpected error occurred" }
   }
 }
 
-export async function recordPageView(pageViewData: PageViewData) {
+export async function addPageView(pageViewData: PageViewData) {
   const supabase = createServerClient()
   if (!supabase) {
     console.warn("Supabase not configured")
@@ -125,13 +125,34 @@ export async function recordPageView(pageViewData: PageViewData) {
       .single()
 
     if (error) {
-      console.error("Error recording page view:", error)
+      console.error("Error adding page view:", error)
       return { success: false, error: error.message }
     }
 
     return { success: true, data }
   } catch (error) {
-    console.error("Database error:", error)
-    return { success: false, error: "Database operation failed" }
+    console.error("Unexpected error in addPageView:", error)
+    return { success: false, error: "Unexpected error occurred" }
+  }
+}
+
+export async function getVisitorBySessionId(sessionId: string) {
+  const supabase = createServerClient()
+  if (!supabase) {
+    return { success: false, error: "Database not configured" }
+  }
+
+  try {
+    const { data, error } = await supabase.from("visitors").select("*").eq("session_id", sessionId).single()
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Error getting visitor:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: data || null }
+  } catch (error) {
+    console.error("Unexpected error in getVisitorBySessionId:", error)
+    return { success: false, error: "Unexpected error occurred" }
   }
 }
