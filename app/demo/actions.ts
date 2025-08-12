@@ -4,11 +4,11 @@ import { z } from "zod"
 import { sendEmail } from "@/lib/email-service"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-const demoSchema = z.object({
+const demoRequestSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
+  phone: z.string().min(1, "Phone number is required"),
   company: z.string().min(1, "Company name is required"),
   jobTitle: z.string().min(1, "Job title is required"),
   companySize: z.string().min(1, "Please select company size"),
@@ -18,17 +18,6 @@ const demoSchema = z.object({
 })
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
-  // If no secret key is configured, allow the request (development mode)
-  if (!process.env.RECAPTCHA_SECRET_KEY) {
-    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
-    return true
-  }
-
-  // If it's the development token, allow it
-  if (token === "development-mode") {
-    return true
-  }
-
   try {
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
@@ -49,27 +38,27 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     const rawData = {
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      company: formData.get("company") as string,
-      jobTitle: formData.get("jobTitle") as string,
-      companySize: formData.get("companySize") as string,
-      currentChallenges: formData.get("currentChallenges") as string,
-      affiliateCode: formData.get("affiliateCode") as string,
-      recaptchaToken: formData.get("recaptchaToken") as string,
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      company: formData.get("company"),
+      jobTitle: formData.get("jobTitle"),
+      companySize: formData.get("companySize"),
+      currentChallenges: formData.get("currentChallenges"),
+      affiliateCode: formData.get("affiliateCode"),
+      recaptchaToken: formData.get("recaptchaToken"),
     }
 
-    const validatedData = demoSchema.parse(rawData)
+    const validatedData = demoRequestSchema.parse(rawData)
 
     // Verify reCAPTCHA
-    const captchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
-    if (!captchaValid) {
+    const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
+    if (!isRecaptchaValid) {
       return {
         success: false,
         message: "reCAPTCHA verification failed. Please try again.",
-        errors: {},
+        errors: { recaptchaToken: "reCAPTCHA verification failed" },
       }
     }
 
@@ -80,7 +69,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       if (!affiliateInfo) {
         return {
           success: false,
-          message: "Invalid affiliate code. Please check and try again.",
+          message: "Invalid affiliate code provided.",
           errors: { affiliateCode: "Invalid affiliate code" },
         }
       }
@@ -113,8 +102,7 @@ Submitted at: ${new Date().toLocaleString()}
     await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "demo@kuhlekt.com",
       subject: emailSubject,
-      text: emailBody,
-      html: emailBody.replace(/\n/g, "<br>"),
+      body: emailBody,
     })
 
     // Send confirmation email to prospect
@@ -124,34 +112,32 @@ Dear ${validatedData.firstName},
 
 Thank you for your interest in Kuhlekt's AR automation platform!
 
-We've received your demo request and our team will contact you within 2 business hours to schedule your personalized demonstration.
+We have received your demo request and our team will contact you within 2 business hours to schedule your personalized demonstration.
 
-What to expect in your demo:
-• Comprehensive overview of our AR automation features
-• Live demonstration tailored to your business needs
-• Q&A session with our AR experts
-• Custom ROI analysis for your company
+In the meantime, feel free to explore our resources:
+- Visit our website: https://kuhlekt.com
+- Learn about our solutions: https://kuhlekt.com/solutions
+- Read customer success stories: https://kuhlekt.com/about
 
-If you have any immediate questions, please don't hesitate to reach out to us.
+We look forward to showing you how Kuhlekt can transform your accounts receivable process.
 
 Best regards,
 The Kuhlekt Team
 
 ---
-This is an automated confirmation email. Please do not reply to this message.
+This is an automated message. Please do not reply to this email.
     `
 
     await sendEmail({
       to: validatedData.email,
       subject: confirmationSubject,
-      text: confirmationBody,
-      html: confirmationBody.replace(/\n/g, "<br>"),
+      body: confirmationBody,
     })
 
     return {
       success: true,
       message:
-        "Thank you! Your demo request has been submitted successfully. We'll contact you within 2 business hours to schedule your personalized demo.",
+        "Thank you! Your demo request has been submitted successfully. We'll contact you within 2 business hours to schedule your personalized demonstration.",
       errors: {},
     }
   } catch (error) {
@@ -160,8 +146,8 @@ This is an automated confirmation email. Please do not reply to this message.
     if (error instanceof z.ZodError) {
       const fieldErrors: Record<string, string> = {}
       error.errors.forEach((err) => {
-        if (err.path[0]) {
-          fieldErrors[err.path[0] as string] = err.message
+        if (err.path) {
+          fieldErrors[err.path[0]] = err.message
         }
       })
 
