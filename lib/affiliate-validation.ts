@@ -1,247 +1,220 @@
-interface AffiliateInfo {
+interface AffiliateCode {
   code: string
   name: string
   category: string
   discount: number
   commission: number
-  description: string
   isActive: boolean
 }
 
-const affiliatePartners: Record<string, AffiliateInfo> = {
-  ACCT2024: {
-    code: "ACCT2024",
-    name: "Premier Accounting Solutions",
-    category: "accounting",
+const affiliateCodes: AffiliateCode[] = [
+  {
+    code: "PARTNER001",
+    name: "TechSolutions Inc",
+    category: "Technology Partner",
     discount: 15,
     commission: 10,
-    description: "Accounting firm partnership program",
     isActive: true,
   },
-  "CPA-GOLD": {
-    code: "CPA-GOLD",
-    name: "Gold Standard CPAs",
-    category: "accounting",
+  {
+    code: "CONSULT001",
+    name: "FinanceConsult Pro",
+    category: "Consulting Partner",
     discount: 20,
-    commission: 12,
-    description: "Premium CPA firm partnership",
-    isActive: true,
-  },
-  BOOKKEEP: {
-    code: "BOOKKEEP",
-    name: "Professional Bookkeepers Network",
-    category: "accounting",
-    discount: 12,
-    commission: 8,
-    description: "Bookkeeping services partnership",
-    isActive: true,
-  },
-  "TECH-INTG": {
-    code: "TECH-INTG",
-    name: "TechIntegrate Solutions",
-    category: "technology",
-    discount: 18,
     commission: 15,
-    description: "Technology integration partnership",
     isActive: true,
   },
-  "SAAS-ALLY": {
-    code: "SAAS-ALLY",
-    name: "SaaS Alliance Partners",
-    category: "technology",
+  {
+    code: "RESELLER001",
+    name: "BusinessSoft Resellers",
+    category: "Reseller Partner",
     discount: 25,
     commission: 20,
-    description: "SaaS ecosystem partnership",
     isActive: true,
   },
-  "CLOUD-PRO": {
-    code: "CLOUD-PRO",
-    name: "CloudPro Consultants",
-    category: "technology",
-    discount: 16,
+  {
+    code: "STARTUP001",
+    name: "StartupAccelerator",
+    category: "Startup Program",
+    discount: 30,
+    commission: 5,
+    isActive: true,
+  },
+  {
+    code: "ENTERPRISE001",
+    name: "Enterprise Solutions Group",
+    category: "Enterprise Partner",
+    discount: 10,
     commission: 12,
-    description: "Cloud consulting partnership",
     isActive: true,
   },
-  CONSULT1: {
-    code: "CONSULT1",
-    name: "Business Process Consultants",
-    category: "consulting",
+  {
+    code: "FINANCE001",
+    name: "CFO Network",
+    category: "Finance Community",
+    discount: 18,
+    commission: 8,
+    isActive: true,
+  },
+  {
+    code: "ACCOUNTING001",
+    name: "CPA Alliance",
+    category: "Accounting Partner",
     discount: 22,
     commission: 18,
-    description: "Business process consulting partnership",
     isActive: true,
   },
-  "FINANCE-EXP": {
-    code: "FINANCE-EXP",
-    name: "Finance Experts Group",
-    category: "consulting",
-    discount: 20,
-    commission: 15,
-    description: "Financial consulting partnership",
-    isActive: true,
-  },
-  "AR-SPECIALIST": {
-    code: "AR-SPECIALIST",
-    name: "AR Specialists Network",
-    category: "consulting",
-    discount: 24,
-    commission: 20,
-    description: "AR specialization partnership",
-    isActive: true,
-  },
-  "RESELL-PRO": {
-    code: "RESELL-PRO",
-    name: "Professional Resellers Inc",
-    category: "reseller",
-    discount: 30,
-    commission: 25,
-    description: "Authorized reseller program",
-    isActive: true,
-  },
-  "CHANNEL-1": {
-    code: "CHANNEL-1",
-    name: "Channel One Partners",
-    category: "reseller",
-    discount: 28,
-    commission: 22,
-    description: "Channel partner program",
-    isActive: true,
-  },
-  "DIST-NETWORK": {
-    code: "DIST-NETWORK",
-    name: "Distribution Network LLC",
-    category: "reseller",
-    discount: 26,
-    commission: 20,
-    description: "Distribution partnership",
-    isActive: true,
-  },
-  "MFG-FOCUS": {
-    code: "MFG-FOCUS",
-    name: "Manufacturing Focus Group",
-    category: "industry",
-    discount: 18,
+  {
+    code: "INTEGRATION001",
+    name: "SystemIntegrators LLC",
+    category: "Integration Partner",
+    discount: 12,
     commission: 14,
-    description: "Manufacturing industry specialization",
     isActive: true,
   },
-  "HEALTHCARE-AR": {
-    code: "HEALTHCARE-AR",
-    name: "Healthcare AR Solutions",
-    category: "industry",
-    discount: 20,
-    commission: 16,
-    description: "Healthcare industry partnership",
-    isActive: true,
-  },
-  "RETAIL-PLUS": {
-    code: "RETAIL-PLUS",
-    name: "Retail Plus Consultants",
-    category: "industry",
+  {
+    code: "REFERRAL001",
+    name: "Customer Referral Program",
+    category: "Customer Referral",
     discount: 15,
-    commission: 12,
-    description: "Retail industry specialization",
+    commission: 25,
     isActive: true,
   },
-  "STARTUP-50": {
-    code: "STARTUP-50",
-    name: "Startup Accelerator Program",
-    category: "special",
-    discount: 50,
-    commission: 5,
-    description: "Special startup program",
-    isActive: true,
-  },
-  NONPROFIT: {
-    code: "NONPROFIT",
-    name: "Nonprofit Organizations",
-    category: "special",
-    discount: 35,
-    commission: 0,
-    description: "Nonprofit discount program",
-    isActive: true,
-  },
-  EDUCATION: {
-    code: "EDUCATION",
+  {
+    code: "EDUCATION001",
     name: "Educational Institutions",
-    category: "special",
+    category: "Education Partner",
+    discount: 35,
+    commission: 5,
+    isActive: true,
+  },
+  {
+    code: "NONPROFIT001",
+    name: "Nonprofit Organizations",
+    category: "Nonprofit Partner",
     discount: 40,
     commission: 0,
-    description: "Educational discount program",
     isActive: true,
   },
-  "WEST-COAST": {
-    code: "WEST-COAST",
-    name: "West Coast Partners",
-    category: "regional",
-    discount: 17,
-    commission: 13,
-    description: "West Coast regional partnership",
+  {
+    code: "HEALTHCARE001",
+    name: "Healthcare Solutions",
+    category: "Healthcare Partner",
+    discount: 20,
+    commission: 15,
     isActive: true,
   },
-  "MIDWEST-PRO": {
-    code: "MIDWEST-PRO",
-    name: "Midwest Professionals",
-    category: "regional",
-    discount: 16,
-    commission: 12,
-    description: "Midwest regional partnership",
-    isActive: true,
-  },
-  SOUTHEAST: {
-    code: "SOUTHEAST",
-    name: "Southeast Business Network",
-    category: "regional",
+  {
+    code: "MANUFACTURING001",
+    name: "Manufacturing Alliance",
+    category: "Manufacturing Partner",
     discount: 18,
-    commission: 14,
-    description: "Southeast regional partnership",
+    commission: 12,
     isActive: true,
   },
-  "VIP-PLATINUM": {
-    code: "VIP-PLATINUM",
-    name: "Platinum VIP Partners",
-    category: "vip",
-    discount: 35,
-    commission: 30,
-    description: "Platinum tier VIP partnership",
+  {
+    code: "RETAIL001",
+    name: "Retail Partners Network",
+    category: "Retail Partner",
+    discount: 16,
+    commission: 10,
     isActive: true,
   },
-  "VIP-GOLD": {
-    code: "VIP-GOLD",
-    name: "Gold VIP Partners",
-    category: "vip",
-    discount: 30,
-    commission: 25,
-    description: "Gold tier VIP partnership",
-    isActive: true,
-  },
-  ENTERPRISE: {
-    code: "ENTERPRISE",
-    name: "Enterprise Partners",
-    category: "vip",
+  {
+    code: "SAAS001",
+    name: "SaaS Partners Collective",
+    category: "SaaS Partner",
     discount: 25,
     commission: 20,
-    description: "Enterprise partnership program",
     isActive: true,
   },
+  {
+    code: "FINTECH001",
+    name: "FinTech Innovators",
+    category: "FinTech Partner",
+    discount: 28,
+    commission: 22,
+    isActive: true,
+  },
+  {
+    code: "CLOUD001",
+    name: "Cloud Solutions Provider",
+    category: "Cloud Partner",
+    discount: 20,
+    commission: 15,
+    isActive: true,
+  },
+  {
+    code: "SECURITY001",
+    name: "CyberSecurity Partners",
+    category: "Security Partner",
+    discount: 15,
+    commission: 12,
+    isActive: true,
+  },
+  {
+    code: "ANALYTICS001",
+    name: "Data Analytics Group",
+    category: "Analytics Partner",
+    discount: 22,
+    commission: 18,
+    isActive: true,
+  },
+  {
+    code: "AUTOMATION001",
+    name: "Process Automation Experts",
+    category: "Automation Partner",
+    discount: 24,
+    commission: 20,
+    isActive: true,
+  },
+  {
+    code: "COMPLIANCE001",
+    name: "Compliance Solutions Inc",
+    category: "Compliance Partner",
+    discount: 18,
+    commission: 14,
+    isActive: true,
+  },
+  {
+    code: "AUDIT001",
+    name: "Audit Professionals Network",
+    category: "Audit Partner",
+    discount: 20,
+    commission: 16,
+    isActive: true,
+  },
+  {
+    code: "TREASURY001",
+    name: "Treasury Management Group",
+    category: "Treasury Partner",
+    discount: 17,
+    commission: 13,
+    isActive: true,
+  },
+  {
+    code: "CREDIT001",
+    name: "Credit Management Alliance",
+    category: "Credit Partner",
+    discount: 19,
+    commission: 15,
+    isActive: true,
+  },
+]
+
+export function validateAffiliateCode(code: string): AffiliateCode | null {
+  const affiliate = affiliateCodes.find(
+    (affiliate) => affiliate.code.toLowerCase() === code.toLowerCase() && affiliate.isActive,
+  )
+  return affiliate || null
 }
 
-export function validateAffiliateCode(code: string): AffiliateInfo | null {
-  const upperCode = code.toUpperCase().trim()
-  const affiliate = affiliatePartners[upperCode]
-
-  if (!affiliate || !affiliate.isActive) {
-    return null
-  }
-
-  return affiliate
+export function getAllAffiliateCodes(): AffiliateCode[] {
+  return affiliateCodes.filter((affiliate) => affiliate.isActive)
 }
 
-export function getAllAffiliatePartners(): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isActive)
-}
-
-export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
+export function getAffiliateByCategory(category: string): AffiliateCode[] {
+  return affiliateCodes.filter(
+    (affiliate) => affiliate.category.toLowerCase().includes(category.toLowerCase()) && affiliate.isActive,
+  )
 }

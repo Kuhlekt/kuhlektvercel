@@ -93,4 +93,8 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
   return <div ref={recaptchaRef} className="flex justify-center" />
 }
 
+// Named export for compatibility
 export { ReCAPTCHA }
+
+// Additional named export as ReCaptcha (with different casing)
+export const ReCaptcha = ReCAPTCHA
