@@ -113,6 +113,21 @@ export default function ContactPage() {
               </div>
 
               <div>
+                <Label htmlFor="affiliate">Affiliate Code</Label>
+                <Input
+                  id="affiliate"
+                  name="affiliate"
+                  type="text"
+                  placeholder="Enter your affiliate code (optional)"
+                  className="mt-1"
+                  disabled={isPending}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  If you have an affiliate or partner code, enter it here for tracking purposes.
+                </p>
+              </div>
+
+              <div>
                 <Label htmlFor="subject">Subject *</Label>
                 <Select name="subject" required disabled={isPending}>
                   <SelectTrigger className="mt-1">
