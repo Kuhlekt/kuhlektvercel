@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { requireAdminAuth } from "@/lib/auth/admin-auth"
 import { AdminHeader } from "@/components/admin-header"
 import {
   Users,
@@ -38,9 +37,7 @@ interface DashboardStats {
   recentSubmissions: number
 }
 
-export default async function DatabaseAdminPage() {
-  await requireAdminAuth()
-
+export default function DatabaseAdminPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [visitors, setVisitors] = useState<any[]>([])
   const [submissions, setSubmissions] = useState<any[]>([])
@@ -48,7 +45,6 @@ export default async function DatabaseAdminPage() {
   const [pageViews, setPageViews] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("dashboard")
 
   useEffect(() => {
     loadData()
@@ -231,7 +227,7 @@ export default async function DatabaseAdminPage() {
             )}
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value="dashboard" onValueChange={() => {}} className="space-y-6">
             <TabsList>
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="submissions">Form Submissions</TabsTrigger>
