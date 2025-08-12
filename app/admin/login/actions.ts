@@ -59,26 +59,15 @@ function verifyTOTP(token: string, secret: string): boolean {
 
 export async function loginAdmin(prevState: any, formData: FormData) {
   const password = formData.get("password") as string
-  const twofa = formData.get("twofa") as string
 
-  if (!password || !twofa) {
-    return { error: "Password and 2FA code are required" }
+  if (!password) {
+    return { error: "Password is required" }
   }
 
   // Check password
   const adminPassword = process.env.ADMIN_PASSWORD
   if (!adminPassword || password !== adminPassword) {
-    return { error: "Invalid credentials" }
-  }
-
-  // Check 2FA
-  const adminSecret = process.env.ADMIN_2FA_SECRET
-  if (!adminSecret) {
-    return { error: "2FA not configured" }
-  }
-
-  if (!verifyTOTP(twofa, adminSecret)) {
-    return { error: "Invalid 2FA code" }
+    return { error: "Invalid password" }
   }
 
   // Set admin session cookie
