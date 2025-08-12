@@ -1,250 +1,309 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useState } from "react"
+import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Calendar, Users, TrendingUp, Shield } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { CheckCircle, AlertCircle, Calendar, Users, TrendingUp, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
 import { submitDemoRequest } from "./actions"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
+
+const initialState = {
+  success: false,
+  message: "",
+  errors: {},
+}
 
 export default function DemoPage() {
-  const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
+  const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
   const [recaptchaToken, setRecaptchaToken] = useState("")
+  const [affiliateCode, setAffiliateCode] = useState("")
+  const [affiliateInfo, setAffiliateInfo] = useState<any>(null)
 
-  const handleRecaptchaVerify = (token: string) => {
-    setRecaptchaToken(token)
+  const handleSubmit = async (formData: FormData) => {
+    formData.append("recaptchaToken", recaptchaToken)
+    await formAction(formData)
+  }
+
+  const handleAffiliateChange = (value: string) => {
+    setAffiliateCode(value)
+    if (value.trim()) {
+      const info = validateAffiliateCode(value.trim())
+      setAffiliateInfo(info)
+    } else {
+      setAffiliateInfo(null)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-12">
-        {/* Header Section */}
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Request Your Personalized Demo</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Request a Demo</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            See how Kuhlekt's AR automation platform can transform your accounts receivable process. Get a live
-            demonstration tailored to your business needs.
+            See how Kuhlekt can transform your accounts receivable process. Schedule a personalized demo with our AR
+            automation experts.
           </p>
         </div>
 
-        {/* Benefits Section */}
-        <div className="grid md:grid-cols-4 gap-6 mb-12">
-          <div className="text-center">
-            <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <Calendar className="h-8 w-8 text-blue-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">30-Minute Demo</h3>
-            <p className="text-sm text-gray-600">Comprehensive overview of all features</p>
-          </div>
-          <div className="text-center">
-            <div className="bg-green-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <Users className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Expert Guidance</h3>
-            <p className="text-sm text-gray-600">AR specialists answer your questions</p>
-          </div>
-          <div className="text-center">
-            <div className="bg-purple-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <TrendingUp className="h-8 w-8 text-purple-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">ROI Analysis</h3>
-            <p className="text-sm text-gray-600">Custom savings calculation for your business</p>
-          </div>
-          <div className="text-center">
-            <div className="bg-orange-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <Shield className="h-8 w-8 text-orange-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">No Commitment</h3>
-            <p className="text-sm text-gray-600">Free demo with no obligations</p>
-          </div>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Left side - Information */}
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="text-center">
+                <CardContent className="pt-6">
+                  <Calendar className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">30-Minute Demo</h3>
+                  <p className="text-gray-600">Personalized walkthrough of our AR automation platform</p>
+                </CardContent>
+              </Card>
 
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Schedule Your Demo</CardTitle>
-              <CardDescription>
-                Fill out the form below and we'll contact you within 2 business hours to schedule your personalized
-                demonstration.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {state?.success && (
-                <Alert className="mb-6 border-green-200 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">{state.message}</AlertDescription>
-                </Alert>
-              )}
+              <Card className="text-center">
+                <CardContent className="pt-6">
+                  <TrendingUp className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">ROI Analysis</h3>
+                  <p className="text-gray-600">Custom ROI projections based on your business metrics</p>
+                </CardContent>
+              </Card>
 
-              {state?.success === false && (
-                <Alert className="mb-6 border-red-200 bg-red-50">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800">{state.message}</AlertDescription>
-                </Alert>
-              )}
+              <Card className="text-center">
+                <CardContent className="pt-6">
+                  <Users className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Expert Consultation</h3>
+                  <p className="text-gray-600">One-on-one session with our AR automation specialists</p>
+                </CardContent>
+              </Card>
 
-              <form action={formAction} className="space-y-6">
-                <input type="hidden" name="recaptchaToken" value={recaptchaToken} />
+              <Card className="text-center">
+                <CardContent className="pt-6">
+                  <Clock className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Quick Response</h3>
+                  <p className="text-gray-600">We'll contact you within 2 business hours</p>
+                </CardContent>
+              </Card>
+            </div>
 
-                {/* Personal Information */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      required
-                      className={state?.errors?.firstName ? "border-red-500" : ""}
-                    />
-                    {state?.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">What You'll See in Your Demo</h3>
+              <ul className="space-y-3 text-gray-600">
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  Automated invoice generation and delivery
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  Smart payment reminder workflows
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  Real-time AR analytics and reporting
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  Integration with your existing systems
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                  Customer portal and self-service options
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Right side - Form */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-green-600" />
+                  Schedule Your Demo
+                </CardTitle>
+                <CardDescription>
+                  Fill out the form below and we'll contact you within 2 business hours to schedule your personalized
+                  demo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {state.message && (
+                  <Alert
+                    className={`mb-6 ${state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                  >
+                    {state.success ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
+                      {state.message}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <form action={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        required
+                        className={state.errors?.firstName ? "border-red-500" : ""}
+                      />
+                      {state.errors?.firstName && <p className="text-sm text-red-600 mt-1">{state.errors.firstName}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        required
+                        className={state.errors?.lastName ? "border-red-500" : ""}
+                      />
+                      {state.errors?.lastName && <p className="text-sm text-red-600 mt-1">{state.errors.lastName}</p>}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      required
-                      className={state?.errors?.lastName ? "border-red-500" : ""}
-                    />
-                    {state?.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="email">Email Address *</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        className={state.errors?.email ? "border-red-500" : ""}
+                      />
+                      {state.errors?.email && <p className="text-sm text-red-600 mt-1">{state.errors.email}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        className={state.errors?.phone ? "border-red-500" : ""}
+                      />
+                      {state.errors?.phone && <p className="text-sm text-red-600 mt-1">{state.errors.phone}</p>}
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Business Email *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    className={state?.errors?.email ? "border-red-500" : ""}
-                  />
-                  {state?.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="company">Company Name *</Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        type="text"
+                        required
+                        className={state.errors?.company ? "border-red-500" : ""}
+                      />
+                      {state.errors?.company && <p className="text-sm text-red-600 mt-1">{state.errors.company}</p>}
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    required
-                    className={state?.errors?.phone ? "border-red-500" : ""}
-                  />
-                  {state?.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
-                </div>
+                    <div>
+                      <Label htmlFor="jobTitle">Job Title *</Label>
+                      <Input
+                        id="jobTitle"
+                        name="jobTitle"
+                        type="text"
+                        required
+                        placeholder="e.g., CFO, Controller, AR Manager"
+                        className={state.errors?.jobTitle ? "border-red-500" : ""}
+                      />
+                      {state.errors?.jobTitle && <p className="text-sm text-red-600 mt-1">{state.errors.jobTitle}</p>}
+                    </div>
+                  </div>
 
-                {/* Company Information */}
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    type="text"
-                    required
-                    className={state?.errors?.company ? "border-red-500" : ""}
-                  />
-                  {state?.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
-                </div>
+                  <div>
+                    <Label htmlFor="companySize">Company Size *</Label>
+                    <Select name="companySize" required>
+                      <SelectTrigger className={state.errors?.companySize ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select company size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1-10">1-10 employees</SelectItem>
+                        <SelectItem value="11-50">11-50 employees</SelectItem>
+                        <SelectItem value="51-200">51-200 employees</SelectItem>
+                        <SelectItem value="201-500">201-500 employees</SelectItem>
+                        <SelectItem value="501-1000">501-1000 employees</SelectItem>
+                        <SelectItem value="1000+">1000+ employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {state.errors?.companySize && (
+                      <p className="text-sm text-red-600 mt-1">{state.errors.companySize}</p>
+                    )}
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title *</Label>
-                  <Input
-                    id="jobTitle"
-                    name="jobTitle"
-                    type="text"
-                    required
-                    className={state?.errors?.jobTitle ? "border-red-500" : ""}
-                  />
-                  {state?.errors?.jobTitle && <p className="text-sm text-red-600">{state.errors.jobTitle}</p>}
-                </div>
+                  <div>
+                    <Label htmlFor="currentChallenges">Current AR Challenges (Optional)</Label>
+                    <Textarea
+                      id="currentChallenges"
+                      name="currentChallenges"
+                      rows={4}
+                      placeholder="Tell us about your current AR challenges, pain points, or specific areas you'd like to see in the demo..."
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="companySize">Company Size *</Label>
-                  <Select name="companySize" required>
-                    <SelectTrigger className={state?.errors?.companySize ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select company size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 employees</SelectItem>
-                      <SelectItem value="11-50">11-50 employees</SelectItem>
-                      <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-500">201-500 employees</SelectItem>
-                      <SelectItem value="501-1000">501-1,000 employees</SelectItem>
-                      <SelectItem value="1000+">1,000+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {state?.errors?.companySize && <p className="text-sm text-red-600">{state.errors.companySize}</p>}
-                </div>
+                  <div>
+                    <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
+                    <Input
+                      id="affiliateCode"
+                      name="affiliateCode"
+                      type="text"
+                      value={affiliateCode}
+                      onChange={(e) => handleAffiliateChange(e.target.value)}
+                      placeholder="Enter your affiliate code for special pricing"
+                      className={state.errors?.affiliateCode ? "border-red-500" : ""}
+                    />
+                    {state.errors?.affiliateCode && (
+                      <p className="text-sm text-red-600 mt-1">{state.errors.affiliateCode}</p>
+                    )}
+                    {affiliateInfo && (
+                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            ✓ Valid Code
+                          </Badge>
+                          <span className="text-sm font-medium text-green-800">
+                            {affiliateInfo.discount}% discount applied
+                          </span>
+                        </div>
+                        <p className="text-sm text-green-700 mt-1">
+                          Partner: {affiliateInfo.name} | Category: {affiliateInfo.category}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      Have a partner or referral code? Enter it here for special demo pricing.
+                    </p>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="currentChallenges">Current AR Challenges (Optional)</Label>
-                  <Textarea
-                    id="currentChallenges"
-                    name="currentChallenges"
-                    placeholder="Tell us about your current accounts receivable challenges..."
-                    rows={4}
-                  />
-                </div>
+                  <div className="flex justify-center">
+                    <ReCAPTCHA onVerify={setRecaptchaToken} />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
-                  <Input
-                    id="affiliateCode"
-                    name="affiliateCode"
-                    type="text"
-                    placeholder="Enter affiliate code if you have one"
-                    className={state?.errors?.affiliateCode ? "border-red-500" : ""}
-                  />
-                  {state?.errors?.affiliateCode && <p className="text-sm text-red-600">{state.errors.affiliateCode}</p>}
-                </div>
-
-                <div className="space-y-4">
-                  <ReCAPTCHA onVerify={handleRecaptchaVerify} />
-                  {state?.errors?.recaptchaToken && (
-                    <p className="text-sm text-red-600">{state.errors.recaptchaToken}</p>
-                  )}
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isPending || !recaptchaToken}>
-                  {isPending ? "Submitting..." : "Request Demo"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Information */}
-        <div className="max-w-4xl mx-auto mt-12">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">What You'll See in Your Demo</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">Automated Workflows</h3>
-              <p className="text-gray-600">
-                See how our platform automates invoice generation, payment reminders, and collection processes.
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">Real-time Analytics</h3>
-              <p className="text-gray-600">
-                Explore comprehensive dashboards showing DSO trends, aging reports, and collection performance.
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="font-semibold text-lg text-gray-900 mb-3">Integration Capabilities</h3>
-              <p className="text-gray-600">
-                Learn how Kuhlekt seamlessly integrates with your existing ERP, CRM, and accounting systems.
-              </p>
-            </div>
+                  <Button
+                    type="submit"
+                    disabled={isPending || !recaptchaToken}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    {isPending ? "Submitting Request..." : "Request Demo"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
