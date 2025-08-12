@@ -8,24 +8,39 @@ export async function loginWithCredentials(formData: FormData) {
   const username = formData.get("username") as string
   const password = formData.get("password") as string
 
+  console.log("Login attempt:", { username, hasPassword: !!password })
+
   if (!username || !password) {
+    console.log("Missing credentials")
     return { success: false, error: "Username and password are required" }
   }
 
   try {
     // First try database authentication
+    console.log("Attempting database authentication...")
     const user = await verifyAdminCredentials(username, password)
+    console.log("Database auth result:", user ? "success" : "failed")
 
     if (user) {
       await createAdminSession(user)
       await logAdminActivity(user.id, user.username, "login_success", "authentication")
+      console.log("Database login successful, redirecting...")
       redirect("/admin/dashboard")
     }
 
     // Fallback to environment variable authentication
+    console.log("Attempting fallback authentication...")
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"
+    console.log("Fallback check:", {
+      username,
+      expectedUsername: "admin",
+      hasEnvPassword: !!ADMIN_PASSWORD,
+      passwordMatch: password === ADMIN_PASSWORD,
+    })
+
     if (username === "admin" && password === ADMIN_PASSWORD) {
       // Create a simple session cookie for fallback mode
+      console.log("Fallback authentication successful, setting cookie...")
       const cookieStore = cookies()
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
@@ -37,9 +52,11 @@ export async function loginWithCredentials(formData: FormData) {
         path: "/admin",
       })
 
+      console.log("Cookie set, redirecting to dashboard...")
       redirect("/admin/dashboard")
     }
 
+    console.log("All authentication methods failed")
     return { success: false, error: "Invalid username or password" }
   } catch (error) {
     console.error("Login error:", error)

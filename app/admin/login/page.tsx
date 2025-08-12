@@ -17,13 +17,17 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError("")
 
+    console.log("Form submission started")
+
     try {
       const result = await loginWithCredentials(formData)
+      console.log("Login result:", result)
 
       if (!result.success) {
         setError(result.error || "Login failed")
       }
     } catch (err) {
+      console.error("Client-side login error:", err)
       setError("An unexpected error occurred")
     }
 
@@ -39,6 +43,7 @@ export default function AdminLoginPage() {
           </div>
           <CardTitle className="text-2xl">Admin Access</CardTitle>
           <p className="text-gray-600">Enter your admin credentials</p>
+          <p className="text-sm text-gray-500 mt-2">Try: username "admin", password "admin123"</p>
         </CardHeader>
 
         <CardContent className="space-y-4">
