@@ -48,14 +48,16 @@ export default function AboutPage() {
             </div>
 
             {/* Right Column - Comparison Image */}
-            <div className="relative">
-              <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-pP0JrLdkXkE7GvcSyHC2RNcSzn75fu.png"
-                alt="Manual AR Chaos vs Automated with Kuhlekt - From Manual Mayhem to Streamlined Collections"
-                width={500}
-                height={300}
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
+            <div className="flex justify-center">
+              <div className="relative w-full max-w-md">
+                <Image
+                  src="/images/manual-vs-automated-ar.png"
+                  alt="Manual AR Chaos vs Automated with Kuhlekt - From Manual Mayhem to Streamlined Collections"
+                  width={400}
+                  height={300}
+                  className="rounded-lg shadow-lg"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -85,30 +87,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Transform Your AR Process?</h2>
-          <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
-            Join hundreds of companies that have already revolutionized their accounts receivable operations with
-            Kuhlekt's intelligent automation platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/demo"
-              className="inline-flex items-center px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-lg"
-            >
-              Request Demo
-            </a>
-            <a
-              href="/contact"
-              className="inline-flex items-center px-8 py-4 border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors text-lg"
-            >
-              Contact Us
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* Bottom Gradient Section */}
+      <section className="h-32 bg-gradient-to-r from-cyan-400 to-blue-500"></section>
     </div>
   )
 }
