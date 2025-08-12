@@ -4,8 +4,8 @@ import type { NextRequest } from "next/request"
 export function middleware(request: NextRequest) {
   // Check if accessing admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    // Allow access to login page
-    if (request.nextUrl.pathname === "/admin/login") {
+    // Allow access to login and 2FA setup pages
+    if (request.nextUrl.pathname === "/admin/login" || request.nextUrl.pathname === "/admin/setup-2fa") {
       return NextResponse.next()
     }
 
