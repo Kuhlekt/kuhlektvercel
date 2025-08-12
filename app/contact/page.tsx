@@ -3,7 +3,7 @@
 import { CardDescription } from "@/components/ui/card"
 
 import { useState, useEffect } from "react"
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +22,7 @@ const initialState = {
 }
 
 export default function ContactPage() {
-  const [state, formAction] = useActionState(submitContactForm, initialState)
+  const [state, formAction] = useFormState(submitContactForm, initialState)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [isPending, setIsPending] = useState(false)
 

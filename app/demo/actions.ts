@@ -1,233 +1,175 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
+import { sendEmail } from "@/lib/email-service"
 import { verifyCaptcha } from "@/lib/captcha"
-import { normalizeAffiliateCode, getAffiliateDiscount } from "@/lib/affiliate-validation"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-export async function submitDemoRequest(prevState: any, formData: FormData) {
+export async function submitDemoForm(prevState: any, formData: FormData) {
   try {
+    // Extract form data
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
     const email = formData.get("email") as string
     const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
     const jobTitle = formData.get("jobTitle") as string
+    const phone = formData.get("phone") as string
     const companySize = formData.get("companySize") as string
     const industry = formData.get("industry") as string
     const currentArVolume = formData.get("currentArVolume") as string
+    const affiliate = formData.get("affiliate") as string
     const currentChallenges = formData.get("currentChallenges") as string
     const timeframe = formData.get("timeframe") as string
-    const affiliate = formData.get("affiliate") as string
     const recaptchaToken = formData.get("recaptchaToken") as string
+
+    // Visitor tracking data
     const referrer = formData.get("referrer") as string
     const utmSource = formData.get("utmSource") as string
     const utmCampaign = formData.get("utmCampaign") as string
     const pageViews = formData.get("pageViews") as string
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !company) {
-      return {
-        success: false,
-        message: "Please fill in all required fields.",
-      }
+    const errors: Record<string, string> = {}
+
+    if (!firstName?.trim()) errors.firstName = "First name is required"
+    if (!lastName?.trim()) errors.lastName = "Last name is required"
+    if (!email?.trim()) errors.email = "Email is required"
+    if (!company?.trim()) errors.company = "Company is required"
+    if (!jobTitle?.trim()) errors.jobTitle = "Job title is required"
+    if (!industry?.trim()) errors.industry = "Industry is required"
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Please enter a valid email address"
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return {
-        success: false,
-        message: "Please enter a valid email address.",
-      }
+    if (Object.keys(errors).length > 0) {
+      return { success: false, message: "Please fix the errors below", errors }
     }
 
-    // Verify CAPTCHA
-    const captchaResult = await verifyCaptcha(recaptchaToken || "")
-    if (!captchaResult.success) {
-      return {
-        success: false,
-        message: captchaResult.error || "Please complete the CAPTCHA verification.",
+    // Verify reCAPTCHA
+    if (recaptchaToken) {
+      const captchaResult = await verifyCaptcha(recaptchaToken)
+      if (!captchaResult.success) {
+        return { success: false, message: "reCAPTCHA verification failed. Please try again." }
       }
     }
 
     // Validate affiliate code if provided
-    let validatedAffiliate: string | null = null
-    let affiliateDiscount = 0
-    let affiliateMessage = ""
-
-    if (affiliate && affiliate.trim()) {
-      validatedAffiliate = normalizeAffiliateCode(affiliate)
-      if (validatedAffiliate) {
-        affiliateDiscount = getAffiliateDiscount(validatedAffiliate)
-        affiliateMessage = `Valid affiliate code applied: ${validatedAffiliate} (${affiliateDiscount}% discount)`
-      } else {
-        return {
-          success: false,
-          message: `Invalid affiliate code: "${affiliate}". Please check the code and try again.`,
-        }
+    let affiliateInfo = null
+    if (affiliate?.trim()) {
+      const validation = validateAffiliateCode(affiliate.trim())
+      if (validation.isValid && validation.info) {
+        affiliateInfo = validation.info
       }
     }
 
-    const demoData = {
-      firstName,
-      lastName,
-      email,
-      company,
-      jobTitle: jobTitle || "Not specified",
-      phone: phone || "Not provided",
-      companySize: companySize || "Not specified",
-      industry: industry || "Not specified",
-      currentArVolume: currentArVolume || "Not specified",
-      currentChallenges: currentChallenges || "Not specified",
-      timeframe: timeframe || "Not specified",
-      affiliate: validatedAffiliate,
-      affiliateDiscount,
-      timestamp: new Date().toISOString(),
-      captchaVerified: true,
-      referrer: referrer || "Not available",
-      utmSource: utmSource || "Not available",
-      utmCampaign: utmCampaign || "Not available",
-      pageViews: pageViews || "Not available",
-    }
-
-    console.log("Processing demo request:", {
-      name: `${firstName} ${lastName}`,
-      email,
-      company,
-      affiliate: validatedAffiliate,
-      discount: affiliateDiscount,
-      captchaVerified: true,
-    })
-
-    // Try to send email using AWS SES
-    try {
-      const emailSubject = `New Demo Request${validatedAffiliate ? ` - Affiliate: ${validatedAffiliate}` : ""} from ${firstName} ${lastName}`
-      const emailBody = `
-        <h2>New Demo Request from Kuhlekt Website</h2>
-
-        <h3>Contact Information:</h3>
-        <ul>
-          <li><strong>Name:</strong> ${firstName} ${lastName}</li>
-          <li><strong>Email:</strong> ${email}</li>
-          <li><strong>Company:</strong> ${company}</li>
-          <li><strong>Job Title:</strong> ${jobTitle || "Not specified"}</li>
-          <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
-        </ul>
-
-        <h3>Company Details:</h3>
-        <ul>
-          <li><strong>Company Size:</strong> ${companySize || "Not specified"}</li>
-          <li><strong>Industry:</strong> ${industry || "Not specified"}</li>
-          <li><strong>Current AR Volume:</strong> ${currentArVolume || "Not specified"}</li>
-          <li><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</li>
-        </ul>
-
-        ${
-          validatedAffiliate
-            ? `
-        <h3>Affiliate Information:</h3>
-        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Affiliate Code:</strong> ${validatedAffiliate}</p>
-          <p><strong>Discount:</strong> ${affiliateDiscount}%</p>
-          <p style="color: green;"><strong>Status:</strong> ✅ Valid affiliate code</p>
+    // Prepare email content
+    const adminEmailContent = `
+      <h2>New Demo Request</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Job Title:</strong> ${jobTitle}</p>
+      <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+      <p><strong>Company Size:</strong> ${companySize || "Not specified"}</p>
+      <p><strong>Industry:</strong> ${industry}</p>
+      <p><strong>Current AR Volume:</strong> ${currentArVolume || "Not specified"}</p>
+      <p><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</p>
+      
+      ${
+        affiliateInfo
+          ? `
+        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <h3 style="color: #1976d2; margin: 0 0 10px 0;">🎯 Affiliate Code Used</h3>
+          <p><strong>Code:</strong> ${affiliate.trim().toUpperCase()}</p>
+          <p><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
+          <p><strong>Description:</strong> ${affiliateInfo.description}</p>
         </div>
-        `
-            : ""
-        }
-
-        <h3>Current Challenges:</h3>
-        <p>${currentChallenges || "Not specified"}</p>
-
-        <h3>Visitor Tracking:</h3>
-        <ul>
-          <li><strong>Referrer:</strong> ${referrer || "Not available"}</li>
-          <li><strong>UTM Source:</strong> ${utmSource || "Not available"}</li>
-          <li><strong>UTM Campaign:</strong> ${utmCampaign || "Not available"}</li>
-          <li><strong>Page Views:</strong> ${pageViews || "Not available"}</li>
-        </ul>
-
-        <h3>Security:</h3>
-        <ul>
-          <li><strong>CAPTCHA Verified:</strong> ✅ Yes</li>
-          <li><strong>Timestamp:</strong> ${demoData.timestamp}</li>
-        </ul>
-
-        <hr>
-        <p><strong>Action Required:</strong> Please follow up with this prospect to schedule a demo within 24 hours.</p>
       `
-
-      const emailResult = await sendEmailWithSES({
-        to: ["enquiries@kuhlekt.com"],
-        subject: emailSubject,
-        body: emailBody,
-        replyTo: email,
-      })
-
-      if (emailResult.success) {
-        console.log("Demo request email sent successfully:", emailResult.messageId)
-
-        // Send confirmation email to user
-        const confirmationSubject = "Demo Request Received - Kuhlekt AR Automation"
-        const confirmationBody = `
-          <h2>Thank you for your demo request!</h2>
-          
-          <p>Hi ${firstName},</p>
-          
-          <p>We've received your demo request and will contact you within 24 hours to schedule your personalized demo of Kuhlekt's AR automation platform.</p>
-          
-          ${
-            validatedAffiliate
-              ? `
-          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <h3 style="color: #0369a1; margin-top: 0;">🎉 Affiliate Code Applied!</h3>
-            <p style="margin-bottom: 0;">Your affiliate code <strong>${validatedAffiliate}</strong> has been validated and you're eligible for a <strong>${affiliateDiscount}% discount</strong> on our services.</p>
-          </div>
-          `
-              : ""
-          }
-          
-          <h3>What happens next?</h3>
-          <ol>
-            <li>Our team will review your requirements</li>
-            <li>We'll contact you at ${email} to schedule the demo</li>
-            <li>During the demo, we'll show you how Kuhlekt can solve your specific AR challenges</li>
-            <li>We'll provide a customized proposal based on your needs</li>
-          </ol>
-          
-          <p>In the meantime, feel free to explore our website to learn more about our AR automation solutions.</p>
-          
-          <p>Best regards,<br>
-          The Kuhlekt Team</p>
-        `
-
-        await sendEmailWithSES({
-          to: [email],
-          subject: confirmationSubject,
-          body: confirmationBody,
-        })
-      } else {
-        console.log("Email sending failed, logging demo data:", demoData)
-        console.error("Email error:", emailResult.message)
+          : ""
       }
-    } catch (emailError) {
-      console.error("Error with AWS SES email service:", emailError)
-      console.log("Logging demo data for manual follow-up:", demoData)
-    }
+      
+      <p><strong>Current Challenges:</strong></p>
+      <p>${currentChallenges || "None specified"}</p>
+      
+      <hr style="margin: 20px 0;">
+      <h3>Visitor Tracking Information</h3>
+      <p><strong>Referrer:</strong> ${referrer || "Direct"}</p>
+      <p><strong>UTM Source:</strong> ${utmSource || "None"}</p>
+      <p><strong>UTM Campaign:</strong> ${utmCampaign || "None"}</p>
+      <p><strong>Page Views:</strong> ${pageViews || "Unknown"}</p>
+      <p><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+    `
 
-    // Always return success to user
+    const userEmailContent = `
+      <h2>Thank you for requesting a Kuhlekt demo!</h2>
+      <p>Dear ${firstName},</p>
+      <p>Thank you for your interest in Kuhlekt's AR automation solutions. We have received your demo request and will contact you within 24 hours to schedule your personalized demonstration.</p>
+      
+      ${
+        affiliateInfo
+          ? `
+        <div style="background-color: #e8f5e8; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <h3 style="color: #2e7d32; margin: 0 0 10px 0;">🎉 Affiliate Discount Applied!</h3>
+          <p>Excellent! Your affiliate code <strong>${affiliate.trim().toUpperCase()}</strong> is valid and provides a <strong>${affiliateInfo.discount}% discount</strong> on our services.</p>
+          <p>${affiliateInfo.description}</p>
+          <p>We'll make sure to apply this discount to any proposals we prepare for ${company}.</p>
+        </div>
+      `
+          : ""
+      }
+      
+      <p><strong>Your demo request details:</strong></p>
+      <ul>
+        <li>Name: ${firstName} ${lastName}</li>
+        <li>Company: ${company}</li>
+        <li>Job Title: ${jobTitle}</li>
+        <li>Industry: ${industry}</li>
+        <li>Company Size: ${companySize || "Not specified"}</li>
+        <li>Implementation Timeframe: ${timeframe || "Not specified"}</li>
+      </ul>
+      
+      <p>During the demo, we'll show you how Kuhlekt can help:</p>
+      <ul>
+        <li>Automate your accounts receivable processes</li>
+        <li>Reduce DSO (Days Sales Outstanding)</li>
+        <li>Improve cash flow management</li>
+        <li>Streamline collections workflows</li>
+        <li>Provide real-time AR analytics and reporting</li>
+      </ul>
+      
+      <p>If you have any questions before our call, feel free to reply to this email or visit our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/help">help center</a>.</p>
+      
+      <p>Best regards,<br>The Kuhlekt Team</p>
+    `
+
+    // Send emails
+    await Promise.all([
+      sendEmail({
+        to: process.env.AWS_SES_FROM_EMAIL!,
+        subject: `New Demo Request from ${firstName} ${lastName} at ${company}${affiliateInfo ? " (Affiliate Code Used)" : ""}`,
+        html: adminEmailContent,
+      }),
+      sendEmail({
+        to: email,
+        subject: `Your Kuhlekt Demo Request Confirmation${affiliateInfo ? " - Discount Applied!" : ""}`,
+        html: userEmailContent,
+      }),
+    ])
+
     return {
       success: true,
-      message: `Thank you! Your demo request has been submitted. We'll contact you within 24 hours to schedule your personalized demo.${affiliateMessage ? ` ${affiliateMessage}` : ""}`,
+      message: affiliateInfo
+        ? `Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration. Your ${affiliateInfo.discount}% affiliate discount has been noted.`
+        : "Thank you for requesting a demo! We'll contact you within 24 hours to schedule your personalized demonstration.",
     }
   } catch (error) {
-    console.error("Error submitting demo request:", error)
+    console.error("Demo form submission error:", error)
     return {
       success: false,
-      message:
-        "Sorry, there was an error submitting your request. Please try again or contact us directly at enquiries@kuhlekt.com",
+      message: "There was an error processing your demo request. Please try again later.",
     }
   }
 }
 
-// Export alias for compatibility
-export const submitDemoForm = submitDemoRequest
+// Export alias for backward compatibility
+export const submitDemoRequest = submitDemoForm

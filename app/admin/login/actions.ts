@@ -4,32 +4,41 @@ import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
 export async function loginAdmin(prevState: any, formData: FormData) {
-  const password = formData.get("password") as string
+  try {
+    const password = formData.get("password") as string
 
-  if (!password) {
-    return { error: "Password is required" }
+    if (!password) {
+      return { error: "Password is required" }
+    }
+
+    // Check against environment variable
+    const adminPassword = process.env.ADMIN_PASSWORD
+    if (!adminPassword) {
+      return { error: "Admin password not configured" }
+    }
+
+    if (password !== adminPassword) {
+      return { error: "Invalid password" }
+    }
+
+    // Set session cookie
+    const cookieStore = cookies()
+    cookieStore.set("admin_session", "authenticated", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24, // 24 hours
+    })
+
+    redirect("/admin/tracking")
+  } catch (error) {
+    console.error("Login error:", error)
+    return { error: "An error occurred during login" }
   }
-
-  // Check password
-  const adminPassword = process.env.ADMIN_PASSWORD
-  if (!adminPassword || password !== adminPassword) {
-    return { error: "Invalid password" }
-  }
-
-  // Set admin session cookie
-  const cookieStore = await cookies()
-  cookieStore.set("admin-session", "authenticated", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 24, // 24 hours
-  })
-
-  redirect("/admin/tracking")
 }
 
 export async function logoutAdmin() {
-  const cookieStore = await cookies()
-  cookieStore.delete("admin-session")
+  const cookieStore = cookies()
+  cookieStore.delete("admin_session")
   redirect("/admin/login")
 }

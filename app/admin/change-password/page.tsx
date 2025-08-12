@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
 export default function ChangePasswordPage() {
-  const [state, action, isPending] = useActionState(changeAdminPassword, null)
+  const [state, action, isPending] = useFormState(changeAdminPassword, null)
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

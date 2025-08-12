@@ -2,16 +2,24 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 export async function requireAdminAuth() {
-  const cookieStore = await cookies()
-  const session = cookieStore.get("admin-session")
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin_session")
 
-  if (!session || session.value !== "authenticated") {
+  if (!adminSession || adminSession.value !== "authenticated") {
     redirect("/admin/login")
   }
+
+  return true
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies()
-  const session = cookieStore.get("admin-session")
-  return session?.value === "authenticated"
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin_session")
+
+  return adminSession?.value === "authenticated"
+}
+
+export async function clearAdminSession() {
+  const cookieStore = cookies()
+  cookieStore.delete("admin_session")
 }
