@@ -1,7 +1,6 @@
 "use server"
 
 import { verifyAdminCredentials, createAdminSession, logAdminActivity } from "@/lib/auth/admin-auth"
-import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 
 export async function loginWithCredentials(formData: FormData) {
@@ -24,8 +23,8 @@ export async function loginWithCredentials(formData: FormData) {
     if (user) {
       await createAdminSession(user)
       await logAdminActivity(user.id, user.username, "login_success", "authentication")
-      console.log("Database login successful, redirecting...")
-      redirect("/admin/dashboard")
+      console.log("Database login successful")
+      return { success: true, redirectTo: "/admin/dashboard" }
     }
 
     // Fallback to environment variable authentication
@@ -57,8 +56,8 @@ export async function loginWithCredentials(formData: FormData) {
         path: "/admin",
       })
 
-      console.log("Cookie set, redirecting to dashboard...")
-      redirect("/admin/dashboard")
+      console.log("Cookie set, returning success")
+      return { success: true, redirectTo: "/admin/dashboard" }
     }
 
     console.log("All authentication methods failed")

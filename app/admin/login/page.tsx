@@ -23,7 +23,11 @@ export default function AdminLoginPage() {
       const result = await loginWithCredentials(formData)
       console.log("Login result:", result)
 
-      if (!result.success) {
+      if (result.success) {
+        console.log("Login successful, redirecting to:", result.redirectTo)
+        window.location.href = result.redirectTo || "/admin/dashboard"
+        return
+      } else {
         setError(result.error || "Login failed")
       }
     } catch (err) {
