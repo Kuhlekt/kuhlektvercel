@@ -1,7 +1,30 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, Eye, MousePointer, Clock, TrendingUp, TrendingDown, Activity } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Users,
+  Eye,
+  MousePointer,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Download,
+  FileText,
+  Search,
+} from "lucide-react"
 
 // Mock data - in a real app, this would come from your analytics service
 const analyticsData = {
@@ -24,7 +47,143 @@ const analyticsData = {
   ],
 }
 
+// Mock detailed logs data
+const detailedLogs = [
+  {
+    id: 1,
+    timestamp: "2024-01-15 14:32:15",
+    event: "Page View",
+    page: "/demo",
+    visitorId: "vis_abc123",
+    sessionId: "ses_def456",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "192.168.1.100",
+    referrer: "https://google.com",
+    utmSource: "google",
+    utmCampaign: "search_ads",
+  },
+  {
+    id: 2,
+    timestamp: "2024-01-15 14:31:45",
+    event: "Form Submission",
+    page: "/contact",
+    visitorId: "vis_xyz789",
+    sessionId: "ses_ghi012",
+    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    ip: "10.0.0.50",
+    referrer: "direct",
+    details: "Contact form submitted - john@example.com",
+  },
+  {
+    id: 3,
+    timestamp: "2024-01-15 14:30:22",
+    event: "Page View",
+    page: "/solutions",
+    visitorId: "vis_mno345",
+    sessionId: "ses_pqr678",
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    ip: "172.16.0.25",
+    referrer: "https://linkedin.com",
+    affiliate: "PARTNER001",
+  },
+  {
+    id: 4,
+    timestamp: "2024-01-15 14:29:10",
+    event: "Demo Request",
+    page: "/demo",
+    visitorId: "vis_stu901",
+    sessionId: "ses_vwx234",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "203.0.113.15",
+    referrer: "https://facebook.com",
+    details: "Demo requested - sarah@company.com",
+  },
+  {
+    id: 5,
+    timestamp: "2024-01-15 14:28:33",
+    event: "Page View",
+    page: "/pricing",
+    visitorId: "vis_abc123",
+    sessionId: "ses_def456",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "192.168.1.100",
+    referrer: "internal",
+    utmSource: "email",
+    utmCampaign: "newsletter",
+  },
+]
+
 export default function AdminTrackingPage() {
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+
+  const generateReport = async () => {
+    setIsGeneratingReport(true)
+
+    // Simulate report generation
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Create report data
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      period: "Last 7 days",
+      summary: {
+        totalVisitors: analyticsData.totalVisitors,
+        pageViews: analyticsData.pageViews,
+        avgSessionDuration: analyticsData.avgSessionDuration,
+        bounceRate: analyticsData.bounceRate,
+      },
+      topPages: analyticsData.topPages,
+      trafficSources: {
+        direct: "45%",
+        search: "32%",
+        social: "15%",
+        referral: "8%",
+      },
+      deviceTypes: {
+        desktop: "65%",
+        mobile: "30%",
+        tablet: "5%",
+      },
+      conversionMetrics: {
+        demoRequests: 12,
+        contactForms: 8,
+        conversionRate: "1.6%",
+      },
+    }
+
+    // Convert to JSON and download
+    const dataStr = JSON.stringify(reportData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: "application/json" })
+    const url = URL.createObjectURL(dataBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `kuhlekt-analytics-report-${new Date().toISOString().split("T")[0]}.json`
+    link.click()
+
+    URL.revokeObjectURL(url)
+    setIsGeneratingReport(false)
+  }
+
+  const exportAnalytics = () => {
+    const exportData = {
+      summary: analyticsData,
+      detailedLogs: detailedLogs,
+      exportedAt: new Date().toISOString(),
+    }
+
+    const dataStr = JSON.stringify(exportData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: "application/json" })
+    const url = URL.createObjectURL(dataBlob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `kuhlekt-analytics-export-${new Date().toISOString().split("T")[0]}.json`
+    link.click()
+
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -151,9 +310,92 @@ export default function AdminTrackingPage() {
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-4 justify-between items-center">
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline">Export Analytics</Button>
-            <Button variant="outline">Generate Report</Button>
-            <Button variant="outline">View Detailed Logs</Button>
+            <Button variant="outline" onClick={exportAnalytics}>
+              <Download className="w-4 h-4 mr-2" />
+              Export Analytics
+            </Button>
+            <Button variant="outline" onClick={generateReport} disabled={isGeneratingReport}>
+              <FileText className="w-4 h-4 mr-2" />
+              {isGeneratingReport ? "Generating..." : "Generate Report"}
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Search className="w-4 h-4 mr-2" />
+                  View Detailed Logs
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle>Detailed Activity Logs</DialogTitle>
+                  <DialogDescription>Comprehensive view of all visitor activities and events</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-[60vh] w-full">
+                  <div className="space-y-4">
+                    {detailedLogs.map((log) => (
+                      <div key={log.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                log.event === "Page View"
+                                  ? "default"
+                                  : log.event === "Form Submission"
+                                    ? "secondary"
+                                    : log.event === "Demo Request"
+                                      ? "destructive"
+                                      : "outline"
+                              }
+                            >
+                              {log.event}
+                            </Badge>
+                            <span className="text-sm text-gray-600">{log.timestamp}</span>
+                          </div>
+                          <span className="text-sm font-mono text-gray-500">{log.page}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Visitor ID:</span>
+                            <span className="ml-2 font-mono">{log.visitorId}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Session ID:</span>
+                            <span className="ml-2 font-mono">{log.sessionId}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">IP Address:</span>
+                            <span className="ml-2 font-mono">{log.ip}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Referrer:</span>
+                            <span className="ml-2">{log.referrer}</span>
+                          </div>
+                        </div>
+
+                        {(log.utmSource || log.utmCampaign || log.affiliate) && (
+                          <div className="mt-2 flex gap-2">
+                            {log.utmSource && <Badge variant="outline">UTM: {log.utmSource}</Badge>}
+                            {log.utmCampaign && <Badge variant="outline">Campaign: {log.utmCampaign}</Badge>}
+                            {log.affiliate && <Badge variant="secondary">Affiliate: {log.affiliate}</Badge>}
+                          </div>
+                        )}
+
+                        {log.details && (
+                          <div className="mt-2 p-2 bg-white rounded border">
+                            <span className="text-sm text-gray-700">{log.details}</span>
+                          </div>
+                        )}
+
+                        <div className="mt-2 text-xs text-gray-500 truncate">
+                          <span className="font-medium">User Agent:</span> {log.userAgent}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
           </div>
           <div className="flex flex-wrap gap-4">
             <Button asChild>
