@@ -1,195 +1,203 @@
 "use server"
 
+import { z } from "zod"
 import { sendEmail } from "@/lib/email-service"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-interface DemoFormState {
-  success: boolean
-  message: string
-  errors: Record<string, string>
-}
+const demoSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(1, "Phone number is required"),
+  company: z.string().min(1, "Company name is required").max(100, "Company name too long"),
+  jobTitle: z.string().min(1, "Job title is required").max(100, "Job title too long"),
+  companySize: z.string().min(1, "Company size is required"),
+  industry: z.string().min(1, "Industry is required"),
+  currentArVolume: z.string().min(1, "AR volume is required"),
+  preferredTime: z.string().optional(),
+  currentChallenges: z.string().optional(),
+  affiliateCode: z.string().optional(),
+  recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
+})
 
-export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
+async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
+  if (!process.env.RECAPTCHA_SECRET_KEY) {
+    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
+    return true
+  }
+
+  // If it's the development token, allow it
+  if (token === "development-mode") {
+    return true
+  }
+
   try {
-    // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
-    const jobTitle = formData.get("jobTitle") as string
-    const companySize = formData.get("companySize") as string
-    const currentARVolume = formData.get("currentARVolume") as string
-    const currentChallenges = formData.get("currentChallenges") as string
-    const affiliateCode = formData.get("affiliateCode") as string
-    const recaptchaToken = formData.get("recaptchaToken") as string
-
-    // Validation
-    const errors: Record<string, string> = {}
-
-    if (!firstName?.trim()) errors.firstName = "First name is required"
-    if (!lastName?.trim()) errors.lastName = "Last name is required"
-    if (!email?.trim()) errors.email = "Email is required"
-    if (!company?.trim()) errors.company = "Company name is required"
-    if (!phone?.trim()) errors.phone = "Phone number is required"
-    if (!jobTitle?.trim()) errors.jobTitle = "Job title is required"
-    if (!companySize) errors.companySize = "Company size is required"
-    if (!currentARVolume) errors.currentARVolume = "AR volume is required"
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (email && !emailRegex.test(email)) {
-      errors.email = "Please enter a valid email address"
-    }
-
-    // Phone validation
-    if (phone && phone.trim()) {
-      const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
-      if (!phoneRegex.test(phone.replace(/[\s\-$$$$]/g, ""))) {
-        errors.phone = "Please enter a valid phone number"
-      }
-    }
-
-    // ReCAPTCHA validation
-    if (!recaptchaToken) {
-      errors.recaptcha = "Please complete the reCAPTCHA verification"
-    } else {
-      // Verify reCAPTCHA token
-      const recaptchaResponse = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
-      })
-
-      const recaptchaResult = await recaptchaResponse.json()
-      if (!recaptchaResult.success) {
-        errors.recaptcha = "reCAPTCHA verification failed. Please try again."
-      }
-    }
-
-    // Affiliate code validation (if provided)
-    let affiliateInfo = null
-    if (affiliateCode?.trim()) {
-      affiliateInfo = validateAffiliateCode(affiliateCode.trim())
-      if (!affiliateInfo) {
-        errors.affiliateCode = "Invalid affiliate code"
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return {
-        success: false,
-        message: "Please correct the errors below",
-        errors,
-      }
-    }
-
-    // Prepare email content
-    const emailSubject = `New Demo Request: ${company} - ${firstName} ${lastName}`
-    const emailBody = `
-New demo request from Kuhlekt website:
-
-Contact Information:
-- Name: ${firstName} ${lastName}
-- Email: ${email}
-- Company: ${company}
-- Phone: ${phone}
-- Job Title: ${jobTitle}
-
-Company Details:
-- Company Size: ${companySize}
-- Monthly AR Volume: ${currentARVolume}
-
-Current Challenges:
-${currentChallenges || "Not specified"}
-
-${
-  affiliateInfo
-    ? `
-Affiliate Information:
-- Code: ${affiliateCode}
-- Partner: ${affiliateInfo.name}
-- Category: ${affiliateInfo.category}
-- Discount: ${affiliateInfo.discount}%
-`
-    : ""
-}
-
-Submitted at: ${new Date().toISOString()}
-
-Next Steps:
-1. Schedule demo within 24 hours
-2. Prepare custom presentation based on company size and AR volume
-3. Include ROI calculator for their specific situation
-    `.trim()
-
-    // Send email to sales team
-    const emailResult = await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "sales@kuhlekt.com",
-      subject: emailSubject,
-      body: emailBody,
-      replyTo: email,
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
     })
 
-    if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
+    const data = await response.json()
+    return data.success
+  } catch (error) {
+    console.error("reCAPTCHA verification error:", error)
+    return false
+  }
+}
+
+export async function submitDemoRequest(prevState: any, formData: FormData) {
+  try {
+    const rawData = {
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      company: formData.get("company"),
+      jobTitle: formData.get("jobTitle"),
+      companySize: formData.get("companySize"),
+      industry: formData.get("industry"),
+      currentArVolume: formData.get("currentArVolume"),
+      preferredTime: formData.get("preferredTime"),
+      currentChallenges: formData.get("currentChallenges"),
+      affiliateCode: formData.get("affiliateCode"),
+      recaptchaToken: formData.get("recaptchaToken"),
+    }
+
+    const validatedData = demoSchema.parse(rawData)
+
+    // Verify reCAPTCHA
+    const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
+    if (!isRecaptchaValid) {
       return {
         success: false,
-        message: "Failed to submit demo request. Please try again or contact us directly.",
+        message: "reCAPTCHA verification failed. Please try again.",
         errors: {},
       }
     }
 
-    // Send confirmation email to user
-    const confirmationSubject = "Your Kuhlekt Demo Request - Next Steps"
+    // Validate affiliate code if provided
+    let affiliateInfo = null
+    if (validatedData.affiliateCode) {
+      affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
+      if (!affiliateInfo) {
+        return {
+          success: false,
+          message: "Invalid affiliate code provided.",
+          errors: { affiliateCode: "Invalid affiliate code" },
+        }
+      }
+    }
+
+    // Prepare email content for sales team
+    const emailSubject = `New Demo Request: ${validatedData.company} - ${validatedData.firstName} ${validatedData.lastName}`
+    const emailBody = `
+      New demo request received:
+
+      CONTACT INFORMATION:
+      Name: ${validatedData.firstName} ${validatedData.lastName}
+      Email: ${validatedData.email}
+      Phone: ${validatedData.phone}
+      Job Title: ${validatedData.jobTitle}
+      Company: ${validatedData.company}
+
+      COMPANY DETAILS:
+      Industry: ${validatedData.industry}
+      Company Size: ${validatedData.companySize}
+      Monthly AR Volume: ${validatedData.currentArVolume}
+      
+      DEMO PREFERENCES:
+      Preferred Time: ${validatedData.preferredTime || "Not specified"}
+      
+      ${affiliateInfo ? `AFFILIATE PARTNER: ${affiliateInfo.name} (${validatedData.affiliateCode}) - ${affiliateInfo.commission}% commission` : ""}
+
+      CURRENT CHALLENGES:
+      ${validatedData.currentChallenges || "Not specified"}
+
+      ---
+      Submitted at: ${new Date().toISOString()}
+      Priority: ${validatedData.currentArVolume.includes("over-10m") || validatedData.currentArVolume.includes("5m-10m") ? "HIGH" : "NORMAL"}
+    `
+
+    // Send email notification to sales team
+    await sendEmail({
+      to: "sales@kuhlekt.com",
+      subject: emailSubject,
+      text: emailBody,
+      html: emailBody.replace(/\n/g, "<br>"),
+    })
+
+    // Send confirmation email to prospect
+    const confirmationSubject = "Your Kuhlekt Demo Request - We'll Contact You Soon!"
     const confirmationBody = `
-Dear ${firstName},
+      Dear ${validatedData.firstName},
 
-Thank you for requesting a demo of Kuhlekt's AR automation platform! We're excited to show you how we can help ${company} streamline your accounts receivable process.
+      Thank you for requesting a demo of Kuhlekt's AR automation platform! 
 
-What happens next:
-1. Our sales team will contact you within 24 hours to schedule your personalized demo
-2. We'll prepare a custom presentation based on your company size (${companySize}) and AR volume (${currentARVolume})
-3. During the demo, we'll show you specific ROI calculations for your business
+      We've received your request and our sales team will contact you within 2 business hours to schedule your personalized demo.
 
-${
-  affiliateInfo
-    ? `
-We've noted your affiliate code (${affiliateCode}) and will apply the ${affiliateInfo.discount}% discount to any applicable services during our discussion.
-`
-    : ""
-}
+      Your Demo Request Details:
+      • Company: ${validatedData.company}
+      • Industry: ${validatedData.industry}
+      • Monthly AR Volume: ${validatedData.currentArVolume}
+      • Preferred Time: ${validatedData.preferredTime || "Flexible"}
+      ${affiliateInfo ? `• Partner: ${affiliateInfo.name}` : ""}
 
-If you have any immediate questions, feel free to reply to this email or call us at 1-800-KUHLEKT.
+      What happens next?
+      1. Our sales representative will call you at ${validatedData.phone}
+      2. We'll schedule a 30-minute demo at your convenience
+      3. You'll see how Kuhlekt can transform your AR process
+      4. We'll provide a custom ROI analysis for your business
 
-Best regards,
-The Kuhlekt Sales Team
+      Questions? Reply to this email or call us at +1 (555) 123-4567.
 
-P.S. In the meantime, feel free to explore our case studies at kuhlekt.com/case-studies to see how we've helped similar companies.
+      Best regards,
+      The Kuhlekt Sales Team
 
----
-Kuhlekt - Transforming Accounts Receivable Through AI
-    `.trim()
+      P.S. In the meantime, feel free to explore our case studies at kuhlekt.com/case-studies
+    `
 
     await sendEmail({
-      to: email,
+      to: validatedData.email,
       subject: confirmationSubject,
-      body: confirmationBody,
+      text: confirmationBody,
+      html: confirmationBody.replace(/\n/g, "<br>"),
     })
 
     return {
       success: true,
-      message: `Thank you ${firstName}! Your demo request has been submitted successfully. Our sales team will contact you within 24 hours to schedule your personalized demonstration.`,
+      message:
+        "Demo request submitted successfully! Our sales team will contact you within 2 business hours to schedule your personalized demo.",
       errors: {},
     }
   } catch (error) {
     console.error("Demo request submission error:", error)
+
+    if (error instanceof z.ZodError) {
+      const errors: Record<string, string> = {}
+      error.errors.forEach((err) => {
+        if (err.path[0]) {
+          errors[err.path[0] as string] = err.message
+        }
+      })
+
+      return {
+        success: false,
+        message: "Please correct the errors below.",
+        errors,
+      }
+    }
+
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "An error occurred while submitting your demo request. Please try again.",
       errors: {},
     }
   }
 }
+
+// Export alias for backward compatibility
+export const submitDemoForm = submitDemoRequest

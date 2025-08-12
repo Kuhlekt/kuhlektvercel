@@ -1,171 +1,250 @@
 interface AffiliateInfo {
+  code: string
   name: string
   category: string
   discount: number
+  commission: number
+  description: string
   isActive: boolean
 }
 
-const affiliateCodes: Record<string, AffiliateInfo> = {
+const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
-  DELOITTE2024: {
-    name: "Deloitte & Touche",
-    category: "Big 4 Accounting",
+  ACCT2024: {
+    code: "ACCT2024",
+    name: "Premier Accounting Solutions",
+    category: "accounting",
     discount: 15,
+    commission: 10,
+    description: "Accounting firm partnership program",
     isActive: true,
   },
-  PWC2024: {
-    name: "PricewaterhouseCoopers",
-    category: "Big 4 Accounting",
-    discount: 15,
+  "CPA-GOLD": {
+    code: "CPA-GOLD",
+    name: "Gold Standard CPAs",
+    category: "accounting",
+    discount: 20,
+    commission: 12,
+    description: "Premium CPA firm partnership",
     isActive: true,
   },
-  EY2024: {
-    name: "Ernst & Young",
-    category: "Big 4 Accounting",
-    discount: 15,
-    isActive: true,
-  },
-  KPMG2024: {
-    name: "KPMG",
-    category: "Big 4 Accounting",
-    discount: 15,
+  BOOKKEEP: {
+    code: "BOOKKEEP",
+    name: "Professional Bookkeepers Network",
+    category: "accounting",
+    discount: 12,
+    commission: 8,
+    description: "Bookkeeping services partnership",
     isActive: true,
   },
 
   // Technology Partners
-  SALESFORCE: {
-    name: "Salesforce Partner Network",
-    category: "CRM Integration",
+  "TECH-INTG": {
+    code: "TECH-INTG",
+    name: "TechIntegrate Solutions",
+    category: "technology",
+    discount: 18,
+    commission: 15,
+    description: "Technology integration partnership",
+    isActive: true,
+  },
+  "SAAS-ALLY": {
+    code: "SAAS-ALLY",
+    name: "SaaS Alliance Partners",
+    category: "technology",
+    discount: 25,
+    commission: 20,
+    description: "SaaS ecosystem partnership",
+    isActive: true,
+  },
+  "CLOUD-PRO": {
+    code: "CLOUD-PRO",
+    name: "CloudPro Consultants",
+    category: "technology",
+    discount: 16,
+    commission: 12,
+    description: "Cloud consulting partnership",
+    isActive: true,
+  },
+
+  // Consultants
+  CONSULT1: {
+    code: "CONSULT1",
+    name: "Business Process Consultants",
+    category: "consulting",
+    discount: 22,
+    commission: 18,
+    description: "Business process consulting partnership",
+    isActive: true,
+  },
+  "FINANCE-EXP": {
+    code: "FINANCE-EXP",
+    name: "Finance Experts Group",
+    category: "consulting",
     discount: 20,
+    commission: 15,
+    description: "Financial consulting partnership",
     isActive: true,
   },
-  MICROSOFT: {
-    name: "Microsoft Partner",
-    category: "ERP Integration",
-    discount: 18,
-    isActive: true,
-  },
-  ORACLE: {
-    name: "Oracle Partner Network",
-    category: "ERP Integration",
-    discount: 18,
-    isActive: true,
-  },
-  SAP: {
-    name: "SAP Partner",
-    category: "ERP Integration",
-    discount: 18,
+  "AR-SPECIALIST": {
+    code: "AR-SPECIALIST",
+    name: "AR Specialists Network",
+    category: "consulting",
+    discount: 24,
+    commission: 20,
+    description: "AR specialization partnership",
     isActive: true,
   },
 
-  // Consulting Partners
-  ACCENTURE: {
-    name: "Accenture",
-    category: "Management Consulting",
-    discount: 12,
+  // Resellers
+  "RESELL-PRO": {
+    code: "RESELL-PRO",
+    name: "Professional Resellers Inc",
+    category: "reseller",
+    discount: 30,
+    commission: 25,
+    description: "Authorized reseller program",
     isActive: true,
   },
-  MCKINSEY: {
-    name: "McKinsey & Company",
-    category: "Management Consulting",
-    discount: 12,
+  "CHANNEL-1": {
+    code: "CHANNEL-1",
+    name: "Channel One Partners",
+    category: "reseller",
+    discount: 28,
+    commission: 22,
+    description: "Channel partner program",
     isActive: true,
   },
-  BCG: {
-    name: "Boston Consulting Group",
-    category: "Management Consulting",
-    discount: 12,
-    isActive: true,
-  },
-  BAIN: {
-    name: "Bain & Company",
-    category: "Management Consulting",
-    discount: 12,
+  "DIST-NETWORK": {
+    code: "DIST-NETWORK",
+    name: "Distribution Network LLC",
+    category: "reseller",
+    discount: 26,
+    commission: 20,
+    description: "Distribution partnership",
     isActive: true,
   },
 
-  // Industry Associations
-  NACM2024: {
-    name: "National Association of Credit Management",
-    category: "Industry Association",
-    discount: 10,
+  // Industry Specific
+  "MFG-FOCUS": {
+    code: "MFG-FOCUS",
+    name: "Manufacturing Focus Group",
+    category: "industry",
+    discount: 18,
+    commission: 14,
+    description: "Manufacturing industry specialization",
     isActive: true,
   },
-  IOFM2024: {
-    name: "Institute of Finance & Management",
-    category: "Industry Association",
-    discount: 10,
+  "HEALTHCARE-AR": {
+    code: "HEALTHCARE-AR",
+    name: "Healthcare AR Solutions",
+    category: "industry",
+    discount: 20,
+    commission: 16,
+    description: "Healthcare industry partnership",
     isActive: true,
   },
-  AFP2024: {
-    name: "Association for Financial Professionals",
-    category: "Industry Association",
-    discount: 10,
+  "RETAIL-PLUS": {
+    code: "RETAIL-PLUS",
+    name: "Retail Plus Consultants",
+    category: "industry",
+    discount: 15,
+    commission: 12,
+    description: "Retail industry specialization",
     isActive: true,
   },
-  AICPA2024: {
-    name: "American Institute of CPAs",
-    category: "Industry Association",
-    discount: 10,
+
+  // Special Programs
+  "STARTUP-50": {
+    code: "STARTUP-50",
+    name: "Startup Accelerator Program",
+    category: "special",
+    discount: 50,
+    commission: 5,
+    description: "Special startup program",
+    isActive: true,
+  },
+  NONPROFIT: {
+    code: "NONPROFIT",
+    name: "Nonprofit Organizations",
+    category: "special",
+    discount: 35,
+    commission: 0,
+    description: "Nonprofit discount program",
+    isActive: true,
+  },
+  EDUCATION: {
+    code: "EDUCATION",
+    name: "Educational Institutions",
+    category: "special",
+    discount: 40,
+    commission: 0,
+    description: "Educational discount program",
     isActive: true,
   },
 
   // Regional Partners
-  NORTHEAST: {
-    name: "Northeast Regional Partner",
-    category: "Regional Partner",
-    discount: 8,
+  "WEST-COAST": {
+    code: "WEST-COAST",
+    name: "West Coast Partners",
+    category: "regional",
+    discount: 17,
+    commission: 13,
+    description: "West Coast regional partnership",
+    isActive: true,
+  },
+  "MIDWEST-PRO": {
+    code: "MIDWEST-PRO",
+    name: "Midwest Professionals",
+    category: "regional",
+    discount: 16,
+    commission: 12,
+    description: "Midwest regional partnership",
     isActive: true,
   },
   SOUTHEAST: {
-    name: "Southeast Regional Partner",
-    category: "Regional Partner",
-    discount: 8,
-    isActive: true,
-  },
-  MIDWEST: {
-    name: "Midwest Regional Partner",
-    category: "Regional Partner",
-    discount: 8,
-    isActive: true,
-  },
-  WEST: {
-    name: "West Coast Regional Partner",
-    category: "Regional Partner",
-    discount: 8,
+    code: "SOUTHEAST",
+    name: "Southeast Business Network",
+    category: "regional",
+    discount: 18,
+    commission: 14,
+    description: "Southeast regional partnership",
     isActive: true,
   },
 
-  // Special Promotions
-  EARLY2024: {
-    name: "Early Adopter Program",
-    category: "Special Promotion",
-    discount: 25,
+  // VIP Partners
+  "VIP-PLATINUM": {
+    code: "VIP-PLATINUM",
+    name: "Platinum VIP Partners",
+    category: "vip",
+    discount: 35,
+    commission: 30,
+    description: "Platinum tier VIP partnership",
     isActive: true,
   },
-  STARTUP: {
-    name: "Startup Discount Program",
-    category: "Special Promotion",
+  "VIP-GOLD": {
+    code: "VIP-GOLD",
+    name: "Gold VIP Partners",
+    category: "vip",
     discount: 30,
+    commission: 25,
+    description: "Gold tier VIP partnership",
     isActive: true,
   },
-  NONPROFIT: {
-    name: "Non-Profit Organization",
-    category: "Special Promotion",
-    discount: 20,
-    isActive: true,
-  },
-  EDUCATION: {
-    name: "Educational Institution",
-    category: "Special Promotion",
-    discount: 20,
+  ENTERPRISE: {
+    code: "ENTERPRISE",
+    name: "Enterprise Partners",
+    category: "vip",
+    discount: 25,
+    commission: 20,
+    description: "Enterprise partnership program",
     isActive: true,
   },
 }
 
 export function validateAffiliateCode(code: string): AffiliateInfo | null {
   const upperCode = code.toUpperCase().trim()
-  const affiliate = affiliateCodes[upperCode]
+  const affiliate = affiliatePartners[upperCode]
 
   if (!affiliate || !affiliate.isActive) {
     return null
@@ -174,18 +253,10 @@ export function validateAffiliateCode(code: string): AffiliateInfo | null {
   return affiliate
 }
 
-export function getAllAffiliateCodes(): Record<string, AffiliateInfo> {
-  return affiliateCodes
+export function getAllAffiliatePartners(): AffiliateInfo[] {
+  return Object.values(affiliatePartners).filter((partner) => partner.isActive)
 }
 
-export function getAffiliatesByCategory(category: string): Record<string, AffiliateInfo> {
-  const filtered: Record<string, AffiliateInfo> = {}
-
-  Object.entries(affiliateCodes).forEach(([code, info]) => {
-    if (info.category === category && info.isActive) {
-      filtered[code] = info
-    }
-  })
-
-  return filtered
+export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
+  return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
 }

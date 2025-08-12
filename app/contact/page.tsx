@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,14 +20,17 @@ const initialState = {
 }
 
 export default function ContactPage() {
-  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
+  const [state, formAction] = useFormState(submitContactForm, initialState)
+  const [isPending, setIsPending] = useState(false)
   const [recaptchaToken, setRecaptchaToken] = useState("")
   const [affiliateCode, setAffiliateCode] = useState("")
   const [affiliateInfo, setAffiliateInfo] = useState(null)
 
   const handleSubmit = async (formData: FormData) => {
+    setIsPending(true)
     formData.append("recaptchaToken", recaptchaToken)
-    return formAction(formData)
+    await formAction(formData)
+    setIsPending(false)
   }
 
   const handleAffiliateChange = (value: string) => {
