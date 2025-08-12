@@ -1,73 +1,191 @@
-interface AffiliateCode {
-  code: string
+interface AffiliateInfo {
   name: string
   category: string
   discount: number
-  active: boolean
+  isActive: boolean
 }
 
-const affiliateCodes: AffiliateCode[] = [
+const affiliateCodes: Record<string, AffiliateInfo> = {
   // Accounting Firms
-  { code: "DELOITTE2024", name: "Deloitte", category: "Big 4 Accounting", discount: 15, active: true },
-  { code: "PWC2024", name: "PwC", category: "Big 4 Accounting", discount: 15, active: true },
-  { code: "EY2024", name: "Ernst & Young", category: "Big 4 Accounting", discount: 15, active: true },
-  { code: "KPMG2024", name: "KPMG", category: "Big 4 Accounting", discount: 15, active: true },
-  { code: "BDO2024", name: "BDO", category: "Accounting Firm", discount: 12, active: true },
-  { code: "RSM2024", name: "RSM", category: "Accounting Firm", discount: 12, active: true },
+  DELOITTE2024: {
+    name: "Deloitte & Touche",
+    category: "Big 4 Accounting",
+    discount: 15,
+    isActive: true,
+  },
+  PWC2024: {
+    name: "PricewaterhouseCoopers",
+    category: "Big 4 Accounting",
+    discount: 15,
+    isActive: true,
+  },
+  EY2024: {
+    name: "Ernst & Young",
+    category: "Big 4 Accounting",
+    discount: 15,
+    isActive: true,
+  },
+  KPMG2024: {
+    name: "KPMG",
+    category: "Big 4 Accounting",
+    discount: 15,
+    isActive: true,
+  },
 
   // Technology Partners
-  { code: "SALESFORCE2024", name: "Salesforce", category: "CRM Partner", discount: 20, active: true },
-  { code: "MICROSOFT2024", name: "Microsoft", category: "Technology Partner", discount: 18, active: true },
-  { code: "ORACLE2024", name: "Oracle", category: "ERP Partner", discount: 18, active: true },
-  { code: "SAP2024", name: "SAP", category: "ERP Partner", discount: 18, active: true },
-  { code: "QUICKBOOKS2024", name: "QuickBooks", category: "Accounting Software", discount: 10, active: true },
-  { code: "XERO2024", name: "Xero", category: "Accounting Software", discount: 10, active: true },
+  SALESFORCE: {
+    name: "Salesforce Partner Network",
+    category: "CRM Integration",
+    discount: 20,
+    isActive: true,
+  },
+  MICROSOFT: {
+    name: "Microsoft Partner",
+    category: "ERP Integration",
+    discount: 18,
+    isActive: true,
+  },
+  ORACLE: {
+    name: "Oracle Partner Network",
+    category: "ERP Integration",
+    discount: 18,
+    isActive: true,
+  },
+  SAP: {
+    name: "SAP Partner",
+    category: "ERP Integration",
+    discount: 18,
+    isActive: true,
+  },
 
   // Consulting Partners
-  { code: "ACCENTURE2024", name: "Accenture", category: "Consulting", discount: 15, active: true },
-  { code: "IBM2024", name: "IBM", category: "Technology Consulting", discount: 15, active: true },
-  { code: "CAPGEMINI2024", name: "Capgemini", category: "Consulting", discount: 12, active: true },
+  ACCENTURE: {
+    name: "Accenture",
+    category: "Management Consulting",
+    discount: 12,
+    isActive: true,
+  },
+  MCKINSEY: {
+    name: "McKinsey & Company",
+    category: "Management Consulting",
+    discount: 12,
+    isActive: true,
+  },
+  BCG: {
+    name: "Boston Consulting Group",
+    category: "Management Consulting",
+    discount: 12,
+    isActive: true,
+  },
+  BAIN: {
+    name: "Bain & Company",
+    category: "Management Consulting",
+    discount: 12,
+    isActive: true,
+  },
 
   // Industry Associations
-  { code: "NACM2024", name: "NACM", category: "Credit Management", discount: 8, active: true },
-  { code: "IOFM2024", name: "IOFM", category: "Finance Operations", discount: 8, active: true },
-  { code: "AFP2024", name: "AFP", category: "Treasury & Finance", discount: 8, active: true },
+  NACM2024: {
+    name: "National Association of Credit Management",
+    category: "Industry Association",
+    discount: 10,
+    isActive: true,
+  },
+  IOFM2024: {
+    name: "Institute of Finance & Management",
+    category: "Industry Association",
+    discount: 10,
+    isActive: true,
+  },
+  AFP2024: {
+    name: "Association for Financial Professionals",
+    category: "Industry Association",
+    discount: 10,
+    isActive: true,
+  },
+  AICPA2024: {
+    name: "American Institute of CPAs",
+    category: "Industry Association",
+    discount: 10,
+    isActive: true,
+  },
 
   // Regional Partners
-  { code: "NORTHEAST2024", name: "Northeast Regional", category: "Regional Partner", discount: 5, active: true },
-  { code: "SOUTHEAST2024", name: "Southeast Regional", category: "Regional Partner", discount: 5, active: true },
-  { code: "MIDWEST2024", name: "Midwest Regional", category: "Regional Partner", discount: 5, active: true },
-  { code: "WEST2024", name: "West Regional", category: "Regional Partner", discount: 5, active: true },
+  NORTHEAST: {
+    name: "Northeast Regional Partner",
+    category: "Regional Partner",
+    discount: 8,
+    isActive: true,
+  },
+  SOUTHEAST: {
+    name: "Southeast Regional Partner",
+    category: "Regional Partner",
+    discount: 8,
+    isActive: true,
+  },
+  MIDWEST: {
+    name: "Midwest Regional Partner",
+    category: "Regional Partner",
+    discount: 8,
+    isActive: true,
+  },
+  WEST: {
+    name: "West Coast Regional Partner",
+    category: "Regional Partner",
+    discount: 8,
+    isActive: true,
+  },
 
-  // Special Codes
-  { code: "EARLY2024", name: "Early Adopter", category: "Special Offer", discount: 25, active: true },
-  { code: "REFERRAL2024", name: "Customer Referral", category: "Referral Program", discount: 20, active: true },
-  { code: "WEBINAR2024", name: "Webinar Attendee", category: "Marketing", discount: 10, active: true },
-]
-
-export function validateAffiliateCode(code: string): AffiliateCode | null {
-  const normalizedCode = code.trim().toUpperCase()
-  const affiliate = affiliateCodes.find(
-    (affiliate) => affiliate.code.toUpperCase() === normalizedCode && affiliate.active,
-  )
-  return affiliate || null
+  // Special Promotions
+  EARLY2024: {
+    name: "Early Adopter Program",
+    category: "Special Promotion",
+    discount: 25,
+    isActive: true,
+  },
+  STARTUP: {
+    name: "Startup Discount Program",
+    category: "Special Promotion",
+    discount: 30,
+    isActive: true,
+  },
+  NONPROFIT: {
+    name: "Non-Profit Organization",
+    category: "Special Promotion",
+    discount: 20,
+    isActive: true,
+  },
+  EDUCATION: {
+    name: "Educational Institution",
+    category: "Special Promotion",
+    discount: 20,
+    isActive: true,
+  },
 }
 
-export function getAllAffiliateCodes(): AffiliateCode[] {
-  return affiliateCodes.filter((code) => code.active)
+export function validateAffiliateCode(code: string): AffiliateInfo | null {
+  const upperCode = code.toUpperCase().trim()
+  const affiliate = affiliateCodes[upperCode]
+
+  if (!affiliate || !affiliate.isActive) {
+    return null
+  }
+
+  return affiliate
 }
 
-export function getAffiliatesByCategory(category: string): AffiliateCode[] {
-  return affiliateCodes.filter((code) => code.category === category && code.active)
+export function getAllAffiliateCodes(): Record<string, AffiliateInfo> {
+  return affiliateCodes
 }
 
-export function searchAffiliates(query: string): AffiliateCode[] {
-  const normalizedQuery = query.toLowerCase()
-  return affiliateCodes.filter(
-    (code) =>
-      code.active &&
-      (code.name.toLowerCase().includes(normalizedQuery) ||
-        code.category.toLowerCase().includes(normalizedQuery) ||
-        code.code.toLowerCase().includes(normalizedQuery)),
-  )
+export function getAffiliatesByCategory(category: string): Record<string, AffiliateInfo> {
+  const filtered: Record<string, AffiliateInfo> = {}
+
+  Object.entries(affiliateCodes).forEach(([code, info]) => {
+    if (info.category === category && info.isActive) {
+      filtered[code] = info
+    }
+  })
+
+  return filtered
 }
