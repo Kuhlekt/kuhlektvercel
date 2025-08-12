@@ -32,13 +32,12 @@ User-agent: LinkedInBot
 Disallow: /admin/
 
 # Allow public pages
-Allow: /
+Allow: /about
+Allow: /contact
+Allow: /demo
 Allow: /product
 Allow: /solutions
 Allow: /pricing-table
-Allow: /demo
-Allow: /contact
-Allow: /about
 Allow: /help
 
 # Sitemap

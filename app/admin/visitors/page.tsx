@@ -1,577 +1,407 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import {
   Users,
+  Eye,
+  Clock,
+  Globe,
+  Smartphone,
+  Monitor,
   Download,
-  Filter,
   RefreshCw,
   Search,
-  Clock,
-  Eye,
-  MousePointer,
-  BarChart3,
-  ExternalLink,
-  Globe,
-  Calendar,
+  Filter,
   Activity,
-  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
-import { getAllVisitors } from "@/components/visitor-tracker"
 
-interface VisitorData {
-  visitorId: string
-  sessionId: string
-  firstVisit: string
-  lastVisit: string
-  pageViews: number
-  referrer: string
+interface Visitor {
+  id: string
+  timestamp: number
+  ip: string
   userAgent: string
-  currentPage: string
-  utmSource?: string
-  utmMedium?: string
-  utmCampaign?: string
-  utmTerm?: string
-  utmContent?: string
-  affiliate?: string
+  page: string
+  referrer: string
+  location?: {
+    country?: string
+    city?: string
+  }
+  device: {
+    type: "desktop" | "mobile" | "tablet"
+    browser: string
+    os: string
+  }
+  sessionId: string
+  isActive: boolean
+  pageViews: number
+  timeOnSite: number
 }
 
-export default function VisitorTracking() {
-  const [visitors, setVisitors] = useState<VisitorData[]>([])
-  const [filteredVisitors, setFilteredVisitors] = useState<VisitorData[]>([])
+// Function to get all visitors from localStorage (this would be replaced with real API call)
+function getAllVisitors(): Visitor[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const visitors = localStorage.getItem("visitors")
+    return visitors ? JSON.parse(visitors) : []
+  } catch {
+    return []
+  }
+}
+
+export default function VisitorsPage() {
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [countryFilter, setCountryFilter] = useState("all")
-  const [isRealTimeActive, setIsRealTimeActive] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [advancedFilters, setAdvancedFilters] = useState({
-    search: "",
-    status: "all",
-    country: "all",
-    deviceType: "all",
-    trafficSource: "all",
-    hasAffiliate: "all",
-  })
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [deviceFilter, setDeviceFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // Load visitor data from localStorage
+  // Load visitors data
   useEffect(() => {
-    const loadVisitorData = () => {
-      try {
-        const visitorData = getAllVisitors()
-        setVisitors(visitorData)
-        setFilteredVisitors(visitorData)
-        setIsLoading(false)
-      } catch (error) {
-        console.error("Error loading visitor data:", error)
-        setIsLoading(false)
-      }
+    const loadVisitors = () => {
+      const allVisitors = getAllVisitors()
+      setVisitors(allVisitors)
+      setLoading(false)
     }
 
-    loadVisitorData()
-  }, [])
+    loadVisitors()
 
-  // Real-time updates
-  useEffect(() => {
-    if (isRealTimeActive) {
-      intervalRef.current = setInterval(() => {
-        const visitorData = getAllVisitors()
-        setVisitors(visitorData)
-        setLastUpdate(new Date())
-      }, 5000) // Update every 5 seconds
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current)
-        }
-      }
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+    // Auto-refresh every 5 seconds if enabled
+    let interval: NodeJS.Timeout
+    if (autoRefresh) {
+      interval = setInterval(loadVisitors, 5000)
     }
-  }, [isRealTimeActive])
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [autoRefresh])
 
   // Filter visitors based on search and filters
   useEffect(() => {
     let filtered = visitors
 
-    // Apply search filter
+    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (visitor) =>
-          visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.sessionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.ip.includes(searchTerm) ||
+          visitor.page.toLowerCase().includes(searchTerm.toLowerCase()) ||
           visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (visitor.utmSource && visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase())),
+          visitor.location?.country?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.location?.city?.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
-    setFilteredVisitors(filtered)
-  }, [visitors, searchTerm, statusFilter, countryFilter])
-
-  // Apply advanced filters
-  const applyAdvancedFilters = () => {
-    let filtered = visitors
-
-    if (advancedFilters.search) {
-      filtered = filtered.filter(
-        (visitor) =>
-          visitor.visitorId.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.sessionId.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.referrer.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(advancedFilters.search.toLowerCase())) ||
-          (visitor.utmSource && visitor.utmSource.toLowerCase().includes(advancedFilters.search.toLowerCase())),
-      )
+    // Device filter
+    if (deviceFilter !== "all") {
+      filtered = filtered.filter((visitor) => visitor.device.type === deviceFilter)
     }
 
-    if (advancedFilters.trafficSource !== "all") {
-      filtered = filtered.filter((visitor) => visitor.utmSource === advancedFilters.trafficSource)
-    }
-
-    if (advancedFilters.hasAffiliate !== "all") {
-      if (advancedFilters.hasAffiliate === "yes") {
-        filtered = filtered.filter((visitor) => visitor.affiliate && visitor.affiliate !== "")
-      } else {
-        filtered = filtered.filter((visitor) => !visitor.affiliate || visitor.affiliate === "")
+    // Status filter
+    if (statusFilter !== "all") {
+      if (statusFilter === "active") {
+        filtered = filtered.filter((visitor) => visitor.isActive)
+      } else if (statusFilter === "inactive") {
+        filtered = filtered.filter((visitor) => !visitor.isActive)
       }
     }
 
     setFilteredVisitors(filtered)
-    setIsFilterDialogOpen(false)
+  }, [visitors, searchTerm, deviceFilter, statusFilter])
+
+  // Calculate statistics
+  const stats = {
+    total: visitors.length,
+    active: visitors.filter((v) => v.isActive).length,
+    desktop: visitors.filter((v) => v.device.type === "desktop").length,
+    mobile: visitors.filter((v) => v.device.type === "mobile").length,
+    tablet: visitors.filter((v) => v.device.type === "tablet").length,
+    totalPageViews: visitors.reduce((sum, v) => sum + v.pageViews, 0),
+    avgTimeOnSite:
+      visitors.length > 0 ? Math.round(visitors.reduce((sum, v) => sum + v.timeOnSite, 0) / visitors.length / 1000) : 0,
   }
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm("")
-    setStatusFilter("all")
-    setCountryFilter("all")
-    setAdvancedFilters({
-      search: "",
-      status: "all",
-      country: "all",
-      deviceType: "all",
-      trafficSource: "all",
-      hasAffiliate: "all",
-    })
-    setFilteredVisitors(visitors)
-  }
+  const handleExportCSV = () => {
+    if (filteredVisitors.length === 0) return
 
-  // Export visitor data as CSV
-  const exportVisitorData = () => {
-    if (filteredVisitors.length === 0) {
-      alert("No visitor data to export")
-      return
-    }
-
-    const csvHeaders = [
-      "Visitor ID",
-      "Session ID",
-      "First Visit",
-      "Last Visit",
-      "Page Views",
-      "Current Page",
+    const headers = [
+      "Timestamp",
+      "IP",
+      "Page",
       "Referrer",
-      "UTM Source",
-      "UTM Medium",
-      "UTM Campaign",
-      "UTM Term",
-      "UTM Content",
-      "Affiliate Code",
-      "User Agent",
+      "Device",
+      "Browser",
+      "OS",
+      "Country",
+      "City",
+      "Status",
+      "Page Views",
+      "Time on Site (s)",
     ]
+    const csvContent = [
+      headers.join(","),
+      ...filteredVisitors.map((visitor) =>
+        [
+          new Date(visitor.timestamp).toISOString(),
+          visitor.ip,
+          `"${visitor.page}"`,
+          `"${visitor.referrer}"`,
+          visitor.device.type,
+          visitor.device.browser,
+          visitor.device.os,
+          visitor.location?.country || "",
+          visitor.location?.city || "",
+          visitor.isActive ? "Active" : "Inactive",
+          visitor.pageViews,
+          Math.round(visitor.timeOnSite / 1000),
+        ].join(","),
+      ),
+    ].join("\n")
 
-    const csvData = filteredVisitors.map((visitor) => [
-      `"${visitor.visitorId}"`,
-      `"${visitor.sessionId}"`,
-      `"${visitor.firstVisit}"`,
-      `"${visitor.lastVisit}"`,
-      visitor.pageViews,
-      `"${visitor.currentPage}"`,
-      `"${visitor.referrer}"`,
-      `"${visitor.utmSource || ""}"`,
-      `"${visitor.utmMedium || ""}"`,
-      `"${visitor.utmCampaign || ""}"`,
-      `"${visitor.utmTerm || ""}"`,
-      `"${visitor.utmContent || ""}"`,
-      `"${visitor.affiliate || ""}"`,
-      `"${visitor.userAgent}"`,
-    ])
-
-    const csvContent = [csvHeaders.join(","), ...csvData.map((row) => row.join(","))].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `visitor-data-${new Date().toISOString().split("T")[0]}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `visitors-${new Date().toISOString().split("T")[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
   }
 
-  // Get unique traffic sources
-  const uniqueTrafficSources = [...new Set(visitors.map((v) => v.utmSource))].filter(Boolean).sort()
+  const formatTimeAgo = (timestamp: number) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
 
-  // Calculate active visitors (visited in last 30 minutes)
-  const activeVisitors = filteredVisitors.filter((visitor) => {
-    const lastVisit = new Date(visitor.lastVisit)
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
-    return lastVisit > thirtyMinutesAgo
-  }).length
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return "Just now"
+  }
 
-  // Calculate visitors with conversions (those who visited demo or contact pages)
-  const convertedVisitors = filteredVisitors.filter(
-    (visitor) => visitor.currentPage.includes("/demo") || visitor.currentPage.includes("/contact"),
-  ).length
+  const getDeviceIcon = (type: string) => {
+    switch (type) {
+      case "mobile":
+        return <Smartphone className="h-4 w-4" />
+      case "tablet":
+        return <Smartphone className="h-4 w-4" />
+      default:
+        return <Monitor className="h-4 w-4" />
+    }
+  }
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">Loading visitor data...</p>
-            </div>
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading visitors...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
-            <p className="text-gray-600 mt-2">Monitor and analyze website visitor behavior in real-time</p>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Visitor Tracking</h1>
+          <p className="text-muted-foreground">Monitor and analyze website visitors in real-time</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Switch id="auto-refresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
+            <Label htmlFor="auto-refresh">Auto-refresh</Label>
           </div>
           <Link href="/admin/tracking">
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-              <BarChart3 className="h-4 w-4" />
+            <Button variant="outline">
+              <Activity className="h-4 w-4 mr-2" />
               Analytics Dashboard
-              <ExternalLink className="h-4 w-4" />
             </Button>
           </Link>
         </div>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{filteredVisitors.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {filteredVisitors.length !== visitors.length ? `Filtered from ${visitors.length}` : "All visitors"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Now</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeVisitors}</div>
-              <p className="text-xs text-muted-foreground">Last 30 minutes</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversions</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{convertedVisitors}</div>
-              <p className="text-xs text-muted-foreground">
-                {filteredVisitors.length > 0
-                  ? `${Math.round((convertedVisitors / filteredVisitors.length) * 100)}% rate`
-                  : "0% rate"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {filteredVisitors.reduce((sum, visitor) => sum + visitor.pageViews, 0)}
-              </div>
-              <p className="text-xs text-muted-foreground">Total page views</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search visitors, referrers, affiliate codes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Advanced Filters
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Advanced Filters</DialogTitle>
-                  <DialogDescription>Apply detailed filters to find specific visitor segments</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="advanced-search">Search</Label>
-                    <Input
-                      id="advanced-search"
-                      placeholder="Search across all fields..."
-                      value={advancedFilters.search}
-                      onChange={(e) => setAdvancedFilters((prev) => ({ ...prev, search: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="advanced-traffic">Traffic Source</Label>
-                    <Select
-                      value={advancedFilters.trafficSource}
-                      onValueChange={(value) => setAdvancedFilters((prev) => ({ ...prev, trafficSource: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sources</SelectItem>
-                        {uniqueTrafficSources.map((source) => (
-                          <SelectItem key={source} value={source}>
-                            {source}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="advanced-affiliate">Has Affiliate Code</Label>
-                    <Select
-                      value={advancedFilters.hasAffiliate}
-                      onValueChange={(value) => setAdvancedFilters((prev) => ({ ...prev, hasAffiliate: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Visitors</SelectItem>
-                        <SelectItem value="yes">With Affiliate</SelectItem>
-                        <SelectItem value="no">Without Affiliate</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={applyAdvancedFilters} className="flex-1">
-                      Apply Filters
-                    </Button>
-                    <Button variant="outline" onClick={clearFilters}>
-                      Clear All
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button onClick={exportVisitorData} variant="outline" disabled={filteredVisitors.length === 0}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-
-            <Button
-              onClick={() => setIsRealTimeActive(!isRealTimeActive)}
-              variant={isRealTimeActive ? "default" : "outline"}
-              className={isRealTimeActive ? "animate-pulse" : ""}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRealTimeActive ? "animate-spin" : ""}`} />
-              Real-time {isRealTimeActive ? "ON" : "OFF"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Real-time indicator */}
-        {isRealTimeActive && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2 text-green-800">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">Real-time monitoring active</span>
-              <span className="text-xs text-green-600">Last updated: {lastUpdate.toLocaleTimeString()}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Visitors Table */}
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Visitor Details ({filteredVisitors.length})
-            </CardTitle>
-            <CardDescription>Detailed information about website visitors and their behavior</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredVisitors.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">No Visitor Data Available</h3>
-                  <p className="mb-4">
-                    {visitors.length === 0
-                      ? "No visitors have been tracked yet. Visitor data will appear here as people browse your website."
-                      : "No visitors found matching your current filters."}
-                  </p>
-                  {visitors.length > 0 && (
-                    <Button variant="outline" onClick={clearFilters} className="bg-transparent">
-                      Clear Filters
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                filteredVisitors.map((visitor) => (
-                  <div key={visitor.visitorId} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      {/* Visitor Info */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-lg">{visitor.visitorId}</span>
-                          <Badge variant="outline">Active</Badge>
-                        </div>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            <span>Session: {visitor.sessionId}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-3 w-3" />
-                            <span>{visitor.pageViews} page views</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3" />
-                            <span>First visit: {new Date(visitor.firstVisit).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Activity className="h-3 w-3" />
-                            <span>Last activity: {new Date(visitor.lastVisit).toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">{stats.active} currently active</p>
+          </CardContent>
+        </Card>
 
-                      {/* Current Page & Navigation */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-blue-600">
-                          <Globe className="h-4 w-4" />
-                          <span className="font-medium">Current Session</span>
-                        </div>
-                        <div className="text-sm text-gray-600 space-y-1 bg-blue-50 p-3 rounded-md">
-                          <div>
-                            <strong>Current Page:</strong> {visitor.currentPage}
-                          </div>
-                          <div>
-                            <strong>Referrer:</strong>{" "}
-                            {visitor.referrer.length > 50
-                              ? visitor.referrer.substring(0, 50) + "..."
-                              : visitor.referrer}
-                          </div>
-                          {visitor.utmSource && (
-                            <div>
-                              <strong>UTM Source:</strong> {visitor.utmSource}
-                            </div>
-                          )}
-                          {visitor.utmMedium && (
-                            <div>
-                              <strong>UTM Medium:</strong> {visitor.utmMedium}
-                            </div>
-                          )}
-                          {visitor.utmCampaign && (
-                            <div>
-                              <strong>Campaign:</strong> {visitor.utmCampaign}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalPageViews}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.total > 0 ? Math.round(stats.totalPageViews / stats.total) : 0} avg per visitor
+            </p>
+          </CardContent>
+        </Card>
 
-                      {/* Additional Data */}
-                      <div className="space-y-2">
-                        <div className="text-sm text-gray-600 space-y-1">
-                          {visitor.affiliate && (
-                            <div>
-                              <strong>Affiliate:</strong> <Badge variant="secondary">{visitor.affiliate}</Badge>
-                            </div>
-                          )}
-                          {visitor.utmTerm && (
-                            <div>
-                              <strong>UTM Term:</strong> {visitor.utmTerm}
-                            </div>
-                          )}
-                          {visitor.utmContent && (
-                            <div>
-                              <strong>UTM Content:</strong> {visitor.utmContent}
-                            </div>
-                          )}
-                          <div className="pt-2 border-t">
-                            <strong>User Agent:</strong>
-                            <div className="text-xs text-gray-500 mt-1 break-all">
-                              {visitor.userAgent.length > 100
-                                ? visitor.userAgent.substring(0, 100) + "..."
-                                : visitor.userAgent}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Time on Site</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.avgTimeOnSite}s</div>
+            <p className="text-xs text-muted-foreground">Average session duration</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Device Split</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.desktop + stats.mobile + stats.tablet}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.desktop}D / {stats.mobile}M / {stats.tablet}T
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Filters and Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters & Controls</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by IP, page, referrer, or location..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <Select value={deviceFilter} onValueChange={setDeviceFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Device type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Devices</SelectItem>
+                <SelectItem value="desktop">Desktop</SelectItem>
+                <SelectItem value="mobile">Mobile</SelectItem>
+                <SelectItem value="tablet">Tablet</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={handleExportCSV} disabled={filteredVisitors.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Visitors List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Visitors ({filteredVisitors.length})</CardTitle>
+          <CardDescription>
+            {filteredVisitors.length === 0 && visitors.length === 0
+              ? "No visitors tracked yet. Visitors will appear here as they browse your site."
+              : `Showing ${filteredVisitors.length} of ${visitors.length} visitors`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredVisitors.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {visitors.length === 0 ? (
+                <div>
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No visitors tracked yet</p>
+                  <p className="text-sm">Visitors will appear here as they browse your site</p>
+                </div>
+              ) : (
+                <div>
+                  <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No visitors match your current filters</p>
+                  <p className="text-sm">Try adjusting your search or filter criteria</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <ScrollArea className="h-[600px]">
+              <div className="space-y-4">
+                {filteredVisitors.map((visitor) => (
+                  <div
+                    key={visitor.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        {getDeviceIcon(visitor.device.type)}
+                        <Badge variant={visitor.isActive ? "default" : "secondary"}>
+                          {visitor.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className="font-medium">{visitor.ip}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {visitor.device.browser} on {visitor.device.os}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">{visitor.page}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {visitor.location?.city && visitor.location?.country
+                          ? `${visitor.location.city}, ${visitor.location.country}`
+                          : "Unknown location"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">{visitor.pageViews} views</div>
+                      <div className="text-sm text-muted-foreground">{formatTimeAgo(visitor.timestamp)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
