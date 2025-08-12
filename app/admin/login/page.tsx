@@ -1,20 +1,24 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Lock, Smartphone, QrCode } from "lucide-react"
+import { Shield, Lock, Smartphone, QrCode, CheckCircle } from "lucide-react"
 import { loginWithPassword, verifyTwoFactor, generateQRCode } from "./actions"
 
 export default function AdminLoginPage() {
-  const [step, setStep] = useState<"password" | "2fa" | "setup">("password")
+  const [step, setStep] = useState<"password" | "2fa" | "setup" | "verify">("password")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [qrCode, setQrCode] = useState("")
   const [secret, setSecret] = useState("")
+  const [verificationCode, setVerificationCode] = useState("")
+  const [setupComplete, setSetupComplete] = useState(false)
 
   const handlePasswordSubmit = async (formData: FormData) => {
     setLoading(true)
@@ -66,6 +70,38 @@ export default function AdminLoginPage() {
     setLoading(false)
   }
 
+  const handleSetupVerification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/admin/verify-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: verificationCode,
+          secret: secret,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Invalid verification code")
+      }
+
+      setSetupComplete(true)
+      setTimeout(() => {
+        setStep("password")
+        setSetupComplete(false)
+        setVerificationCode("")
+      }, 3000)
+    } catch (err) {
+      setError("Invalid verification code. Please check your authenticator app and try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -78,6 +114,7 @@ export default function AdminLoginPage() {
             {step === "password" && "Enter your admin password"}
             {step === "2fa" && "Enter your 2FA code"}
             {step === "setup" && "Setup Two-Factor Authentication"}
+            {step === "verify" && (setupComplete ? "Setup Complete!" : "Verify Your Setup")}
           </p>
         </CardHeader>
 
@@ -169,9 +206,59 @@ export default function AdminLoginPage() {
                 </div>
               )}
 
-              <Button onClick={() => setStep("password")} className="w-full">
+              <Button onClick={() => setStep("verify")} className="w-full">
+                Continue to Verification
+              </Button>
+
+              <Button onClick={() => setStep("password")} variant="outline" className="w-full">
                 Back to Login
               </Button>
+            </div>
+          )}
+
+          {step === "verify" && (
+            <div className="space-y-4">
+              {setupComplete ? (
+                <div className="text-center space-y-4">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-700 mb-2">
+                      <strong>Success!</strong> Your 2FA is now configured.
+                    </p>
+                    <p className="text-sm text-green-600">Update your ADMIN_2FA_SECRET environment variable with:</p>
+                    <code className="block mt-2 p-2 bg-green-100 rounded text-xs font-mono break-all">{secret}</code>
+                  </div>
+                  <p className="text-sm text-gray-600">Returning to login...</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSetupVerification} className="space-y-4">
+                  <div>
+                    <Label htmlFor="verification-code">6-Digit Verification Code</Label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="verification-code"
+                        type="text"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="000000"
+                        maxLength={6}
+                        className="pl-10 text-center text-lg font-mono tracking-widest"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Enter the current code from your authenticator app</p>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={loading || verificationCode.length !== 6}>
+                    {loading ? "Verifying..." : "Verify & Complete Setup"}
+                  </Button>
+
+                  <Button type="button" variant="outline" onClick={() => setStep("setup")} className="w-full">
+                    Back to QR Code
+                  </Button>
+                </form>
+              )}
             </div>
           )}
         </CardContent>
