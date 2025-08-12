@@ -9,6 +9,7 @@ interface AffiliateInfo {
 }
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
+  // Accounting Firms
   ACCT2024: {
     code: "ACCT2024",
     name: "Premier Accounting Solutions",
@@ -36,6 +37,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Bookkeeping services partnership",
     isActive: true,
   },
+
+  // Technology Partners
   "TECH-INTG": {
     code: "TECH-INTG",
     name: "TechIntegrate Solutions",
@@ -63,6 +66,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Cloud consulting partnership",
     isActive: true,
   },
+
+  // Consultants
   CONSULT1: {
     code: "CONSULT1",
     name: "Business Process Consultants",
@@ -90,6 +95,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "AR specialization partnership",
     isActive: true,
   },
+
+  // Resellers
   "RESELL-PRO": {
     code: "RESELL-PRO",
     name: "Professional Resellers Inc",
@@ -117,6 +124,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Distribution partnership",
     isActive: true,
   },
+
+  // Industry Specific
   "MFG-FOCUS": {
     code: "MFG-FOCUS",
     name: "Manufacturing Focus Group",
@@ -144,6 +153,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Retail industry specialization",
     isActive: true,
   },
+
+  // Special Programs
   "STARTUP-50": {
     code: "STARTUP-50",
     name: "Startup Accelerator Program",
@@ -171,6 +182,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Educational discount program",
     isActive: true,
   },
+
+  // Regional Partners
   "WEST-COAST": {
     code: "WEST-COAST",
     name: "West Coast Partners",
@@ -198,6 +211,8 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     description: "Southeast regional partnership",
     isActive: true,
   },
+
+  // VIP Partners
   "VIP-PLATINUM": {
     code: "VIP-PLATINUM",
     name: "Platinum VIP Partners",

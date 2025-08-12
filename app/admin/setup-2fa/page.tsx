@@ -1,157 +1,151 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Shield, Copy, Check } from "lucide-react"
+import QRCode from "qrcode"
 
 export default function Setup2FAPage() {
+  const [qrCodeUrl, setQrCodeUrl] = useState("")
   const [secret, setSecret] = useState("")
-  const [qrCode, setQrCode] = useState("")
-  const [testCode, setTestCode] = useState("")
-  const [verificationResult, setVerificationResult] = useState<{ valid: boolean; error?: string } | null>(null)
-  const [isVerifying, setIsVerifying] = useState(false)
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isVerified, setIsVerified] = useState(false)
+  const [error, setError] = useState("")
+  const [copied, setCopied] = useState(false)
 
-  const generateSecret = () => {
-    // Generate a random base32 secret
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-    let result = ""
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
+  useEffect(() => {
+    // Generate a random secret for demo purposes
+    const generateSecret = () => {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+      let result = ""
+      for (let i = 0; i < 32; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
     }
-    setSecret(result)
 
-    // Generate QR code URL for Google Authenticator
-    const issuer = "Kuhlekt Admin"
-    const accountName = "admin@kuhlekt.com"
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/${encodeURIComponent(accountName)}?secret=${result}&issuer=${encodeURIComponent(issuer)}`
-    setQrCode(qrUrl)
+    const newSecret = generateSecret()
+    setSecret(newSecret)
+
+    // Generate QR code
+    const otpAuthUrl = `otpauth://totp/Kuhlekt%20Admin?secret=${newSecret}&issuer=Kuhlekt`
+    QRCode.toDataURL(otpAuthUrl)
+      .then((url) => setQrCodeUrl(url))
+      .catch((err) => console.error("Error generating QR code:", err))
+  }, [])
+
+  const copySecret = async () => {
+    try {
+      await navigator.clipboard.writeText(secret)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy secret:", err)
+    }
   }
 
   const verifyCode = async () => {
-    if (!testCode || !secret) return
-
-    setIsVerifying(true)
     try {
       const response = await fetch("/api/admin/verify-totp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: testCode, secret }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          secret: secret,
+          token: verificationCode,
+        }),
       })
 
       const result = await response.json()
-      setVerificationResult(result)
-    } catch (error) {
-      setVerificationResult({ valid: false, error: "Network error" })
-    } finally {
-      setIsVerifying(false)
+
+      if (result.valid) {
+        setIsVerified(true)
+        setError("")
+      } else {
+        setError("Invalid verification code. Please try again.")
+      }
+    } catch (err) {
+      setError("Error verifying code. Please try again.")
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>Setup Two-Factor Authentication</CardTitle>
-          <CardDescription>Configure Google Authenticator or another TOTP app for admin access</CardDescription>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <Shield className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Set Up 2FA</CardTitle>
+          <CardDescription>Secure your admin account with two-factor authentication</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Step 1: Generate Secret */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Step 1: Generate Secret Key</h3>
-            <Button onClick={generateSecret} className="w-full">
-              Generate New Secret
-            </Button>
-
-            {secret && (
-              <div className="space-y-2">
-                <Label>Secret Key (save this securely):</Label>
-                <div className="p-3 bg-gray-100 rounded font-mono text-sm break-all">{secret}</div>
-                <Alert>
-                  <AlertDescription>
-                    <strong>Important:</strong> Save this secret key securely and add it to your ADMIN_2FA_SECRET
-                    environment variable.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-          </div>
-
-          {/* Step 2: Scan QR Code */}
-          {qrCode && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Step 2: Scan QR Code</h3>
+          {!isVerified ? (
+            <>
               <div className="text-center">
-                <img src={qrCode || "/placeholder.svg"} alt="2FA QR Code" className="mx-auto border rounded" />
-              </div>
-              <div className="text-sm text-gray-600">
-                <p>
-                  <strong>Instructions:</strong>
+                <p className="text-sm text-gray-600 mb-4">
+                  Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
                 </p>
-                <ol className="list-decimal list-inside space-y-1 mt-2">
-                  <li>Open Google Authenticator, Authy, or another TOTP app</li>
-                  <li>Tap "Add account" or "+"</li>
-                  <li>Scan this QR code with your phone</li>
-                  <li>Or manually enter the secret key above</li>
-                </ol>
+                {qrCodeUrl && <img src={qrCodeUrl || "/placeholder.svg"} alt="2FA QR Code" className="mx-auto" />}
               </div>
-            </div>
-          )}
 
-          {/* Step 3: Test Code */}
-          {secret && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Step 3: Test Your Setup</h3>
-              <div className="flex gap-2">
+              <div>
+                <Label htmlFor="secret">Or enter this secret manually:</Label>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Input id="secret" value={secret} readOnly className="font-mono text-xs" />
+                  <Button type="button" size="sm" onClick={copySecret} className="flex-shrink-0">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="verificationCode">Enter verification code:</Label>
                 <Input
+                  id="verificationCode"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
                   placeholder="Enter 6-digit code"
-                  value={testCode}
-                  onChange={(e) => setTestCode(e.target.value)}
                   maxLength={6}
+                  className="mt-1"
                 />
-                <Button onClick={verifyCode} disabled={isVerifying || testCode.length !== 6}>
-                  {isVerifying ? "Verifying..." : "Verify"}
-                </Button>
               </div>
 
-              {verificationResult && (
-                <Alert variant={verificationResult.valid ? "default" : "destructive"}>
-                  <AlertDescription>
-                    {verificationResult.valid ? (
-                      <span className="text-green-600">✅ Code verified successfully! Your 2FA is working.</span>
-                    ) : (
-                      <span>❌ Invalid code. {verificationResult.error || "Please try again."}</span>
-                    )}
-                  </AlertDescription>
+              {error && (
+                <Alert className="border-red-500 bg-red-50">
+                  <AlertDescription className="text-red-700">{error}</AlertDescription>
                 </Alert>
               )}
-            </div>
-          )}
 
-          {/* Step 4: Environment Variable */}
-          {secret && verificationResult?.valid && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Step 4: Update Environment Variable</h3>
-              <Alert>
-                <AlertDescription>
-                  <p className="mb-2">Add this to your environment variables:</p>
-                  <code className="block p-2 bg-gray-100 rounded text-sm">ADMIN_2FA_SECRET={secret}</code>
-                  <p className="mt-2 text-sm">
-                    After updating the environment variable, you can use the admin login with your password and 2FA
-                    codes.
-                  </p>
+              <Button onClick={verifyCode} className="w-full" disabled={verificationCode.length !== 6}>
+                Verify Code
+              </Button>
+            </>
+          ) : (
+            <div className="text-center">
+              <Alert className="border-green-500 bg-green-50 mb-4">
+                <AlertDescription className="text-green-700">
+                  2FA has been set up successfully! You can now use this authenticator app to log in.
                 </AlertDescription>
               </Alert>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Important:</strong> Save this secret key in a secure location:
+                </p>
+                <code className="block mt-2 p-2 bg-white rounded text-xs font-mono break-all">{secret}</code>
+              </div>
+
+              <Button asChild className="w-full">
+                <a href="/admin/login">Go to Login</a>
+              </Button>
             </div>
           )}
-
-          <div className="pt-4 border-t">
-            <Button asChild variant="outline" className="w-full bg-transparent">
-              <a href="/admin/login">Back to Login</a>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

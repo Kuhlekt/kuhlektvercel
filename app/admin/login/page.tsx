@@ -1,153 +1,102 @@
 "use client"
 
 import { useState } from "react"
-import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Shield, AlertCircle } from "lucide-react"
-import { loginAdmin } from "./actions"
-
-const initialState = {
-  success: false,
-  message: "",
-  requiresTwoFactor: false,
-  errors: {},
-}
+import { Eye, EyeOff, Shield } from "lucide-react"
+import { adminLogin } from "./actions"
 
 export default function AdminLoginPage() {
-  const [state, formAction] = useFormState(loginAdmin, initialState)
-  const [isPending, setIsPending] = useState(false)
-  const [showTwoFactor, setShowTwoFactor] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Handle form submission with pending state
   const handleSubmit = async (formData: FormData) => {
-    setIsPending(true)
+    setIsLoading(true)
+    setError("")
 
     try {
-      await formAction(formData)
-      if (state.requiresTwoFactor) {
-        setShowTwoFactor(true)
+      const result = await adminLogin(formData)
+      if (result?.error) {
+        setError(result.error)
       }
+    } catch (error) {
+      setError("An error occurred during login")
     } finally {
-      setIsPending(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Shield className="mx-auto h-12 w-12 text-blue-400" />
-          <h2 className="mt-6 text-3xl font-extrabold text-white">Admin Access</h2>
-          <p className="mt-2 text-sm text-gray-300">Secure login to Kuhlekt admin panel</p>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <Shield className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardDescription>Access the Kuhlekt admin dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert className="mb-4 border-red-500 bg-red-50">
+              <AlertDescription className="text-red-700">{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">{showTwoFactor ? "Two-Factor Authentication" : "Sign In"}</CardTitle>
-            <CardDescription className="text-gray-300">
-              {showTwoFactor ? "Enter your 6-digit authentication code" : "Enter your admin credentials"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {state.message && (
-              <Alert className={`mb-6 ${state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-                <AlertCircle className={`h-4 w-4 ${state.success ? "text-green-600" : "text-red-600"}`} />
-                <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
-                  {state.message}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <form action={handleSubmit} className="space-y-6">
-              {!showTwoFactor ? (
-                <>
-                  <div>
-                    <Label htmlFor="password" className="text-white">
-                      Admin Password
-                    </Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      required
-                      className="mt-1 bg-slate-700 border-slate-600 text-white placeholder-gray-400"
-                      placeholder="Enter admin password"
-                    />
-                    {state.errors?.password && <p className="text-red-400 text-sm mt-1">{state.errors.password}</p>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <Label htmlFor="twoFactorCode" className="text-white">
-                      Authentication Code
-                    </Label>
-                    <Input
-                      id="twoFactorCode"
-                      name="twoFactorCode"
-                      type="text"
-                      required
-                      maxLength={6}
-                      className="mt-1 bg-slate-700 border-slate-600 text-white placeholder-gray-400 text-center text-2xl tracking-widest"
-                      placeholder="000000"
-                    />
-                    {state.errors?.twoFactorCode && (
-                      <p className="text-red-400 text-sm mt-1">{state.errors.twoFactorCode}</p>
-                    )}
-                  </div>
-                  <input type="hidden" name="step" value="verify-2fa" />
-                </>
-              )}
-
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {showTwoFactor ? "Verifying..." : "Signing In..."}
-                  </>
-                ) : showTwoFactor ? (
-                  "Verify Code"
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </form>
-
-            {showTwoFactor && (
-              <div className="mt-4 text-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowTwoFactor(false)}
-                  className="text-gray-300 hover:text-white"
+          <form action={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
                 >
-                  Back to Password
-                </Button>
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
               </div>
-            )}
-
-            <div className="mt-6 text-center">
-              <p className="text-xs text-gray-400">This is a secure area. All access attempts are logged.</p>
             </div>
-          </CardContent>
-        </Card>
 
-        <div className="text-center">
-          <p className="text-sm text-gray-400">
-            Need help? Contact{" "}
-            <a href="mailto:support@kuhlekt.com" className="text-blue-400 hover:underline">
-              support@kuhlekt.com
+            <div>
+              <Label htmlFor="totpCode">2FA Code</Label>
+              <Input
+                id="totpCode"
+                name="totpCode"
+                type="text"
+                required
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+                pattern="[0-9]{6}"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <a href="/admin/setup-2fa" className="text-sm text-blue-600 hover:text-blue-500">
+              Need to set up 2FA?
             </a>
-          </p>
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

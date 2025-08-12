@@ -17,11 +17,13 @@ const contactSchema = z.object({
 })
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
   if (!process.env.RECAPTCHA_SECRET_KEY) {
     console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
     return true
   }
 
+  // If it's the development token, allow it
   if (token === "development-mode") {
     return true
   }
@@ -59,6 +61,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
 
     const validatedData = contactSchema.parse(rawData)
 
+    // Verify reCAPTCHA
     const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
     if (!isRecaptchaValid) {
       return {
@@ -68,6 +71,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
+    // Validate affiliate code if provided
     let affiliateInfo = null
     if (validatedData.affiliateCode) {
       affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
@@ -80,6 +84,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
+    // Prepare email content
     const emailSubject = `New Contact Form Submission: ${validatedData.subject}`
     const emailBody = `
       New contact form submission received:
@@ -97,8 +102,10 @@ export async function submitContactForm(prevState: any, formData: FormData) {
 
       ---
       Submitted at: ${new Date().toISOString()}
+      IP Address: ${formData.get("userIP") || "Unknown"}
     `
 
+    // Send email notification
     await sendEmail({
       to: "contact@kuhlekt.com",
       subject: emailSubject,
@@ -106,6 +113,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       html: emailBody.replace(/\n/g, "<br>"),
     })
 
+    // Send confirmation email to user
     const confirmationSubject = "Thank you for contacting Kuhlekt"
     const confirmationBody = `
       Dear ${validatedData.firstName},
@@ -159,6 +167,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
   }
 }
 
+// Test function for AWS SES
 export async function testAWSSES() {
   try {
     await sendEmail({

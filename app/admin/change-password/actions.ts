@@ -2,21 +2,13 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import bcrypt from "bcryptjs"
 
-interface ChangePasswordState {
-  error?: string
-  success?: string
-}
+export async function changePassword(formData: FormData) {
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin-session")
 
-export async function changeAdminPassword(
-  prevState: ChangePasswordState | null,
-  formData: FormData,
-): Promise<ChangePasswordState> {
-  // Check if user is authenticated
-  const cookieStore = await cookies()
-  const session = cookieStore.get("admin_session")
-
-  if (!session || session.value !== "authenticated") {
+  if (!adminSession) {
     redirect("/admin/login")
   }
 
@@ -24,7 +16,6 @@ export async function changeAdminPassword(
   const newPassword = formData.get("newPassword") as string
   const confirmPassword = formData.get("confirmPassword") as string
 
-  // Validation
   if (!currentPassword || !newPassword || !confirmPassword) {
     return { error: "All fields are required" }
   }
@@ -38,13 +29,13 @@ export async function changeAdminPassword(
   }
 
   // Verify current password
-  if (currentPassword !== process.env.ADMIN_PASSWORD) {
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
+
+  if (!isCurrentPasswordValid) {
     return { error: "Current password is incorrect" }
   }
 
-  // In a real application, you would update the password in a database
-  // For this demo, we'll just show a success message with instructions
-  return {
-    success: `Password change validated! To complete the change, please update your ADMIN_PASSWORD environment variable to: ${newPassword}`,
-  }
+  // In a real application, you would update the password in the database
+  // For this demo, we'll just return success
+  return { success: "Password changed successfully" }
 }

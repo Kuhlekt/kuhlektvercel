@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, Calendar, Users, TrendingUp, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
 import { submitDemoRequest } from "./actions"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
@@ -26,7 +25,7 @@ export default function DemoPage() {
   const [isPending, setIsPending] = useState(false)
   const [recaptchaToken, setRecaptchaToken] = useState("")
   const [affiliateCode, setAffiliateCode] = useState("")
-  const [affiliateInfo, setAffiliateInfo] = useState<any>(null)
+  const [affiliateInfo, setAffiliateInfo] = useState(null)
 
   const handleSubmit = async (formData: FormData) => {
     setIsPending(true)
@@ -47,60 +46,25 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Request a Demo</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            See how Kuhlekt can transform your accounts receivable process. Schedule a personalized demo with our AR
-            automation experts.
+          <p className="text-xl text-gray-600">
+            See how Kuhlekt can transform your accounts receivable process with a personalized demo.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <Calendar className="h-12 w-12 text-green-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-lg mb-2">30-Minute Demo</h3>
-              <p className="text-gray-600">Personalized walkthrough of our AR automation platform</p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <TrendingUp className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-lg mb-2">ROI Analysis</h3>
-              <p className="text-gray-600">Custom ROI projections based on your business metrics</p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <Users className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-lg mb-2">Expert Consultation</h3>
-              <p className="text-gray-600">One-on-one session with our AR automation specialists</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
+        <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-green-600" />
-              Schedule Your Demo
-            </CardTitle>
-            <CardDescription>
-              Fill out the form below and we'll contact you within 2 business hours to schedule your personalized demo.
+            <CardTitle className="text-2xl text-center">Schedule Your Demo</CardTitle>
+            <CardDescription className="text-center">
+              Our team will contact you within 2 business hours to schedule your personalized demo.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {state.message && (
-              <Alert className={`mb-6 ${state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-                {state.success ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                )}
-                <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
+              <Alert className={`mb-6 ${state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}`}>
+                <AlertDescription className={state.success ? "text-green-700" : "text-red-700"}>
                   {state.message}
                 </AlertDescription>
               </Alert>
@@ -117,7 +81,7 @@ export default function DemoPage() {
                     required
                     className={state.errors?.firstName ? "border-red-500" : ""}
                   />
-                  {state.errors?.firstName && <p className="text-sm text-red-600 mt-1">{state.errors.firstName}</p>}
+                  {state.errors?.firstName && <p className="text-red-500 text-sm mt-1">{state.errors.firstName}</p>}
                 </div>
 
                 <div>
@@ -129,61 +93,57 @@ export default function DemoPage() {
                     required
                     className={state.errors?.lastName ? "border-red-500" : ""}
                   />
-                  {state.errors?.lastName && <p className="text-sm text-red-600 mt-1">{state.errors.lastName}</p>}
+                  {state.errors?.lastName && <p className="text-red-500 text-sm mt-1">{state.errors.lastName}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    className={state.errors?.email ? "border-red-500" : ""}
-                  />
-                  {state.errors?.email && <p className="text-sm text-red-600 mt-1">{state.errors.email}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    required
-                    className={state.errors?.phone ? "border-red-500" : ""}
-                  />
-                  {state.errors?.phone && <p className="text-sm text-red-600 mt-1">{state.errors.phone}</p>}
-                </div>
+              <div>
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  className={state.errors?.email ? "border-red-500" : ""}
+                />
+                {state.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email}</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    type="text"
-                    required
-                    className={state.errors?.company ? "border-red-500" : ""}
-                  />
-                  {state.errors?.company && <p className="text-sm text-red-600 mt-1">{state.errors.company}</p>}
-                </div>
+              <div>
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  className={state.errors?.phone ? "border-red-500" : ""}
+                />
+                {state.errors?.phone && <p className="text-red-500 text-sm mt-1">{state.errors.phone}</p>}
+              </div>
 
-                <div>
-                  <Label htmlFor="jobTitle">Job Title *</Label>
-                  <Input
-                    id="jobTitle"
-                    name="jobTitle"
-                    type="text"
-                    required
-                    placeholder="e.g., CFO, Controller, AR Manager"
-                    className={state.errors?.jobTitle ? "border-red-500" : ""}
-                  />
-                  {state.errors?.jobTitle && <p className="text-sm text-red-600 mt-1">{state.errors.jobTitle}</p>}
-                </div>
+              <div>
+                <Label htmlFor="company">Company Name *</Label>
+                <Input
+                  id="company"
+                  name="company"
+                  type="text"
+                  required
+                  className={state.errors?.company ? "border-red-500" : ""}
+                />
+                {state.errors?.company && <p className="text-red-500 text-sm mt-1">{state.errors.company}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="jobTitle">Job Title *</Label>
+                <Input
+                  id="jobTitle"
+                  name="jobTitle"
+                  type="text"
+                  required
+                  placeholder="e.g., CFO, Controller, AR Manager"
+                  className={state.errors?.jobTitle ? "border-red-500" : ""}
+                />
+                {state.errors?.jobTitle && <p className="text-red-500 text-sm mt-1">{state.errors.jobTitle}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -197,33 +157,31 @@ export default function DemoPage() {
                       <SelectItem value="1-10">1-10 employees</SelectItem>
                       <SelectItem value="11-50">11-50 employees</SelectItem>
                       <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-500">201-500 employees</SelectItem>
-                      <SelectItem value="501-1000">501-1000 employees</SelectItem>
-                      <SelectItem value="1000+">1000+ employees</SelectItem>
+                      <SelectItem value="201-1000">201-1,000 employees</SelectItem>
+                      <SelectItem value="1000+">1,000+ employees</SelectItem>
                     </SelectContent>
                   </Select>
-                  {state.errors?.companySize && <p className="text-sm text-red-600 mt-1">{state.errors.companySize}</p>}
+                  {state.errors?.companySize && <p className="text-red-500 text-sm mt-1">{state.errors.companySize}</p>}
                 </div>
 
                 <div>
                   <Label htmlFor="industry">Industry *</Label>
                   <Select name="industry" required>
                     <SelectTrigger className={state.errors?.industry ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select your industry" />
+                      <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="distribution">Distribution</SelectItem>
                       <SelectItem value="retail">Retail</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
                       <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="financial-services">Financial Services</SelectItem>
                       <SelectItem value="professional-services">Professional Services</SelectItem>
                       <SelectItem value="construction">Construction</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
-                  {state.errors?.industry && <p className="text-sm text-red-600 mt-1">{state.errors.industry}</p>}
+                  {state.errors?.industry && <p className="text-red-500 text-sm mt-1">{state.errors.industry}</p>}
                 </div>
               </div>
 
@@ -231,7 +189,7 @@ export default function DemoPage() {
                 <Label htmlFor="currentArVolume">Monthly AR Volume *</Label>
                 <Select name="currentArVolume" required>
                   <SelectTrigger className={state.errors?.currentArVolume ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select your monthly AR volume" />
+                    <SelectValue placeholder="Select monthly AR volume" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="under-100k">Under $100K</SelectItem>
@@ -243,7 +201,7 @@ export default function DemoPage() {
                   </SelectContent>
                 </Select>
                 {state.errors?.currentArVolume && (
-                  <p className="text-sm text-red-600 mt-1">{state.errors.currentArVolume}</p>
+                  <p className="text-red-500 text-sm mt-1">{state.errors.currentArVolume}</p>
                 )}
               </div>
 
@@ -251,13 +209,12 @@ export default function DemoPage() {
                 <Label htmlFor="preferredTime">Preferred Demo Time</Label>
                 <Select name="preferredTime">
                   <SelectTrigger>
-                    <SelectValue placeholder="Select your preferred time" />
+                    <SelectValue placeholder="Select preferred time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="morning">Morning (9 AM - 12 PM EST)</SelectItem>
-                    <SelectItem value="afternoon">Afternoon (12 PM - 5 PM EST)</SelectItem>
-                    <SelectItem value="evening">Evening (5 PM - 7 PM EST)</SelectItem>
-                    <SelectItem value="flexible">I'm flexible</SelectItem>
+                    <SelectItem value="morning">Morning (9AM - 12PM EST)</SelectItem>
+                    <SelectItem value="afternoon">Afternoon (12PM - 5PM EST)</SelectItem>
+                    <SelectItem value="flexible">Flexible</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -284,7 +241,7 @@ export default function DemoPage() {
                   className={state.errors?.affiliateCode ? "border-red-500" : ""}
                 />
                 {state.errors?.affiliateCode && (
-                  <p className="text-sm text-red-600 mt-1">{state.errors.affiliateCode}</p>
+                  <p className="text-red-500 text-sm mt-1">{state.errors.affiliateCode}</p>
                 )}
                 {affiliateInfo && (
                   <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
@@ -301,9 +258,6 @@ export default function DemoPage() {
                     </p>
                   </div>
                 )}
-                <p className="text-sm text-gray-500 mt-1">
-                  Have a partner or referral code? Enter it here for special demo pricing.
-                </p>
               </div>
 
               <div className="flex justify-center">
@@ -313,11 +267,31 @@ export default function DemoPage() {
               <Button
                 type="submit"
                 disabled={isPending || !recaptchaToken}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
               >
-                {isPending ? "Submitting Request..." : "Request Demo"}
+                {isPending ? "Submitting..." : "Request Demo"}
               </Button>
             </form>
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="text-center text-sm text-gray-600">
+                <p className="mb-2">What to expect:</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">30-45 Minutes</h4>
+                    <p>Comprehensive demo tailored to your business</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Live Q&A</h4>
+                    <p>Ask questions and see real-time solutions</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Custom Proposal</h4>
+                    <p>Receive a tailored proposal with ROI projections</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

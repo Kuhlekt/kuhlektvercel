@@ -2,26 +2,42 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import bcrypt from "bcryptjs"
+import { authenticator } from "otplib"
 
-interface LoginState {
-  error?: string
-}
-
-export async function loginAdmin(prevState: LoginState | null, formData: FormData): Promise<LoginState> {
+export async function adminLogin(formData: FormData) {
   const password = formData.get("password") as string
+  const totpCode = formData.get("totpCode") as string
 
-  if (!password) {
-    return { error: "Password is required" }
+  if (!password || !totpCode) {
+    return { error: "Password and 2FA code are required" }
   }
 
-  // Check against environment variable
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return { error: "Invalid password" }
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, process.env.ADMIN_PASSWORD || "")
+
+  if (!isPasswordValid) {
+    return { error: "Invalid credentials" }
+  }
+
+  // Verify TOTP
+  const secret = process.env.ADMIN_2FA_SECRET
+  if (!secret) {
+    return { error: "2FA not configured" }
+  }
+
+  const isValidToken = authenticator.verify({
+    token: totpCode,
+    secret: secret,
+  })
+
+  if (!isValidToken) {
+    return { error: "Invalid 2FA code" }
   }
 
   // Set session cookie
-  const cookieStore = await cookies()
-  cookieStore.set("admin_session", "authenticated", {
+  const cookieStore = cookies()
+  cookieStore.set("admin-session", "authenticated", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -29,10 +45,4 @@ export async function loginAdmin(prevState: LoginState | null, formData: FormDat
   })
 
   redirect("/admin/tracking")
-}
-
-export async function logoutAdmin() {
-  const cookieStore = await cookies()
-  cookieStore.delete("admin_session")
-  redirect("/admin/login")
 }

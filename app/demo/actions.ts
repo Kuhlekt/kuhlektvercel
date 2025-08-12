@@ -21,11 +21,13 @@ const demoSchema = z.object({
 })
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
   if (!process.env.RECAPTCHA_SECRET_KEY) {
     console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
     return true
   }
 
+  // If it's the development token, allow it
   if (token === "development-mode") {
     return true
   }
@@ -67,6 +69,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
     const validatedData = demoSchema.parse(rawData)
 
+    // Verify reCAPTCHA
     const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
     if (!isRecaptchaValid) {
       return {
@@ -76,6 +79,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
+    // Validate affiliate code if provided
     let affiliateInfo = null
     if (validatedData.affiliateCode) {
       affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
@@ -88,6 +92,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
+    // Prepare email content for sales team
     const emailSubject = `New Demo Request: ${validatedData.company} - ${validatedData.firstName} ${validatedData.lastName}`
     const emailBody = `
       New demo request received:
@@ -117,6 +122,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       Priority: ${validatedData.currentArVolume.includes("over-10m") || validatedData.currentArVolume.includes("5m-10m") ? "HIGH" : "NORMAL"}
     `
 
+    // Send email notification to sales team
     await sendEmail({
       to: "sales@kuhlekt.com",
       subject: emailSubject,
@@ -124,6 +130,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       html: emailBody.replace(/\n/g, "<br>"),
     })
 
+    // Send confirmation email to prospect
     const confirmationSubject = "Your Kuhlekt Demo Request - We'll Contact You Soon!"
     const confirmationBody = `
       Dear ${validatedData.firstName},
