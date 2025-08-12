@@ -2,9 +2,7 @@
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
-
-// Predefined affiliate table for validation
-const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
+import { normalizeAffiliateCode, getAffiliateDiscount } from "@/lib/affiliate-validation"
 
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
@@ -31,6 +29,16 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return {
+        success: false,
+        error: true,
+        message: "Please enter a valid email address.",
+      }
+    }
+
     // Verify reCAPTCHA
     const captchaResult = await verifyCaptcha(recaptchaToken || "")
     if (!captchaResult.success) {
@@ -42,28 +50,59 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     }
 
     // Validate affiliate code if provided
-    const validAffiliate =
-      affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : null
+    let validatedAffiliate: string | null = null
+    let affiliateDiscount = 0
+    let affiliateMessage = ""
+
+    if (affiliate && affiliate.trim()) {
+      validatedAffiliate = normalizeAffiliateCode(affiliate)
+      if (validatedAffiliate) {
+        affiliateDiscount = getAffiliateDiscount(validatedAffiliate)
+        affiliateMessage = `Valid affiliate code applied: ${validatedAffiliate} (${affiliateDiscount}% discount)`
+      } else {
+        return {
+          success: false,
+          error: true,
+          message: `Invalid affiliate code: "${affiliate}". Please check the code and try again.`,
+        }
+      }
+    }
 
     // Prepare email content
-    const emailSubject = "New Contact Form Submission - Kuhlekt"
+    const emailSubject = `New Contact Form Submission${validatedAffiliate ? ` - Affiliate: ${validatedAffiliate}` : ""} - Kuhlekt`
     const emailBody = `
-      New contact form submission:
+      <h2>New Contact Form Submission</h2>
       
-      Name: ${firstName} ${lastName}
-      Email: ${email}
-      Company: ${company || "Not provided"}
-      Phone: ${phone || "Not provided"}
-      ${validAffiliate ? `Affiliate: ${validAffiliate}` : ""}
-      Message: ${message || "No message provided"}
+      <h3>Contact Information:</h3>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company || "Not provided"}</p>
+      <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
       
-      Visitor Tracking:
-      - Referrer: ${referrer || "Not available"}
-      - UTM Source: ${utmSource || "Not available"}
-      - UTM Campaign: ${utmCampaign || "Not available"}
-      - Page Views: ${pageViews || "Not available"}
+      ${
+        validatedAffiliate
+          ? `
+      <h3>Affiliate Information:</h3>
+      <p><strong>Affiliate Code:</strong> ${validatedAffiliate}</p>
+      <p><strong>Discount:</strong> ${affiliateDiscount}%</p>
+      <p style="color: green;"><strong>Status:</strong> ✅ Valid affiliate code</p>
+      `
+          : ""
+      }
       
-      Submitted at: ${new Date().toISOString()}
+      <h3>Message:</h3>
+      <p>${message || "No message provided"}</p>
+      
+      <h3>Visitor Tracking:</h3>
+      <ul>
+        <li><strong>Referrer:</strong> ${referrer || "Not available"}</li>
+        <li><strong>UTM Source:</strong> ${utmSource || "Not available"}</li>
+        <li><strong>UTM Campaign:</strong> ${utmCampaign || "Not available"}</li>
+        <li><strong>Page Views:</strong> ${pageViews || "Not available"}</li>
+      </ul>
+      
+      <hr>
+      <p><em>Submitted at: ${new Date().toISOString()}</em></p>
     `
 
     // Send email
@@ -74,10 +113,42 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       replyTo: email,
     })
 
+    // Send confirmation email to user
+    const confirmationSubject = "Thank you for contacting Kuhlekt"
+    const confirmationBody = `
+      <h2>Thank you for your message!</h2>
+      
+      <p>Hi ${firstName},</p>
+      
+      <p>We've received your message and will get back to you within 24 hours.</p>
+      
+      ${
+        validatedAffiliate
+          ? `
+      <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="color: #0369a1; margin-top: 0;">🎉 Affiliate Code Applied!</h3>
+        <p style="margin-bottom: 0;">Your affiliate code <strong>${validatedAffiliate}</strong> has been validated and you're eligible for a <strong>${affiliateDiscount}% discount</strong> on our services.</p>
+      </div>
+      `
+          : ""
+      }
+      
+      <p>In the meantime, feel free to explore our website to learn more about our AR automation solutions.</p>
+      
+      <p>Best regards,<br>
+      The Kuhlekt Team</p>
+    `
+
+    await sendEmailWithSES({
+      to: [email],
+      subject: confirmationSubject,
+      body: confirmationBody,
+    })
+
     return {
       success: true,
       error: false,
-      message: "Thank you for your message! We'll get back to you soon.",
+      message: `Thank you for your message! We'll get back to you soon.${affiliateMessage ? ` ${affiliateMessage}` : ""}`,
     }
   } catch (error) {
     console.error("Contact form submission error:", error)

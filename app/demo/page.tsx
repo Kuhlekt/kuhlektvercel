@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 import { submitDemoForm } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, AlertCircle, Info, Loader2 } from "lucide-react"
 import { Recaptcha } from "@/components/recaptcha"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
@@ -20,7 +22,7 @@ const initialState = {
 }
 
 export default function DemoPage() {
-  const [state, formAction] = useFormState(submitDemoForm, initialState)
+  const [state, formAction] = useActionState(submitDemoForm, initialState)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [isPending, setIsPending] = useState(false)
 
@@ -84,6 +86,20 @@ export default function DemoPage() {
             <CardTitle className="text-2xl text-center">Request Your Demo</CardTitle>
           </CardHeader>
           <CardContent>
+            {state?.success && (
+              <Alert className="mb-6 border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{state.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {state?.message && !state?.success && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">{state.message}</AlertDescription>
+              </Alert>
+            )}
+
             <form id="demo-form" action={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -170,6 +186,26 @@ export default function DemoPage() {
               </div>
 
               <div>
+                <Label htmlFor="affiliate">Affiliate Code (Optional)</Label>
+                <Input
+                  id="affiliate"
+                  name="affiliate"
+                  type="text"
+                  placeholder="Enter affiliate code if you have one"
+                  className="mt-1"
+                  disabled={isPending}
+                />
+                <div className="mt-2">
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 text-sm">
+                      Have an affiliate code? Enter it here to receive special discounts on our services.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </div>
+
+              <div>
                 <Label htmlFor="currentChallenges">Current AR Challenges (Optional)</Label>
                 <Textarea
                   id="currentChallenges"
@@ -208,12 +244,15 @@ export default function DemoPage() {
                 disabled={isPending}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
               >
-                {isPending ? "Scheduling..." : "Schedule Demo"}
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  "Schedule Demo"
+                )}
               </Button>
-
-              {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
-
-              {state?.error && <div className="text-red-600 text-center">{state.message}</div>}
             </form>
           </CardContent>
         </Card>

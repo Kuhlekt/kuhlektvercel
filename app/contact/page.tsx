@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Info } from "lucide-react"
 import { Recaptcha } from "@/components/recaptcha"
 import { VisitorTracker } from "@/components/visitor-tracker"
 import { submitContactForm } from "./actions"
@@ -121,8 +121,8 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <Label htmlFor="company">Company *</Label>
-                <Input id="company" name="company" type="text" required className="mt-1" disabled={isPending} />
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" name="company" type="text" className="mt-1" disabled={isPending} />
                 {state.errors?.company && <p className="text-sm text-red-600 mt-1">{state.errors.company}</p>}
               </div>
 
@@ -142,6 +142,14 @@ export default function ContactPage() {
                   className="mt-1"
                   disabled={isPending}
                 />
+                <div className="mt-2">
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 text-sm">
+                      Have an affiliate code? Enter it here to receive special discounts on our services.
+                    </AlertDescription>
+                  </Alert>
+                </div>
               </div>
 
               <div>
