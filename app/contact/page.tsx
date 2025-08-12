@@ -137,24 +137,10 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <Label htmlFor="subject">Subject *</Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  type="text"
-                  required
-                  placeholder="How can we help you?"
-                  className={state.errors?.subject ? "border-red-500" : ""}
-                />
-                {state.errors?.subject && <p className="text-red-500 text-sm mt-1">{state.errors.subject}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="message">Message *</Label>
+                <Label htmlFor="message">Message</Label>
                 <Textarea
                   id="message"
                   name="message"
-                  required
                   rows={5}
                   placeholder="Tell us about your current AR challenges and how we can help..."
                   className={state.errors?.message ? "border-red-500" : ""}

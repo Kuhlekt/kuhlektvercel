@@ -1,139 +1,104 @@
 "use server"
 
-import { z } from "zod"
-import { sendEmail } from "@/lib/email-service"
+import { sendEmail } from "@/lib/aws-ses"
+import { verifyCaptcha } from "@/lib/captcha"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-const contactSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
-  lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
-  email: z.string().email("Invalid email address"),
-  company: z.string().min(1, "Company name is required").max(100, "Company name too long"),
-  phone: z.string().optional(),
-  subject: z.string().min(1, "Subject is required").max(200, "Subject too long"),
-  message: z.string().min(10, "Message must be at least 10 characters").max(2000, "Message too long"),
-  affiliateCode: z.string().optional(),
-  recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
-})
-
-async function verifyRecaptcha(token: string): Promise<boolean> {
-  // If no secret key is configured, allow the request (development mode)
-  if (!process.env.RECAPTCHA_SECRET_KEY) {
-    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
-    return true
-  }
-
-  // If it's the development token, allow it
-  if (token === "development-mode") {
-    return true
-  }
-
-  try {
-    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
-    })
-
-    const data = await response.json()
-    return data.success
-  } catch (error) {
-    console.error("reCAPTCHA verification error:", error)
-    return false
-  }
+interface FormErrors {
+  firstName?: string
+  lastName?: string
+  email?: string
+  company?: string
+  phone?: string
+  message?: string
+  affiliateCode?: string
+  recaptcha?: string
 }
 
 export async function submitContactForm(prevState: any, formData: FormData) {
+  const firstName = formData.get("firstName") as string
+  const lastName = formData.get("lastName") as string
+  const email = formData.get("email") as string
+  const company = formData.get("company") as string
+  const phone = formData.get("phone") as string
+  const message = formData.get("message") as string
+  const affiliateCode = formData.get("affiliateCode") as string
+  const recaptchaToken = formData.get("recaptchaToken") as string
+
+  const errors: FormErrors = {}
+
+  // Validate required fields
+  if (!firstName?.trim()) {
+    errors.firstName = "First name is required"
+  }
+
+  if (!lastName?.trim()) {
+    errors.lastName = "Last name is required"
+  }
+
+  if (!email?.trim()) {
+    errors.email = "Email is required"
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = "Please enter a valid email address"
+  }
+
+  if (!company?.trim()) {
+    errors.company = "Company name is required"
+  }
+
+  // Validate phone if provided
+  if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
+    errors.phone = "Please enter a valid phone number"
+  }
+
+  // Validate affiliate code if provided
+  if (affiliateCode?.trim()) {
+    const affiliateInfo = validateAffiliateCode(affiliateCode.trim())
+    if (!affiliateInfo) {
+      errors.affiliateCode = "Invalid affiliate code"
+    }
+  }
+
+  // Verify reCAPTCHA
+  if (!recaptchaToken) {
+    errors.recaptcha = "Please complete the reCAPTCHA verification"
+  } else {
+    const captchaValid = await verifyCaptcha(recaptchaToken)
+    if (!captchaValid) {
+      errors.recaptcha = "reCAPTCHA verification failed. Please try again."
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      success: false,
+      message: "Please correct the errors below.",
+      errors,
+    }
+  }
+
   try {
-    const rawData = {
-      firstName: formData.get("firstName"),
-      lastName: formData.get("lastName"),
-      email: formData.get("email"),
-      company: formData.get("company"),
-      phone: formData.get("phone"),
-      subject: formData.get("subject"),
-      message: formData.get("message"),
-      affiliateCode: formData.get("affiliateCode"),
-      recaptchaToken: formData.get("recaptchaToken"),
-    }
-
-    const validatedData = contactSchema.parse(rawData)
-
-    // Verify reCAPTCHA
-    const isRecaptchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
-    if (!isRecaptchaValid) {
-      return {
-        success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
-        errors: {},
-      }
-    }
-
-    // Validate affiliate code if provided
-    let affiliateInfo = null
-    if (validatedData.affiliateCode) {
-      affiliateInfo = validateAffiliateCode(validatedData.affiliateCode)
-      if (!affiliateInfo) {
-        return {
-          success: false,
-          message: "Invalid affiliate code provided.",
-          errors: { affiliateCode: "Invalid affiliate code" },
-        }
-      }
-    }
-
     // Prepare email content
-    const emailSubject = `New Contact Form Submission: ${validatedData.subject}`
-    const emailBody = `
-      New contact form submission received:
+    const affiliateInfo = affiliateCode?.trim() ? validateAffiliateCode(affiliateCode.trim()) : null
 
-      Name: ${validatedData.firstName} ${validatedData.lastName}
-      Email: ${validatedData.email}
-      Company: ${validatedData.company}
-      Phone: ${validatedData.phone || "Not provided"}
-      Subject: ${validatedData.subject}
-      
-      ${affiliateInfo ? `Affiliate Partner: ${affiliateInfo.name} (${validatedData.affiliateCode})` : ""}
+    const emailContent = `
+New Contact Form Submission
 
-      Message:
-      ${validatedData.message}
+Name: ${firstName} ${lastName}
+Email: ${email}
+Company: ${company}
+Phone: ${phone || "Not provided"}
+Message: ${message || "No message provided"}
+${affiliateInfo ? `Affiliate Code: ${affiliateCode} (${affiliateInfo.name} - ${affiliateInfo.discount}% discount)` : ""}
 
-      ---
-      Submitted at: ${new Date().toISOString()}
-      IP Address: ${formData.get("userIP") || "Unknown"}
-    `
+Submitted at: ${new Date().toLocaleString()}
+    `.trim()
 
-    // Send email notification
+    // Send email
     await sendEmail({
-      to: "contact@kuhlekt.com",
-      subject: emailSubject,
-      text: emailBody,
-      html: emailBody.replace(/\n/g, "<br>"),
-    })
-
-    // Send confirmation email to user
-    const confirmationSubject = "Thank you for contacting Kuhlekt"
-    const confirmationBody = `
-      Dear ${validatedData.firstName},
-
-      Thank you for reaching out to Kuhlekt! We have received your message and will get back to you within 24 hours.
-
-      Your inquiry details:
-      Subject: ${validatedData.subject}
-      Company: ${validatedData.company}
-      ${affiliateInfo ? `Partner: ${affiliateInfo.name}` : ""}
-
-      Best regards,
-      The Kuhlekt Team
-    `
-
-    await sendEmail({
-      to: validatedData.email,
-      subject: confirmationSubject,
-      text: confirmationBody,
-      html: confirmationBody.replace(/\n/g, "<br>"),
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: `New Contact Form Submission from ${firstName} ${lastName}`,
+      body: emailContent,
     })
 
     return {
@@ -142,50 +107,11 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       errors: {},
     }
   } catch (error) {
-    console.error("Contact form submission error:", error)
-
-    if (error instanceof z.ZodError) {
-      const errors: Record<string, string> = {}
-      error.errors.forEach((err) => {
-        if (err.path[0]) {
-          errors[err.path[0] as string] = err.message
-        }
-      })
-
-      return {
-        success: false,
-        message: "Please correct the errors below.",
-        errors,
-      }
-    }
-
+    console.error("Error sending contact form:", error)
     return {
       success: false,
-      message: "An error occurred while sending your message. Please try again.",
+      message: "There was an error sending your message. Please try again.",
       errors: {},
-    }
-  }
-}
-
-// Test function for AWS SES
-export async function testAWSSES() {
-  try {
-    await sendEmail({
-      to: "test@example.com",
-      subject: "AWS SES Test Email",
-      text: "This is a test email from Kuhlekt contact form.",
-      html: "<p>This is a test email from Kuhlekt contact form.</p>",
-    })
-
-    return {
-      success: true,
-      message: "Test email sent successfully!",
-    }
-  } catch (error) {
-    console.error("AWS SES test error:", error)
-    return {
-      success: false,
-      message: "Failed to send test email. Please check your AWS SES configuration.",
     }
   }
 }
