@@ -8,16 +8,14 @@ interface DemoFormData {
   lastName: string
   email: string
   company: string
-  role?: string
+  role: string
   affiliateCode?: string
-  challenges?: string
-  captchaToken: string
+  challenges: string
 }
 
-interface ActionResult {
-  success: boolean
+interface ValidationError {
+  field: string
   message: string
-  errors?: Record<string, string>
 }
 
 function validateEmail(email: string): boolean {
@@ -25,187 +23,102 @@ function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-async function verifyRecaptcha(token: string): Promise<boolean> {
-  // If no secret key is configured, allow the request (development mode)
-  if (!process.env.RECAPTCHA_SECRET_KEY) {
-    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
-    return true
+function validateFormData(data: DemoFormData): ValidationError[] {
+  const errors: ValidationError[] = []
+
+  if (!data.firstName.trim()) {
+    errors.push({ field: "firstName", message: "First name is required" })
   }
 
-  // If it's the development token, allow it
-  if (token === "development-mode") {
-    return true
+  if (!data.lastName.trim()) {
+    errors.push({ field: "lastName", message: "Last name is required" })
   }
 
-  try {
-    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
-    })
-
-    const data = await response.json()
-    return data.success
-  } catch (error) {
-    console.error("reCAPTCHA verification error:", error)
-    return false
+  if (!data.email.trim()) {
+    errors.push({ field: "email", message: "Email is required" })
+  } else if (!validateEmail(data.email)) {
+    errors.push({ field: "email", message: "Please enter a valid email address" })
   }
+
+  if (!data.company.trim()) {
+    errors.push({ field: "company", message: "Company is required" })
+  }
+
+  if (!data.role.trim()) {
+    errors.push({ field: "role", message: "Role is required" })
+  }
+
+  if (!data.challenges.trim()) {
+    errors.push({ field: "challenges", message: "Please describe your AR challenges" })
+  }
+
+  return errors
 }
 
-export async function submitDemoRequest(formData: FormData): Promise<ActionResult> {
+export async function submitDemoRequest(formData: FormData) {
   try {
-    // Extract form data
     const data: DemoFormData = {
-      firstName: (formData.get("firstName") as string)?.trim() || "",
-      lastName: (formData.get("lastName") as string)?.trim() || "",
-      email: (formData.get("email") as string)?.trim() || "",
-      company: (formData.get("company") as string)?.trim() || "",
-      role: (formData.get("role") as string)?.trim() || "",
-      affiliateCode: (formData.get("affiliateCode") as string)?.trim() || "",
-      challenges: (formData.get("challenges") as string)?.trim() || "",
-      captchaToken: (formData.get("captchaToken") as string)?.trim() || "",
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      email: formData.get("email") as string,
+      company: formData.get("company") as string,
+      role: formData.get("role") as string,
+      affiliateCode: (formData.get("affiliateCode") as string) || undefined,
+      challenges: formData.get("challenges") as string,
     }
 
-    // Validate required fields
-    const errors: Record<string, string> = {}
-
-    if (!data.firstName) {
-      errors.firstName = "First name is required"
-    } else if (data.firstName.length > 50) {
-      errors.firstName = "First name is too long"
-    }
-
-    if (!data.lastName) {
-      errors.lastName = "Last name is required"
-    } else if (data.lastName.length > 50) {
-      errors.lastName = "Last name is too long"
-    }
-
-    if (!data.email) {
-      errors.email = "Email is required"
-    } else if (!validateEmail(data.email)) {
-      errors.email = "Please enter a valid email address"
-    }
-
-    if (!data.company) {
-      errors.company = "Company name is required"
-    } else if (data.company.length > 100) {
-      errors.company = "Company name is too long"
-    }
-
-    if (!data.captchaToken) {
-      errors.captcha = "Please complete the reCAPTCHA verification"
+    // Validate form data
+    const validationErrors = validateFormData(data)
+    if (validationErrors.length > 0) {
+      return {
+        success: false,
+        errors: validationErrors,
+      }
     }
 
     // Validate affiliate code if provided
-    let affiliateInfo = null
     if (data.affiliateCode) {
-      affiliateInfo = validateAffiliateCode(data.affiliateCode)
-      if (!affiliateInfo) {
-        errors.affiliateCode = "Invalid affiliate code"
+      const isValidAffiliate = await validateAffiliateCode(data.affiliateCode)
+      if (!isValidAffiliate) {
+        return {
+          success: false,
+          errors: [{ field: "affiliateCode", message: "Invalid affiliate code" }],
+        }
       }
     }
 
-    if (Object.keys(errors).length > 0) {
-      return {
-        success: false,
-        message: "Please correct the errors below.",
-        errors,
-      }
-    }
-
-    // Verify reCAPTCHA
-    const isRecaptchaValid = await verifyRecaptcha(data.captchaToken)
-    if (!isRecaptchaValid) {
-      return {
-        success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
-        errors: {},
-      }
-    }
-
-    // Prepare email content for sales team
-    const emailSubject = `New Demo Request: ${data.company} - ${data.firstName} ${data.lastName}`
+    // Send email notification
+    const emailSubject = "New Demo Request - Kuhlekt"
     const emailBody = `
-New demo request received:
-
-CONTACT INFORMATION:
-Name: ${data.firstName} ${data.lastName}
-Email: ${data.email}
-Company: ${data.company}
-Role: ${data.role || "Not specified"}
-
-${affiliateInfo ? `AFFILIATE PARTNER: ${affiliateInfo.name} (${data.affiliateCode}) - ${affiliateInfo.discount}% discount` : ""}
-
-AR CHALLENGES:
-${data.challenges || "Not specified"}
-
----
-Submitted at: ${new Date().toISOString()}
-    `.trim()
-
-    // Send email notification to sales team
-    const emailResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "sales@kuhlekt.com",
-      subject: emailSubject,
-      body: emailBody,
-      replyTo: data.email,
-    })
-
-    if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
-      // Don't fail the form submission if email fails - log it but continue
-    }
-
-    // Send confirmation email to prospect
-    const confirmationSubject = "Your Kuhlekt Demo Request - We'll Contact You Soon!"
-    const confirmationBody = `
-Dear ${data.firstName},
-
-Thank you for requesting a demo of Kuhlekt's AR automation platform! 
-
-We've received your request and our sales team will contact you within 24 hours to schedule your personalized demo.
-
-Your Demo Request Details:
-• Company: ${data.company}
-• Role: ${data.role || "Not specified"}
-${affiliateInfo ? `• Partner: ${affiliateInfo.name}` : ""}
-
-What happens next?
-1. Our sales representative will contact you within 24 hours
-2. We'll schedule a 30-minute demo at your convenience
-3. You'll see how Kuhlekt can transform your AR process
-4. We'll provide a custom ROI analysis for your business
-
-Questions? Reply to this email or call us at +1 (555) 123-4567.
-
-Best regards,
-The Kuhlekt Sales Team
-
-P.S. In the meantime, feel free to explore our case studies at kuhlekt.com/case-studies
-    `.trim()
+      New demo request received:
+      
+      Name: ${data.firstName} ${data.lastName}
+      Email: ${data.email}
+      Company: ${data.company}
+      Role: ${data.role}
+      ${data.affiliateCode ? `Affiliate Code: ${data.affiliateCode}` : ""}
+      
+      AR Challenges:
+      ${data.challenges}
+      
+      Please follow up within 24 hours.
+    `
 
     await sendEmail({
-      to: data.email,
-      subject: confirmationSubject,
-      body: confirmationBody,
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      body: emailBody,
     })
 
     return {
       success: true,
-      message:
-        "Demo request submitted successfully! Our sales team will contact you within 24 hours to schedule your personalized demo.",
-      errors: {},
+      message: "Demo request submitted successfully! We'll contact you within 24 hours.",
     }
   } catch (error) {
-    console.error("Demo request submission error:", error)
-
+    console.error("Error submitting demo request:", error)
     return {
       success: false,
-      message: "An error occurred while submitting your demo request. Please try again.",
-      errors: {},
+      errors: [{ field: "general", message: "An error occurred. Please try again." }],
     }
   }
 }
