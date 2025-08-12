@@ -36,10 +36,12 @@ export default function HomePage() {
                     Schedule a Demo →
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" className="border-gray-300 bg-white">
-                  <Play className="w-4 h-4 mr-2" />
-                  Watch Product Tour
-                </Button>
+                <Link href="https://youtu.be/iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="lg" className="border-gray-300 bg-white">
+                    <Play className="w-4 h-4 mr-2" />
+                    Watch Product Tour
+                  </Button>
+                </Link>
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-600">

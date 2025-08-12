@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,7 @@ export default function DemoPage() {
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [role, setRole] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -31,9 +32,8 @@ export default function DemoPage() {
 
       if (result.success) {
         setMessage(result.message || "Demo request submitted successfully!")
-        // Reset form
-        const form = document.getElementById("demo-form") as HTMLFormElement
-        form?.reset()
+        // Clear form on success
+        formRef.current?.reset()
         setRole("")
       } else {
         setError(result.error || "Failed to submit demo request")
@@ -60,29 +60,29 @@ export default function DemoPage() {
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-teal-500 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-6 w-6 text-cyan-500 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">See how to automate your collections process</span>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-teal-500 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-6 w-6 text-cyan-500 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">Learn how to reduce DSO by 30%</span>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-teal-500 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-6 w-6 text-cyan-500 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">Discover how to eliminate 80% of manual tasks</span>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-teal-500 mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="h-6 w-6 text-cyan-500 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">Get a personalized walkthrough of our platform</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                  <div className="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                     1
                   </div>
                   <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
@@ -108,7 +108,7 @@ export default function DemoPage() {
                 </p>
               </div>
 
-              <form id="demo-form" action={handleSubmit} className="space-y-6">
+              <form ref={formRef} action={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description:
     "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO, improve cash flow, and streamline collections.",
   keywords: "accounts receivable, AR automation, digital collections, cash flow management, invoice processing",
-    generator: 'v0.dev'
+    generator: 'v0.app'
 }
 
 export default function RootLayout({

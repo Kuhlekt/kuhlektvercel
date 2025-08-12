@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,11 +25,21 @@ export default function ContactPage() {
   const [recaptchaToken, setRecaptchaToken] = useState("")
   const [affiliateCode, setAffiliateCode] = useState("")
   const [affiliateInfo, setAffiliateInfo] = useState(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   const handleSubmit = async (formData: FormData) => {
     setIsPending(true)
     formData.append("recaptchaToken", recaptchaToken)
-    await formAction(formData)
+    const result = await formAction(formData)
+
+    // Clear form on success
+    if (result?.success) {
+      formRef.current?.reset()
+      setRecaptchaToken("")
+      setAffiliateCode("")
+      setAffiliateInfo(null)
+    }
+
     setIsPending(false)
   }
 
@@ -69,7 +79,7 @@ export default function ContactPage() {
               </Alert>
             )}
 
-            <form action={handleSubmit} className="space-y-6">
+            <form ref={formRef} action={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>
