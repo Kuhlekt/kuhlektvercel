@@ -146,77 +146,21 @@ export default function DemoPage() {
                 {state.errors?.jobTitle && <p className="text-red-500 text-sm mt-1">{state.errors.jobTitle}</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="companySize">Company Size *</Label>
-                  <Select name="companySize" required>
-                    <SelectTrigger className={state.errors?.companySize ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select company size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 employees</SelectItem>
-                      <SelectItem value="11-50">11-50 employees</SelectItem>
-                      <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-1000">201-1,000 employees</SelectItem>
-                      <SelectItem value="1000+">1,000+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {state.errors?.companySize && <p className="text-red-500 text-sm mt-1">{state.errors.companySize}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="industry">Industry *</Label>
-                  <Select name="industry" required>
-                    <SelectTrigger className={state.errors?.industry ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="distribution">Distribution</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="professional-services">Professional Services</SelectItem>
-                      <SelectItem value="construction">Construction</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {state.errors?.industry && <p className="text-red-500 text-sm mt-1">{state.errors.industry}</p>}
-                </div>
-              </div>
-
               <div>
-                <Label htmlFor="currentArVolume">Monthly AR Volume *</Label>
-                <Select name="currentArVolume" required>
-                  <SelectTrigger className={state.errors?.currentArVolume ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select monthly AR volume" />
+                <Label htmlFor="companySize">Company Size *</Label>
+                <Select name="companySize" required>
+                  <SelectTrigger className={state.errors?.companySize ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select company size" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="under-100k">Under $100K</SelectItem>
-                    <SelectItem value="100k-500k">$100K - $500K</SelectItem>
-                    <SelectItem value="500k-1m">$500K - $1M</SelectItem>
-                    <SelectItem value="1m-5m">$1M - $5M</SelectItem>
-                    <SelectItem value="5m-10m">$5M - $10M</SelectItem>
-                    <SelectItem value="over-10m">Over $10M</SelectItem>
+                    <SelectItem value="1-10">1-10 employees</SelectItem>
+                    <SelectItem value="11-50">11-50 employees</SelectItem>
+                    <SelectItem value="51-200">51-200 employees</SelectItem>
+                    <SelectItem value="201-1000">201-1,000 employees</SelectItem>
+                    <SelectItem value="1000+">1,000+ employees</SelectItem>
                   </SelectContent>
                 </Select>
-                {state.errors?.currentArVolume && (
-                  <p className="text-red-500 text-sm mt-1">{state.errors.currentArVolume}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="preferredTime">Preferred Demo Time</Label>
-                <Select name="preferredTime">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select preferred time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="morning">Morning (9AM - 12PM EST)</SelectItem>
-                    <SelectItem value="afternoon">Afternoon (12PM - 5PM EST)</SelectItem>
-                    <SelectItem value="flexible">Flexible</SelectItem>
-                  </SelectContent>
-                </Select>
+                {state.errors?.companySize && <p className="text-red-500 text-sm mt-1">{state.errors.companySize}</p>}
               </div>
 
               <div>
@@ -276,7 +220,7 @@ export default function DemoPage() {
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="text-center text-sm text-gray-600">
                 <p className="mb-2">What to expect:</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                   <div>
                     <h4 className="font-semibold text-gray-800">30-45 Minutes</h4>
                     <p>Comprehensive demo tailored to your business</p>
@@ -284,10 +228,6 @@ export default function DemoPage() {
                   <div>
                     <h4 className="font-semibold text-gray-800">Live Q&A</h4>
                     <p>Ask questions and see real-time solutions</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Custom Proposal</h4>
-                    <p>Receive a tailored proposal with ROI projections</p>
                   </div>
                 </div>
               </div>

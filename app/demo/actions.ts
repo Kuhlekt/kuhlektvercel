@@ -12,10 +12,6 @@ const demoSchema = z.object({
   company: z.string().min(1, "Company name is required").max(100, "Company name too long"),
   jobTitle: z.string().min(1, "Job title is required").max(100, "Job title too long"),
   companySize: z.string().min(1, "Company size is required"),
-  industry: z.string().min(1, "Industry is required"),
-  currentArVolume: z.string().min(1, "AR volume is required"),
-  preferredTime: z.string().optional(),
-  currentChallenges: z.string().optional(),
   affiliateCode: z.string().optional(),
   recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
 })
@@ -59,10 +55,6 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       company: formData.get("company"),
       jobTitle: formData.get("jobTitle"),
       companySize: formData.get("companySize"),
-      industry: formData.get("industry"),
-      currentArVolume: formData.get("currentArVolume"),
-      preferredTime: formData.get("preferredTime"),
-      currentChallenges: formData.get("currentChallenges"),
       affiliateCode: formData.get("affiliateCode"),
       recaptchaToken: formData.get("recaptchaToken"),
     }
@@ -105,12 +97,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       Company: ${validatedData.company}
 
       COMPANY DETAILS:
-      Industry: ${validatedData.industry}
       Company Size: ${validatedData.companySize}
-      Monthly AR Volume: ${validatedData.currentArVolume}
-      
-      DEMO PREFERENCES:
-      Preferred Time: ${validatedData.preferredTime || "Not specified"}
       
       ${affiliateInfo ? `AFFILIATE PARTNER: ${affiliateInfo.name} (${validatedData.affiliateCode}) - ${affiliateInfo.commission}% commission` : ""}
 
@@ -119,7 +106,6 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
       ---
       Submitted at: ${new Date().toISOString()}
-      Priority: ${validatedData.currentArVolume.includes("over-10m") || validatedData.currentArVolume.includes("5m-10m") ? "HIGH" : "NORMAL"}
     `
 
     // Send email notification to sales team
@@ -141,9 +127,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
       Your Demo Request Details:
       • Company: ${validatedData.company}
-      • Industry: ${validatedData.industry}
-      • Monthly AR Volume: ${validatedData.currentArVolume}
-      • Preferred Time: ${validatedData.preferredTime || "Flexible"}
+      • Company Size: ${validatedData.companySize}
       ${affiliateInfo ? `• Partner: ${affiliateInfo.name}` : ""}
 
       What happens next?
