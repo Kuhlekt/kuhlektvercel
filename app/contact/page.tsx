@@ -205,17 +205,6 @@ export default function ContactPage() {
                 {isPending ? "Sending..." : "Send Message"}
               </Button>
             </form>
-
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <div className="text-center text-sm text-gray-600">
-                <p className="mb-2">Other ways to reach us:</p>
-                <div className="space-y-1">
-                  <p>📧 Email: contact@kuhlekt.com</p>
-                  <p>📞 Phone: 1-800-KUHLEKT</p>
-                  <p>🕒 Business Hours: Mon-Fri 9AM-6PM EST</p>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
