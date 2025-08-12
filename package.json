@@ -17,22 +17,16 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-separator": "^1.0.3",
-<<<<<<< HEAD
     "@radix-ui/react-slot": "latest",
     "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "^1.1.5",
     "@supabase/supabase-js": "latest",
     "bcryptjs": "latest",
-=======
-    "@radix-ui/react-slot": "^1.0.2",
-    "@radix-ui/react-tabs": "^1.0.4",
->>>>>>> b6f078367543ef5907d7e2117db93a1b9a9043d9
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
-<<<<<<< HEAD
     "next-themes": "latest",
     "qrcode": "latest",
     "react": "^18",
@@ -40,11 +34,6 @@
     "speakeasy": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7"
-=======
-    "react": "^18",
-    "react-dom": "^18",
-    "tailwind-merge": "^2.5.5"
->>>>>>> b6f078367543ef5907d7e2117db93a1b9a9043d9
   },
   "devDependencies": {
     "@types/node": "^22",
