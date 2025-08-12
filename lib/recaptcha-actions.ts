@@ -1,16 +1,8 @@
 "use server"
 
-// Server action to get reCAPTCHA configuration
-export async function getRecaptchaConfig() {
-  // Get the site key from server environment
-  const siteKey = process.env.RECAPTCHA_SITE_KEY
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY
-
-  // Check if both keys are available
-  const isEnabled = Boolean(siteKey && secretKey)
-
+export async function getRecaptchaSiteKey() {
   return {
-    siteKey: siteKey || "",
-    isEnabled,
+    siteKey: process.env.RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI",
+    isEnabled: !!process.env.RECAPTCHA_SITE_KEY,
   }
 }

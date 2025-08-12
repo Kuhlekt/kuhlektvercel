@@ -1,12 +1,14 @@
 "use server"
 
 // Simple AWS SES implementation that works in edge runtime
-export async function sendEmailWithSES(params: {
-  to: string[]
+interface EmailParams {
+  to: string
   subject: string
-  body: string
-  replyTo?: string
-}) {
+  text: string
+  html?: string
+}
+
+export async function sendEmailWithSES(params: EmailParams) {
   // Check if AWS SES is configured
   const region = process.env.AWS_SES_REGION
   const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
@@ -18,8 +20,7 @@ export async function sendEmailWithSES(params: {
     console.log("Email details:", {
       to: params.to,
       subject: params.subject,
-      body: params.body,
-      replyTo: params.replyTo,
+      body: params.text,
       timestamp: new Date().toISOString(),
     })
     return {
@@ -32,14 +33,12 @@ export async function sendEmailWithSES(params: {
   try {
     // Validate email addresses
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    for (const email of params.to) {
-      if (!emailRegex.test(email)) {
-        throw new Error(`Invalid email address: ${email}`)
-      }
+    if (!emailRegex.test(params.to)) {
+      throw new Error(`Invalid email address: ${params.to}`)
     }
 
-    if (params.replyTo && !emailRegex.test(params.replyTo)) {
-      throw new Error(`Invalid reply-to email address: ${params.replyTo}`)
+    if (params.html && !emailRegex.test(params.to)) {
+      throw new Error(`Invalid reply-to email address: ${params.to}`)
     }
 
     // Use fetch to call AWS SES API directly
@@ -51,18 +50,15 @@ export async function sendEmailWithSES(params: {
       Version: "2010-12-01",
       Source: fromEmail,
       "Message.Subject.Data": params.subject,
-      "Message.Body.Text.Data": params.body,
+      "Message.Body.Text.Data": params.text,
     })
+
+    if (params.html) {
+      emailParams.append("Message.Body.Html.Data", params.html)
+    }
 
     // Add destinations
-    params.to.forEach((email, index) => {
-      emailParams.append(`Destination.ToAddresses.member.${index + 1}`, email)
-    })
-
-    // Add reply-to if provided
-    if (params.replyTo) {
-      emailParams.append("ReplyToAddresses.member.1", params.replyTo)
-    }
+    emailParams.append(`Destination.ToAddresses.member.1`, params.to)
 
     // Create AWS signature v4
     const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
@@ -140,8 +136,7 @@ export async function sendEmailWithSES(params: {
     console.log("Email failed, logging for manual follow-up:", {
       to: params.to,
       subject: params.subject,
-      body: params.body,
-      replyTo: params.replyTo,
+      body: params.text,
       error: error instanceof Error ? error.message : "Unknown error",
       timestamp: new Date().toISOString(),
     })
@@ -377,4 +372,23 @@ async function hmacSha256(
   }
 
   return signatureArray
+}
+
+export async function sendEmailViaSES(params: EmailParams): Promise<boolean> {
+  try {
+    // Mock AWS SES implementation
+    console.log("AWS SES Email:", {
+      to: params.to,
+      subject: params.subject,
+      preview: params.text.substring(0, 50) + "...",
+    })
+
+    // Simulate email sending delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    return true
+  } catch (error) {
+    console.error("AWS SES Error:", error)
+    return false
+  }
 }

@@ -1,23 +1,32 @@
 import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
 
-export async function requireAuth() {
-  const cookieStore = await cookies()
-  const session = cookieStore.get("admin_session")
+export async function isAdminAuthenticated(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies()
+    const adminToken = cookieStore.get("admin-token")
 
-  if (!session || session.value !== "authenticated") {
-    redirect("/admin/login")
+    if (!adminToken) {
+      return false
+    }
+
+    // In a real app, verify the token
+    return adminToken.value === "authenticated"
+  } catch (error) {
+    console.error("Admin auth check error:", error)
+    return false
   }
 }
 
-export async function isAuthenticated(): Promise<boolean> {
+export async function setAdminAuthenticated(): Promise<void> {
   const cookieStore = await cookies()
-  const session = cookieStore.get("admin_session")
-
-  return session?.value === "authenticated"
+  cookieStore.set("admin-token", "authenticated", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24, // 24 hours
+  })
 }
 
-export async function getSession() {
+export async function clearAdminAuthentication(): Promise<void> {
   const cookieStore = await cookies()
-  return cookieStore.get("admin_session")
+  cookieStore.delete("admin-token")
 }

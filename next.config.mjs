@@ -17,6 +17,9 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['crypto'],
+  },
 }
 
 export default nextConfig
