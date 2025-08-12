@@ -3,11 +3,14 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Admin Dashboard - Kuhlekt",
-  description: "Admin dashboard for Kuhlekt",
+  description: "Administrative dashboard for Kuhlekt website management",
   robots: {
     index: false,
     follow: false,
     nocache: true,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true,
     googleBot: {
       index: false,
       follow: false,
@@ -17,6 +20,15 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  other: {
+    robots: "noindex, nofollow, noarchive, nosnippet, noimageindex, nocache",
+    googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    bingbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    slurp: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    duckduckbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    baiduspider: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    yandexbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  },
 }
 
 export default function AdminLayout({
@@ -25,17 +37,19 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        <meta name="robots" content="noindex, nofollow, nocache, nosnippet, noimageindex, noarchive" />
-        <meta name="googlebot" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-        <meta name="bingbot" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-        <meta name="slurp" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-        <meta name="duckduckbot" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-        <meta name="baiduspider" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-        <meta name="yandexbot" content="noindex, nofollow, noimageindex, nosnippet, noarchive" />
-      </head>
-      <body>{children}</body>
-    </html>
+    <>
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, nocache" />
+      <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="slurp" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="baiduspider" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="yandexbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="referrer" content="no-referrer" />
+      <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
+      <meta name="pragma" content="no-cache" />
+      <meta name="expires" content="0" />
+      {children}
+    </>
   )
 }

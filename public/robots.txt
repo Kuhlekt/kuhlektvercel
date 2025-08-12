@@ -1,23 +1,45 @@
 User-agent: *
 Allow: /
-
-# Block all admin areas from crawling
 Disallow: /admin/
-Disallow: /admin/*
-
-# Block API routes that might contain sensitive data
 Disallow: /api/admin/
-Disallow: /api/admin/*
 
-# Allow specific public pages
+# Block specific bots from admin areas
+User-agent: Googlebot
+Disallow: /admin/
+
+User-agent: Bingbot
+Disallow: /admin/
+
+User-agent: Slurp
+Disallow: /admin/
+
+User-agent: DuckDuckBot
+Disallow: /admin/
+
+User-agent: Baiduspider
+Disallow: /admin/
+
+User-agent: YandexBot
+Disallow: /admin/
+
+User-agent: facebookexternalhit
+Disallow: /admin/
+
+User-agent: Twitterbot
+Disallow: /admin/
+
+User-agent: LinkedInBot
+Disallow: /admin/
+
+# Allow public pages
 Allow: /
-Allow: /about
-Allow: /contact
-Allow: /demo
 Allow: /product
 Allow: /solutions
 Allow: /pricing-table
+Allow: /demo
+Allow: /contact
+Allow: /about
 Allow: /help
 
-# Sitemap location
+# Sitemap
 Sitemap: https://kuhlekt.com/sitemap.xml

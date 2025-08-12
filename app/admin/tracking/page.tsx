@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,333 +23,151 @@ import {
   FileText,
   Activity,
   Globe,
-  Smartphone,
-  Monitor,
-  Tablet,
   ExternalLink,
-  MapPin,
   Clock,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
+import { getAllVisitors, getPageHistory } from "@/components/visitor-tracker"
 
-// Mock analytics data
-const mockAnalyticsData = {
-  summary: {
-    totalVisitors: 1247,
-    pageViews: 3891,
-    bounceRate: 34.2,
-    avgSessionDuration: "3m 42s",
-    conversionRate: 12.8,
-    newVisitors: 892,
-    returningVisitors: 355,
-  },
-  topPages: [
-    { page: "/", views: 1234, uniqueVisitors: 892, bounceRate: 28.5 },
-    { page: "/product", views: 567, uniqueVisitors: 445, bounceRate: 31.2 },
-    { page: "/demo", views: 445, uniqueVisitors: 334, bounceRate: 22.1 },
-    { page: "/pricing-table", views: 334, uniqueVisitors: 267, bounceRate: 35.8 },
-    { page: "/contact", views: 223, uniqueVisitors: 189, bounceRate: 18.9 },
-  ],
-  trafficSources: [
-    { source: "Organic Search", visitors: 567, percentage: 45.5 },
-    { source: "Direct", visitors: 334, percentage: 26.8 },
-    { source: "Social Media", visitors: 223, percentage: 17.9 },
-    { source: "Referral", visitors: 89, percentage: 7.1 },
-    { source: "Email", visitors: 34, percentage: 2.7 },
-  ],
-  deviceTypes: [
-    { type: "Desktop", count: 723, percentage: 58.0 },
-    { type: "Mobile", count: 445, percentage: 35.7 },
-    { type: "Tablet", count: 79, percentage: 6.3 },
-  ],
-  topCountries: [
-    { country: "United States", visitors: 445, percentage: 35.7 },
-    { country: "Canada", visitors: 223, percentage: 17.9 },
-    { country: "United Kingdom", visitors: 156, percentage: 12.5 },
-    { country: "Germany", visitors: 134, percentage: 10.7 },
-    { country: "Australia", visitors: 89, percentage: 7.1 },
-  ],
+interface VisitorData {
+  visitorId: string
+  sessionId: string
+  firstVisit: string
+  lastVisit: string
+  pageViews: number
+  referrer: string
+  userAgent: string
+  currentPage: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmTerm?: string
+  utmContent?: string
+  affiliate?: string
 }
 
-// Mock detailed logs data with location information
-const mockDetailedLogs = [
-  {
-    id: "LOG001",
-    timestamp: "2024-01-15T14:32:15Z",
-    event: "page_view",
-    visitorId: "V001",
-    sessionId: "S001",
-    page: "/product",
-    referrer: "https://google.com/search?q=accounts+receivable+software",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    ipAddress: "192.168.1.100",
-    location: {
-      country: "United States",
-      countryCode: "US",
-      region: "California",
-      city: "San Francisco",
-      timezone: "America/Los_Angeles",
-      coordinates: { lat: 37.7749, lng: -122.4194 },
-    },
-    utmSource: "google",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "",
-    deviceType: "Desktop",
-    browser: "Chrome",
-    os: "Windows 10",
-  },
-  {
-    id: "LOG002",
-    timestamp: "2024-01-15T14:35:22Z",
-    event: "form_submission",
-    visitorId: "V001",
-    sessionId: "S001",
-    page: "/demo",
-    referrer: "/product",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    ipAddress: "192.168.1.100",
-    location: {
-      country: "United States",
-      countryCode: "US",
-      region: "California",
-      city: "San Francisco",
-      timezone: "America/Los_Angeles",
-      coordinates: { lat: 37.7749, lng: -122.4194 },
-    },
-    utmSource: "google",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "",
-    deviceType: "Desktop",
-    browser: "Chrome",
-    os: "Windows 10",
-    formData: { firstName: "John", lastName: "Doe", email: "john.doe@company.com", company: "Acme Inc" },
-  },
-  {
-    id: "LOG003",
-    timestamp: "2024-01-15T13:28:45Z",
-    event: "page_view",
-    visitorId: "V002",
-    sessionId: "S002",
-    page: "/",
-    referrer: "https://linkedin.com",
-    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    ipAddress: "10.0.0.50",
-    location: {
-      country: "Canada",
-      countryCode: "CA",
-      region: "Ontario",
-      city: "Toronto",
-      timezone: "America/Toronto",
-      coordinates: { lat: 43.6532, lng: -79.3832 },
-    },
-    utmSource: "linkedin",
-    utmMedium: "social",
-    utmCampaign: "ar_automation",
-    affiliateCode: "PARTNER123",
-    deviceType: "Desktop",
-    browser: "Safari",
-    os: "macOS",
-  },
-  {
-    id: "LOG004",
-    timestamp: "2024-01-15T13:31:12Z",
-    event: "contact_form",
-    visitorId: "V002",
-    sessionId: "S002",
-    page: "/contact",
-    referrer: "/solutions",
-    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    ipAddress: "10.0.0.50",
-    location: {
-      country: "Canada",
-      countryCode: "CA",
-      region: "Ontario",
-      city: "Toronto",
-      timezone: "America/Toronto",
-      coordinates: { lat: 43.6532, lng: -79.3832 },
-    },
-    utmSource: "linkedin",
-    utmMedium: "social",
-    utmCampaign: "ar_automation",
-    affiliateCode: "PARTNER123",
-    deviceType: "Desktop",
-    browser: "Safari",
-    os: "macOS",
-    formData: { firstName: "Sarah", lastName: "Johnson", email: "sarah.j@techcorp.ca", company: "TechCorp" },
-  },
-  {
-    id: "LOG005",
-    timestamp: "2024-01-15T12:45:33Z",
-    event: "demo_request",
-    visitorId: "V003",
-    sessionId: "S003",
-    page: "/demo",
-    referrer: "https://google.com/search?q=automated+accounts+receivable",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0",
-    ipAddress: "203.0.113.200",
-    location: {
-      country: "France",
-      countryCode: "FR",
-      region: "Île-de-France",
-      city: "Paris",
-      timezone: "Europe/Paris",
-      coordinates: { lat: 48.8566, lng: 2.3522 },
-    },
-    utmSource: "google",
-    utmMedium: "cpc",
-    utmCampaign: "ar_automation_paid",
-    affiliateCode: "AGENCY789",
-    deviceType: "Desktop",
-    browser: "Edge",
-    os: "Windows 10",
-    formData: {
-      firstName: "Marie",
-      lastName: "Dubois",
-      email: "marie.dubois@entreprise.fr",
-      company: "Entreprise SA",
-      role: "Finance Manager",
-    },
-  },
-  {
-    id: "LOG006",
-    timestamp: "2024-01-15T11:22:18Z",
-    event: "page_view",
-    visitorId: "V004",
-    sessionId: "S004",
-    page: "/pricing-table",
-    referrer: "https://facebook.com",
-    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-    ipAddress: "172.16.0.25",
-    location: {
-      country: "United Kingdom",
-      countryCode: "GB",
-      region: "England",
-      city: "London",
-      timezone: "Europe/London",
-      coordinates: { lat: 51.5074, lng: -0.1278 },
-    },
-    utmSource: "facebook",
-    utmMedium: "social",
-    utmCampaign: "brand_awareness",
-    affiliateCode: "",
-    deviceType: "Mobile",
-    browser: "Safari",
-    os: "iOS",
-  },
-  {
-    id: "LOG007",
-    timestamp: "2024-01-15T10:15:44Z",
-    event: "newsletter_signup",
-    visitorId: "V005",
-    sessionId: "S005",
-    page: "/about",
-    referrer: "https://duckduckgo.com/?q=receivables+management+platform",
-    userAgent:
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
-    ipAddress: "198.51.100.150",
-    location: {
-      country: "Brazil",
-      countryCode: "BR",
-      region: "São Paulo",
-      city: "São Paulo",
-      timezone: "America/Sao_Paulo",
-      coordinates: { lat: -23.5505, lng: -46.6333 },
-    },
-    utmSource: "duckduckgo",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "",
-    deviceType: "Desktop",
-    browser: "Safari",
-    os: "macOS",
-    formData: { email: "carlos.silva@empresa.com.br" },
-  },
-  {
-    id: "LOG008",
-    timestamp: "2024-01-15T09:33:27Z",
-    event: "page_view",
-    visitorId: "V006",
-    sessionId: "S006",
-    page: "/solutions",
-    referrer: "https://bing.com/search?q=credit+management+software",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
-    ipAddress: "203.0.113.45",
-    location: {
-      country: "Germany",
-      countryCode: "DE",
-      region: "Bavaria",
-      city: "Munich",
-      timezone: "Europe/Berlin",
-      coordinates: { lat: 48.1351, lng: 11.582 },
-    },
-    utmSource: "bing",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "CONSULTANT456",
-    deviceType: "Desktop",
-    browser: "Firefox",
-    os: "Windows 10",
-  },
-  {
-    id: "LOG009",
-    timestamp: "2024-01-15T08:47:55Z",
-    event: "pricing_inquiry",
-    visitorId: "V007",
-    sessionId: "S007",
-    page: "/pricing-table",
-    referrer: "/product",
-    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    ipAddress: "198.51.100.78",
-    location: {
-      country: "Australia",
-      countryCode: "AU",
-      region: "New South Wales",
-      city: "Sydney",
-      timezone: "Australia/Sydney",
-      coordinates: { lat: -33.8688, lng: 151.2093 },
-    },
-    utmSource: "twitter",
-    utmMedium: "social",
-    utmCampaign: "fintech_discussion",
-    affiliateCode: "",
-    deviceType: "Desktop",
-    browser: "Chrome",
-    os: "Linux",
-    formData: { company: "Sydney Finance Solutions", contactEmail: "info@sydneyfinance.com.au" },
-  },
-  {
-    id: "LOG010",
-    timestamp: "2024-01-15T07:52:11Z",
-    event: "page_view",
-    visitorId: "V008",
-    sessionId: "S008",
-    page: "/help",
-    referrer: "https://reddit.com/r/accounting",
-    userAgent: "Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/119.0 Firefox/119.0",
-    ipAddress: "192.0.2.123",
-    location: {
-      country: "Japan",
-      countryCode: "JP",
-      region: "Tokyo",
-      city: "Tokyo",
-      timezone: "Asia/Tokyo",
-      coordinates: { lat: 35.6762, lng: 139.6503 },
-    },
-    utmSource: "reddit",
-    utmMedium: "social",
-    utmCampaign: "",
-    affiliateCode: "",
-    deviceType: "Mobile",
-    browser: "Firefox",
-    os: "Android",
-  },
-]
+interface PageHistoryItem {
+  page: string
+  timestamp: string
+  sessionId: string
+}
 
 export default function AnalyticsDashboard() {
+  const [visitors, setVisitors] = useState<VisitorData[]>([])
+  const [pageHistory, setPageHistory] = useState<PageHistoryItem[]>([])
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [isLogsDialogOpen, setIsLogsDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load data from localStorage
+  useEffect(() => {
+    const loadData = () => {
+      try {
+        const visitorData = getAllVisitors()
+        const historyData = getPageHistory()
+        setVisitors(visitorData)
+        setPageHistory(historyData)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error loading analytics data:", error)
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Calculate analytics from real visitor data
+  const calculateAnalytics = () => {
+    if (visitors.length === 0) {
+      return {
+        totalVisitors: 0,
+        pageViews: 0,
+        bounceRate: 0,
+        avgSessionDuration: "0m 0s",
+        conversionRate: 0,
+        newVisitors: 0,
+        returningVisitors: 0,
+      }
+    }
+
+    const totalPageViews = visitors.reduce((sum, visitor) => sum + visitor.pageViews, 0)
+    const activeVisitors = visitors.filter((visitor) => {
+      const lastVisit = new Date(visitor.lastVisit)
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
+      return lastVisit > thirtyMinutesAgo
+    }).length
+
+    const convertedVisitors = visitors.filter(
+      (visitor) => visitor.currentPage.includes("/demo") || visitor.currentPage.includes("/contact"),
+    ).length
+
+    const conversionRate = visitors.length > 0 ? (convertedVisitors / visitors.length) * 100 : 0
+    const bounceRate =
+      visitors.length > 0 ? (visitors.filter((v) => v.pageViews === 1).length / visitors.length) * 100 : 0
+
+    return {
+      totalVisitors: visitors.length,
+      pageViews: totalPageViews,
+      bounceRate: bounceRate,
+      avgSessionDuration: "3m 42s", // This would need session duration tracking
+      conversionRate: conversionRate,
+      newVisitors: visitors.length, // All are new in this simple implementation
+      returningVisitors: 0,
+      activeVisitors,
+      convertedVisitors,
+    }
+  }
+
+  // Calculate top pages from page history
+  const calculateTopPages = () => {
+    if (pageHistory.length === 0) return []
+
+    const pageCounts = pageHistory.reduce(
+      (acc, item) => {
+        acc[item.page] = (acc[item.page] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    return Object.entries(pageCounts)
+      .map(([page, views]) => ({
+        page,
+        views,
+        percentage: pageHistory.length > 0 ? (views / pageHistory.length) * 100 : 0,
+      }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5)
+  }
+
+  // Calculate traffic sources
+  const calculateTrafficSources = () => {
+    if (visitors.length === 0) return []
+
+    const sourceCounts = visitors.reduce(
+      (acc, visitor) => {
+        const source = visitor.utmSource || (visitor.referrer === "direct" ? "Direct" : "Other")
+        acc[source] = (acc[source] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    return Object.entries(sourceCounts)
+      .map(([source, count]) => ({
+        source: source.charAt(0).toUpperCase() + source.slice(1),
+        visitors: count,
+        percentage: visitors.length > 0 ? (count / visitors.length) * 100 : 0,
+      }))
+      .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 5)
+  }
+
+  const analytics = calculateAnalytics()
+  const topPages = calculateTopPages()
+  const trafficSources = calculateTrafficSources()
 
   // Generate comprehensive report
   const generateReport = async () => {
@@ -360,25 +178,21 @@ export default function AnalyticsDashboard() {
 
     const reportData = {
       generatedAt: new Date().toISOString(),
-      summary: mockAnalyticsData.summary,
-      topPages: mockAnalyticsData.topPages,
-      trafficSources: mockAnalyticsData.trafficSources,
-      deviceBreakdown: mockAnalyticsData.deviceTypes,
-      topCountries: mockAnalyticsData.topCountries,
-      conversionMetrics: {
-        totalConversions: 159,
-        conversionsByType: {
-          demo_requests: 89,
-          contact_forms: 45,
-          newsletter_signups: 25,
-        },
-        conversionRate: mockAnalyticsData.summary.conversionRate,
-        topConvertingPages: [
-          { page: "/demo", conversions: 89, rate: 20.0 },
-          { page: "/contact", conversions: 45, rate: 20.2 },
-          { page: "/pricing-table", conversions: 25, rate: 7.5 },
-        ],
-      },
+      summary: analytics,
+      topPages: topPages,
+      trafficSources: trafficSources,
+      totalVisitors: visitors.length,
+      totalPageViews: pageHistory.length,
+      visitorDetails: visitors.map((visitor) => ({
+        visitorId: visitor.visitorId,
+        sessionId: visitor.sessionId,
+        firstVisit: visitor.firstVisit,
+        lastVisit: visitor.lastVisit,
+        pageViews: visitor.pageViews,
+        referrer: visitor.referrer,
+        utmSource: visitor.utmSource,
+        affiliate: visitor.affiliate,
+      })),
     }
 
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" })
@@ -398,8 +212,11 @@ export default function AnalyticsDashboard() {
   const exportAnalytics = () => {
     const exportData = {
       exportedAt: new Date().toISOString(),
-      summary: mockAnalyticsData,
-      detailedLogs: mockDetailedLogs,
+      visitors: visitors,
+      pageHistory: pageHistory,
+      analytics: analytics,
+      topPages: topPages,
+      trafficSources: trafficSources,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
@@ -413,36 +230,19 @@ export default function AnalyticsDashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const getEventBadgeColor = (event: string) => {
-    switch (event) {
-      case "page_view":
-        return "bg-blue-100 text-blue-800"
-      case "form_submission":
-        return "bg-green-100 text-green-800"
-      case "demo_request":
-        return "bg-purple-100 text-purple-800"
-      case "contact_form":
-        return "bg-orange-100 text-orange-800"
-      case "newsletter_signup":
-        return "bg-cyan-100 text-cyan-800"
-      case "pricing_inquiry":
-        return "bg-yellow-100 text-yellow-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getDeviceIcon = (deviceType: string) => {
-    switch (deviceType) {
-      case "Desktop":
-        return <Monitor className="h-4 w-4" />
-      case "Mobile":
-        return <Smartphone className="h-4 w-4" />
-      case "Tablet":
-        return <Tablet className="h-4 w-4" />
-      default:
-        return <Monitor className="h-4 w-4" />
-    }
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Loading analytics data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -471,8 +271,8 @@ export default function AnalyticsDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockAnalyticsData.summary.totalVisitors.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+12.5% from last month</p>
+              <div className="text-2xl font-bold">{analytics.totalVisitors.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">{analytics.activeVisitors} currently active</p>
             </CardContent>
           </Card>
 
@@ -482,8 +282,12 @@ export default function AnalyticsDashboard() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockAnalyticsData.summary.pageViews.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+8.2% from last month</p>
+              <div className="text-2xl font-bold">{analytics.pageViews.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                {analytics.totalVisitors > 0
+                  ? `Avg. ${(analytics.pageViews / analytics.totalVisitors).toFixed(1)} per visitor`
+                  : "No data available"}
+              </p>
             </CardContent>
           </Card>
 
@@ -493,8 +297,8 @@ export default function AnalyticsDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockAnalyticsData.summary.conversionRate}%</div>
-              <p className="text-xs text-muted-foreground">+2.1% from last month</p>
+              <div className="text-2xl font-bold">{analytics.conversionRate.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">{analytics.convertedVisitors} conversions</p>
             </CardContent>
           </Card>
 
@@ -504,15 +308,15 @@ export default function AnalyticsDashboard() {
               <MousePointer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockAnalyticsData.summary.bounceRate}%</div>
-              <p className="text-xs text-muted-foreground">-3.4% from last month</p>
+              <div className="text-2xl font-bold">{analytics.bounceRate.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">Single page visits</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8">
-          <Button onClick={generateReport} disabled={isGeneratingReport}>
+          <Button onClick={generateReport} disabled={isGeneratingReport || visitors.length === 0}>
             {isGeneratingReport ? (
               <>
                 <Activity className="h-4 w-4 mr-2 animate-spin" />
@@ -528,113 +332,47 @@ export default function AnalyticsDashboard() {
 
           <Dialog open={isLogsDialogOpen} onOpenChange={setIsLogsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" disabled={pageHistory.length === 0}>
                 <Activity className="h-4 w-4 mr-2" />
-                View Detailed Logs
+                View Page History
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl max-h-[80vh]">
+            <DialogContent className="max-w-4xl max-h-[80vh]">
               <DialogHeader>
-                <DialogTitle>Detailed Activity Logs</DialogTitle>
-                <DialogDescription>
-                  Comprehensive visitor activity and event tracking with location data
-                </DialogDescription>
+                <DialogTitle>Page Visit History</DialogTitle>
+                <DialogDescription>Chronological log of all page visits tracked on your website</DialogDescription>
               </DialogHeader>
               <ScrollArea className="h-[60vh] w-full">
-                <div className="space-y-4">
-                  {mockDetailedLogs.map((log) => (
-                    <div key={log.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge className={getEventBadgeColor(log.event)}>{log.event.replace("_", " ")}</Badge>
-                          <span className="font-mono text-sm text-gray-600">{log.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          {new Date(log.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="text-sm">
-                            <strong>Visitor:</strong> {log.visitorId} | <strong>Session:</strong> {log.sessionId}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Page:</strong> {log.page}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Referrer:</strong>{" "}
-                            {log.referrer.length > 50 ? log.referrer.substring(0, 50) + "..." : log.referrer}
-                          </div>
-                          <div className="text-sm">
-                            <strong>IP:</strong> {log.ipAddress}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            {getDeviceIcon(log.deviceType)}
-                            <span>
-                              {log.deviceType} | {log.browser} | {log.os}
-                            </span>
-                          </div>
-                          {log.utmSource && (
-                            <div className="text-sm">
-                              <strong>UTM:</strong> {log.utmSource} / {log.utmMedium}
-                              {log.utmCampaign && ` / ${log.utmCampaign}`}
-                            </div>
-                          )}
-                          {log.affiliateCode && (
-                            <div className="text-sm">
-                              <strong>Affiliate:</strong> <Badge variant="secondary">{log.affiliateCode}</Badge>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="bg-blue-50 p-3 rounded-md">
-                          <div className="flex items-center gap-2 text-blue-600 mb-2">
-                            <MapPin className="h-4 w-4" />
-                            <span className="font-medium">Location</span>
-                          </div>
-                          <div className="text-sm space-y-1">
-                            <div>
-                              <strong>Country:</strong> {log.location.country} ({log.location.countryCode})
-                            </div>
-                            <div>
-                              <strong>Region:</strong> {log.location.region}
-                            </div>
-                            <div>
-                              <strong>City:</strong> {log.location.city}
-                            </div>
-                            <div>
-                              <strong>Timezone:</strong> {log.location.timezone}
-                            </div>
-                            <div>
-                              <strong>Coordinates:</strong> {log.location.coordinates.lat.toFixed(4)},{" "}
-                              {log.location.coordinates.lng.toFixed(4)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {log.formData && (
-                        <div className="bg-green-50 p-3 rounded-md">
-                          <div className="font-medium text-green-800 mb-2">Form Data:</div>
-                          <div className="text-sm space-y-1">
-                            {Object.entries(log.formData).map(([key, value]) => (
-                              <div key={key}>
-                                <strong>{key}:</strong> {value}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                <div className="space-y-3">
+                  {pageHistory.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No page history available</p>
                     </div>
-                  ))}
+                  ) : (
+                    pageHistory
+                      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                      .map((item, index) => (
+                        <div key={index} className="border rounded-lg p-3 bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{item.page}</Badge>
+                              <span className="text-sm text-gray-600">Session: {item.sessionId}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              {new Date(item.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                  )}
                 </div>
               </ScrollArea>
             </DialogContent>
           </Dialog>
 
-          <Button onClick={exportAnalytics} variant="outline">
+          <Button onClick={exportAnalytics} variant="outline" disabled={visitors.length === 0}>
             <Download className="h-4 w-4 mr-2" />
             Export Analytics
           </Button>
@@ -648,168 +386,142 @@ export default function AnalyticsDashboard() {
         </div>
 
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Top Pages */}
+        {visitors.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Top Pages
-              </CardTitle>
-              <CardDescription>Most visited pages and their performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockAnalyticsData.topPages.map((page, index) => (
-                  <div key={page.page} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-medium flex items-center justify-center">
-                        {index + 1}
+            <CardContent className="py-12">
+              <div className="text-center text-gray-500">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Analytics Data Available</h3>
+                <p className="mb-4">
+                  Analytics data will appear here as visitors browse your website. The visitor tracking system will
+                  automatically collect and display insights about your website traffic.
+                </p>
+                <Link href="/admin/visitors">
+                  <Button variant="outline" className="bg-transparent">
+                    View Visitor Tracking
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Top Pages */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Top Pages
+                </CardTitle>
+                <CardDescription>Most visited pages on your website</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {topPages.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No page data available</p>
+                    </div>
+                  ) : (
+                    topPages.map((page, index) => (
+                      <div key={page.page} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-medium flex items-center justify-center">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <div className="font-medium">{page.page}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">{page.views.toLocaleString()}</div>
+                          <div className="text-sm text-gray-500">{page.percentage.toFixed(1)}%</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium">{page.page}</div>
-                        <div className="text-sm text-gray-500">{page.uniqueVisitors} unique visitors</div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Traffic Sources */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Traffic Sources
+                </CardTitle>
+                <CardDescription>Where your visitors are coming from</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {trafficSources.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No traffic source data available</p>
+                    </div>
+                  ) : (
+                    trafficSources.map((source) => (
+                      <div key={source.source} className="flex items-center justify-between">
+                        <div className="font-medium">{source.source}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm text-gray-500">{source.percentage.toFixed(1)}%</div>
+                          <div className="font-medium">{source.visitors.toLocaleString()}</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">{page.views.toLocaleString()}</div>
-                      <div className="text-sm text-gray-500">{page.bounceRate}% bounce</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Traffic Sources */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Traffic Sources
-              </CardTitle>
-              <CardDescription>Where your visitors are coming from</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockAnalyticsData.trafficSources.map((source) => (
-                  <div key={source.source} className="flex items-center justify-between">
-                    <div className="font-medium">{source.source}</div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-500">{source.percentage}%</div>
-                      <div className="font-medium">{source.visitors.toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Device Types */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Device Types
-              </CardTitle>
-              <CardDescription>Visitor device breakdown</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockAnalyticsData.deviceTypes.map((device) => (
-                  <div key={device.type} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getDeviceIcon(device.type)}
-                      <span className="font-medium">{device.type}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-500">{device.percentage}%</div>
-                      <div className="font-medium">{device.count.toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Countries */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Top Countries
-              </CardTitle>
-              <CardDescription>Geographic distribution of visitors</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockAnalyticsData.topCountries.map((country, index) => (
-                  <div key={country.country} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-green-100 text-green-800 text-xs font-medium flex items-center justify-center">
-                        {index + 1}
-                      </div>
-                      <div className="font-medium">{country.country}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-500">{country.percentage}%</div>
-                      <div className="font-medium">{country.visitors.toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Session Duration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{mockAnalyticsData.summary.avgSessionDuration}</div>
-              <p className="text-sm text-gray-500 mt-2">Average time per session</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">New vs Returning</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>New Visitors</span>
-                  <span className="font-medium">{mockAnalyticsData.summary.newVisitors.toLocaleString()}</span>
+                    ))
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span>Returning</span>
-                  <span className="font-medium">{mockAnalyticsData.summary.returningVisitors.toLocaleString()}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Bounce Rate</span>
-                  <span className="font-medium">{mockAnalyticsData.summary.bounceRate}%</span>
+            {/* Session Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Session Metrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Average Session Duration</span>
+                    <span className="font-medium">{analytics.avgSessionDuration}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pages per Session</span>
+                    <span className="font-medium">
+                      {analytics.totalVisitors > 0 ? (analytics.pageViews / analytics.totalVisitors).toFixed(1) : "0"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Active Visitors</span>
+                    <span className="font-medium">{analytics.activeVisitors}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Conversion Rate</span>
-                  <span className="font-medium">{mockAnalyticsData.summary.conversionRate}%</span>
+              </CardContent>
+            </Card>
+
+            {/* Visitor Types */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Visitor Types</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>New Visitors</span>
+                    <span className="font-medium">{analytics.newVisitors.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Returning Visitors</span>
+                    <span className="font-medium">{analytics.returningVisitors.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Converted Visitors</span>
+                    <span className="font-medium">{analytics.convertedVisitors.toLocaleString()}</span>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   )

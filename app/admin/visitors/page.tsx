@@ -21,7 +21,6 @@ import {
   Filter,
   RefreshCw,
   Search,
-  MapPin,
   Clock,
   Eye,
   MousePointer,
@@ -30,272 +29,38 @@ import {
   Globe,
   Calendar,
   Activity,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
+import { getAllVisitors } from "@/components/visitor-tracker"
 
-// Mock visitor data with comprehensive information
-const mockVisitors = [
-  {
-    id: "V001",
-    sessionId: "S001",
-    ipAddress: "192.168.1.100",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    firstVisit: "2024-01-15T10:30:00Z",
-    lastActivity: "2024-01-15T11:45:00Z",
-    pageViews: 8,
-    timeOnSite: "1h 15m",
-    status: "Active",
-    referrer: "https://google.com/search?q=accounts+receivable+software",
-    utmSource: "google",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "",
-    location: {
-      country: "United States",
-      countryCode: "US",
-      region: "California",
-      city: "San Francisco",
-      timezone: "America/Los_Angeles",
-      coordinates: { lat: 37.7749, lng: -122.4194 },
-    },
-    pagesVisited: ["/product", "/pricing-table", "/demo", "/contact"],
-    deviceType: "Desktop",
-    browser: "Chrome",
-    os: "Windows 10",
-    conversionEvents: ["demo_request"],
-    totalSessions: 3,
-    bounceRate: 0,
-  },
-  {
-    id: "V002",
-    sessionId: "S002",
-    ipAddress: "10.0.0.50",
-    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    firstVisit: "2024-01-15T09:15:00Z",
-    lastActivity: "2024-01-15T09:45:00Z",
-    pageViews: 3,
-    timeOnSite: "30m",
-    status: "Converted",
-    referrer: "https://linkedin.com",
-    utmSource: "linkedin",
-    utmMedium: "social",
-    utmCampaign: "ar_automation",
-    affiliateCode: "PARTNER123",
-    location: {
-      country: "Canada",
-      countryCode: "CA",
-      region: "Ontario",
-      city: "Toronto",
-      timezone: "America/Toronto",
-      coordinates: { lat: 43.6532, lng: -79.3832 },
-    },
-    pagesVisited: ["/", "/solutions", "/contact"],
-    deviceType: "Desktop",
-    browser: "Safari",
-    os: "macOS",
-    conversionEvents: ["contact_form", "demo_request"],
-    totalSessions: 1,
-    bounceRate: 0,
-  },
-  {
-    id: "V003",
-    sessionId: "S003",
-    ipAddress: "172.16.0.25",
-    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-    firstVisit: "2024-01-15T14:20:00Z",
-    lastActivity: "2024-01-15T14:22:00Z",
-    pageViews: 1,
-    timeOnSite: "2m",
-    status: "Bounced",
-    referrer: "https://facebook.com",
-    utmSource: "facebook",
-    utmMedium: "social",
-    utmCampaign: "brand_awareness",
-    affiliateCode: "",
-    location: {
-      country: "United Kingdom",
-      countryCode: "GB",
-      region: "England",
-      city: "London",
-      timezone: "Europe/London",
-      coordinates: { lat: 51.5074, lng: -0.1278 },
-    },
-    pagesVisited: ["/"],
-    deviceType: "Mobile",
-    browser: "Safari",
-    os: "iOS",
-    conversionEvents: [],
-    totalSessions: 1,
-    bounceRate: 1,
-  },
-  {
-    id: "V004",
-    sessionId: "S004",
-    ipAddress: "203.0.113.45",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
-    firstVisit: "2024-01-15T16:10:00Z",
-    lastActivity: "2024-01-15T17:30:00Z",
-    pageViews: 12,
-    timeOnSite: "1h 20m",
-    status: "Active",
-    referrer: "https://bing.com/search?q=credit+management+software",
-    utmSource: "bing",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "CONSULTANT456",
-    location: {
-      country: "Germany",
-      countryCode: "DE",
-      region: "Bavaria",
-      city: "Munich",
-      timezone: "Europe/Berlin",
-      coordinates: { lat: 48.1351, lng: 11.582 },
-    },
-    pagesVisited: ["/", "/product", "/solutions", "/pricing-table", "/about", "/demo"],
-    deviceType: "Desktop",
-    browser: "Firefox",
-    os: "Windows 10",
-    conversionEvents: ["demo_request", "newsletter_signup"],
-    totalSessions: 2,
-    bounceRate: 0,
-  },
-  {
-    id: "V005",
-    sessionId: "S005",
-    ipAddress: "198.51.100.78",
-    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    firstVisit: "2024-01-15T12:45:00Z",
-    lastActivity: "2024-01-15T13:15:00Z",
-    pageViews: 5,
-    timeOnSite: "30m",
-    status: "Active",
-    referrer: "https://twitter.com",
-    utmSource: "twitter",
-    utmMedium: "social",
-    utmCampaign: "fintech_discussion",
-    affiliateCode: "",
-    location: {
-      country: "Australia",
-      countryCode: "AU",
-      region: "New South Wales",
-      city: "Sydney",
-      timezone: "Australia/Sydney",
-      coordinates: { lat: -33.8688, lng: 151.2093 },
-    },
-    pagesVisited: ["/", "/product", "/help", "/contact", "/about"],
-    deviceType: "Desktop",
-    browser: "Chrome",
-    os: "Linux",
-    conversionEvents: ["contact_form"],
-    totalSessions: 1,
-    bounceRate: 0,
-  },
-  {
-    id: "V006",
-    sessionId: "S006",
-    ipAddress: "192.0.2.123",
-    userAgent: "Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/119.0 Firefox/119.0",
-    firstVisit: "2024-01-15T08:30:00Z",
-    lastActivity: "2024-01-15T08:35:00Z",
-    pageViews: 2,
-    timeOnSite: "5m",
-    status: "Bounced",
-    referrer: "https://reddit.com/r/accounting",
-    utmSource: "reddit",
-    utmMedium: "social",
-    utmCampaign: "",
-    affiliateCode: "",
-    location: {
-      country: "Japan",
-      countryCode: "JP",
-      region: "Tokyo",
-      city: "Tokyo",
-      timezone: "Asia/Tokyo",
-      coordinates: { lat: 35.6762, lng: 139.6503 },
-    },
-    pagesVisited: ["/", "/product"],
-    deviceType: "Mobile",
-    browser: "Firefox",
-    os: "Android",
-    conversionEvents: [],
-    totalSessions: 1,
-    bounceRate: 1,
-  },
-  {
-    id: "V007",
-    sessionId: "S007",
-    ipAddress: "203.0.113.200",
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0 Safari/537.36",
-    firstVisit: "2024-01-15T15:20:00Z",
-    lastActivity: "2024-01-15T16:45:00Z",
-    pageViews: 9,
-    timeOnSite: "1h 25m",
-    status: "Converted",
-    referrer: "https://google.com/search?q=automated+accounts+receivable",
-    utmSource: "google",
-    utmMedium: "cpc",
-    utmCampaign: "ar_automation_paid",
-    affiliateCode: "AGENCY789",
-    location: {
-      country: "France",
-      countryCode: "FR",
-      region: "Île-de-France",
-      city: "Paris",
-      timezone: "Europe/Paris",
-      coordinates: { lat: 48.8566, lng: 2.3522 },
-    },
-    pagesVisited: ["/", "/product", "/solutions", "/pricing-table", "/demo", "/contact", "/about"],
-    deviceType: "Desktop",
-    browser: "Edge",
-    os: "Windows 10",
-    conversionEvents: ["demo_request", "contact_form", "pricing_inquiry"],
-    totalSessions: 4,
-    bounceRate: 0,
-  },
-  {
-    id: "V008",
-    sessionId: "S008",
-    ipAddress: "198.51.100.150",
-    userAgent:
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
-    firstVisit: "2024-01-15T11:00:00Z",
-    lastActivity: "2024-01-15T11:40:00Z",
-    pageViews: 6,
-    timeOnSite: "40m",
-    status: "Active",
-    referrer: "https://duckduckgo.com/?q=receivables+management+platform",
-    utmSource: "duckduckgo",
-    utmMedium: "organic",
-    utmCampaign: "",
-    affiliateCode: "",
-    location: {
-      country: "Brazil",
-      countryCode: "BR",
-      region: "São Paulo",
-      city: "São Paulo",
-      timezone: "America/Sao_Paulo",
-      coordinates: { lat: -23.5505, lng: -46.6333 },
-    },
-    pagesVisited: ["/", "/solutions", "/product", "/pricing-table", "/help", "/about"],
-    deviceType: "Desktop",
-    browser: "Safari",
-    os: "macOS",
-    conversionEvents: ["newsletter_signup"],
-    totalSessions: 2,
-    bounceRate: 0,
-  },
-]
+interface VisitorData {
+  visitorId: string
+  sessionId: string
+  firstVisit: string
+  lastVisit: string
+  pageViews: number
+  referrer: string
+  userAgent: string
+  currentPage: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmTerm?: string
+  utmContent?: string
+  affiliate?: string
+}
 
 export default function VisitorTracking() {
-  const [visitors, setVisitors] = useState(mockVisitors)
-  const [filteredVisitors, setFilteredVisitors] = useState(mockVisitors)
+  const [visitors, setVisitors] = useState<VisitorData[]>([])
+  const [filteredVisitors, setFilteredVisitors] = useState<VisitorData[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [countryFilter, setCountryFilter] = useState("all")
   const [isRealTimeActive, setIsRealTimeActive] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [advancedFilters, setAdvancedFilters] = useState({
     search: "",
     status: "all",
@@ -306,25 +71,29 @@ export default function VisitorTracking() {
   })
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Load visitor data from localStorage
+  useEffect(() => {
+    const loadVisitorData = () => {
+      try {
+        const visitorData = getAllVisitors()
+        setVisitors(visitorData)
+        setFilteredVisitors(visitorData)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error loading visitor data:", error)
+        setIsLoading(false)
+      }
+    }
+
+    loadVisitorData()
+  }, [])
+
   // Real-time updates
   useEffect(() => {
     if (isRealTimeActive) {
       intervalRef.current = setInterval(() => {
-        setVisitors((prevVisitors) => {
-          const updatedVisitors = prevVisitors.map((visitor) => {
-            // Simulate real-time updates for active visitors
-            if (visitor.status === "Active" && Math.random() > 0.7) {
-              return {
-                ...visitor,
-                pageViews: visitor.pageViews + Math.floor(Math.random() * 3) + 1,
-                lastActivity: new Date().toISOString(),
-                timeOnSite: `${Math.floor(Math.random() * 60) + 30}m`,
-              }
-            }
-            return visitor
-          })
-          return updatedVisitors
-        })
+        const visitorData = getAllVisitors()
+        setVisitors(visitorData)
         setLastUpdate(new Date())
       }, 5000) // Update every 5 seconds
 
@@ -348,23 +117,12 @@ export default function VisitorTracking() {
     if (searchTerm) {
       filtered = filtered.filter(
         (visitor) =>
-          visitor.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.location.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.sessionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
           visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.affiliateCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase()),
+          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (visitor.utmSource && visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase())),
       )
-    }
-
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((visitor) => visitor.status === statusFilter)
-    }
-
-    // Apply country filter
-    if (countryFilter !== "all") {
-      filtered = filtered.filter((visitor) => visitor.location.country === countryFilter)
     }
 
     setFilteredVisitors(filtered)
@@ -377,25 +135,12 @@ export default function VisitorTracking() {
     if (advancedFilters.search) {
       filtered = filtered.filter(
         (visitor) =>
-          visitor.id.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.location.country.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.location.city.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
+          visitor.visitorId.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
+          visitor.sessionId.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
           visitor.referrer.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.affiliateCode.toLowerCase().includes(advancedFilters.search.toLowerCase()) ||
-          visitor.utmSource.toLowerCase().includes(advancedFilters.search.toLowerCase()),
+          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(advancedFilters.search.toLowerCase())) ||
+          (visitor.utmSource && visitor.utmSource.toLowerCase().includes(advancedFilters.search.toLowerCase())),
       )
-    }
-
-    if (advancedFilters.status !== "all") {
-      filtered = filtered.filter((visitor) => visitor.status === advancedFilters.status)
-    }
-
-    if (advancedFilters.country !== "all") {
-      filtered = filtered.filter((visitor) => visitor.location.country === advancedFilters.country)
-    }
-
-    if (advancedFilters.deviceType !== "all") {
-      filtered = filtered.filter((visitor) => visitor.deviceType === advancedFilters.deviceType)
     }
 
     if (advancedFilters.trafficSource !== "all") {
@@ -404,9 +149,9 @@ export default function VisitorTracking() {
 
     if (advancedFilters.hasAffiliate !== "all") {
       if (advancedFilters.hasAffiliate === "yes") {
-        filtered = filtered.filter((visitor) => visitor.affiliateCode !== "")
+        filtered = filtered.filter((visitor) => visitor.affiliate && visitor.affiliate !== "")
       } else {
-        filtered = filtered.filter((visitor) => visitor.affiliateCode === "")
+        filtered = filtered.filter((visitor) => !visitor.affiliate || visitor.affiliate === "")
       }
     }
 
@@ -432,63 +177,42 @@ export default function VisitorTracking() {
 
   // Export visitor data as CSV
   const exportVisitorData = () => {
+    if (filteredVisitors.length === 0) {
+      alert("No visitor data to export")
+      return
+    }
+
     const csvHeaders = [
       "Visitor ID",
       "Session ID",
-      "IP Address",
       "First Visit",
-      "Last Activity",
+      "Last Visit",
       "Page Views",
-      "Time on Site",
-      "Status",
-      "Country",
-      "Region",
-      "City",
-      "Timezone",
-      "Latitude",
-      "Longitude",
-      "Device Type",
-      "Browser",
-      "OS",
+      "Current Page",
       "Referrer",
       "UTM Source",
       "UTM Medium",
       "UTM Campaign",
+      "UTM Term",
+      "UTM Content",
       "Affiliate Code",
-      "Pages Visited",
-      "Conversion Events",
-      "Total Sessions",
-      "Bounce Rate",
       "User Agent",
     ]
 
     const csvData = filteredVisitors.map((visitor) => [
-      `"${visitor.id}"`,
+      `"${visitor.visitorId}"`,
       `"${visitor.sessionId}"`,
-      `"${visitor.ipAddress}"`,
       `"${visitor.firstVisit}"`,
-      `"${visitor.lastActivity}"`,
+      `"${visitor.lastVisit}"`,
       visitor.pageViews,
-      `"${visitor.timeOnSite}"`,
-      `"${visitor.status}"`,
-      `"${visitor.location.country}"`,
-      `"${visitor.location.region}"`,
-      `"${visitor.location.city}"`,
-      `"${visitor.location.timezone}"`,
-      visitor.location.coordinates.lat,
-      visitor.location.coordinates.lng,
-      `"${visitor.deviceType}"`,
-      `"${visitor.browser}"`,
-      `"${visitor.os}"`,
+      `"${visitor.currentPage}"`,
       `"${visitor.referrer}"`,
-      `"${visitor.utmSource}"`,
-      `"${visitor.utmMedium}"`,
-      `"${visitor.utmCampaign}"`,
-      `"${visitor.affiliateCode}"`,
-      `"${visitor.pagesVisited.join("; ")}"`,
-      `"${visitor.conversionEvents.join("; ")}"`,
-      visitor.totalSessions,
-      visitor.bounceRate,
+      `"${visitor.utmSource || ""}"`,
+      `"${visitor.utmMedium || ""}"`,
+      `"${visitor.utmCampaign || ""}"`,
+      `"${visitor.utmTerm || ""}"`,
+      `"${visitor.utmContent || ""}"`,
+      `"${visitor.affiliate || ""}"`,
       `"${visitor.userAgent}"`,
     ])
 
@@ -505,23 +229,34 @@ export default function VisitorTracking() {
     document.body.removeChild(link)
   }
 
-  // Get unique countries for filter dropdown
-  const uniqueCountries = [...new Set(visitors.map((v) => v.location.country))].sort()
-
   // Get unique traffic sources
   const uniqueTrafficSources = [...new Set(visitors.map((v) => v.utmSource))].filter(Boolean).sort()
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800"
-      case "Converted":
-        return "bg-blue-100 text-blue-800"
-      case "Bounced":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+  // Calculate active visitors (visited in last 30 minutes)
+  const activeVisitors = filteredVisitors.filter((visitor) => {
+    const lastVisit = new Date(visitor.lastVisit)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
+    return lastVisit > thirtyMinutesAgo
+  }).length
+
+  // Calculate visitors with conversions (those who visited demo or contact pages)
+  const convertedVisitors = filteredVisitors.filter(
+    (visitor) => visitor.currentPage.includes("/demo") || visitor.currentPage.includes("/contact"),
+  ).length
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Loading visitor data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -563,8 +298,8 @@ export default function VisitorTracking() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{filteredVisitors.filter((v) => v.status === "Active").length}</div>
-              <p className="text-xs text-muted-foreground">Currently browsing</p>
+              <div className="text-2xl font-bold">{activeVisitors}</div>
+              <p className="text-xs text-muted-foreground">Last 30 minutes</p>
             </CardContent>
           </Card>
 
@@ -574,12 +309,10 @@ export default function VisitorTracking() {
               <MousePointer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {filteredVisitors.filter((v) => v.status === "Converted").length}
-              </div>
+              <div className="text-2xl font-bold">{convertedVisitors}</div>
               <p className="text-xs text-muted-foreground">
                 {filteredVisitors.length > 0
-                  ? `${Math.round((filteredVisitors.filter((v) => v.status === "Converted").length / filteredVisitors.length) * 100)}% rate`
+                  ? `${Math.round((convertedVisitors / filteredVisitors.length) * 100)}% rate`
                   : "0% rate"}
               </p>
             </CardContent>
@@ -587,12 +320,14 @@ export default function VisitorTracking() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Countries</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{new Set(filteredVisitors.map((v) => v.location.country)).size}</div>
-              <p className="text-xs text-muted-foreground">Unique locations</p>
+              <div className="text-2xl font-bold">
+                {filteredVisitors.reduce((sum, visitor) => sum + visitor.pageViews, 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">Total page views</p>
             </CardContent>
           </Card>
         </div>
@@ -603,7 +338,7 @@ export default function VisitorTracking() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search visitors, locations, referrers, affiliate codes..."
+                placeholder="Search visitors, referrers, affiliate codes..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -612,32 +347,6 @@ export default function VisitorTracking() {
           </div>
 
           <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Bounced">Bounced</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Countries</SelectItem>
-                {uniqueCountries.map((country) => (
-                  <SelectItem key={country} value={country}>
-                    {country}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -659,62 +368,6 @@ export default function VisitorTracking() {
                       value={advancedFilters.search}
                       onChange={(e) => setAdvancedFilters((prev) => ({ ...prev, search: e.target.value }))}
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="advanced-status">Status</Label>
-                    <Select
-                      value={advancedFilters.status}
-                      onValueChange={(value) => setAdvancedFilters((prev) => ({ ...prev, status: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Converted">Converted</SelectItem>
-                        <SelectItem value="Bounced">Bounced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="advanced-country">Country</Label>
-                    <Select
-                      value={advancedFilters.country}
-                      onValueChange={(value) => setAdvancedFilters((prev) => ({ ...prev, country: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Countries</SelectItem>
-                        {uniqueCountries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="advanced-device">Device Type</Label>
-                    <Select
-                      value={advancedFilters.deviceType}
-                      onValueChange={(value) => setAdvancedFilters((prev) => ({ ...prev, deviceType: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Devices</SelectItem>
-                        <SelectItem value="Desktop">Desktop</SelectItem>
-                        <SelectItem value="Mobile">Mobile</SelectItem>
-                        <SelectItem value="Tablet">Tablet</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
 
                   <div>
@@ -766,7 +419,7 @@ export default function VisitorTracking() {
               </DialogContent>
             </Dialog>
 
-            <Button onClick={exportVisitorData} variant="outline">
+            <Button onClick={exportVisitorData} variant="outline" disabled={filteredVisitors.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
@@ -804,124 +457,116 @@ export default function VisitorTracking() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredVisitors.map((visitor) => (
-                <div key={visitor.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Visitor Info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg">{visitor.id}</span>
-                        <Badge className={getStatusBadgeColor(visitor.status)}>{visitor.status}</Badge>
+              {filteredVisitors.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Visitor Data Available</h3>
+                  <p className="mb-4">
+                    {visitors.length === 0
+                      ? "No visitors have been tracked yet. Visitor data will appear here as people browse your website."
+                      : "No visitors found matching your current filters."}
+                  </p>
+                  {visitors.length > 0 && (
+                    <Button variant="outline" onClick={clearFilters} className="bg-transparent">
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                filteredVisitors.map((visitor) => (
+                  <div key={visitor.visitorId} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {/* Visitor Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-lg">{visitor.visitorId}</span>
+                          <Badge variant="outline">Active</Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            <span>Session: {visitor.sessionId}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-3 w-3" />
+                            <span>{visitor.pageViews} page views</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-3 w-3" />
+                            <span>First visit: {new Date(visitor.firstVisit).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-3 w-3" />
+                            <span>Last activity: {new Date(visitor.lastVisit).toLocaleString()}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3 w-3" />
-                          <span>Session: {visitor.sessionId}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Eye className="h-3 w-3" />
-                          <span>
-                            {visitor.pageViews} page views • {visitor.timeOnSite}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3" />
-                          <span>First visit: {new Date(visitor.firstVisit).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Location & Device */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-blue-600">
-                        <MapPin className="h-4 w-4" />
-                        <span className="font-medium">Location & Device</span>
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-1 bg-blue-50 p-3 rounded-md">
-                        <div>
-                          <strong>Country:</strong> {visitor.location.country} ({visitor.location.countryCode})
+                      {/* Current Page & Navigation */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-blue-600">
+                          <Globe className="h-4 w-4" />
+                          <span className="font-medium">Current Session</span>
                         </div>
-                        <div>
-                          <strong>Region:</strong> {visitor.location.region}
-                        </div>
-                        <div>
-                          <strong>City:</strong> {visitor.location.city}
-                        </div>
-                        <div>
-                          <strong>Timezone:</strong> {visitor.location.timezone}
-                        </div>
-                        <div>
-                          <strong>Coordinates:</strong> {visitor.location.coordinates.lat.toFixed(4)},{" "}
-                          {visitor.location.coordinates.lng.toFixed(4)}
-                        </div>
-                        <div className="pt-2 border-t border-blue-200">
+                        <div className="text-sm text-gray-600 space-y-1 bg-blue-50 p-3 rounded-md">
                           <div>
-                            <strong>Device:</strong> {visitor.deviceType}
+                            <strong>Current Page:</strong> {visitor.currentPage}
                           </div>
                           <div>
-                            <strong>Browser:</strong> {visitor.browser}
+                            <strong>Referrer:</strong>{" "}
+                            {visitor.referrer.length > 50
+                              ? visitor.referrer.substring(0, 50) + "..."
+                              : visitor.referrer}
                           </div>
-                          <div>
-                            <strong>OS:</strong> {visitor.os}
-                          </div>
+                          {visitor.utmSource && (
+                            <div>
+                              <strong>UTM Source:</strong> {visitor.utmSource}
+                            </div>
+                          )}
+                          {visitor.utmMedium && (
+                            <div>
+                              <strong>UTM Medium:</strong> {visitor.utmMedium}
+                            </div>
+                          )}
+                          {visitor.utmCampaign && (
+                            <div>
+                              <strong>Campaign:</strong> {visitor.utmCampaign}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Traffic & Conversion */}
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>
-                          <strong>Referrer:</strong>{" "}
-                          {visitor.referrer.length > 50 ? visitor.referrer.substring(0, 50) + "..." : visitor.referrer}
-                        </div>
-                        <div>
-                          <strong>UTM Source:</strong> {visitor.utmSource || "Direct"}
-                        </div>
-                        <div>
-                          <strong>UTM Medium:</strong> {visitor.utmMedium || "None"}
-                        </div>
-                        {visitor.utmCampaign && (
-                          <div>
-                            <strong>Campaign:</strong> {visitor.utmCampaign}
+                      {/* Additional Data */}
+                      <div className="space-y-2">
+                        <div className="text-sm text-gray-600 space-y-1">
+                          {visitor.affiliate && (
+                            <div>
+                              <strong>Affiliate:</strong> <Badge variant="secondary">{visitor.affiliate}</Badge>
+                            </div>
+                          )}
+                          {visitor.utmTerm && (
+                            <div>
+                              <strong>UTM Term:</strong> {visitor.utmTerm}
+                            </div>
+                          )}
+                          {visitor.utmContent && (
+                            <div>
+                              <strong>UTM Content:</strong> {visitor.utmContent}
+                            </div>
+                          )}
+                          <div className="pt-2 border-t">
+                            <strong>User Agent:</strong>
+                            <div className="text-xs text-gray-500 mt-1 break-all">
+                              {visitor.userAgent.length > 100
+                                ? visitor.userAgent.substring(0, 100) + "..."
+                                : visitor.userAgent}
+                            </div>
                           </div>
-                        )}
-                        {visitor.affiliateCode && (
-                          <div>
-                            <strong>Affiliate:</strong> <Badge variant="secondary">{visitor.affiliateCode}</Badge>
-                          </div>
-                        )}
-                        <div>
-                          <strong>Pages:</strong> {visitor.pagesVisited.join(", ")}
-                        </div>
-                        {visitor.conversionEvents.length > 0 && (
-                          <div>
-                            <strong>Conversions:</strong>{" "}
-                            {visitor.conversionEvents.map((event) => (
-                              <Badge key={event} variant="outline" className="ml-1">
-                                {event}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        <div>
-                          <strong>Sessions:</strong> {visitor.totalSessions} • <strong>Bounce Rate:</strong>{" "}
-                          {Math.round(visitor.bounceRate * 100)}%
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {filteredVisitors.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No visitors found matching your filters.</p>
-                  <Button variant="outline" onClick={clearFilters} className="mt-2 bg-transparent">
-                    Clear Filters
-                  </Button>
-                </div>
+                ))
               )}
             </div>
           </CardContent>
