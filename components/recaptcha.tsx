@@ -4,97 +4,103 @@ import { useEffect, useRef, useState } from "react"
 
 interface ReCAPTCHAProps {
   onVerify: (token: string) => void
+  onExpire?: () => void
+  theme?: "light" | "dark"
+  size?: "normal" | "compact"
 }
 
 declare global {
   interface Window {
-    grecaptcha: {
-      ready: (callback: () => void) => void
-      render: (
-        container: string | HTMLElement,
-        options: {
-          sitekey: string
-          callback: (token: string) => void
-          "expired-callback": () => void
-          "error-callback": () => void
-        },
-      ) => number
-      reset: (widgetId?: number) => void
-    }
+    grecaptcha: any
+    onRecaptchaLoad: () => void
   }
 }
 
-export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
+export function ReCAPTCHA({ onVerify, onExpire, theme = "light", size = "normal" }: ReCAPTCHAProps) {
   const recaptchaRef = useRef<HTMLDivElement>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [siteKey, setSiteKey] = useState<string | null>(null)
   const widgetIdRef = useRef<number | null>(null)
-  const [siteKey, setSiteKey] = useState<string>("")
-  const [isEnabled, setIsEnabled] = useState(false)
 
   useEffect(() => {
-    async function fetchSiteKey() {
-      try {
-        const response = await fetch("/api/recaptcha-config")
-        const data = await response.json()
+    // Fetch the site key from our API
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then((data) => {
         setSiteKey(data.siteKey)
-        setIsEnabled(data.isEnabled)
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Failed to fetch reCAPTCHA config:", error)
-        setIsEnabled(false)
-      }
-    }
-
-    fetchSiteKey()
-  }, [])
+        // Use development mode token if config fails
+        onVerify("development-mode")
+      })
+  }, [onVerify])
 
   useEffect(() => {
-    if (!isEnabled || !siteKey) return
+    if (!siteKey) return
 
-    const loadRecaptcha = () => {
-      if (window.grecaptcha && recaptchaRef.current) {
-        widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
-          sitekey: siteKey,
-          callback: onVerify,
-          "expired-callback": () => onVerify(""),
-          "error-callback": () => onVerify(""),
-        })
-      }
+    // Check if reCAPTCHA is already loaded
+    if (window.grecaptcha && window.grecaptcha.render) {
+      setIsLoaded(true)
+      return
     }
 
-    if (window.grecaptcha) {
-      window.grecaptcha.ready(loadRecaptcha)
-    } else {
-      const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js"
-      script.async = true
-      script.defer = true
-      script.onload = () => {
-        window.grecaptcha.ready(loadRecaptcha)
-      }
-      document.head.appendChild(script)
+    // Define the callback function
+    window.onRecaptchaLoad = () => {
+      setIsLoaded(true)
     }
+
+    // Load the reCAPTCHA script
+    const script = document.createElement("script")
+    script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit`
+    script.async = true
+    script.defer = true
+    document.head.appendChild(script)
 
     return () => {
-      if (widgetIdRef.current !== null && window.grecaptcha) {
-        window.grecaptcha.reset(widgetIdRef.current)
+      // Cleanup
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
       }
+      delete window.onRecaptchaLoad
     }
-  }, [siteKey, isEnabled, onVerify])
+  }, [siteKey])
 
   useEffect(() => {
-    if (!isEnabled) {
-      onVerify("development-mode")
+    if (isLoaded && siteKey && recaptchaRef.current && !widgetIdRef.current) {
+      try {
+        widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: siteKey,
+          theme,
+          size,
+          callback: (token: string) => {
+            onVerify(token)
+          },
+          "expired-callback": () => {
+            onExpire?.()
+          },
+        })
+      } catch (error) {
+        console.error("Failed to render reCAPTCHA:", error)
+        // Fallback to development mode
+        onVerify("development-mode")
+      }
     }
-  }, [isEnabled, onVerify])
+  }, [isLoaded, siteKey, theme, size, onVerify, onExpire])
 
-  if (!isEnabled) {
-    return null
+  if (!siteKey) {
+    return (
+      <div className="flex items-center justify-center p-4 bg-gray-100 rounded">
+        <div className="text-sm text-gray-600">Loading verification...</div>
+      </div>
+    )
   }
 
   return <div ref={recaptchaRef} className="flex justify-center" />
 }
 
 // Named export for compatibility
-export { ReCAPTCHA }
+export { ReCAPTCHA as ReCaptcha }
 
-// Additional named export as ReCaptcha (with different casing)
-export const ReCaptcha = ReCAPTCHA
+// Default export
+export default ReCAPTCHA

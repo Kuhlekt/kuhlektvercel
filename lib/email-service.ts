@@ -1,12 +1,4 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
-
-const sesClient = new SESClient({
-  region: process.env.AWS_SES_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
-  },
-})
+import { sendEmailWithSES } from "./aws-ses"
 
 interface EmailOptions {
   to: string | string[]
@@ -19,54 +11,30 @@ interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<void> {
   const { to, subject, text, html, from } = options
 
-  const fromEmail = from || process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
-  const recipients = Array.isArray(to) ? to : [to]
+  // Convert array to single recipient for now (AWS SES direct API limitation)
+  const recipient = Array.isArray(to) ? to[0] : to
 
-  try {
-    const command = new SendEmailCommand({
-      Source: fromEmail,
-      Destination: {
-        ToAddresses: recipients,
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: "UTF-8",
-        },
-        Body: {
-          Text: text
-            ? {
-                Data: text,
-                Charset: "UTF-8",
-              }
-            : undefined,
-          Html: html
-            ? {
-                Data: html,
-                Charset: "UTF-8",
-              }
-            : undefined,
-        },
-      },
-    })
+  const result = await sendEmailWithSES({
+    to: recipient,
+    subject,
+    text: text || "",
+    html,
+  })
 
-    const result = await sesClient.send(command)
-    console.log("Email sent successfully:", result.MessageId)
-  } catch (error) {
-    console.error("Error sending email:", error)
-    throw new Error(`Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`)
+  if (!result.success) {
+    throw new Error(result.message || "Failed to send email")
   }
 }
 
 export async function testAWSSES(): Promise<boolean> {
   try {
-    await sendEmail({
+    const result = await sendEmailWithSES({
       to: process.env.AWS_SES_FROM_EMAIL || "test@kuhlekt.com",
       subject: "AWS SES Test Email",
       text: "This is a test email to verify AWS SES configuration.",
       html: "<p>This is a test email to verify AWS SES configuration.</p>",
     })
-    return true
+    return result.success
   } catch (error) {
     console.error("AWS SES test failed:", error)
     return false
