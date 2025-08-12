@@ -31,11 +31,16 @@ export async function loginWithCredentials(formData: FormData) {
     // Fallback to environment variable authentication
     console.log("Attempting fallback authentication...")
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"
+
     console.log("Fallback check:", {
       username,
       expectedUsername: "admin",
       hasEnvPassword: !!ADMIN_PASSWORD,
       passwordMatch: password === ADMIN_PASSWORD,
+      actualPassword: password,
+      expectedPassword: ADMIN_PASSWORD, // Temporarily show for debugging
+      passwordLength: password.length,
+      expectedLength: ADMIN_PASSWORD.length,
     })
 
     if (username === "admin" && password === ADMIN_PASSWORD) {
@@ -57,7 +62,10 @@ export async function loginWithCredentials(formData: FormData) {
     }
 
     console.log("All authentication methods failed")
-    return { success: false, error: "Invalid username or password" }
+    return {
+      success: false,
+      error: `Invalid username or password. Check console for details. Expected password length: ${ADMIN_PASSWORD.length}`,
+    }
   } catch (error) {
     console.error("Login error:", error)
     return { success: false, error: `Login failed: ${error.message}` }

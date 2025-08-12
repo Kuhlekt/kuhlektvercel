@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
           </div>
           <CardTitle className="text-2xl">Admin Access</CardTitle>
           <p className="text-gray-600">Enter your admin credentials</p>
-          <p className="text-sm text-gray-500 mt-2">Try: username "admin", password "admin123"</p>
+          <p className="text-sm text-gray-500 mt-2">Username: "admin" | Check console for expected password</p>
         </CardHeader>
 
         <CardContent className="space-y-4">
