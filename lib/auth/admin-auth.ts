@@ -71,13 +71,13 @@ async function hmacSha1(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> 
 
 async function generateTOTP(secret: string, timeStep = 30, digits = 6): Promise<string> {
   const secretBytes = base32Decode(secret)
-  const time = Math.floor(Date.now() / 1000 / timeStep)
+  let time = Math.floor(Date.now() / 1000 / timeStep)
 
   // Convert time to 8-byte array
   const timeBytes = new Uint8Array(8)
   for (let i = 7; i >= 0; i--) {
     timeBytes[i] = time & 0xff
-    time >>> 8
+    time = time >>> 8
   }
 
   const hmac = await hmacSha1(secretBytes, timeBytes)
