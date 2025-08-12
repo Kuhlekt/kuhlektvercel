@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Shield, Key } from "lucide-react"
+import { Loader2, Shield, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react"
 import { changeAdminPassword } from "./actions"
 
 const initialState = {
@@ -23,130 +23,173 @@ export default function ChangePasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  // Handle form submission with pending state
   const handleSubmit = async (formData: FormData) => {
     setIsPending(true)
-    await formAction(formData)
-    setIsPending(false)
+
+    try {
+      await formAction(formData)
+    } finally {
+      setIsPending(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardHeader className="text-center pb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-full flex items-center justify-center mb-4">
-              <Key className="w-8 h-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-800">Change Admin Password</CardTitle>
-            <CardDescription className="text-gray-600">
-              Update your admin password for enhanced security
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-blue-400" />
+          <h2 className="mt-6 text-3xl font-extrabold text-white">Change Admin Password</h2>
+          <p className="mt-2 text-sm text-gray-300">Update your admin password for enhanced security</p>
+        </div>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white">Password Update</CardTitle>
+            <CardDescription className="text-gray-300">
+              Enter your current password and choose a new secure password
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {state.message && (
-              <Alert className={state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
-                  {state.message}
-                </AlertDescription>
+          <CardContent>
+            {state.success && (
+              <Alert className="mb-6 border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{state.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {state.message && !state.success && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800">{state.message}</AlertDescription>
               </Alert>
             )}
 
             <form action={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
+              <div>
+                <Label htmlFor="currentPassword" className="text-white">
                   Current Password
                 </Label>
-                <div className="relative">
+                <div className="relative mt-1">
                   <Input
                     id="currentPassword"
                     name="currentPassword"
                     type={showCurrentPassword ? "text" : "password"}
                     required
-                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                    className="bg-slate-700 border-slate-600 text-white placeholder-gray-400 pr-10"
                     placeholder="Enter current password"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
                 </div>
                 {state.errors?.currentPassword && (
-                  <p className="text-sm text-red-600">{state.errors.currentPassword}</p>
+                  <p className="text-red-400 text-sm mt-1">{state.errors.currentPassword}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+              <div>
+                <Label htmlFor="newPassword" className="text-white">
                   New Password
                 </Label>
-                <div className="relative">
+                <div className="relative mt-1">
                   <Input
                     id="newPassword"
                     name="newPassword"
                     type={showNewPassword ? "text" : "password"}
                     required
-                    minLength={8}
-                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                    className="bg-slate-700 border-slate-600 text-white placeholder-gray-400 pr-10"
                     placeholder="Enter new password"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
                 </div>
-                {state.errors?.newPassword && <p className="text-sm text-red-600">{state.errors.newPassword}</p>}
-                <p className="text-xs text-gray-500">Password must be at least 8 characters long</p>
+                {state.errors?.newPassword && <p className="text-red-400 text-sm mt-1">{state.errors.newPassword}</p>}
+                <p className="text-xs text-gray-400 mt-1">Password must be at least 8 characters long</p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+              <div>
+                <Label htmlFor="confirmPassword" className="text-white">
                   Confirm New Password
                 </Label>
-                <div className="relative">
+                <div className="relative mt-1">
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     required
-                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                    className="bg-slate-700 border-slate-600 text-white placeholder-gray-400 pr-10"
                     placeholder="Confirm new password"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
                 </div>
                 {state.errors?.confirmPassword && (
-                  <p className="text-sm text-red-600">{state.errors.confirmPassword}</p>
+                  <p className="text-red-400 text-sm mt-1">{state.errors.confirmPassword}</p>
                 )}
               </div>
 
               <Button
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
               >
-                {isPending ? "Updating Password..." : "Update Password"}
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating Password...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
               </Button>
             </form>
 
-            <div className="text-center pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500">
-                <Shield className="w-3 h-3 inline mr-1" />
-                Your password is encrypted and secure
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-400">
+                Password changes take effect immediately. You will need to sign in again.
               </p>
             </div>
           </CardContent>
         </Card>
+
+        <div className="text-center">
+          <Button variant="ghost" className="text-gray-300 hover:text-white" onClick={() => window.history.back()}>
+            ← Back to Admin Panel
+          </Button>
+        </div>
       </div>
     </div>
   )

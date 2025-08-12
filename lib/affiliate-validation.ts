@@ -1,94 +1,57 @@
-export interface AffiliateCode {
-  code: string
-  discount: number
-  category: "startup" | "industry" | "partner" | "promotional" | "vip"
-  description: string
-  isActive: boolean
+// Predefined affiliate codes with their details
+export const AFFILIATE_CODES = {
+  PARTNER001: { name: "TechCorp Solutions", commission: 15, active: true },
+  PARTNER002: { name: "Digital Dynamics", commission: 12, active: true },
+  PARTNER003: { name: "Innovation Labs", commission: 18, active: true },
+  PARTNER004: { name: "Future Systems", commission: 10, active: true },
+  PARTNER005: { name: "Smart Solutions", commission: 14, active: true },
+  PARTNER006: { name: "Tech Innovators", commission: 16, active: true },
+  PARTNER007: { name: "Digital Partners", commission: 13, active: true },
+  PARTNER008: { name: "Advanced Systems", commission: 17, active: true },
+  PARTNER009: { name: "Modern Tech", commission: 11, active: true },
+  PARTNER010: { name: "Enterprise Solutions", commission: 19, active: true },
+  PARTNER011: { name: "Cloud Experts", commission: 15, active: true },
+  PARTNER012: { name: "Data Specialists", commission: 12, active: true },
+  PARTNER013: { name: "AI Solutions", commission: 20, active: true },
+  PARTNER014: { name: "Automation Pro", commission: 14, active: true },
+  PARTNER015: { name: "Tech Leaders", commission: 16, active: true },
+  PARTNER016: { name: "Digital Experts", commission: 13, active: true },
+  PARTNER017: { name: "Innovation Hub", commission: 18, active: true },
+  PARTNER018: { name: "Smart Tech", commission: 11, active: true },
+  PARTNER019: { name: "Future Labs", commission: 17, active: true },
+  PARTNER020: { name: "Tech Pioneers", commission: 15, active: true },
+  PARTNER021: { name: "Digital Leaders", commission: 12, active: true },
+  PARTNER022: { name: "Advanced Solutions", commission: 19, active: true },
+  PARTNER023: { name: "Modern Systems", commission: 14, active: true },
+  PARTNER024: { name: "Enterprise Tech", commission: 16, active: true },
+} as const
+
+export type AffiliateCode = keyof typeof AFFILIATE_CODES
+
+export interface AffiliateInfo {
+  name: string
+  commission: number
+  active: boolean
 }
 
-export const AFFILIATE_CODES: AffiliateCode[] = [
-  // Startup codes (10-15% discount)
-  { code: "STARTUP10", discount: 10, category: "startup", description: "New startup discount", isActive: true },
-  { code: "EARLYBIRD", discount: 15, category: "startup", description: "Early adopter discount", isActive: true },
-  { code: "LAUNCH2024", discount: 12, category: "startup", description: "2024 launch special", isActive: true },
-  { code: "NEWBIZ", discount: 10, category: "startup", description: "New business discount", isActive: true },
-  { code: "FOUNDER", discount: 15, category: "startup", description: "Founder special rate", isActive: true },
+export function validateAffiliateCode(code: string): AffiliateInfo | null {
+  const upperCode = code.toUpperCase() as AffiliateCode
+  const affiliate = AFFILIATE_CODES[upperCode]
 
-  // Industry codes (15-25% discount)
-  { code: "FINTECH20", discount: 20, category: "industry", description: "Fintech industry discount", isActive: true },
-  {
-    code: "HEALTHCARE15",
-    discount: 15,
-    category: "industry",
-    description: "Healthcare sector discount",
-    isActive: true,
-  },
-  { code: "MANUFACTURING", discount: 18, category: "industry", description: "Manufacturing discount", isActive: true },
-  { code: "RETAIL25", discount: 25, category: "industry", description: "Retail industry special", isActive: true },
-  { code: "SAAS20", discount: 20, category: "industry", description: "SaaS company discount", isActive: true },
-  {
-    code: "ECOMMERCE",
-    discount: 22,
-    category: "industry",
-    description: "E-commerce platform discount",
-    isActive: true,
-  },
+  if (affiliate && affiliate.active) {
+    return affiliate
+  }
 
-  // Partner codes (20-30% discount)
-  { code: "PARTNER25", discount: 25, category: "partner", description: "Strategic partner discount", isActive: true },
-  { code: "INTEGRATION", discount: 20, category: "partner", description: "Integration partner rate", isActive: true },
-  { code: "RESELLER30", discount: 30, category: "partner", description: "Reseller partner discount", isActive: true },
-  { code: "CONSULTANT", discount: 22, category: "partner", description: "Consultant partner rate", isActive: true },
-  { code: "AGENCY25", discount: 25, category: "partner", description: "Agency partner discount", isActive: true },
-
-  // Promotional codes (15-35% discount)
-  { code: "SUMMER2024", discount: 20, category: "promotional", description: "Summer 2024 promotion", isActive: true },
-  { code: "BLACKFRIDAY", discount: 35, category: "promotional", description: "Black Friday special", isActive: true },
-  { code: "NEWYEAR25", discount: 25, category: "promotional", description: "New Year promotion", isActive: true },
-  {
-    code: "WEBINAR15",
-    discount: 15,
-    category: "promotional",
-    description: "Webinar attendee discount",
-    isActive: true,
-  },
-  {
-    code: "CONFERENCE",
-    discount: 18,
-    category: "promotional",
-    description: "Conference special offer",
-    isActive: true,
-  },
-
-  // VIP codes (30-50% discount)
-  { code: "VIP40", discount: 40, category: "vip", description: "VIP customer discount", isActive: true },
-  { code: "ENTERPRISE50", discount: 50, category: "vip", description: "Enterprise tier discount", isActive: true },
-  { code: "PLATINUM", discount: 35, category: "vip", description: "Platinum member rate", isActive: true },
-  { code: "EXECUTIVE", discount: 30, category: "vip", description: "Executive package discount", isActive: true },
-]
-
-export function validateAffiliateCode(code: string): AffiliateCode | null {
-  const normalizedCode = code.toUpperCase().trim()
-  return AFFILIATE_CODES.find((affiliate) => affiliate.code === normalizedCode && affiliate.isActive) || null
+  return null
 }
 
-export function getAffiliateDiscount(code: string): number {
+export function getAllActiveAffiliateCodes(): Array<{ code: AffiliateCode; info: AffiliateInfo }> {
+  return Object.entries(AFFILIATE_CODES)
+    .filter(([, info]) => info.active)
+    .map(([code, info]) => ({ code: code as AffiliateCode, info }))
+}
+
+export function getAffiliateCommission(code: string): number {
   const affiliate = validateAffiliateCode(code)
-  return affiliate ? affiliate.discount : 0
-}
-
-export function getAffiliatesByCategory(category: AffiliateCode["category"]): AffiliateCode[] {
-  return AFFILIATE_CODES.filter((affiliate) => affiliate.category === category && affiliate.isActive)
-}
-
-export function getAllActiveAffiliates(): AffiliateCode[] {
-  return AFFILIATE_CODES.filter((affiliate) => affiliate.isActive)
-}
-
-export function formatDiscountText(discount: number): string {
-  return `${discount}% off`
-}
-
-export function calculateDiscountedPrice(originalPrice: number, discountPercent: number): number {
-  return originalPrice * (1 - discountPercent / 100)
+  return affiliate ? affiliate.commission : 0
 }
