@@ -24,6 +24,7 @@ import {
   Download,
   FileText,
   Search,
+  MapPin,
 } from "lucide-react"
 
 // Mock data - in a real app, this would come from your analytics service
@@ -47,7 +48,7 @@ const analyticsData = {
   ],
 }
 
-// Mock detailed logs data
+// Mock detailed logs data with location information
 const detailedLogs = [
   {
     id: 1,
@@ -61,6 +62,15 @@ const detailedLogs = [
     referrer: "https://google.com",
     utmSource: "google",
     utmCampaign: "search_ads",
+    location: {
+      country: "United States",
+      countryCode: "US",
+      region: "California",
+      city: "San Francisco",
+      timezone: "America/Los_Angeles",
+      latitude: 37.7749,
+      longitude: -122.4194,
+    },
   },
   {
     id: 2,
@@ -73,6 +83,15 @@ const detailedLogs = [
     ip: "10.0.0.50",
     referrer: "direct",
     details: "Contact form submitted - john@example.com",
+    location: {
+      country: "Canada",
+      countryCode: "CA",
+      region: "Ontario",
+      city: "Toronto",
+      timezone: "America/Toronto",
+      latitude: 43.6532,
+      longitude: -79.3832,
+    },
   },
   {
     id: 3,
@@ -85,6 +104,15 @@ const detailedLogs = [
     ip: "172.16.0.25",
     referrer: "https://linkedin.com",
     affiliate: "PARTNER001",
+    location: {
+      country: "United Kingdom",
+      countryCode: "GB",
+      region: "England",
+      city: "London",
+      timezone: "Europe/London",
+      latitude: 51.5074,
+      longitude: -0.1278,
+    },
   },
   {
     id: 4,
@@ -97,6 +125,15 @@ const detailedLogs = [
     ip: "203.0.113.15",
     referrer: "https://facebook.com",
     details: "Demo requested - sarah@company.com",
+    location: {
+      country: "Australia",
+      countryCode: "AU",
+      region: "New South Wales",
+      city: "Sydney",
+      timezone: "Australia/Sydney",
+      latitude: -33.8688,
+      longitude: 151.2093,
+    },
   },
   {
     id: 5,
@@ -110,6 +147,77 @@ const detailedLogs = [
     referrer: "internal",
     utmSource: "email",
     utmCampaign: "newsletter",
+    location: {
+      country: "Germany",
+      countryCode: "DE",
+      region: "Bavaria",
+      city: "Munich",
+      timezone: "Europe/Berlin",
+      latitude: 48.1351,
+      longitude: 11.582,
+    },
+  },
+  {
+    id: 6,
+    timestamp: "2024-01-15 14:27:18",
+    event: "Page View",
+    page: "/about",
+    visitorId: "vis_def567",
+    sessionId: "ses_abc890",
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+    ip: "198.51.100.42",
+    referrer: "https://twitter.com",
+    location: {
+      country: "Japan",
+      countryCode: "JP",
+      region: "Tokyo",
+      city: "Tokyo",
+      timezone: "Asia/Tokyo",
+      latitude: 35.6762,
+      longitude: 139.6503,
+    },
+  },
+  {
+    id: 7,
+    timestamp: "2024-01-15 14:26:05",
+    event: "Form Submission",
+    page: "/demo",
+    visitorId: "vis_ghi123",
+    sessionId: "ses_jkl456",
+    userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    ip: "203.0.113.89",
+    referrer: "https://bing.com",
+    details: "Demo form submitted - mike@techcorp.com",
+    location: {
+      country: "France",
+      countryCode: "FR",
+      region: "Île-de-France",
+      city: "Paris",
+      timezone: "Europe/Paris",
+      latitude: 48.8566,
+      longitude: 2.3522,
+    },
+  },
+  {
+    id: 8,
+    timestamp: "2024-01-15 14:25:42",
+    event: "Page View",
+    page: "/product",
+    visitorId: "vis_mno789",
+    sessionId: "ses_pqr012",
+    userAgent: "Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/111.0 Firefox/115.0",
+    ip: "192.0.2.156",
+    referrer: "direct",
+    utmSource: "newsletter",
+    location: {
+      country: "Brazil",
+      countryCode: "BR",
+      region: "São Paulo",
+      city: "São Paulo",
+      timezone: "America/Sao_Paulo",
+      latitude: -23.5505,
+      longitude: -46.6333,
+    },
   },
 ]
 
@@ -148,6 +256,14 @@ export default function AdminTrackingPage() {
         demoRequests: 12,
         contactForms: 8,
         conversionRate: "1.6%",
+      },
+      topCountries: {
+        "United States": "35%",
+        Canada: "18%",
+        "United Kingdom": "12%",
+        Germany: "8%",
+        Australia: "7%",
+        Other: "20%",
       },
     }
 
@@ -325,10 +441,12 @@ export default function AdminTrackingPage() {
                   View Detailed Logs
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh]">
+              <DialogContent className="max-w-5xl max-h-[80vh]">
                 <DialogHeader>
                   <DialogTitle>Detailed Activity Logs</DialogTitle>
-                  <DialogDescription>Comprehensive view of all visitor activities and events</DialogDescription>
+                  <DialogDescription>
+                    Comprehensive view of all visitor activities and events with location data
+                  </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[60vh] w-full">
                   <div className="space-y-4">
@@ -354,7 +472,7 @@ export default function AdminTrackingPage() {
                           <span className="text-sm font-mono text-gray-500">{log.page}</span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                           <div>
                             <span className="text-gray-500">Visitor ID:</span>
                             <span className="ml-2 font-mono">{log.visitorId}</span>
@@ -373,8 +491,44 @@ export default function AdminTrackingPage() {
                           </div>
                         </div>
 
+                        {/* Location Information */}
+                        {log.location && (
+                          <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <MapPin className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">Location Information</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-gray-600">Country:</span>
+                                <span className="ml-2 font-medium">
+                                  {log.location.country} ({log.location.countryCode})
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Region:</span>
+                                <span className="ml-2 font-medium">{log.location.region}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">City:</span>
+                                <span className="ml-2 font-medium">{log.location.city}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Timezone:</span>
+                                <span className="ml-2 font-medium">{log.location.timezone}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-gray-600">Coordinates:</span>
+                                <span className="ml-2 font-mono text-xs">
+                                  {log.location.latitude.toFixed(4)}, {log.location.longitude.toFixed(4)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {(log.utmSource || log.utmCampaign || log.affiliate) && (
-                          <div className="mt-2 flex gap-2">
+                          <div className="mb-2 flex gap-2">
                             {log.utmSource && <Badge variant="outline">UTM: {log.utmSource}</Badge>}
                             {log.utmCampaign && <Badge variant="outline">Campaign: {log.utmCampaign}</Badge>}
                             {log.affiliate && <Badge variant="secondary">Affiliate: {log.affiliate}</Badge>}
@@ -382,12 +536,12 @@ export default function AdminTrackingPage() {
                         )}
 
                         {log.details && (
-                          <div className="mt-2 p-2 bg-white rounded border">
+                          <div className="mb-2 p-2 bg-white rounded border">
                             <span className="text-sm text-gray-700">{log.details}</span>
                           </div>
                         )}
 
-                        <div className="mt-2 text-xs text-gray-500 truncate">
+                        <div className="text-xs text-gray-500 truncate">
                           <span className="font-medium">User Agent:</span> {log.userAgent}
                         </div>
                       </div>
