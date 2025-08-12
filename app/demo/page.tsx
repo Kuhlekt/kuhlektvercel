@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, Users, TrendingUp, DollarSign, Shield } from "lucide-react"
+import { CheckCircle, Clock, Users, TrendingUp, DollarSign, Shield } from 'lucide-react'
 import { submitDemoRequest } from "./actions"
-import { ReCaptcha } from "@/components/recaptcha"
+import ReCAPTCHA from "@/components/recaptcha"
 
 export default function DemoPage() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, null)
@@ -165,7 +165,9 @@ export default function DemoPage() {
                   )}
                 </div>
 
-                <ReCaptcha />
+                <div className="flex justify-center">
+                  <ReCAPTCHA onVerify={() => {}} />
+                </div>
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isPending}>
                   {isPending ? "Submitting..." : "Request Demo"}
