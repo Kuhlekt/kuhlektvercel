@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginAdmin } from "./actions"
 
 export default function AdminLoginPage() {
-  const [state, action, isPending] = useActionState(loginAdmin, null)
+  const [state, action] = useFormState(loginAdmin, null)
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -22,14 +22,7 @@ export default function AdminLoginPage() {
           <form action={action} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Admin Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter admin password"
-                required
-                disabled={isPending}
-              />
+              <Input id="password" name="password" type="password" placeholder="Enter admin password" required />
             </div>
 
             {state?.error && (
@@ -38,8 +31,8 @@ export default function AdminLoginPage() {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Logging in..." : "Login"}
+            <Button type="submit" className="w-full">
+              Login
             </Button>
           </form>
         </CardContent>

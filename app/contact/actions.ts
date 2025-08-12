@@ -1,8 +1,8 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { sendEmail } from "@/lib/email-service"
 import { verifyCaptcha } from "@/lib/captcha"
-import { validateAffiliate } from "@/lib/affiliate-validation"
 
 interface ContactFormState {
   success: boolean
@@ -22,12 +22,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     const message = formData.get("message") as string
     const recaptchaToken = formData.get("recaptchaToken") as string
 
-    // Visitor tracking data
-    const referrer = formData.get("referrer") as string
-    const utmSource = formData.get("utmSource") as string
-    const utmCampaign = formData.get("utmCampaign") as string
-    const pageViews = formData.get("pageViews") as string
-
     // Validation
     const errors: Record<string, string> = {}
 
@@ -45,8 +39,35 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       errors.email = "Please enter a valid email address"
     }
 
-    if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-()]/g, ""))) {
+    if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
       errors.phone = "Please enter a valid phone number"
+    }
+
+    // Validate reCAPTCHA
+    if (!recaptchaToken) {
+      return {
+        success: false,
+        message: "Please complete the reCAPTCHA verification",
+        errors: {},
+      }
+    }
+
+    const captchaValid = await verifyCaptcha(recaptchaToken)
+    if (!captchaValid) {
+      return {
+        success: false,
+        message: "reCAPTCHA verification failed. Please try again.",
+        errors: {},
+      }
+    }
+
+    // Validate affiliate code if provided
+    let affiliateInfo = null
+    if (affiliate?.trim()) {
+      affiliateInfo = validateAffiliateCode(affiliate.trim())
+      if (!affiliateInfo) {
+        errors.affiliate = "Invalid affiliate code"
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -57,169 +78,98 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Verify reCAPTCHA
-    if (recaptchaToken) {
-      const captchaResult = await verifyCaptcha(recaptchaToken)
-      if (!captchaResult.success) {
-        return {
-          success: false,
-          message: "reCAPTCHA verification failed. Please try again.",
-          errors: {},
-        }
-      }
-    }
-
-    // Validate affiliate code if provided
-    let affiliateInfo = null
-    if (affiliate?.trim()) {
-      affiliateInfo = validateAffiliate(affiliate.trim())
-      if (!affiliateInfo.isValid) {
-        errors.affiliate = "Invalid affiliate code"
-        return {
-          success: false,
-          message: "Invalid affiliate code provided",
-          errors,
-        }
-      }
-    }
-
     // Prepare email content
-    const adminEmailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">New Contact Form Submission</h2>
-        
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 15px 0;">Contact Information</h3>
-          <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-          <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-          <p><strong>Company:</strong> ${company || "Not provided"}</p>
-          <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+    const emailSubject = `New Contact Form Submission from ${firstName} ${lastName}`
+
+    const emailContent = `
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      ${company ? `<p><strong>Company:</strong> ${company}</p>` : ""}
+      ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+      ${message ? `<p><strong>Message:</strong></p><p>${message.replace(/\n/g, "<br>")}</p>` : ""}
+      
+      ${
+        affiliateInfo
+          ? `
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
+          <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 Affiliate Code Applied</h3>
+          <p><strong>Code:</strong> ${affiliateInfo.code}</p>
+          <p><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
+          <p><strong>Category:</strong> ${affiliateInfo.category}</p>
+          <p><strong>Description:</strong> ${affiliateInfo.description}</p>
         </div>
-
-        ${
-          affiliateInfo?.isValid
-            ? `
-          <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #3b82f6; margin: 20px 0;">
-            <h3 style="color: #1e40af; margin: 0 0 15px 0;">🎯 Affiliate Information</h3>
-            <p style="margin: 5px 0;"><strong>Code:</strong> ${affiliateInfo.code}</p>
-            <p style="margin: 5px 0;"><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
-            <p style="margin: 5px 0;"><strong>Type:</strong> ${affiliateInfo.type}</p>
-            <p style="margin: 5px 0;"><strong>Description:</strong> ${affiliateInfo.description}</p>
-          </div>
-        `
-            : ""
-        }
-
-        ${
-          message
-            ? `
-          <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #92400e; margin: 0 0 15px 0;">Message</h3>
-            <p style="white-space: pre-wrap;">${message}</p>
-          </div>
-        `
-            : ""
-        }
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        
-        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px;">
-          <h3 style="color: #374151; margin: 0 0 10px 0;">Visitor Tracking Information</h3>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>Referrer:</strong> ${referrer || "Direct"}</p>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>UTM Source:</strong> ${utmSource || "None"}</p>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>UTM Campaign:</strong> ${utmCampaign || "None"}</p>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>Page Views:</strong> ${pageViews || "Unknown"}</p>
-          <p style="margin: 5px 0; font-size: 14px;"><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
-        </div>
-
-        ${
-          affiliateInfo?.isValid
-            ? `
-          <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #166534; margin: 0 0 15px 0;">⚠️ Action Required</h3>
-            <p style="margin: 0;"><strong>Apply ${affiliateInfo.discount}% affiliate discount to any proposals for this prospect.</strong></p>
-          </div>
-        `
-            : ""
-        }
-      </div>
+      `
+          : ""
+      }
+      
+      <hr style="margin: 20px 0;">
+      <p style="color: #666; font-size: 12px;">
+        Submitted at: ${new Date().toLocaleString()}<br>
+        IP: ${process.env.VERCEL_FORWARDED_FOR || "Unknown"}
+      </p>
     `
 
-    const userEmailContent = `
+    // Send email notification
+    await sendEmail({
+      to: "contact@kuhlekt.com",
+      subject: emailSubject,
+      html: emailContent,
+    })
+
+    // Send confirmation email to user
+    const confirmationSubject = "Thank you for contacting Kuhlekt!"
+    const confirmationContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1e40af;">Thank you for contacting Kuhlekt!</h2>
+        <h2 style="color: #1e40af;">Thank you for your interest in Kuhlekt!</h2>
         
         <p>Dear ${firstName},</p>
         
-        <p>Thank you for reaching out to us. We have received your message and will get back to you within 24 hours with a personalized response.</p>
+        <p>We've received your contact form submission and appreciate your interest in our AR automation solutions.</p>
         
         ${
-          affiliateInfo?.isValid
+          affiliateInfo
             ? `
-          <div style="background-color: #f0fdf4; padding: 20px; border-left: 4px solid #22c55e; margin: 20px 0;">
-            <h3 style="color: #16a34a; margin: 0 0 15px 0;">🎉 Affiliate Discount Applied!</h3>
-            <p style="margin: 5px 0;">Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated.</p>
-            <p style="margin: 5px 0;">You're eligible for a <strong>${affiliateInfo.discount}% discount</strong> on our services!</p>
-            <p style="margin: 5px 0;">${affiliateInfo.description}</p>
-            <p style="margin: 5px 0;">Our team will include this discount in your personalized quote.</p>
+          <div style="background-color: #dcfce7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #166534; margin: 0 0 10px 0;">🎉 Great news!</h3>
+            <p>Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated and you're eligible for <strong>${affiliateInfo.discount}% off</strong> our services!</p>
+            <p>We'll make sure to apply this discount when we prepare your custom proposal.</p>
           </div>
         `
             : ""
         }
         
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 15px 0;">Your Submission Summary</h3>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li><strong>Name:</strong> ${firstName} ${lastName}</li>
-            <li><strong>Email:</strong> ${email}</li>
-            <li><strong>Company:</strong> ${company || "Not provided"}</li>
-            <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
-          </ul>
-        </div>
+        <h3>What happens next?</h3>
+        <ul>
+          <li>Our team will review your submission within 24 hours</li>
+          <li>We'll reach out to schedule a personalized consultation</li>
+          <li>You'll receive a custom proposal tailored to your needs</li>
+        </ul>
         
-        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #92400e; margin: 0 0 15px 0;">What Happens Next?</h3>
-          <ol style="margin: 0; padding-left: 20px;">
-            <li>Our team will review your inquiry within 24 hours</li>
-            <li>We'll prepare a personalized response based on your needs</li>
-            <li>You'll receive a detailed follow-up with next steps</li>
-            <li>We can schedule a demo or consultation if appropriate</li>
-          </ol>
-        </div>
-        
-        <p>In the meantime, feel free to explore our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/solutions" style="color: #3b82f6;">solutions page</a> to learn more about our AR automation capabilities.</p>
+        <p>In the meantime, feel free to explore our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/solutions" style="color: #1e40af;">solutions page</a> to learn more about how we can help streamline your accounts receivable process.</p>
         
         <p>Best regards,<br>
-        <strong>The Kuhlekt Team</strong></p>
+        The Kuhlekt Team</p>
         
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        
-        <div style="text-align: center; color: #6b7280; font-size: 12px;">
-          <p>Kuhlekt - AR Automation Solutions</p>
-          <p>This email was sent in response to your contact form submission.</p>
-        </div>
+        <p style="color: #6b7280; font-size: 14px;">
+          Kuhlekt - AR Automation & Digital Collections<br>
+          Email: contact@kuhlekt.com | Phone: 1-800-KUHLEKT<br>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #1e40af;">Visit our website</a>
+        </p>
       </div>
     `
 
-    // Send emails
-    await Promise.all([
-      sendEmailWithSES({
-        to: [process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com"],
-        subject: `New Contact Form Submission - ${firstName} ${lastName}${affiliateInfo?.isValid ? ` (${affiliateInfo.code} - ${affiliateInfo.discount}% discount)` : ""}`,
-        body: adminEmailContent,
-        replyTo: email,
-      }),
-      sendEmailWithSES({
-        to: [email],
-        subject: `Thank you for contacting Kuhlekt!${affiliateInfo?.isValid ? ` (${affiliateInfo.discount}% Discount Applied)` : ""}`,
-        body: userEmailContent,
-      }),
-    ])
+    await sendEmail({
+      to: email,
+      subject: confirmationSubject,
+      html: confirmationContent,
+    })
 
     return {
       success: true,
-      message: affiliateInfo?.isValid
-        ? `Thank you for your message! We'll be in touch within 24 hours. Your affiliate code ${affiliateInfo.code} has been applied for a ${affiliateInfo.discount}% discount.`
+      message: affiliateInfo
+        ? `Thank you for your message! We've validated your affiliate code ${affiliateInfo.code} for ${affiliateInfo.discount}% off. We'll be in touch within 24 hours.`
         : "Thank you for your message! We'll be in touch within 24 hours.",
       errors: {},
     }
@@ -227,155 +177,23 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      message:
-        "There was an error sending your message. Please try again later or contact us directly at contact@kuhlekt.com.",
+      message: "There was an error sending your message. Please try again or contact us directly.",
       errors: {},
     }
   }
 }
 
+// Test function for AWS SES
 export async function testAWSSES() {
   try {
-    console.log("Testing AWS SES connection...")
-
-    // Check environment variables
-    const region = process.env.AWS_SES_REGION
-    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-    const fromEmail = process.env.AWS_SES_FROM_EMAIL
-
-    const envCheck = {
-      region: !!region,
-      accessKey: !!accessKeyId,
-      secretKey: !!secretAccessKey,
-      fromEmail: !!fromEmail,
-    }
-
-    console.log("Environment variables status:", envCheck)
-
-    // Check if all required variables are present
-    const allConfigured = Object.values(envCheck).every(Boolean)
-
-    if (!allConfigured) {
-      return {
-        success: false,
-        message: "AWS SES is not fully configured. Missing environment variables.",
-        details: envCheck,
-      }
-    }
-
-    // Test connection by attempting to get send quota
-    try {
-      const endpoint = `https://email.${region}.amazonaws.com/`
-
-      // Create test parameters
-      const testParams = new URLSearchParams({
-        Action: "GetSendQuota",
-        Version: "2010-12-01",
-      })
-
-      // Create AWS signature v4
-      const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
-      const date = timestamp.substr(0, 8)
-
-      const method = "POST"
-      const canonicalUri = "/"
-      const canonicalQueryString = ""
-      const canonicalHeaders = `host:email.${region}.amazonaws.com\nx-amz-date:${timestamp}\n`
-      const signedHeaders = "host;x-amz-date"
-
-      const payload = testParams.toString()
-
-      const algorithm = "AWS4-HMAC-SHA256"
-      const credentialScope = `${date}/${region}/ses/aws4_request`
-      const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(payload)}`
-      const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
-
-      const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-      const kRegion = await hmacSha256(kDate, region)
-      const kService = await hmacSha256(kRegion, "ses")
-      const kSigning = await hmacSha256(kService, "aws4_request")
-
-      const signature = await hmacSha256(kSigning, stringToSign, "hex")
-      const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Amz-Date": timestamp,
-          Authorization: authorization,
-        },
-        body: payload,
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("AWS SES test failed:", errorText)
-        return {
-          success: false,
-          message: `AWS SES test failed: ${response.status} ${response.statusText}`,
-          details: envCheck,
-        }
-      }
-
-      const responseText = await response.text()
-      console.log("AWS SES test successful:", responseText)
-
-      return {
-        success: true,
-        message: `AWS SES is working correctly!\n\nConfiguration Details:\n- Region: ${region}\n- From Email: ${fromEmail}\n\nThe email system is ready to use!`,
-        details: envCheck,
-      }
-    } catch (testError) {
-      console.error("AWS SES test error:", testError)
-      return {
-        success: false,
-        message: `AWS SES test failed: ${testError instanceof Error ? testError.message : "Unknown error"}`,
-        details: envCheck,
-      }
-    }
+    await sendEmail({
+      to: "test@example.com",
+      subject: "AWS SES Test Email",
+      html: "<h1>Test Email</h1><p>This is a test email from AWS SES.</p>",
+    })
+    return { success: true, message: "Test email sent successfully!" }
   } catch (error) {
-    console.error("Test function error:", error)
-    return {
-      success: false,
-      message: `Test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      details: {
-        region: false,
-        accessKey: false,
-        secretKey: false,
-        fromEmail: false,
-      },
-    }
+    console.error("AWS SES test error:", error)
+    return { success: false, message: "Failed to send test email", error: error.message }
   }
-}
-
-// Helper functions for AWS signature
-async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-}
-
-async function hmacSha256(
-  key: string | Uint8Array,
-  message: string,
-  encoding: "hex" | "binary" = "binary",
-): Promise<string | Uint8Array> {
-  const keyBuffer = typeof key === "string" ? new TextEncoder().encode(key) : key
-  const messageBuffer = new TextEncoder().encode(message)
-
-  const cryptoKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
-
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageBuffer)
-  const signatureArray = new Uint8Array(signature)
-
-  if (encoding === "hex") {
-    return Array.from(signatureArray)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-  }
-
-  return signatureArray
 }

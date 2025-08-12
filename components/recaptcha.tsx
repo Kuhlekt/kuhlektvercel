@@ -1,81 +1,68 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Script from "next/script"
-import { getRecaptchaConfig } from "@/lib/recaptcha-actions"
+import { useEffect, useRef } from "react"
 
-interface RecaptchaProps {
+interface ReCAPTCHAProps {
   onVerify: (token: string) => void
-  onExpire?: () => void
-  onError?: () => void
-}
-
-interface RecaptchaConfig {
-  siteKey: string
-  isEnabled: boolean
-}
-
-export function Recaptcha({ onVerify, onExpire, onError }: RecaptchaProps) {
-  const [config, setConfig] = useState<RecaptchaConfig | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    getRecaptchaConfig()
-      .then(setConfig)
-      .catch((error) => {
-        console.error("Failed to load reCAPTCHA config:", error)
-        setConfig({ siteKey: "", isEnabled: false })
-      })
-  }, [])
-
-  useEffect(() => {
-    if (isLoaded && config?.isEnabled && config.siteKey && typeof window !== "undefined" && window.grecaptcha) {
-      try {
-        const widgetId = window.grecaptcha.render("recaptcha-container", {
-          sitekey: config.siteKey,
-          callback: onVerify,
-          "expired-callback": onExpire,
-          "error-callback": onError,
-        })
-
-        return () => {
-          if (typeof window !== "undefined" && window.grecaptcha && widgetId !== undefined) {
-            try {
-              window.grecaptcha.reset(widgetId)
-            } catch (e) {
-              // Ignore reset errors
-            }
-          }
-        }
-      } catch (error) {
-        console.error("reCAPTCHA render error:", error)
-      }
-    }
-  }, [isLoaded, config, onVerify, onExpire, onError])
-
-  if (!config?.isEnabled || !config.siteKey) {
-    return null
-  }
-
-  return (
-    <>
-      <Script
-        src="https://www.google.com/recaptcha/api.js"
-        onLoad={() => setIsLoaded(true)}
-        onError={() => console.error("Failed to load reCAPTCHA script")}
-      />
-      <div id="recaptcha-container" />
-    </>
-  )
-}
-
-// Default export for compatibility
-export default function ReCAPTCHA({ onVerify, onExpire, onError }: RecaptchaProps) {
-  return <Recaptcha onVerify={onVerify} onExpire={onExpire} onError={onError} />
 }
 
 declare global {
   interface Window {
-    grecaptcha: any
+    grecaptcha: {
+      ready: (callback: () => void) => void
+      render: (
+        container: string | HTMLElement,
+        options: {
+          sitekey: string
+          callback: (token: string) => void
+          "expired-callback": () => void
+          "error-callback": () => void
+        },
+      ) => number
+      reset: (widgetId?: number) => void
+    }
   }
 }
+
+export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
+  const recaptchaRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const loadRecaptcha = () => {
+      if (window.grecaptcha && recaptchaRef.current) {
+        widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
+          sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI", // Test key
+          callback: onVerify,
+          "expired-callback": () => onVerify(""),
+          "error-callback": () => onVerify(""),
+        })
+      }
+    }
+
+    if (window.grecaptcha) {
+      window.grecaptcha.ready(loadRecaptcha)
+    } else {
+      // Load reCAPTCHA script
+      const script = document.createElement("script")
+      script.src = "https://www.google.com/recaptcha/api.js"
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        window.grecaptcha.ready(loadRecaptcha)
+      }
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      if (widgetIdRef.current !== null && window.grecaptcha) {
+        window.grecaptcha.reset(widgetIdRef.current)
+      }
+    }
+  }, [onVerify])
+
+  return <div ref={recaptchaRef} className="flex justify-center" />
+}
+
+// Named export for compatibility
+export { ReCAPTCHA }

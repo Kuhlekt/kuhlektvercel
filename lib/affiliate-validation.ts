@@ -1,247 +1,110 @@
 // Affiliate validation system for Kuhlekt
-export interface AffiliateInfo {
+export interface AffiliateCode {
   code: string
   discount: number
-  type: string
+  category: string
   description: string
-  isValid: boolean
+  active: boolean
 }
 
-// Predefined affiliate codes with their respective discounts and types
-const AFFILIATE_CODES: Record<string, Omit<AffiliateInfo, "isValid">> = {
-  // Startup and Growth codes
-  STARTUP50: {
-    code: "STARTUP50",
-    discount: 50,
-    type: "Startup",
-    description: "Special 50% discount for startup companies",
-  },
-  GROWTH25: {
-    code: "GROWTH25",
-    discount: 25,
-    type: "Growth",
-    description: "25% discount for growing businesses",
-  },
-  SMB40: {
+export const AFFILIATE_CODES: AffiliateCode[] = [
+  // Startup & Growth
+  { code: "STARTUP50", discount: 50, category: "startup", description: "50% off for startups", active: true },
+  { code: "GROWTH25", discount: 25, category: "startup", description: "25% off for growing businesses", active: true },
+  {
     code: "SMB40",
     discount: 40,
-    type: "Small Business",
-    description: "40% discount for small and medium businesses",
+    category: "startup",
+    description: "40% off for small-medium businesses",
+    active: true,
   },
+  { code: "EARLY45", discount: 45, category: "startup", description: "45% off for early adopters", active: true },
+  { code: "BETA35", discount: 35, category: "startup", description: "35% off for beta participants", active: true },
 
-  // Industry-specific codes
-  HEALTHCARE: {
+  // Industry Specific
+  {
     code: "HEALTHCARE",
     discount: 15,
-    type: "Industry",
-    description: "Healthcare industry discount",
+    category: "industry",
+    description: "15% off for healthcare organizations",
+    active: true,
   },
-  MANUFACTURING: {
+  {
     code: "MANUFACTURING",
     discount: 20,
-    type: "Industry",
-    description: "Manufacturing industry discount",
+    category: "industry",
+    description: "20% off for manufacturing companies",
+    active: true,
   },
-  NONPROFIT: {
+  {
     code: "NONPROFIT",
     discount: 30,
-    type: "Industry",
-    description: "Non-profit organization discount",
+    category: "industry",
+    description: "30% off for non-profit organizations",
+    active: true,
   },
-  EDUCATION: {
+  {
     code: "EDUCATION",
     discount: 35,
-    type: "Industry",
-    description: "Educational institution discount",
+    category: "industry",
+    description: "35% off for educational institutions",
+    active: true,
   },
-  GOVERNMENT: {
+  {
     code: "GOVERNMENT",
     discount: 25,
-    type: "Industry",
-    description: "Government agency discount",
+    category: "industry",
+    description: "25% off for government agencies",
+    active: true,
   },
 
-  // Partner codes
-  PARTNER001: {
+  // Partners & Channels
+  {
     code: "PARTNER001",
     discount: 20,
-    type: "Partner",
-    description: "Certified partner discount",
+    category: "partner",
+    description: "20% off for strategic partners",
+    active: true,
   },
-  PARTNER002: {
-    code: "PARTNER002",
-    discount: 25,
-    type: "Partner",
-    description: "Premium partner discount",
-  },
-  RESELLER01: {
-    code: "RESELLER01",
-    discount: 30,
-    type: "Reseller",
-    description: "Authorized reseller discount",
-  },
-  CHANNEL01: {
-    code: "CHANNEL01",
-    discount: 25,
-    type: "Channel",
-    description: "Channel partner discount",
-  },
-
-  // Promotional codes
-  DISCOUNT20: {
-    code: "DISCOUNT20",
-    discount: 20,
-    type: "Promotional",
-    description: "Limited time 20% discount",
-  },
-  PROMO2024: {
-    code: "PROMO2024",
-    discount: 15,
-    type: "Promotional",
-    description: "2024 promotional discount",
-  },
-  WELCOME15: {
-    code: "WELCOME15",
-    discount: 15,
-    type: "Welcome",
-    description: "Welcome discount for new customers",
-  },
-  SPECIAL01: {
-    code: "SPECIAL01",
-    discount: 30,
-    type: "Special",
-    description: "Special event discount",
-  },
-
-  // VIP and Premium codes
-  VIP30: {
-    code: "VIP30",
-    discount: 30,
-    type: "VIP",
-    description: "VIP customer discount",
-  },
-  PREMIUM15: {
-    code: "PREMIUM15",
-    discount: 15,
-    type: "Premium",
-    description: "Premium service discount",
-  },
-  ENTERPRISE: {
-    code: "ENTERPRISE",
-    discount: 10,
-    type: "Enterprise",
-    description: "Enterprise customer discount",
-  },
-
-  // Referral and loyalty codes
-  REFERRAL10: {
-    code: "REFERRAL10",
-    discount: 10,
-    type: "Referral",
-    description: "Customer referral discount",
-  },
-  LOYALTY25: {
-    code: "LOYALTY25",
-    discount: 25,
-    type: "Loyalty",
-    description: "Loyalty program discount",
-  },
-
-  // Beta and early access codes
-  BETA35: {
-    code: "BETA35",
-    discount: 35,
-    type: "Beta",
-    description: "Beta tester discount",
-  },
-  EARLY45: {
-    code: "EARLY45",
-    discount: 45,
-    type: "Early Access",
-    description: "Early access customer discount",
-  },
-
-  // Legacy codes
-  AFFILIATE01: {
+  { code: "PARTNER002", discount: 25, category: "partner", description: "25% off for premium partners", active: true },
+  { code: "RESELLER01", discount: 30, category: "partner", description: "30% off for reseller partners", active: true },
+  { code: "CHANNEL01", discount: 25, category: "partner", description: "25% off for channel partners", active: true },
+  {
     code: "AFFILIATE01",
-    discount: 20,
-    type: "Affiliate",
-    description: "General affiliate discount",
+    discount: 15,
+    category: "partner",
+    description: "15% off for affiliate partners",
+    active: true,
   },
-}
+
+  // Promotional
+  { code: "PROMO2024", discount: 15, category: "promotional", description: "15% off promotional offer", active: true },
+  { code: "SPECIAL01", discount: 20, category: "promotional", description: "20% off special promotion", active: true },
+  { code: "WELCOME15", discount: 15, category: "promotional", description: "15% off welcome offer", active: true },
+  { code: "DISCOUNT20", discount: 20, category: "promotional", description: "20% off general discount", active: true },
+  { code: "REFERRAL10", discount: 10, category: "promotional", description: "10% off referral bonus", active: true },
+
+  // VIP & Premium
+  { code: "VIP30", discount: 30, category: "vip", description: "30% off for VIP customers", active: true },
+  { code: "PREMIUM15", discount: 15, category: "vip", description: "15% off for premium customers", active: true },
+  { code: "ENTERPRISE", discount: 10, category: "vip", description: "10% off for enterprise customers", active: true },
+  { code: "LOYALTY25", discount: 25, category: "vip", description: "25% off loyalty reward", active: true },
+]
 
 /**
  * Validates an affiliate code and returns affiliate information
  * @param code - The affiliate code to validate
- * @returns AffiliateInfo object with validation result
+ * @returns AffiliateCode object with validation result or null if invalid
  */
-export function validateAffiliate(code: string): AffiliateInfo {
+export function validateAffiliateCode(code: string): AffiliateCode | null {
   if (!code || typeof code !== "string") {
-    return {
-      code: "",
-      discount: 0,
-      type: "",
-      description: "",
-      isValid: false,
-    }
+    return null
   }
 
   const normalizedCode = code.trim().toUpperCase()
-  const affiliateData = AFFILIATE_CODES[normalizedCode]
+  const affiliateCode = AFFILIATE_CODES.find((ac) => ac.code === normalizedCode && ac.active)
 
-  if (affiliateData) {
-    return {
-      ...affiliateData,
-      isValid: true,
-    }
-  }
-
-  return {
-    code: normalizedCode,
-    discount: 0,
-    type: "",
-    description: "Invalid affiliate code",
-    isValid: false,
-  }
-}
-
-/**
- * Gets all available affiliate codes (for admin purposes)
- * @returns Array of all affiliate codes
- */
-export function getAllAffiliateCodes(): AffiliateInfo[] {
-  return Object.values(AFFILIATE_CODES).map((code) => ({
-    ...code,
-    isValid: true,
-  }))
-}
-
-/**
- * Gets affiliate codes by type
- * @param type - The type of affiliate codes to retrieve
- * @returns Array of affiliate codes of the specified type
- */
-export function getAffiliateCodesByType(type: string): AffiliateInfo[] {
-  return Object.values(AFFILIATE_CODES)
-    .filter((code) => code.type.toLowerCase() === type.toLowerCase())
-    .map((code) => ({
-      ...code,
-      isValid: true,
-    }))
-}
-
-/**
- * Checks if an affiliate code exists
- * @param code - The affiliate code to check
- * @returns boolean indicating if the code exists
- */
-export function affiliateCodeExists(code: string): boolean {
-  if (!code || typeof code !== "string") {
-    return false
-  }
-
-  const normalizedCode = code.trim().toUpperCase()
-  return normalizedCode in AFFILIATE_CODES
+  return affiliateCode || null
 }
 
 /**
@@ -250,6 +113,23 @@ export function affiliateCodeExists(code: string): boolean {
  * @returns The discount percentage (0 if invalid)
  */
 export function getAffiliateDiscount(code: string): number {
-  const affiliate = validateAffiliate(code)
-  return affiliate.isValid ? affiliate.discount : 0
+  const affiliateCode = validateAffiliateCode(code)
+  return affiliateCode ? affiliateCode.discount : 0
+}
+
+/**
+ * Gets affiliate codes by category
+ * @param category - The category of affiliate codes to retrieve
+ * @returns Array of affiliate codes of the specified category
+ */
+export function getAffiliatesByCategory(category: string): AffiliateCode[] {
+  return AFFILIATE_CODES.filter((ac) => ac.category === category && ac.active)
+}
+
+/**
+ * Gets all active affiliate codes (for admin purposes)
+ * @returns Array of all active affiliate codes
+ */
+export function getAllActiveAffiliateCodes(): AffiliateCode[] {
+  return AFFILIATE_CODES.filter((ac) => ac.active)
 }

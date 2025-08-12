@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
+import { useFormState } from "react-dom"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +21,8 @@ const initialState = {
 }
 
 export default function ContactPage() {
-  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
+  const [state, formAction] = useFormState(submitContactForm, initialState)
+  const [isPending, setIsPending] = useState(false)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
   const [affiliateCode, setAffiliateCode] = useState("")
   const [affiliateStatus, setAffiliateStatus] = useState<"valid" | "invalid" | null>(null)
@@ -31,6 +33,7 @@ export default function ContactPage() {
       setRecaptchaToken("")
       setAffiliateCode("")
       setAffiliateStatus(null)
+      setIsPending(false)
       // Reset form
       const form = document.getElementById("contact-form") as HTMLFormElement
       if (form) {
@@ -77,6 +80,12 @@ export default function ContactPage() {
     }
   }, [affiliateCode])
 
+  const handleSubmit = async (formData: FormData) => {
+    setIsPending(true)
+    await formAction(formData)
+    setIsPending(false)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <VisitorTracker />
@@ -117,7 +126,7 @@ export default function ContactPage() {
                   </Alert>
                 )}
 
-                <form id="contact-form" action={formAction} className="space-y-6">
+                <form id="contact-form" action={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="firstName">First Name *</Label>
