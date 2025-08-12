@@ -45,7 +45,6 @@ export default function ContactPage() {
       formData.append("recaptchaToken", recaptchaToken)
     }
 
-    // Add visitor tracking data if available
     if (typeof window !== "undefined") {
       try {
         const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
@@ -55,7 +54,12 @@ export default function ContactPage() {
           formData.append("utmSource", visitorData.utmSource || "")
           formData.append("utmCampaign", visitorData.utmCampaign || "")
           formData.append("pageViews", visitorData.pageViews?.toString() || "")
+          formData.append("sessionId", visitorData.sessionId || "")
+          formData.append("landingPage", visitorData.landingPage || "")
         }
+
+        // Add user agent and current page info
+        formData.append("userAgent", navigator.userAgent || "")
       } catch (error) {
         console.error("Error adding visitor data to form:", error)
       }
@@ -110,6 +114,18 @@ export default function ContactPage() {
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input id="phone" name="phone" type="tel" className="mt-1" disabled={isPending} />
+              </div>
+
+              <div>
+                <Label htmlFor="affiliate">Affiliate Code (Optional)</Label>
+                <Input
+                  id="affiliate"
+                  name="affiliate"
+                  type="text"
+                  placeholder="Enter affiliate code if you have one"
+                  className="mt-1"
+                  disabled={isPending}
+                />
               </div>
 
               <div>

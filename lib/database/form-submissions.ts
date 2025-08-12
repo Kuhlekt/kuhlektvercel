@@ -26,6 +26,7 @@ export interface FormSubmissionData {
   ipAddress?: string
   userAgent?: string
   formData?: Record<string, any>
+  status?: "new" | "contacted" | "qualified" | "converted" | "closed"
 }
 
 export async function createFormSubmission(submissionData: FormSubmissionData) {
@@ -62,6 +63,7 @@ export async function createFormSubmission(submissionData: FormSubmissionData) {
         ip_address: submissionData.ipAddress,
         user_agent: submissionData.userAgent,
         form_data: submissionData.formData,
+        status: submissionData.status || "new",
       })
       .select()
       .single()
@@ -73,36 +75,60 @@ export async function createFormSubmission(submissionData: FormSubmissionData) {
 
     return { success: true, data }
   } catch (error) {
-    console.error("Unexpected error in createFormSubmission:", error)
-    return { success: false, error: "Unexpected error occurred" }
+    console.error("Database error:", error)
+    return { success: false, error: "Database operation failed" }
   }
 }
 
-export async function getFormSubmissions(limit = 50, offset = 0) {
+export async function getFormSubmissions(filters?: {
+  formType?: string
+  status?: string
+  affiliateId?: string
+  limit?: number
+  offset?: number
+}) {
   const supabase = createServerClient()
   if (!supabase) {
+    console.warn("Supabase not configured")
     return { success: false, error: "Database not configured" }
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("form_submitters")
       .select(`
         *,
-        visitors (session_id, landing_page, referrer),
-        affiliates (affiliate_code, affiliate_name)
+        visitors (session_id, referrer, landing_page, country, city),
+        affiliates (affiliate_code, affiliate_name, company)
       `)
       .order("submitted_at", { ascending: false })
-      .range(offset, offset + limit - 1)
+
+    if (filters?.formType) {
+      query = query.eq("form_type", filters.formType)
+    }
+    if (filters?.status) {
+      query = query.eq("status", filters.status)
+    }
+    if (filters?.affiliateId) {
+      query = query.eq("affiliate_id", filters.affiliateId)
+    }
+    if (filters?.limit) {
+      query = query.limit(filters.limit)
+    }
+    if (filters?.offset) {
+      query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1)
+    }
+
+    const { data, error } = await query
 
     if (error) {
-      console.error("Error getting form submissions:", error)
+      console.error("Error fetching form submissions:", error)
       return { success: false, error: error.message }
     }
 
     return { success: true, data }
   } catch (error) {
-    console.error("Unexpected error in getFormSubmissions:", error)
-    return { success: false, error: "Unexpected error occurred" }
+    console.error("Database error:", error)
+    return { success: false, error: "Database operation failed" }
   }
 }

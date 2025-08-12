@@ -2,8 +2,8 @@
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
+import { createOrUpdateVisitor } from "@/lib/database/visitors"
 import { validateAffiliateCode } from "@/lib/database/affiliates"
-import { createOrUpdateVisitor, getVisitorBySessionId } from "@/lib/database/visitors"
 import { createFormSubmission } from "@/lib/database/form-submissions"
 import { headers } from "next/headers"
 
@@ -15,13 +15,15 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const role = formData.get("role") as string
     const challenges = formData.get("challenges") as string
-    const affiliate = formData.get("affiliate") as string
     const captchaToken = formData.get("recaptchaToken") as string
     const referrer = formData.get("referrer") as string
     const utmSource = formData.get("utmSource") as string
     const utmCampaign = formData.get("utmCampaign") as string
     const pageViews = formData.get("pageViews") as string
     const sessionId = formData.get("sessionId") as string
+    const userAgent = formData.get("userAgent") as string
+    const landingPage = formData.get("landingPage") as string
+    const affiliate = formData.get("affiliate") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
@@ -51,43 +53,38 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
     const headersList = headers()
     const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown"
-    const userAgent = headersList.get("user-agent") || "unknown"
 
-    let validAffiliate = null
-    let affiliateId = null
-    if (affiliate) {
-      const affiliateResult = await validateAffiliateCode(affiliate)
-      if (affiliateResult.success && affiliateResult.isValid) {
-        validAffiliate = affiliateResult.affiliate
-        affiliateId = validAffiliate?.id
+    let visitorId: string | undefined
+    if (sessionId) {
+      const visitorResult = await createOrUpdateVisitor({
+        sessionId,
+        ipAddress,
+        userAgent,
+        referrer,
+        landingPage,
+        pageViews: Number.parseInt(pageViews) || 1,
+      })
+
+      if (visitorResult.success && visitorResult.data) {
+        visitorId = visitorResult.data.id
       }
     }
 
-    let visitorId = null
-    if (sessionId) {
-      // Try to get existing visitor
-      const visitorResult = await getVisitorBySessionId(sessionId)
-      if (visitorResult.success && visitorResult.data) {
-        visitorId = visitorResult.data.id
-      } else {
-        // Create new visitor record
-        const newVisitorResult = await createOrUpdateVisitor({
-          sessionId,
-          ipAddress,
-          userAgent,
-          referrer,
-          landingPage: referrer || "direct",
-          pageViews: Number.parseInt(pageViews) || 1,
-        })
-        if (newVisitorResult.success) {
-          visitorId = newVisitorResult.data?.id
+    let validAffiliate: { id: string; code: string; name: string } | null = null
+    if (affiliate) {
+      const affiliateResult = await validateAffiliateCode(affiliate)
+      if (affiliateResult.success && affiliateResult.affiliate) {
+        validAffiliate = {
+          id: affiliateResult.affiliate.id,
+          code: affiliateResult.affiliate.affiliateCode,
+          name: affiliateResult.affiliate.affiliateName,
         }
       }
     }
 
     const submissionResult = await createFormSubmission({
       visitorId,
-      affiliateId,
+      affiliateId: validAffiliate?.id,
       formType: "demo",
       firstName,
       lastName,
@@ -95,7 +92,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       company,
       message: challenges,
       affiliateReference: affiliate,
-      sourcePage: "/demo",
+      sourcePage: landingPage || referrer,
       utmSource,
       utmCampaign,
       ipAddress,
@@ -127,6 +124,9 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       utmSource: utmSource || "Not available",
       utmCampaign: utmCampaign || "Not available",
       pageViews: pageViews || "Not available",
+      affiliate: validAffiliate,
+      sessionId,
+      ipAddress,
     }
 
     console.log("Processing demo request:", {
@@ -134,6 +134,8 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       email,
       company,
       captchaVerified: true,
+      affiliate: validAffiliate?.code,
+      databaseStored: submissionResult.success,
     })
 
     // Try to send email using AWS SDK
@@ -149,23 +151,23 @@ Contact Information:
 - Email: ${email}
 - Company: ${company}
 - Role: ${role || "Not specified"}
-${validAffiliate ? `- Affiliate: ${validAffiliate.affiliate_code} (${validAffiliate.affiliate_name || "Unknown"})` : ""}
+${validAffiliate ? `- Affiliate: ${validAffiliate.code} (${validAffiliate.name})` : ""}
 
 Challenges:
 ${challenges || "Not specified"}
 
 Visitor Tracking:
+- Session ID: ${sessionId || "Not available"}
+- IP Address: ${ipAddress}
 - Referrer: ${referrer || "Not available"}
 - UTM Source: ${utmSource || "Not available"}
 - UTM Campaign: ${utmCampaign || "Not available"}
 - Page Views: ${pageViews || "Not available"}
-- Session ID: ${sessionId || "Not available"}
-- IP Address: ${ipAddress}
-
-Database Record: ${submissionResult.success ? `ID ${submissionResult.data?.id}` : "Failed to store"}
+- Landing Page: ${landingPage || "Not available"}
 
 Security:
 - CAPTCHA Verified: Yes
+- Database Status: ${submissionResult.success ? "Stored successfully" : "Storage failed"}
 - Timestamp: ${demoData.timestamp}
 
 Please follow up with this prospect to schedule a demo.

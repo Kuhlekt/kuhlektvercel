@@ -2,13 +2,10 @@
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
+import { createOrUpdateVisitor } from "@/lib/database/visitors"
 import { validateAffiliateCode } from "@/lib/database/affiliates"
-import { createOrUpdateVisitor, getVisitorBySessionId } from "@/lib/database/visitors"
 import { createFormSubmission } from "@/lib/database/form-submissions"
 import { headers } from "next/headers"
-
-// Predefined affiliate table for validation
-const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
 
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
@@ -26,6 +23,8 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const utmCampaign = formData.get("utmCampaign") as string
     const pageViews = formData.get("pageViews") as string
     const sessionId = formData.get("sessionId") as string
+    const userAgent = formData.get("userAgent") as string
+    const landingPage = formData.get("landingPage") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
@@ -48,43 +47,38 @@ export async function submitContactForm(prevState: any, formData: FormData) {
 
     const headersList = headers()
     const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown"
-    const userAgent = headersList.get("user-agent") || "unknown"
 
-    let validAffiliate = null
-    let affiliateId = null
-    if (affiliate) {
-      const affiliateResult = await validateAffiliateCode(affiliate)
-      if (affiliateResult.success && affiliateResult.isValid) {
-        validAffiliate = affiliateResult.affiliate
-        affiliateId = validAffiliate?.id
+    let visitorId: string | undefined
+    if (sessionId) {
+      const visitorResult = await createOrUpdateVisitor({
+        sessionId,
+        ipAddress,
+        userAgent,
+        referrer,
+        landingPage,
+        pageViews: Number.parseInt(pageViews) || 1,
+      })
+
+      if (visitorResult.success && visitorResult.data) {
+        visitorId = visitorResult.data.id
       }
     }
 
-    let visitorId = null
-    if (sessionId) {
-      // Try to get existing visitor
-      const visitorResult = await getVisitorBySessionId(sessionId)
-      if (visitorResult.success && visitorResult.data) {
-        visitorId = visitorResult.data.id
-      } else {
-        // Create new visitor record
-        const newVisitorResult = await createOrUpdateVisitor({
-          sessionId,
-          ipAddress,
-          userAgent,
-          referrer,
-          landingPage: referrer || "direct",
-          pageViews: Number.parseInt(pageViews) || 1,
-        })
-        if (newVisitorResult.success) {
-          visitorId = newVisitorResult.data?.id
+    let validAffiliate: { id: string; code: string; name: string } | null = null
+    if (affiliate) {
+      const affiliateResult = await validateAffiliateCode(affiliate)
+      if (affiliateResult.success && affiliateResult.affiliate) {
+        validAffiliate = {
+          id: affiliateResult.affiliate.id,
+          code: affiliateResult.affiliate.affiliateCode,
+          name: affiliateResult.affiliate.affiliateName,
         }
       }
     }
 
     const submissionResult = await createFormSubmission({
       visitorId,
-      affiliateId,
+      affiliateId: validAffiliate?.id,
       formType: "contact",
       firstName,
       lastName,
@@ -93,7 +87,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       company,
       message,
       affiliateReference: affiliate,
-      sourcePage: "/contact",
+      sourcePage: landingPage || referrer,
       utmSource,
       utmCampaign,
       ipAddress,
@@ -119,19 +113,19 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       Email: ${email}
       Company: ${company || "Not provided"}
       Phone: ${phone || "Not provided"}
-      ${validAffiliate ? `Affiliate: ${validAffiliate.affiliate_code} (${validAffiliate.affiliate_name || "Unknown"})` : ""}
+      ${validAffiliate ? `Affiliate: ${validAffiliate.code} (${validAffiliate.name})` : ""}
       Message: ${message || "No message provided"}
       
       Visitor Tracking:
+      - Session ID: ${sessionId || "Not available"}
+      - IP Address: ${ipAddress}
       - Referrer: ${referrer || "Not available"}
       - UTM Source: ${utmSource || "Not available"}
       - UTM Campaign: ${utmCampaign || "Not available"}
       - Page Views: ${pageViews || "Not available"}
-      - Session ID: ${sessionId || "Not available"}
-      - IP Address: ${ipAddress}
+      - Landing Page: ${landingPage || "Not available"}
       
-      Database Record: ${submissionResult.success ? `ID ${submissionResult.data?.id}` : "Failed to store"}
-      
+      Database Status: ${submissionResult.success ? "Stored successfully" : "Storage failed"}
       Submitted at: ${new Date().toISOString()}
     `
 
