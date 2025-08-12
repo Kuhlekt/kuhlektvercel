@@ -3,7 +3,6 @@
 import { z } from "zod"
 import { sendEmail } from "@/lib/email-service"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/recaptcha-actions"
 
 const demoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -17,6 +16,35 @@ const demoSchema = z.object({
   affiliateCode: z.string().optional(),
   recaptchaToken: z.string().min(1, "Please complete the reCAPTCHA verification"),
 })
+
+async function verifyRecaptcha(token: string): Promise<boolean> {
+  // If no secret key is configured, allow the request (development mode)
+  if (!process.env.RECAPTCHA_SECRET_KEY) {
+    console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification")
+    return true
+  }
+
+  // If it's the development token, allow it
+  if (token === "development-mode") {
+    return true
+  }
+
+  try {
+    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+    })
+
+    const data = await response.json()
+    return data.success
+  } catch (error) {
+    console.error("reCAPTCHA verification error:", error)
+    return false
+  }
+}
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
@@ -36,7 +64,7 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     const validatedData = demoSchema.parse(rawData)
 
     // Verify reCAPTCHA
-    const captchaValid = await verifyCaptcha(validatedData.recaptchaToken)
+    const captchaValid = await verifyRecaptcha(validatedData.recaptchaToken)
     if (!captchaValid) {
       return {
         success: false,
@@ -85,7 +113,8 @@ Submitted at: ${new Date().toLocaleString()}
     await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "demo@kuhlekt.com",
       subject: emailSubject,
-      body: emailBody,
+      text: emailBody,
+      html: emailBody.replace(/\n/g, "<br>"),
     })
 
     // Send confirmation email to prospect
@@ -115,7 +144,8 @@ This is an automated confirmation email. Please do not reply to this message.
     await sendEmail({
       to: validatedData.email,
       subject: confirmationSubject,
-      body: confirmationBody,
+      text: confirmationBody,
+      html: confirmationBody.replace(/\n/g, "<br>"),
     })
 
     return {
