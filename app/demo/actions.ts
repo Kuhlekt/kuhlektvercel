@@ -1,89 +1,72 @@
 "use server"
 
 import { sendEmail } from "@/lib/email-service"
-import { verifyCaptcha } from "@/lib/recaptcha-actions"
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    const captchaToken = formData.get("captcha-token") as string
-
-    // Verify reCAPTCHA
-    const captchaResult = await verifyCaptcha(captchaToken)
-    if (!captchaResult.success) {
-      return {
-        success: false,
-        message: "Please complete the captcha verification.",
-      }
-    }
-
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
     const email = formData.get("email") as string
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
-    const jobTitle = formData.get("jobTitle") as string
-    const companySize = formData.get("companySize") as string
-    const arVolume = formData.get("arVolume") as string
-    const currentSolution = formData.get("currentSolution") as string
-    const challenges = formData.get("challenges") as string
-    const timeline = formData.get("timeline") as string
+    const message = formData.get("message") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email || !company) {
       return {
         success: false,
-        message: "Please fill in all required fields.",
+        error: "Please fill in all required fields",
       }
     }
 
-    // Email validation
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return {
         success: false,
-        message: "Please enter a valid email address.",
+        error: "Please enter a valid email address",
       }
     }
 
-    // Send notification email
-    const emailContent = `
-      New Demo Request Received
-      
-      Contact Information:
-      - Name: ${firstName} ${lastName}
-      - Email: ${email}
-      - Company: ${company}
-      - Phone: ${phone || "Not provided"}
-      - Job Title: ${jobTitle || "Not provided"}
-      
-      Company Details:
-      - Company Size: ${companySize || "Not provided"}
-      - AR Volume: ${arVolume || "Not provided"}
-      - Current Solution: ${currentSolution || "Not provided"}
-      
-      Additional Information:
-      - Challenges: ${challenges || "Not provided"}
-      - Timeline: ${timeline || "Not provided"}
-      
-      Please follow up with this prospect as soon as possible.
-    `
-
+    // Send email notification
     await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "admin@kuhlekt.com",
-      subject: `New Demo Request from ${firstName} ${lastName} at ${company}`,
-      text: emailContent,
-      html: emailContent.replace(/\n/g, "<br>"),
+      subject: `New Demo Request from ${firstName} ${lastName}`,
+      html: `
+        <h2>New Demo Request</h2>
+        <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Company:</strong> ${company}</p>
+        <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message || "No message provided"}</p>
+        <hr>
+        <p><em>Submitted at: ${new Date().toLocaleString()}</em></p>
+      `,
+    })
+
+    // Send confirmation email to user
+    await sendEmail({
+      to: email,
+      subject: "Demo Request Received - Kuhlekt",
+      html: `
+        <h2>Thank you for your demo request!</h2>
+        <p>Hi ${firstName},</p>
+        <p>We've received your demo request and will get back to you within 24 hours.</p>
+        <p>In the meantime, feel free to explore our website to learn more about our AR automation solutions.</p>
+        <p>Best regards,<br>The Kuhlekt Team</p>
+      `,
     })
 
     return {
       success: true,
-      message: "Thank you for your interest! We'll contact you within 24 hours to schedule your demo.",
+      message: "Demo request submitted successfully! We'll contact you soon.",
     }
   } catch (error) {
     console.error("Demo request error:", error)
     return {
       success: false,
-      message: "There was an error processing your request. Please try again or contact us directly.",
+      error: "Failed to submit demo request. Please try again.",
     }
   }
 }

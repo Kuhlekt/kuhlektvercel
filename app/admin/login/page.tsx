@@ -9,20 +9,27 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { loginAdmin } from "./actions"
 
 export default function AdminLoginPage() {
-  const [state, formAction, isPending] = useActionState(loginAdmin, null)
+  const [state, action, isPending] = useActionState(loginAdmin, null)
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Admin Login</CardTitle>
-          <CardDescription>Enter your admin password to access the dashboard</CardDescription>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
+          <CardDescription>Enter your admin credentials to access the dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required disabled={isPending} />
+          <form action={action} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Admin Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Enter admin password"
+                required
+                disabled={isPending}
+              />
             </div>
 
             {state?.error && (
