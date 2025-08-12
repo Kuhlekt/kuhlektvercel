@@ -1,10 +1,24 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, Eye, Clock, MapPin, ExternalLink, BarChart3 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Users, Eye, Clock, MapPin, ExternalLink, BarChart3, Download, Filter, RefreshCw, Search } from "lucide-react"
 
 // Mock visitor data - in a real app, this would come from your database
-const visitorsData = [
+const allVisitorsData = [
   {
     id: 1,
     visitorId: "vis_abc123",
@@ -110,17 +124,211 @@ const visitorsData = [
     ip: "198.51.100.42",
     status: "active",
   },
+  {
+    id: 6,
+    visitorId: "vis_jkl678",
+    sessionId: "ses_mno901",
+    firstVisit: "2024-01-15 14:25:33",
+    lastActivity: "2024-01-15 14:39:18",
+    pageViews: 8,
+    sessionDuration: "13m 45s",
+    pages: ["/", "/solutions", "/product", "/pricing", "/demo", "/contact", "/about", "/help"],
+    referrer: "https://bing.com",
+    utmSource: "bing",
+    utmCampaign: "brand_search",
+    location: {
+      country: "France",
+      countryCode: "FR",
+      region: "Île-de-France",
+      city: "Paris",
+    },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "203.0.113.75",
+    status: "converted",
+    conversion: "Demo Requested",
+  },
+  {
+    id: 7,
+    visitorId: "vis_pqr234",
+    sessionId: "ses_stu567",
+    firstVisit: "2024-01-15 14:24:12",
+    lastActivity: "2024-01-15 14:26:45",
+    pageViews: 2,
+    sessionDuration: "2m 33s",
+    pages: ["/", "/pricing"],
+    referrer: "direct",
+    location: {
+      country: "Japan",
+      countryCode: "JP",
+      region: "Tokyo",
+      city: "Tokyo",
+    },
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    ip: "198.51.100.123",
+    status: "bounced",
+  },
+  {
+    id: 8,
+    visitorId: "vis_vwx890",
+    sessionId: "ses_yza123",
+    firstVisit: "2024-01-15 14:22:55",
+    lastActivity: "2024-01-15 14:44:22",
+    pageViews: 9,
+    sessionDuration: "21m 27s",
+    pages: ["/", "/solutions", "/product", "/pricing", "/demo", "/contact", "/about", "/help", "/solutions"],
+    referrer: "https://google.com",
+    utmSource: "google",
+    utmCampaign: "ar_software",
+    affiliate: "PARTNER002",
+    location: {
+      country: "Brazil",
+      countryCode: "BR",
+      region: "São Paulo",
+      city: "São Paulo",
+    },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "203.0.113.200",
+    status: "converted",
+    conversion: "Contact Form Submitted",
+  },
 ]
 
-const summaryStats = {
-  totalVisitors: visitorsData.length,
-  activeVisitors: visitorsData.filter((v) => v.status === "active").length,
-  convertedVisitors: visitorsData.filter((v) => v.status === "converted").length,
-  avgSessionDuration: "10m 29s",
-  totalPageViews: visitorsData.reduce((sum, visitor) => sum + visitor.pageViews, 0),
-}
-
 export default function AdminVisitorsPage() {
+  const [visitorsData, setVisitorsData] = useState(allVisitorsData)
+  const [filteredVisitors, setFilteredVisitors] = useState(allVisitorsData)
+  const [isRealTimeActive, setIsRealTimeActive] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [countryFilter, setCountryFilter] = useState("all")
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
+
+  // Real-time simulation
+  useEffect(() => {
+    if (!isRealTimeActive) return
+
+    const interval = setInterval(() => {
+      // Simulate real-time updates
+      setVisitorsData((prev) => {
+        const updated = [...prev]
+        // Randomly update last activity for active visitors
+        updated.forEach((visitor) => {
+          if (visitor.status === "active" && Math.random() > 0.7) {
+            visitor.lastActivity = new Date().toLocaleString()
+            visitor.pageViews += Math.floor(Math.random() * 2)
+          }
+        })
+        return updated
+      })
+      setLastUpdate(new Date())
+    }, 5000) // Update every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [isRealTimeActive])
+
+  // Apply filters
+  useEffect(() => {
+    let filtered = visitorsData
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (visitor) =>
+          visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.sessionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.location.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())),
+      )
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((visitor) => visitor.status === statusFilter)
+    }
+
+    // Country filter
+    if (countryFilter !== "all") {
+      filtered = filtered.filter((visitor) => visitor.location.country === countryFilter)
+    }
+
+    setFilteredVisitors(filtered)
+  }, [visitorsData, searchTerm, statusFilter, countryFilter])
+
+  const summaryStats = {
+    totalVisitors: filteredVisitors.length,
+    activeVisitors: filteredVisitors.filter((v) => v.status === "active").length,
+    convertedVisitors: filteredVisitors.filter((v) => v.status === "converted").length,
+    avgSessionDuration: "10m 29s",
+    totalPageViews: filteredVisitors.reduce((sum, visitor) => sum + visitor.pageViews, 0),
+  }
+
+  const exportToCSV = () => {
+    const headers = [
+      "Visitor ID",
+      "Session ID",
+      "First Visit",
+      "Last Activity",
+      "Page Views",
+      "Session Duration",
+      "Status",
+      "Conversion",
+      "Country",
+      "Region",
+      "City",
+      "IP Address",
+      "Referrer",
+      "UTM Source",
+      "UTM Campaign",
+      "Affiliate",
+      "Pages Visited",
+      "User Agent",
+    ]
+
+    const csvData = filteredVisitors.map((visitor) => [
+      visitor.visitorId,
+      visitor.sessionId,
+      visitor.firstVisit,
+      visitor.lastActivity,
+      visitor.pageViews,
+      visitor.sessionDuration,
+      visitor.status,
+      visitor.conversion || "",
+      visitor.location.country,
+      visitor.location.region,
+      visitor.location.city,
+      visitor.ip,
+      visitor.referrer,
+      visitor.utmSource || "",
+      visitor.utmCampaign || "",
+      visitor.affiliate || "",
+      visitor.pages.join("; "),
+      visitor.userAgent,
+    ])
+
+    const csvContent = [headers, ...csvData].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `visitor-data-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("all")
+    setCountryFilter("all")
+    setIsFilterDialogOpen(false)
+  }
+
+  const uniqueCountries = [...new Set(allVisitorsData.map((v) => v.location.country))].sort()
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -129,6 +337,14 @@ export default function AdminVisitorsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Visitor Tracking</h1>
             <p className="text-gray-600">Detailed view of individual visitor sessions and behavior</p>
+            {isRealTimeActive && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm text-green-600">
+                  Real-time active • Last update: {lastUpdate.toLocaleTimeString()}
+                </span>
+              </div>
+            )}
           </div>
           <Button asChild>
             <a href="/admin/tracking" className="flex items-center gap-2">
@@ -192,15 +408,57 @@ export default function AdminVisitorsPage() {
           </Card>
         </div>
 
+        {/* Search and Quick Filters */}
+        <div className="mb-6 flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2 flex-1 min-w-64">
+            <Search className="h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search visitors, locations, referrers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="converted">Converted</SelectItem>
+              <SelectItem value="bounced">Bounced</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={countryFilter} onValueChange={setCountryFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Country" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Countries</SelectItem>
+              {uniqueCountries.map((country) => (
+                <SelectItem key={country} value={country}>
+                  {country}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(searchTerm || statusFilter !== "all" || countryFilter !== "all") && (
+            <Button variant="outline" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          )}
+        </div>
+
         {/* Visitors List */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Visitors</CardTitle>
+            <CardTitle>Recent Visitors ({filteredVisitors.length})</CardTitle>
             <CardDescription>Individual visitor sessions and their activity details</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {visitorsData.map((visitor) => (
+              {filteredVisitors.map((visitor) => (
                 <div key={visitor.id} className="border rounded-lg p-4 bg-white">
                   {/* Visitor Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -305,9 +563,83 @@ export default function AdminVisitorsPage() {
         {/* Action Buttons */}
         <div className="mt-8 flex flex-wrap gap-4 justify-between items-center">
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline">Export Visitor Data</Button>
-            <Button variant="outline">Filter Visitors</Button>
-            <Button variant="outline">Real-time View</Button>
+            <Button onClick={exportToCSV} className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export Visitor Data (CSV)
+            </Button>
+
+            <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+                  <Filter className="w-4 h-4" />
+                  Advanced Filters
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Filter Visitors</DialogTitle>
+                  <DialogDescription>Apply advanced filters to narrow down the visitor list</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="search">Search</Label>
+                    <Input
+                      id="search"
+                      placeholder="Visitor ID, location, referrer..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="converted">Converted</SelectItem>
+                        <SelectItem value="bounced">Bounced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="country">Country</Label>
+                    <Select value={countryFilter} onValueChange={setCountryFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Countries</SelectItem>
+                        {uniqueCountries.map((country) => (
+                          <SelectItem key={country} value={country}>
+                            {country}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={clearFilters} variant="outline" className="flex-1 bg-transparent">
+                      Clear All
+                    </Button>
+                    <Button onClick={() => setIsFilterDialogOpen(false)} className="flex-1">
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant={isRealTimeActive ? "default" : "outline"}
+              onClick={() => setIsRealTimeActive(!isRealTimeActive)}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRealTimeActive ? "animate-spin" : ""}`} />
+              {isRealTimeActive ? "Real-time Active" : "Enable Real-time"}
+            </Button>
           </div>
           <div className="flex flex-wrap gap-4">
             <Button asChild variant="outline">
