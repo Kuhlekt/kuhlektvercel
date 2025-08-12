@@ -1,501 +1,323 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Users, MousePointer, Clock, Search, Download, RefreshCw, Calendar, Globe, Smartphone } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Users, Eye, Clock, MapPin, ExternalLink, BarChart3 } from "lucide-react"
 
-interface VisitorData {
-  visitorId: string
-  sessionId: string
-  firstVisit: string
-  lastVisit: string
-  pageViews: number
-  referrer: string
-  userAgent: string
-  currentPage: string
-  utmSource?: string
-  utmMedium?: string
-  utmCampaign?: string
-  utmTerm?: string
-  utmContent?: string
-  affiliate?: string
+// Mock visitor data - in a real app, this would come from your database
+const visitorsData = [
+  {
+    id: 1,
+    visitorId: "vis_abc123",
+    sessionId: "ses_def456",
+    firstVisit: "2024-01-15 14:32:15",
+    lastActivity: "2024-01-15 14:45:22",
+    pageViews: 5,
+    sessionDuration: "13m 7s",
+    pages: ["/", "/solutions", "/pricing", "/demo", "/contact"],
+    referrer: "https://google.com",
+    utmSource: "google",
+    utmCampaign: "search_ads",
+    location: {
+      country: "United States",
+      countryCode: "US",
+      region: "California",
+      city: "San Francisco",
+    },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "192.168.1.100",
+    status: "active",
+  },
+  {
+    id: 2,
+    visitorId: "vis_xyz789",
+    sessionId: "ses_ghi012",
+    firstVisit: "2024-01-15 14:31:45",
+    lastActivity: "2024-01-15 14:38:12",
+    pageViews: 3,
+    sessionDuration: "6m 27s",
+    pages: ["/", "/contact", "/about"],
+    referrer: "direct",
+    location: {
+      country: "Canada",
+      countryCode: "CA",
+      region: "Ontario",
+      city: "Toronto",
+    },
+    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    ip: "10.0.0.50",
+    status: "converted",
+    conversion: "Contact Form Submitted",
+  },
+  {
+    id: 3,
+    visitorId: "vis_mno345",
+    sessionId: "ses_pqr678",
+    firstVisit: "2024-01-15 14:30:22",
+    lastActivity: "2024-01-15 14:42:55",
+    pageViews: 7,
+    sessionDuration: "12m 33s",
+    pages: ["/", "/solutions", "/product", "/pricing", "/demo", "/about", "/contact"],
+    referrer: "https://linkedin.com",
+    affiliate: "PARTNER001",
+    location: {
+      country: "United Kingdom",
+      countryCode: "GB",
+      region: "England",
+      city: "London",
+    },
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+    ip: "172.16.0.25",
+    status: "converted",
+    conversion: "Demo Requested",
+  },
+  {
+    id: 4,
+    visitorId: "vis_stu901",
+    sessionId: "ses_vwx234",
+    firstVisit: "2024-01-15 14:29:10",
+    lastActivity: "2024-01-15 14:35:45",
+    pageViews: 4,
+    sessionDuration: "6m 35s",
+    pages: ["/", "/solutions", "/demo", "/pricing"],
+    referrer: "https://facebook.com",
+    location: {
+      country: "Australia",
+      countryCode: "AU",
+      region: "New South Wales",
+      city: "Sydney",
+    },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    ip: "203.0.113.15",
+    status: "bounced",
+  },
+  {
+    id: 5,
+    visitorId: "vis_def567",
+    sessionId: "ses_abc890",
+    firstVisit: "2024-01-15 14:27:18",
+    lastActivity: "2024-01-15 14:41:02",
+    pageViews: 6,
+    sessionDuration: "13m 44s",
+    pages: ["/", "/about", "/solutions", "/product", "/pricing", "/contact"],
+    referrer: "https://twitter.com",
+    location: {
+      country: "Germany",
+      countryCode: "DE",
+      region: "Bavaria",
+      city: "Munich",
+    },
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+    ip: "198.51.100.42",
+    status: "active",
+  },
+]
+
+const summaryStats = {
+  totalVisitors: visitorsData.length,
+  activeVisitors: visitorsData.filter((v) => v.status === "active").length,
+  convertedVisitors: visitorsData.filter((v) => v.status === "converted").length,
+  avgSessionDuration: "10m 29s",
+  totalPageViews: visitorsData.reduce((sum, visitor) => sum + visitor.pageViews, 0),
 }
 
-interface PageVisit {
-  page: string
-  timestamp: string
-  sessionId: string
-}
-
-export default function TrackingAdminPage() {
-  const [visitorData, setVisitorData] = useState<VisitorData | null>(null)
-  const [pageHistory, setPageHistory] = useState<PageVisit[]>([])
-  const [allVisitors, setAllVisitors] = useState<VisitorData[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    loadTrackingData()
-  }, [])
-
-  const loadTrackingData = () => {
-    setIsLoading(true)
-
-    try {
-      // Load current visitor data
-      const currentVisitorStr = localStorage.getItem("kuhlekt_visitor_data")
-      if (currentVisitorStr) {
-        setVisitorData(JSON.parse(currentVisitorStr))
-      }
-
-      // Load page history
-      const historyStr = localStorage.getItem("kuhlekt_page_history")
-      if (historyStr) {
-        setPageHistory(JSON.parse(historyStr))
-      }
-
-      // Load all visitors (simulate from localStorage - in real app this would be from API)
-      const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
-      if (allVisitorsStr) {
-        setAllVisitors(JSON.parse(allVisitorsStr))
-      } else {
-        // If no stored visitors, create array with current visitor
-        if (currentVisitorStr) {
-          const currentVisitor = JSON.parse(currentVisitorStr)
-          setAllVisitors([currentVisitor])
-          localStorage.setItem("kuhlekt_all_visitors", JSON.stringify([currentVisitor]))
-        }
-      }
-    } catch (error) {
-      console.error("Error loading tracking data:", error)
-    }
-
-    setIsLoading(false)
-  }
-
-  const refreshData = () => {
-    loadTrackingData()
-  }
-
-  const clearAllData = () => {
-    if (confirm("Are you sure you want to clear all tracking data? This cannot be undone.")) {
-      localStorage.removeItem("kuhlekt_visitor_data")
-      localStorage.removeItem("kuhlekt_page_history")
-      localStorage.removeItem("kuhlekt_all_visitors")
-      localStorage.removeItem("kuhlekt_visitor_id")
-      sessionStorage.removeItem("kuhlekt_session_id")
-
-      setVisitorData(null)
-      setPageHistory([])
-      setAllVisitors([])
-    }
-  }
-
-  const exportData = () => {
-    const exportData = {
-      currentVisitor: visitorData,
-      pageHistory: pageHistory,
-      allVisitors: allVisitors,
-      exportedAt: new Date().toISOString(),
-    }
-
-    const dataStr = JSON.stringify(exportData, null, 2)
-    const dataBlob = new Blob([dataStr], { type: "application/json" })
-    const url = URL.createObjectURL(dataBlob)
-
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `kuhlekt-tracking-data-${new Date().toISOString().split("T")[0]}.json`
-    link.click()
-
-    URL.revokeObjectURL(url)
-  }
-
-  const filteredVisitors = allVisitors.filter(
-    (visitor) =>
-      visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visitor.utmSource && visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
-
-  const getDeviceType = (userAgent: string) => {
-    if (/Mobile|Android|iPhone|iPad/.test(userAgent)) return "Mobile"
-    if (/Tablet/.test(userAgent)) return "Tablet"
-    return "Desktop"
-  }
-
-  const getBrowser = (userAgent: string) => {
-    if (userAgent.includes("Chrome")) return "Chrome"
-    if (userAgent.includes("Firefox")) return "Firefox"
-    if (userAgent.includes("Safari")) return "Safari"
-    if (userAgent.includes("Edge")) return "Edge"
-    return "Other"
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-cyan-500" />
-          <p className="text-gray-600">Loading tracking data...</p>
-        </div>
-      </div>
-    )
-  }
-
+export default function AdminVisitorsPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking Admin</h1>
-              <p className="text-gray-600">Monitor and analyze visitor behavior and tracking data</p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={refreshData} variant="outline">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button onClick={exportData} variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button onClick={clearAllData} variant="destructive">
-                Clear All Data
-              </Button>
-            </div>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Visitor Tracking</h1>
+            <p className="text-gray-600">Detailed view of individual visitor sessions and behavior</p>
           </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Users className="w-8 h-8 text-cyan-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{allVisitors.length}</p>
-                    <p className="text-sm text-gray-600">Total Visitors</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Eye className="w-8 h-8 text-green-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{pageHistory.length}</p>
-                    <p className="text-sm text-gray-600">Page Views</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <MousePointer className="w-8 h-8 text-blue-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{allVisitors.filter((v) => v.affiliate).length}</p>
-                    <p className="text-sm text-gray-600">Affiliate Visitors</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Clock className="w-8 h-8 text-purple-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{visitorData ? visitorData.pageViews : 0}</p>
-                    <p className="text-sm text-gray-600">Current Session</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Button asChild>
+            <a href="/admin/tracking" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics Dashboard
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </Button>
         </div>
 
-        <Tabs defaultValue="current" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="current">Current Visitor</TabsTrigger>
-            <TabsTrigger value="history">Page History</TabsTrigger>
-            <TabsTrigger value="all">All Visitors</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summaryStats.totalVisitors}</div>
+            </CardContent>
+          </Card>
 
-          {/* Current Visitor Tab */}
-          <TabsContent value="current">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Visitor Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {visitorData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Visitor ID</Label>
-                        <p className="font-mono text-sm bg-gray-100 p-2 rounded">{visitorData.visitorId}</p>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summaryStats.activeVisitors}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Converted</CardTitle>
+              <div className="w-2 h-2 bg-blue-500 rounded-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summaryStats.convertedVisitors}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summaryStats.avgSessionDuration}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summaryStats.totalPageViews}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Visitors List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Visitors</CardTitle>
+            <CardDescription>Individual visitor sessions and their activity details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {visitorsData.map((visitor) => (
+                <div key={visitor.id} className="border rounded-lg p-4 bg-white">
+                  {/* Visitor Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 text-blue-600" />
                       </div>
-
                       <div>
-                        <Label className="text-sm font-medium text-gray-500">Session ID</Label>
-                        <p className="font-mono text-sm bg-gray-100 p-2 rounded">{visitorData.sessionId}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">First Visit</Label>
-                        <p className="text-sm">{new Date(visitorData.firstVisit).toLocaleString()}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Last Visit</Label>
-                        <p className="text-sm">{new Date(visitorData.lastVisit).toLocaleString()}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Page Views</Label>
-                        <p className="text-sm font-semibold">{visitorData.pageViews}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Current Page</Label>
-                        <p className="text-sm">{visitorData.currentPage}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Referrer</Label>
-                        <p className="text-sm break-all">{visitorData.referrer || "Direct"}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Device</Label>
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-4 h-4" />
-                          <span className="text-sm">{getDeviceType(visitorData.userAgent)}</span>
-                          <Badge variant="outline">{getBrowser(visitorData.userAgent)}</Badge>
-                        </div>
-                      </div>
-
-                      {visitorData.utmSource && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">UTM Source</Label>
-                          <Badge className="ml-2">{visitorData.utmSource}</Badge>
-                        </div>
-                      )}
-
-                      {visitorData.utmCampaign && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">UTM Campaign</Label>
-                          <Badge className="ml-2">{visitorData.utmCampaign}</Badge>
-                        </div>
-                      )}
-
-                      {visitorData.affiliate && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">Affiliate</Label>
-                          <Badge variant="secondary" className="ml-2">
-                            {visitorData.affiliate}
-                          </Badge>
-                        </div>
-                      )}
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">User Agent</Label>
-                        <p className="text-xs text-gray-600 bg-gray-100 p-2 rounded break-all">
-                          {visitorData.userAgent}
-                        </p>
+                        <p className="font-medium text-gray-900">Visitor {visitor.visitorId}</p>
+                        <p className="text-sm text-gray-500">Session: {visitor.sessionId}</p>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          visitor.status === "active"
+                            ? "default"
+                            : visitor.status === "converted"
+                              ? "secondary"
+                              : "outline"
+                        }
+                      >
+                        {visitor.status === "active" && "🟢 Active"}
+                        {visitor.status === "converted" && "✅ Converted"}
+                        {visitor.status === "bounced" && "⚪ Bounced"}
+                      </Badge>
+                      {visitor.conversion && <Badge variant="destructive">{visitor.conversion}</Badge>}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No visitor data available</p>
-                    <p className="text-sm text-gray-500">Visit some pages to generate tracking data</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Page History Tab */}
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Page Visit History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pageHistory.length > 0 ? (
-                  <div className="space-y-2">
-                    {pageHistory
-                      .slice()
-                      .reverse()
-                      .map((visit, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Globe className="w-4 h-4 text-gray-500" />
-                            <span className="font-medium">{visit.page}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(visit.timestamp).toLocaleString()}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {visit.sessionId.split("-")[0]}
-                            </Badge>
-                          </div>
-                        </div>
+                  {/* Session Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <span className="text-sm text-gray-500">First Visit:</span>
+                      <p className="font-medium">{visitor.firstVisit}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Last Activity:</span>
+                      <p className="font-medium">{visitor.lastActivity}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Session Duration:</span>
+                      <p className="font-medium">{visitor.sessionDuration}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Page Views:</span>
+                      <p className="font-medium">{visitor.pageViews} pages</p>
+                    </div>
+                  </div>
+
+                  {/* Location & Technical Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">
+                        {visitor.location.city}, {visitor.location.region}, {visitor.location.country}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {visitor.location.countryCode}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">IP:</span> {visitor.ip}
+                    </div>
+                  </div>
+
+                  {/* Traffic Source */}
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-gray-500">Traffic Source:</span>
+                      <span className="font-medium">{visitor.referrer}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {visitor.utmSource && <Badge variant="outline">UTM: {visitor.utmSource}</Badge>}
+                      {visitor.utmCampaign && <Badge variant="outline">Campaign: {visitor.utmCampaign}</Badge>}
+                      {visitor.affiliate && <Badge variant="secondary">Affiliate: {visitor.affiliate}</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Pages Visited */}
+                  <div className="mb-4">
+                    <span className="text-sm text-gray-500 mb-2 block">Pages Visited:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {visitor.pages.map((page, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {page}
+                        </Badge>
                       ))}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No page history available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* All Visitors Tab */}
-          <TabsContent value="all">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>All Visitors</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Search className="w-4 h-4 text-gray-500" />
-                    <Input
-                      placeholder="Search visitors..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-64"
-                    />
+                  {/* User Agent */}
+                  <div className="text-xs text-gray-500 truncate">
+                    <span className="font-medium">User Agent:</span> {visitor.userAgent}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {filteredVisitors.length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredVisitors.map((visitor, index) => (
-                      <div key={index} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-mono text-sm text-gray-600">{visitor.visitorId}</p>
-                            <p className="text-sm text-gray-500">{new Date(visitor.firstVisit).toLocaleDateString()}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Badge>{visitor.pageViews} views</Badge>
-                            {visitor.affiliate && <Badge variant="secondary">{visitor.affiliate}</Badge>}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Referrer:</span>
-                            <p className="truncate">{visitor.referrer || "Direct"}</p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Device:</span>
-                            <p>
-                              {getDeviceType(visitor.userAgent)} - {getBrowser(visitor.userAgent)}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">UTM Source:</span>
-                            <p>{visitor.utmSource || "None"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No visitors found</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Traffic Sources</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(
-                      allVisitors.reduce(
-                        (acc, visitor) => {
-                          const source =
-                            visitor.referrer === ""
-                              ? "Direct"
-                              : visitor.referrer.includes("google")
-                                ? "Google"
-                                : visitor.referrer.includes("facebook")
-                                  ? "Facebook"
-                                  : visitor.referrer.includes("linkedin")
-                                    ? "LinkedIn"
-                                    : "Other"
-                          acc[source] = (acc[source] || 0) + 1
-                          return acc
-                        },
-                        {} as Record<string, number>,
-                      ),
-                    ).map(([source, count]) => (
-                      <div key={source} className="flex justify-between items-center">
-                        <span>{source}</span>
-                        <Badge>{count}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Device Types</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(
-                      allVisitors.reduce(
-                        (acc, visitor) => {
-                          const device = getDeviceType(visitor.userAgent)
-                          acc[device] = (acc[device] || 0) + 1
-                          return acc
-                        },
-                        {} as Record<string, number>,
-                      ),
-                    ).map(([device, count]) => (
-                      <div key={device} className="flex justify-between items-center">
-                        <span>{device}</span>
-                        <Badge>{count}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              ))}
             </div>
-          </TabsContent>
-        </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-wrap gap-4 justify-between items-center">
+          <div className="flex flex-wrap gap-4">
+            <Button variant="outline">Export Visitor Data</Button>
+            <Button variant="outline">Filter Visitors</Button>
+            <Button variant="outline">Real-time View</Button>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <Button asChild variant="outline">
+              <a href="/admin/change-password">Change Password</a>
+            </Button>
+            <Button asChild>
+              <a href="/admin/tracking">Back to Analytics</a>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

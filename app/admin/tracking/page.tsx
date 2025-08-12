@@ -25,6 +25,7 @@ import {
   FileText,
   Search,
   MapPin,
+  ExternalLink,
 } from "lucide-react"
 
 // Mock data - in a real app, this would come from your analytics service
@@ -304,9 +305,18 @@ export default function AdminTrackingPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-          <p className="text-gray-600">Monitor your website performance and visitor behavior</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+            <p className="text-gray-600">Monitor your website performance and visitor behavior</p>
+          </div>
+          <Button asChild variant="outline">
+            <a href="/admin/visitors" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Visitor Tracking
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </Button>
         </div>
 
         {/* Key Metrics */}
