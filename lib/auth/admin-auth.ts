@@ -129,3 +129,18 @@ export async function clearPendingTwoFactor(): Promise<void> {
   const cookieStore = cookies()
   cookieStore.delete("admin-2fa-pending")
 }
+
+export async function generateNewAdminTwoFactorSecret(): Promise<{ secret: string; qrCode: string }> {
+  const secret = speakeasy.generateSecret({
+    name: "Kuhlekt Admin",
+    issuer: "Kuhlekt Website",
+    length: 32,
+  })
+
+  const qrCode = await QRCode.toDataURL(secret.otpauth_url!)
+
+  return {
+    secret: secret.base32!,
+    qrCode,
+  }
+}
