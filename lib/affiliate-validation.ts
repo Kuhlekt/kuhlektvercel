@@ -3,100 +3,103 @@ interface AffiliateCode {
   discount: number
   type: string
   description: string
+  isActive: boolean
 }
 
-// Predefined affiliate codes with their discount percentages
-const AFFILIATE_CODES: AffiliateCode[] = [
-  // Partner codes
-  { code: "PARTNER001", discount: 25, type: "Partner", description: "Strategic Partner Discount" },
-  { code: "PARTNER002", discount: 30, type: "Partner", description: "Premium Partner Discount" },
-  { code: "PARTNER003", discount: 20, type: "Partner", description: "Regional Partner Discount" },
+const affiliateCodes: AffiliateCode[] = [
+  // Startup and Growth Codes
+  { code: "STARTUP50", discount: 50, type: "Startup", description: "50% off for startups", isActive: true },
+  { code: "GROWTH25", discount: 25, type: "Growth", description: "25% off for growing businesses", isActive: true },
+  { code: "SMB40", discount: 40, type: "SMB", description: "40% off for small-medium businesses", isActive: true },
 
-  // Reseller codes
-  { code: "RESELLER01", discount: 35, type: "Reseller", description: "Authorized Reseller Discount" },
-  { code: "RESELLER02", discount: 40, type: "Reseller", description: "Premium Reseller Discount" },
-  { code: "CHANNEL01", discount: 30, type: "Channel", description: "Channel Partner Discount" },
+  // Industry-Specific Codes
+  { code: "HEALTHCARE", discount: 15, type: "Industry", description: "Healthcare industry discount", isActive: true },
+  {
+    code: "MANUFACTURING",
+    discount: 20,
+    type: "Industry",
+    description: "Manufacturing industry discount",
+    isActive: true,
+  },
+  {
+    code: "NONPROFIT",
+    discount: 30,
+    type: "Industry",
+    description: "Non-profit organization discount",
+    isActive: true,
+  },
+  {
+    code: "EDUCATION",
+    discount: 35,
+    type: "Industry",
+    description: "Educational institution discount",
+    isActive: true,
+  },
+  { code: "GOVERNMENT", discount: 25, type: "Industry", description: "Government agency discount", isActive: true },
 
-  // Discount codes
-  { code: "DISCOUNT10", discount: 10, type: "Promotional", description: "10% Promotional Discount" },
-  { code: "DISCOUNT15", discount: 15, type: "Promotional", description: "15% Promotional Discount" },
-  { code: "DISCOUNT20", discount: 20, type: "Promotional", description: "20% Promotional Discount" },
+  // Partner and Channel Codes
+  { code: "PARTNER001", discount: 20, type: "Partner", description: "Strategic partner discount", isActive: true },
+  { code: "PARTNER002", discount: 25, type: "Partner", description: "Premium partner discount", isActive: true },
+  { code: "RESELLER01", discount: 30, type: "Reseller", description: "Authorized reseller discount", isActive: true },
+  { code: "CHANNEL01", discount: 22, type: "Channel", description: "Channel partner discount", isActive: true },
+  { code: "AFFILIATE01", discount: 18, type: "Affiliate", description: "Affiliate partner discount", isActive: true },
 
-  // Industry-specific codes
-  { code: "HEALTHCARE", discount: 15, type: "Industry", description: "Healthcare Industry Discount" },
-  { code: "MANUFACTURING", discount: 20, type: "Industry", description: "Manufacturing Industry Discount" },
-  { code: "RETAIL", discount: 15, type: "Industry", description: "Retail Industry Discount" },
-  { code: "FINTECH", discount: 25, type: "Industry", description: "FinTech Industry Discount" },
+  // Promotional Codes
+  { code: "DISCOUNT20", discount: 20, type: "Promo", description: "General 20% discount", isActive: true },
+  { code: "PROMO2024", discount: 15, type: "Promo", description: "2024 promotional discount", isActive: true },
+  { code: "SPECIAL01", discount: 25, type: "Special", description: "Special offer discount", isActive: true },
+  { code: "WELCOME15", discount: 15, type: "Welcome", description: "Welcome new customer discount", isActive: true },
 
-  // Special codes
-  { code: "STARTUP50", discount: 50, type: "Startup", description: "Startup Special Discount" },
-  { code: "GROWTH25", discount: 25, type: "Growth", description: "Growth Stage Company Discount" },
-  { code: "ENTERPRISE", discount: 15, type: "Enterprise", description: "Enterprise Client Discount" },
-  { code: "NONPROFIT", discount: 40, type: "Nonprofit", description: "Nonprofit Organization Discount" },
+  // VIP and Premium Codes
+  { code: "VIP30", discount: 30, type: "VIP", description: "VIP customer discount", isActive: true },
+  { code: "PREMIUM15", discount: 15, type: "Premium", description: "Premium service discount", isActive: true },
+  { code: "ENTERPRISE", discount: 10, type: "Enterprise", description: "Enterprise customer discount", isActive: true },
 
-  // Welcome codes
-  { code: "WELCOME20", discount: 20, type: "Welcome", description: "New Customer Welcome Discount" },
-  { code: "FIRSTTIME", discount: 15, type: "Welcome", description: "First Time Customer Discount" },
-  { code: "NEWCLIENT", discount: 18, type: "Welcome", description: "New Client Discount" },
+  // Referral and Loyalty Codes
+  { code: "REFERRAL10", discount: 10, type: "Referral", description: "Customer referral discount", isActive: true },
+  { code: "LOYALTY25", discount: 25, type: "Loyalty", description: "Loyalty program discount", isActive: true },
 
-  // Premium codes
-  { code: "PREMIUM15", discount: 15, type: "Premium", description: "Premium Service Discount" },
-  { code: "VIP30", discount: 30, type: "VIP", description: "VIP Client Discount" },
-  { code: "PLATINUM", discount: 35, type: "Platinum", description: "Platinum Member Discount" },
+  // Beta and Early Access Codes
+  { code: "BETA35", discount: 35, type: "Beta", description: "Beta tester discount", isActive: true },
+  { code: "EARLY45", discount: 45, type: "Early", description: "Early adopter discount", isActive: true },
 ]
 
-interface AffiliateValidationResult {
+export function validateAffiliate(code: string): {
   isValid: boolean
   code?: string
   discount?: number
   type?: string
   description?: string
-  normalizedCode?: string
-}
-
-export function validateAffiliate(inputCode: string): AffiliateValidationResult {
-  if (!inputCode || typeof inputCode !== "string") {
+} {
+  if (!code || typeof code !== "string") {
     return { isValid: false }
   }
 
-  // Normalize the input code (uppercase, trim whitespace)
-  const normalizedCode = inputCode.trim().toUpperCase()
+  const normalizedCode = code.trim().toUpperCase()
+  const affiliate = affiliateCodes.find((item) => item.code === normalizedCode && item.isActive)
 
-  // Find matching affiliate code
-  const affiliateCode = AFFILIATE_CODES.find((affiliate) => affiliate.code === normalizedCode)
-
-  if (affiliateCode) {
+  if (affiliate) {
     return {
       isValid: true,
-      code: affiliateCode.code,
-      discount: affiliateCode.discount,
-      type: affiliateCode.type,
-      description: affiliateCode.description,
-      normalizedCode,
+      code: affiliate.code,
+      discount: affiliate.discount,
+      type: affiliate.type,
+      description: affiliate.description,
     }
   }
 
-  return {
-    isValid: false,
-    normalizedCode,
-  }
+  return { isValid: false }
 }
 
 export function getAllAffiliateCodes(): AffiliateCode[] {
-  return [...AFFILIATE_CODES]
+  return affiliateCodes.filter((code) => code.isActive)
 }
 
-export function getAffiliateCodesByType(type: string): AffiliateCode[] {
-  return AFFILIATE_CODES.filter((code) => code.type.toLowerCase() === type.toLowerCase())
+export function getAffiliatesByType(type: string): AffiliateCode[] {
+  return affiliateCodes.filter((code) => code.type === type && code.isActive)
 }
 
-export function calculateDiscountedPrice(originalPrice: number, affiliateCode: string): number {
-  const validation = validateAffiliate(affiliateCode)
-
-  if (!validation.isValid || !validation.discount) {
-    return originalPrice
-  }
-
-  const discountAmount = (originalPrice * validation.discount) / 100
-  return originalPrice - discountAmount
+export function getAffiliateDiscount(code: string): number {
+  const affiliate = validateAffiliate(code)
+  return affiliate.isValid ? affiliate.discount || 0 : 0
 }

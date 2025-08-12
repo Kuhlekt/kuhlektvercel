@@ -1,7 +1,7 @@
 "use server"
 
+import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
-import { sendEmail } from "@/lib/email-service"
 import { validateAffiliate } from "@/lib/affiliate-validation"
 
 interface DemoFormState {
@@ -21,10 +21,10 @@ export async function submitDemoForm(prevState: DemoFormState, formData: FormDat
     const phone = formData.get("phone") as string
     const companySize = formData.get("companySize") as string
     const industry = formData.get("industry") as string
-    const currentArVolume = formData.get("currentArVolume") as string
     const affiliate = formData.get("affiliate") as string
-    const currentChallenges = formData.get("currentChallenges") as string
-    const timeframe = formData.get("timeframe") as string
+    const currentSolution = formData.get("currentSolution") as string
+    const challenges = formData.get("challenges") as string
+    const preferredTime = formData.get("preferredTime") as string
     const recaptchaToken = formData.get("recaptchaToken") as string
 
     // Visitor tracking data
@@ -47,27 +47,29 @@ export async function submitDemoForm(prevState: DemoFormState, formData: FormDat
     if (!email?.trim()) {
       errors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address"
+      errors.email = "Please enter a valid business email address"
     }
 
     if (!company?.trim()) {
-      errors.company = "Company is required"
+      errors.company = "Company name is required"
     }
 
     if (!jobTitle?.trim()) {
       errors.jobTitle = "Job title is required"
     }
 
-    if (!companySize?.trim()) {
-      errors.companySize = "Company size is required"
-    }
-
-    if (!industry?.trim()) {
-      errors.industry = "Industry is required"
-    }
-
-    if (phone && !/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-$$$$]/g, ""))) {
+    if (!phone?.trim()) {
+      errors.phone = "Phone number is required"
+    } else if (!/^[+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-()]/g, ""))) {
       errors.phone = "Please enter a valid phone number"
+    }
+
+    if (!companySize) {
+      errors.companySize = "Please select your company size"
+    }
+
+    if (!industry) {
+      errors.industry = "Please select your industry"
     }
 
     if (Object.keys(errors).length > 0) {
@@ -107,96 +109,125 @@ export async function submitDemoForm(prevState: DemoFormState, formData: FormDat
     // Prepare email content
     const adminEmailContent = `
       <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Company:</strong> ${company}</p>
-      <p><strong>Job Title:</strong> ${jobTitle}</p>
-      <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-      <p><strong>Company Size:</strong> ${companySize}</p>
-      <p><strong>Industry:</strong> ${industry}</p>
-      <p><strong>Current AR Volume:</strong> ${currentArVolume || "Not specified"}</p>
-      <p><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</p>
-      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #1e40af; margin: 0 0 15px 0;">Contact Information</h3>
+        <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Company:</strong> ${company}</p>
+        <p><strong>Job Title:</strong> ${jobTitle}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+      </div>
+
+      <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #1e40af; margin: 0 0 15px 0;">Company Details</h3>
+        <p><strong>Company Size:</strong> ${companySize}</p>
+        <p><strong>Industry:</strong> ${industry}</p>
+        <p><strong>Current Solution:</strong> ${currentSolution || "Not specified"}</p>
+        <p><strong>Preferred Demo Time:</strong> ${preferredTime || "Not specified"}</p>
+      </div>
+
       ${
         affiliateInfo?.isValid
           ? `
-        <div style="background-color: #f0f9ff; padding: 15px; border-left: 4px solid #3b82f6; margin: 15px 0;">
-          <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 Affiliate Information</h3>
+        <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+          <h3 style="color: #1e40af; margin: 0 0 15px 0;">🎯 Affiliate Information</h3>
           <p style="margin: 5px 0;"><strong>Code:</strong> ${affiliateInfo.code}</p>
           <p style="margin: 5px 0;"><strong>Discount:</strong> ${affiliateInfo.discount}%</p>
           <p style="margin: 5px 0;"><strong>Type:</strong> ${affiliateInfo.type}</p>
+          <p style="margin: 5px 0;"><strong>Description:</strong> ${affiliateInfo.description}</p>
+        </div>
+      `
+          : ""
+      }
+
+      ${
+        challenges
+          ? `
+        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #92400e; margin: 0 0 15px 0;">Current Challenges</h3>
+          <p>${challenges}</p>
         </div>
       `
           : ""
       }
       
-      <p><strong>Current AR Challenges:</strong></p>
-      <p>${currentChallenges || "Not specified"}</p>
-      
-      <hr style="margin: 20px 0;">
+      <hr style="margin: 30px 0;">
       <h3>Visitor Tracking Information</h3>
       <p><strong>Referrer:</strong> ${referrer || "Direct"}</p>
       <p><strong>UTM Source:</strong> ${utmSource || "None"}</p>
       <p><strong>UTM Campaign:</strong> ${utmCampaign || "None"}</p>
       <p><strong>Page Views:</strong> ${pageViews || "Unknown"}</p>
       <p><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+
+      <div style="background-color: #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #166534; margin: 0 0 15px 0;">Next Steps</h3>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li>Schedule demo within 24 hours</li>
+          <li>Prepare industry-specific use cases</li>
+          <li>Review current solution integration options</li>
+          ${affiliateInfo?.isValid ? `<li><strong>Apply ${affiliateInfo.discount}% affiliate discount to proposal</strong></li>` : ""}
+        </ul>
+      </div>
     `
 
     const userEmailContent = `
       <h2>Thank you for requesting a demo!</h2>
       <p>Dear ${firstName},</p>
-      <p>Thank you for your interest in Kuhlekt's AR automation solutions. We have received your demo request and will contact you within 24 hours to schedule your personalized demonstration.</p>
+      <p>Thank you for your interest in Kuhlekt's AR automation platform. We're excited to show you how we can help streamline your accounts receivable process.</p>
       
       ${
         affiliateInfo?.isValid
           ? `
-        <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #22c55e; margin: 15px 0;">
-          <h3 style="color: #16a34a; margin: 0 0 10px 0;">🎉 Affiliate Discount Applied!</h3>
+        <div style="background-color: #f0fdf4; padding: 20px; border-left: 4px solid #22c55e; margin: 20px 0;">
+          <h3 style="color: #16a34a; margin: 0 0 15px 0;">🎉 Affiliate Discount Applied!</h3>
           <p style="margin: 5px 0;">Your affiliate code <strong>${affiliateInfo.code}</strong> has been validated.</p>
           <p style="margin: 5px 0;">You're eligible for a <strong>${affiliateInfo.discount}% discount</strong> on our services!</p>
-          <p style="margin: 5px 0;">Our team will include this discount in your personalized quote during the demo.</p>
+          <p style="margin: 5px 0;">We'll include this discount in your personalized proposal after the demo.</p>
         </div>
       `
           : ""
       }
       
-      <p>Here's a summary of your demo request:</p>
-      <ul>
-        <li><strong>Name:</strong> ${firstName} ${lastName}</li>
-        <li><strong>Company:</strong> ${company}</li>
-        <li><strong>Job Title:</strong> ${jobTitle}</li>
-        <li><strong>Email:</strong> ${email}</li>
-        <li><strong>Phone:</strong> ${phone || "Not provided"}</li>
-        <li><strong>Company Size:</strong> ${companySize}</li>
-        <li><strong>Industry:</strong> ${industry}</li>
-        <li><strong>Implementation Timeframe:</strong> ${timeframe || "Not specified"}</li>
-      </ul>
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #1e40af; margin: 0 0 15px 0;">What Happens Next?</h3>
+        <ol style="margin: 0; padding-left: 20px;">
+          <li><strong>Demo Scheduling:</strong> Our team will contact you within 24 hours to schedule your personalized demo</li>
+          <li><strong>Demo Preparation:</strong> We'll prepare industry-specific examples based on your ${industry} background</li>
+          <li><strong>Live Demo:</strong> 30-45 minute screen share showing Kuhlekt in action</li>
+          <li><strong>Custom Proposal:</strong> Tailored pricing and implementation plan for ${company}</li>
+        </ol>
+      </div>
+
+      <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #92400e; margin: 0 0 15px 0;">Your Demo Request Summary</h3>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li><strong>Company:</strong> ${company}</li>
+          <li><strong>Industry:</strong> ${industry}</li>
+          <li><strong>Company Size:</strong> ${companySize}</li>
+          <li><strong>Current Solution:</strong> ${currentSolution || "Not specified"}</li>
+          <li><strong>Preferred Time:</strong> ${preferredTime || "Flexible"}</li>
+        </ul>
+      </div>
       
-      <p>During the demo, we'll show you how Kuhlekt can:</p>
-      <ul>
-        <li>Automate your accounts receivable processes</li>
-        <li>Reduce DSO (Days Sales Outstanding)</li>
-        <li>Improve cash flow management</li>
-        <li>Streamline customer communications</li>
-        <li>Provide real-time AR analytics and reporting</li>
-      </ul>
+      <p>In the meantime, feel free to explore our <a href="${process.env.NEXT_PUBLIC_SITE_URL}/solutions" style="color: #3b82f6;">solutions page</a> to learn more about our AR automation capabilities.</p>
       
-      <p>We look forward to showing you how Kuhlekt can transform your AR operations!</p>
+      <p>We look forward to showing you how Kuhlekt can transform your accounts receivable process!</p>
       
-      <p>Best regards,<br>The Kuhlekt Team</p>
+      <p>Best regards,<br>The Kuhlekt Demo Team</p>
     `
 
     // Send emails
     await Promise.all([
-      sendEmail({
-        to: process.env.AWS_SES_FROM_EMAIL!,
-        subject: `New Demo Request - ${firstName} ${lastName} (${company})${affiliateInfo?.isValid ? ` - ${affiliateInfo.code} (${affiliateInfo.discount}% discount)` : ""}`,
-        html: adminEmailContent,
+      sendEmailWithSES({
+        to: [process.env.AWS_SES_FROM_EMAIL || "demos@kuhlekt.com"],
+        subject: `New Demo Request - ${company} (${firstName} ${lastName})${affiliateInfo?.isValid ? ` - ${affiliateInfo.code} (${affiliateInfo.discount}% discount)` : ""}`,
+        body: adminEmailContent,
+        replyTo: email,
       }),
-      sendEmail({
-        to: email,
-        subject: "Your Kuhlekt Demo Request Confirmation",
-        html: userEmailContent,
+      sendEmailWithSES({
+        to: [email],
+        subject: `Demo Scheduled - Welcome to Kuhlekt!${affiliateInfo?.isValid ? ` (${affiliateInfo.discount}% Discount Applied)` : ""}`,
+        body: userEmailContent,
       }),
     ])
 
