@@ -2,6 +2,10 @@
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyCaptcha } from "@/lib/captcha"
+import { validateAffiliateCode } from "@/lib/database/affiliates"
+import { createOrUpdateVisitor, getVisitorBySessionId } from "@/lib/database/visitors"
+import { createFormSubmission } from "@/lib/database/form-submissions"
+import { headers } from "next/headers"
 
 // Predefined affiliate table for validation
 const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
@@ -21,6 +25,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const utmSource = formData.get("utmSource") as string
     const utmCampaign = formData.get("utmCampaign") as string
     const pageViews = formData.get("pageViews") as string
+    const sessionId = formData.get("sessionId") as string
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
@@ -41,9 +46,69 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Validate affiliate code if provided
-    const validAffiliate =
-      affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : null
+    const headersList = headers()
+    const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown"
+    const userAgent = headersList.get("user-agent") || "unknown"
+
+    let validAffiliate = null
+    let affiliateId = null
+    if (affiliate) {
+      const affiliateResult = await validateAffiliateCode(affiliate)
+      if (affiliateResult.success && affiliateResult.isValid) {
+        validAffiliate = affiliateResult.affiliate
+        affiliateId = validAffiliate?.id
+      }
+    }
+
+    let visitorId = null
+    if (sessionId) {
+      // Try to get existing visitor
+      const visitorResult = await getVisitorBySessionId(sessionId)
+      if (visitorResult.success && visitorResult.data) {
+        visitorId = visitorResult.data.id
+      } else {
+        // Create new visitor record
+        const newVisitorResult = await createOrUpdateVisitor({
+          sessionId,
+          ipAddress,
+          userAgent,
+          referrer,
+          landingPage: referrer || "direct",
+          pageViews: Number.parseInt(pageViews) || 1,
+        })
+        if (newVisitorResult.success) {
+          visitorId = newVisitorResult.data?.id
+        }
+      }
+    }
+
+    const submissionResult = await createFormSubmission({
+      visitorId,
+      affiliateId,
+      formType: "contact",
+      firstName,
+      lastName,
+      email,
+      phone,
+      company,
+      message,
+      affiliateReference: affiliate,
+      sourcePage: "/contact",
+      utmSource,
+      utmCampaign,
+      ipAddress,
+      userAgent,
+      formData: {
+        referrer,
+        pageViews: Number.parseInt(pageViews) || 1,
+        sessionId,
+      },
+    })
+
+    if (!submissionResult.success) {
+      console.error("Failed to store form submission:", submissionResult.error)
+      // Continue with email sending even if database storage fails
+    }
 
     // Prepare email content
     const emailSubject = "New Contact Form Submission - Kuhlekt"
@@ -54,7 +119,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       Email: ${email}
       Company: ${company || "Not provided"}
       Phone: ${phone || "Not provided"}
-      ${validAffiliate ? `Affiliate: ${validAffiliate}` : ""}
+      ${validAffiliate ? `Affiliate: ${validAffiliate.affiliate_code} (${validAffiliate.affiliate_name || "Unknown"})` : ""}
       Message: ${message || "No message provided"}
       
       Visitor Tracking:
@@ -62,6 +127,10 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       - UTM Source: ${utmSource || "Not available"}
       - UTM Campaign: ${utmCampaign || "Not available"}
       - Page Views: ${pageViews || "Not available"}
+      - Session ID: ${sessionId || "Not available"}
+      - IP Address: ${ipAddress}
+      
+      Database Record: ${submissionResult.success ? `ID ${submissionResult.data?.id}` : "Failed to store"}
       
       Submitted at: ${new Date().toISOString()}
     `
