@@ -22,7 +22,6 @@ const initialState = {
 export default function ContactPage() {
   const [state, formAction] = useFormState(submitContactForm, initialState)
   const [recaptchaToken, setRecaptchaToken] = useState<string>("")
-  const [isPending, setIsPending] = useState(false)
 
   // Reset form on successful submission
   useEffect(() => {
@@ -39,8 +38,8 @@ export default function ContactPage() {
     }
   }, [state?.success])
 
-  const handleSubmit = async (formData: FormData) => {
-    setIsPending(true)
+  const enhancedFormAction = async (formData: FormData) => {
+    // Add recaptcha token
     if (recaptchaToken) {
       formData.append("recaptchaToken", recaptchaToken)
     }
@@ -61,8 +60,7 @@ export default function ContactPage() {
       }
     }
 
-    formAction(formData)
-    setIsPending(false)
+    return formAction(formData)
   }
 
   return (
@@ -85,31 +83,31 @@ export default function ContactPage() {
             <CardTitle className="text-2xl text-center">Send us a Message</CardTitle>
           </CardHeader>
           <CardContent>
-            <form id="contact-form" action={handleSubmit} className="space-y-6">
+            <form id="contact-form" action={enhancedFormAction} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" name="firstName" type="text" required className="mt-1" disabled={isPending} />
+                  <Input id="firstName" name="firstName" type="text" required className="mt-1" />
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" name="lastName" type="text" required className="mt-1" disabled={isPending} />
+                  <Input id="lastName" name="lastName" type="text" required className="mt-1" />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="email">Email Address *</Label>
-                <Input id="email" name="email" type="email" required className="mt-1" disabled={isPending} />
+                <Input id="email" name="email" type="email" required className="mt-1" />
               </div>
 
               <div>
                 <Label htmlFor="company">Company</Label>
-                <Input id="company" name="company" type="text" className="mt-1" disabled={isPending} />
+                <Input id="company" name="company" type="text" className="mt-1" />
               </div>
 
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" type="tel" className="mt-1" disabled={isPending} />
+                <Input id="phone" name="phone" type="tel" className="mt-1" />
               </div>
 
               <div>
@@ -120,7 +118,6 @@ export default function ContactPage() {
                   type="text"
                   placeholder="Enter your affiliate code (optional)"
                   className="mt-1"
-                  disabled={isPending}
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   If you have an affiliate or partner code, enter it here for tracking purposes.
@@ -129,7 +126,7 @@ export default function ContactPage() {
 
               <div>
                 <Label htmlFor="subject">Subject *</Label>
-                <Select name="subject" required disabled={isPending}>
+                <Select name="subject" required>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="What can we help you with?" />
                   </SelectTrigger>
@@ -153,7 +150,6 @@ export default function ContactPage() {
                   required
                   placeholder="Tell us more about how we can help you..."
                   className="mt-1"
-                  disabled={isPending}
                 />
               </div>
 
@@ -163,12 +159,8 @@ export default function ContactPage() {
                 onError={() => setRecaptchaToken("")}
               />
 
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
-              >
-                {isPending ? "Sending..." : "Send Message"}
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3">
+                Send Message
               </Button>
 
               {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
