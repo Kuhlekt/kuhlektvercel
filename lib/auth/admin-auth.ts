@@ -33,6 +33,7 @@ export async function generateTwoFactorSecret(): Promise<{ secret: string; qrCod
   }
 }
 
+// Export both function names for compatibility
 export async function verifyTwoFactorToken(token: string, secret?: string): Promise<boolean> {
   const secretToUse = secret || ADMIN_2FA_SECRET
 
@@ -42,6 +43,9 @@ export async function verifyTwoFactorToken(token: string, secret?: string): Prom
     window: 2, // Allow 2 time steps (60 seconds) of drift
   })
 }
+
+// Alias for compatibility
+export const verifyTwoFactorCode = verifyTwoFactorToken
 
 export async function createAdminSession(): Promise<string> {
   const sessionId = crypto.randomUUID()
@@ -143,4 +147,14 @@ export async function generateNewAdminTwoFactorSecret(): Promise<{ secret: strin
     secret: secret.base32!,
     qrCode,
   }
+}
+
+export async function generateQRCode(secret: string): Promise<string> {
+  const otpauth = speakeasy.otpauthURL({
+    secret,
+    label: "Kuhlekt Admin",
+    issuer: "Kuhlekt Website",
+  })
+
+  return await QRCode.toDataURL(otpauth)
 }
