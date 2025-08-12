@@ -4,8 +4,7 @@ import type { NextRequest } from "next/request"
 export function middleware(request: NextRequest) {
   // Check if accessing admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    // Allow access to login and 2FA setup pages
-    if (request.nextUrl.pathname === "/admin/login" || request.nextUrl.pathname === "/admin/setup-2fa") {
+    if (request.nextUrl.pathname === "/admin/login") {
       return NextResponse.next()
     }
 
@@ -23,7 +22,6 @@ export function middleware(request: NextRequest) {
       const response = NextResponse.redirect(new URL("/admin/login", request.url))
       response.cookies.delete("admin-session")
       response.cookies.delete("admin-session-expires")
-      response.cookies.delete("admin-2fa-pending")
       return response
     }
   }
