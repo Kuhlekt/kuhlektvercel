@@ -1,41 +1,45 @@
 "use server"
 
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
+import { createHmac } from "crypto"
 
-// Simple TOTP implementation without external dependencies
-function generateTOTP(secret: string, timeStep = 30): string {
-  const time = Math.floor(Date.now() / 1000 / timeStep)
+function base32Decode(encoded: string): Buffer {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+  let bits = 0
+  let value = 0
+  const output = []
 
-  // Simple hash-based implementation
-  // In production, you'd want a proper TOTP library
-  const hash = require("crypto")
-    .createHmac("sha1", Buffer.from(secret, "base32"))
-    .update(Buffer.from(time.toString(16).padStart(16, "0"), "hex"))
-    .digest()
+  for (let i = 0; i < encoded.length; i++) {
+    const char = encoded[i].toUpperCase()
+    const index = alphabet.indexOf(char)
+    if (index === -1) continue
 
-  const offset = hash[hash.length - 1] & 0xf
-  const code =
-    (((hash[offset] & 0x7f) << 24) |
-      ((hash[offset + 1] & 0xff) << 16) |
-      ((hash[offset + 2] & 0xff) << 8) |
-      (hash[offset + 3] & 0xff)) %
-    1000000
+    value = (value << 5) | index
+    bits += 5
 
-  return code.toString().padStart(6, "0")
+    if (bits >= 8) {
+      output.push((value >>> (bits - 8)) & 255)
+      bits -= 8
+    }
+  }
+
+  return Buffer.from(output)
 }
 
 function verifyTOTP(token: string, secret: string): boolean {
-  // Check current time window and previous/next windows for clock drift
   const timeStep = 30
   const currentTime = Math.floor(Date.now() / 1000 / timeStep)
 
+  // Check current time window and previous/next windows for clock drift
   for (let i = -1; i <= 1; i++) {
     const time = currentTime + i
-    const hash = require("crypto")
-      .createHmac("sha1", Buffer.from(secret, "base32"))
-      .update(Buffer.from(time.toString(16).padStart(16, "0"), "hex"))
-      .digest()
+    const timeBuffer = Buffer.alloc(8)
+    timeBuffer.writeUInt32BE(0, 0)
+    timeBuffer.writeUInt32BE(time, 4)
+
+    const secretBuffer = base32Decode(secret)
+    const hash = createHmac("sha1", secretBuffer).update(timeBuffer).digest()
 
     const offset = hash[hash.length - 1] & 0xf
     const code =
@@ -57,20 +61,23 @@ export async function loginAdmin(prevState: any, formData: FormData) {
   const password = formData.get("password") as string
   const twofa = formData.get("twofa") as string
 
+  if (!password || !twofa) {
+    return { error: "Password and 2FA code are required" }
+  }
+
   // Check password
-  if (password !== process.env.ADMIN_PASSWORD) {
+  const adminPassword = process.env.ADMIN_PASSWORD
+  if (!adminPassword || password !== adminPassword) {
     return { error: "Invalid credentials" }
   }
 
   // Check 2FA
-  const secret = process.env.ADMIN_2FA_SECRET
-  if (!secret) {
-    return { error: "Server configuration error" }
+  const adminSecret = process.env.ADMIN_2FA_SECRET
+  if (!adminSecret) {
+    return { error: "2FA not configured" }
   }
 
-  const isValid = verifyTOTP(twofa, secret)
-
-  if (!isValid) {
+  if (!verifyTOTP(twofa, adminSecret)) {
     return { error: "Invalid 2FA code" }
   }
 
@@ -84,10 +91,4 @@ export async function loginAdmin(prevState: any, formData: FormData) {
   })
 
   redirect("/admin/tracking")
-}
-
-export async function logoutAdmin() {
-  const cookieStore = await cookies()
-  cookieStore.delete("admin-session")
-  redirect("/admin/login")
 }

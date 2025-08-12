@@ -13,6 +13,11 @@ export async function requireAdminAuth() {
 export async function isAdminAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies()
   const session = cookieStore.get("admin-session")
-
   return session?.value === "authenticated"
+}
+
+export async function logoutAdmin() {
+  const cookieStore = await cookies()
+  cookieStore.delete("admin-session")
+  redirect("/admin/login")
 }
