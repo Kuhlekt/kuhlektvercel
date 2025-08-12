@@ -1,18 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useFormState } from "react-dom"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { CheckCircle, AlertCircle, Mail, Phone, MapPin, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
 import { submitContactForm } from "./actions"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 const initialState = {
   success: false,
@@ -24,18 +22,10 @@ export default function ContactPage() {
   const [state, formAction] = useFormState(submitContactForm, initialState)
   const [isPending, setIsPending] = useState(false)
   const [recaptchaToken, setRecaptchaToken] = useState("")
-  const [affiliateCode, setAffiliateCode] = useState("")
-  const [affiliateInfo, setAffiliateInfo] = useState<any>(null)
-  const [affiliateValidation, setAffiliateValidation] = useState<{
-    isValid: boolean
-    message: string
-  } | null>(null)
 
-  // Handle form submission with pending state
   const handleSubmit = async (formData: FormData) => {
     setIsPending(true)
     formData.append("recaptchaToken", recaptchaToken)
-    formData.append("affiliateCode", affiliateCode)
 
     try {
       await formAction(formData)
@@ -45,214 +35,219 @@ export default function ContactPage() {
     }
   }
 
-  // Validate affiliate code in real-time
-  useEffect(() => {
-    if (affiliateCode.trim()) {
-      const info = validateAffiliateCode(affiliateCode)
-      if (info) {
-        setAffiliateInfo(info)
-        setAffiliateValidation({
-          isValid: true,
-          message: `Valid partner: ${info.name} (${info.commission}% commission)`,
-        })
-      } else {
-        setAffiliateInfo(null)
-        setAffiliateValidation({
-          isValid: false,
-          message: "Invalid affiliate code",
-        })
-      }
-    } else {
-      setAffiliateInfo(null)
-      setAffiliateValidation(null)
-    }
-  }, [affiliateCode])
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600">
-            Get in touch with our team to learn more about Kuhlekt's AR automation solutions
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Kuhlekt</h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Ready to transform your accounts receivable process? Get in touch with our AR automation experts.
           </p>
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-2xl">Send us a message</CardTitle>
-            <CardDescription>Fill out the form below and we'll get back to you within 24 hours</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {state.success && (
-              <Alert className="mb-6 border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">{state.message}</AlertDescription>
-              </Alert>
-            )}
-
-            {state.message && !state.success && (
-              <Alert className="mb-6 border-red-200 bg-red-50">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">{state.message}</AlertDescription>
-              </Alert>
-            )}
-
-            <form action={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" name="firstName" type="text" required className="mt-1" placeholder="John" />
-                  {state.errors?.firstName && <p className="text-red-600 text-sm mt-1">{state.errors.firstName}</p>}
-                </div>
-
-                <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" name="lastName" type="text" required className="mt-1" placeholder="Doe" />
-                  {state.errors?.lastName && <p className="text-red-600 text-sm mt-1">{state.errors.lastName}</p>}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="mt-1"
-                  placeholder="john.doe@company.com"
-                />
-                {state.errors?.email && <p className="text-red-600 text-sm mt-1">{state.errors.email}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="company">Company Name *</Label>
-                <Input
-                  id="company"
-                  name="company"
-                  type="text"
-                  required
-                  className="mt-1"
-                  placeholder="Your Company Inc."
-                />
-                {state.errors?.company && <p className="text-red-600 text-sm mt-1">{state.errors.company}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" type="tel" className="mt-1" placeholder="+1 (555) 123-4567" />
-                {state.errors?.phone && <p className="text-red-600 text-sm mt-1">{state.errors.phone}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor="affiliateCode">Affiliate/Partner Code</Label>
-                <Input
-                  id="affiliateCode"
-                  name="affiliateCode"
-                  type="text"
-                  className="mt-1"
-                  placeholder="PARTNER001"
-                  value={affiliateCode}
-                  onChange={(e) => setAffiliateCode(e.target.value.toUpperCase())}
-                />
-                {affiliateValidation && (
-                  <div className="mt-2">
-                    <Badge variant={affiliateValidation.isValid ? "default" : "destructive"} className="text-xs">
-                      {affiliateValidation.message}
-                    </Badge>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Contact Information */}
+          <div className="lg:col-span-1">
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  Get in Touch
+                </CardTitle>
+                <CardDescription>We're here to help you streamline your AR process</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-blue-600 mt-1" />
+                  <div>
+                    <p className="font-medium">Email</p>
+                    <p className="text-gray-600">contact@kuhlekt.com</p>
                   </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Phone className="h-5 w-5 text-blue-600 mt-1" />
+                  <div>
+                    <p className="font-medium">Phone</p>
+                    <p className="text-gray-600">+1 (555) 123-4567</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-blue-600 mt-1" />
+                  <div>
+                    <p className="font-medium">Address</p>
+                    <p className="text-gray-600">
+                      123 Business Ave
+                      <br />
+                      Suite 100
+                      <br />
+                      New York, NY 10001
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-blue-600 mt-1" />
+                  <div>
+                    <p className="font-medium">Business Hours</p>
+                    <p className="text-gray-600">
+                      Monday - Friday
+                      <br />
+                      9:00 AM - 6:00 PM EST
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Contact Form */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Send us a Message</CardTitle>
+                <CardDescription>Fill out the form below and we'll get back to you within 24 hours</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {state.message && (
+                  <Alert
+                    className={`mb-6 ${state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                  >
+                    {state.success ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    )}
+                    <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
+                      {state.message}
+                    </AlertDescription>
+                  </Alert>
                 )}
-                {state.errors?.affiliateCode && (
-                  <p className="text-red-600 text-sm mt-1">{state.errors.affiliateCode}</p>
-                )}
-              </div>
 
-              <div>
-                <Label htmlFor="subject">Subject *</Label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  type="text"
-                  required
-                  className="mt-1"
-                  placeholder="Inquiry about AR automation solutions"
-                />
-                {state.errors?.subject && <p className="text-red-600 text-sm mt-1">{state.errors.subject}</p>}
-              </div>
+                <form action={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        required
+                        className={state.errors?.firstName ? "border-red-500" : ""}
+                      />
+                      {state.errors?.firstName && <p className="text-sm text-red-600 mt-1">{state.errors.firstName}</p>}
+                    </div>
 
-              <div>
-                <Label htmlFor="message">Message *</Label>
-                <Textarea
-                  id="message"
-                  name="message"
-                  required
-                  rows={6}
-                  className="mt-1"
-                  placeholder="Tell us about your accounts receivable challenges and how we can help..."
-                />
-                {state.errors?.message && <p className="text-red-600 text-sm mt-1">{state.errors.message}</p>}
-              </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        required
+                        className={state.errors?.lastName ? "border-red-500" : ""}
+                      />
+                      {state.errors?.lastName && <p className="text-sm text-red-600 mt-1">{state.errors.lastName}</p>}
+                    </div>
+                  </div>
 
-              <div className="flex justify-center">
-                <ReCAPTCHA onVerify={setRecaptchaToken} />
-              </div>
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      className={state.errors?.email ? "border-red-500" : ""}
+                    />
+                    {state.errors?.email && <p className="text-sm text-red-600 mt-1">{state.errors.email}</p>}
+                  </div>
 
-              <Button
-                type="submit"
-                disabled={isPending || !recaptchaToken}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Message...
-                  </>
-                ) : (
-                  "Send Message"
-                )}
-              </Button>
-            </form>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="company">Company *</Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        type="text"
+                        required
+                        className={state.errors?.company ? "border-red-500" : ""}
+                      />
+                      {state.errors?.company && <p className="text-sm text-red-600 mt-1">{state.errors.company}</p>}
+                    </div>
 
-            <div className="mt-6 text-center text-sm text-gray-600">
-              <p>
-                By submitting this form, you agree to our{" "}
-                <a href="#" className="text-blue-600 hover:underline">
-                  Privacy Policy
-                </a>{" "}
-                and{" "}
-                <a href="#" className="text-blue-600 hover:underline">
-                  Terms of Service
-                </a>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        className={state.errors?.phone ? "border-red-500" : ""}
+                      />
+                      {state.errors?.phone && <p className="text-sm text-red-600 mt-1">{state.errors.phone}</p>}
+                    </div>
+                  </div>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">Sales Inquiries</h3>
-              <p className="text-gray-600 mb-2">sales@kuhlekt.com</p>
-              <p className="text-gray-600">+1 (555) 123-4567</p>
-            </CardContent>
-          </Card>
+                  <div>
+                    <Label htmlFor="subject">Subject *</Label>
+                    <Input
+                      id="subject"
+                      name="subject"
+                      type="text"
+                      required
+                      placeholder="How can we help you?"
+                      className={state.errors?.subject ? "border-red-500" : ""}
+                    />
+                    {state.errors?.subject && <p className="text-sm text-red-600 mt-1">{state.errors.subject}</p>}
+                  </div>
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">Technical Support</h3>
-              <p className="text-gray-600 mb-2">support@kuhlekt.com</p>
-              <p className="text-gray-600">+1 (555) 123-4568</p>
-            </CardContent>
-          </Card>
+                  <div>
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea
+                      id="message"
+                      name="message"
+                      required
+                      rows={5}
+                      placeholder="Tell us about your current AR challenges and how we can help..."
+                      className={state.errors?.message ? "border-red-500" : ""}
+                    />
+                    {state.errors?.message && <p className="text-sm text-red-600 mt-1">{state.errors.message}</p>}
+                  </div>
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">General Info</h3>
-              <p className="text-gray-600 mb-2">info@kuhlekt.com</p>
-              <p className="text-gray-600">+1 (555) 123-4569</p>
-            </CardContent>
-          </Card>
+                  <div>
+                    <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
+                    <Input
+                      id="affiliateCode"
+                      name="affiliateCode"
+                      type="text"
+                      placeholder="Enter your affiliate code for special pricing"
+                      className={state.errors?.affiliateCode ? "border-red-500" : ""}
+                    />
+                    {state.errors?.affiliateCode && (
+                      <p className="text-sm text-red-600 mt-1">{state.errors.affiliateCode}</p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      Have a partner or referral code? Enter it here for special pricing.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <ReCAPTCHA onVerify={setRecaptchaToken} />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isPending || !recaptchaToken}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isPending ? "Sending..." : "Send Message"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
