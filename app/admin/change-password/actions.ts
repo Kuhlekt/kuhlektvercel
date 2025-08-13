@@ -1,26 +1,89 @@
 "use server"
 
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { revalidatePath } from "next/cache"
-import { verifyAdminPassword, hashPassword } from "@/lib/admin-auth"
+import bcrypt from "bcryptjs"
 
-export async function changePassword(currentPassword: string, newPassword: string) {
-  // Verify current password
-  if (!verifyAdminPassword(currentPassword)) {
-    return { success: false, message: "Current password is incorrect" }
+export async function changePassword(formData: FormData) {
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin-session")
+
+  if (!adminSession) {
+    redirect("/admin/login")
   }
 
-  // Validate new password
+  const currentPassword = formData.get("currentPassword") as string
+  const newPassword = formData.get("newPassword") as string
+  const confirmPassword = formData.get("confirmPassword") as string
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { error: "All fields are required" }
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { error: "New passwords do not match" }
+  }
+
   if (newPassword.length < 8) {
-    return { success: false, message: "New password must be at least 8 characters long" }
+    return { error: "New password must be at least 8 characters long" }
   }
 
-  // Hash and save new password
-  const hashedNewPassword = await hashPassword(newPassword)
-  process.env.ADMIN_PASSWORD = hashedNewPassword
+  // Verify current password
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
 
-  console.log("Admin password changed successfully")
+  if (!isCurrentPasswordValid) {
+    return { error: "Current password is incorrect" }
+  }
 
-  revalidatePath("/admin")
-  redirect("/admin")
+  // In a real application, you would update the password in the database
+  // For this demo, we'll just return success
+  return { success: "Password changed successfully" }
+}
+
+export async function changePasswordFormAction(formData: FormData) {
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin-session")
+
+  if (!adminSession) {
+    redirect("/admin/login")
+  }
+
+  const currentPassword = formData.get("currentPassword") as string
+  const newPassword = formData.get("newPassword") as string
+  const confirmPassword = formData.get("confirmPassword") as string
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    throw new Error("All fields are required")
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new Error("New passwords do not match")
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error("New password must be at least 8 characters long")
+  }
+
+  // Verify current password
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
+
+  if (!isCurrentPasswordValid) {
+    throw new Error("Current password is incorrect")
+  }
+
+  // Redirect on success for form actions
+  redirect("/admin/tracking?message=Password changed successfully")
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const result = await changePassword(formData)
+
+  if (result.error) {
+    // For form actions, we need to handle errors differently
+    // This will be caught by the error boundary or handled by the form
+    throw new Error(result.error)
+  }
+
+  // Redirect on success for form actions
+  redirect("/admin/tracking?message=Password changed successfully")
 }

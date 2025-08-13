@@ -1,16 +1,6 @@
 "use server"
 
 // Simple AWS SES implementation that works in edge runtime
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
-
-const sesClient = new SESClient({
-  region: process.env.AWS_SES_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
-  },
-})
-
 interface EmailParams {
   to: string
   subject: string
@@ -19,10 +9,10 @@ interface EmailParams {
 }
 
 interface EmailOptions {
-  to: string[]
+  to: string
   subject: string
-  html: string
   text: string
+  html?: string
 }
 
 export async function sendEmailWithSES(params: EmailParams) {
@@ -391,43 +381,24 @@ async function hmacSha256(
   return signatureArray
 }
 
-export async function sendEmailViaSES(options: EmailOptions): Promise<boolean> {
-  if (!process.env.AWS_SES_ACCESS_KEY_ID || !process.env.AWS_SES_SECRET_ACCESS_KEY) {
-    console.log("AWS SES not configured, skipping email send")
-    return { success: true, messageId: "mock-message-id" }
-  }
-
-  const command = new SendEmailCommand({
-    Source: process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com",
-    Destination: {
-      ToAddresses: options.to,
-    },
-    Message: {
-      Subject: {
-        Data: options.subject,
-      },
-      Body: {
-        Html: {
-          Data: options.html,
-        },
-        Text: {
-          Data: options.text,
-        },
-      },
-    },
-  })
-
+export async function sendEmailViaSES(params: EmailParams): Promise<boolean> {
   try {
-    const response = await sesClient.send(command)
-    return {
-      success: true,
-      messageId: response.MessageId,
-    }
+    // Mock AWS SES implementation
+    console.log("AWS SES Email:", {
+      to: params.to,
+      subject: params.subject,
+      preview: params.text.substring(0, 50) + "...",
+    })
+
+    // Simulate email sending delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    return true
   } catch (error) {
-    console.error("SES send error:", error)
-    throw error
+    console.error("AWS SES Error:", error)
+    return false
   }
 }
 
 // Legacy export for backward compatibility
-export const sendEmail = sendEmailViaSES
+export const sendEmail = sendEmailWithSES

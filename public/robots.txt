@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/admin/
 
 # Block all bots from admin areas
 User-agent: *

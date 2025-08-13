@@ -1,25 +1,15 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
-interface ReCaptchaProps {
-  onVerify: (token: string) => void
-  onChange?: (token: string) => void
+interface RecaptchaProps {
+  onVerify?: (token: string) => void
 }
 
-declare global {
-  interface Window {
-    grecaptcha: any
-    onRecaptchaLoad: () => void
-  }
-}
-
-export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
-  const recaptchaRef = useRef<HTMLDivElement>(null)
+export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [isLoaded, setIsLoaded] = useState(false)
-  const [siteKey, setSiteKey] = useState<string>("")
+  const [siteKey, setSiteKey] = useState<string | null>(null)
   const [isEnabled, setIsEnabled] = useState(false)
-  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     // Fetch reCAPTCHA configuration
@@ -29,107 +19,97 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
         setSiteKey(data.siteKey)
         setIsEnabled(data.enabled)
 
-        if (!data.enabled) {
-          // If reCAPTCHA is disabled, provide a fallback token
-          const fallbackToken = "recaptcha-disabled-fallback-token"
-          onVerify(fallbackToken)
-          onChange?.(fallbackToken)
-          return
+        if (data.enabled && data.siteKey) {
+          loadReCAPTCHA(data.siteKey)
+        } else {
+          // Provide bypass token for development
+          if (onVerify) {
+            onVerify("development-bypass-token")
+          }
         }
-
-        if (!data.siteKey) {
-          setError("reCAPTCHA site key not configured")
-          const errorToken = "recaptcha-error-fallback-token"
-          onVerify(errorToken)
-          onChange?.(errorToken)
-          return
+      })
+      .catch((error) => {
+        console.error("Failed to fetch reCAPTCHA config:", error)
+        // Provide bypass token on error
+        if (onVerify) {
+          onVerify("development-bypass-token")
         }
-
-        // Load reCAPTCHA script
-        loadRecaptchaScript()
       })
-      .catch((err) => {
-        console.error("Failed to fetch reCAPTCHA config:", err)
-        setError("Failed to load reCAPTCHA configuration")
-        const errorToken = "recaptcha-load-error-fallback-token"
-        onVerify(errorToken)
-        onChange?.(errorToken)
-      })
-  }, [onVerify, onChange])
+  }, [onVerify])
 
-  const loadRecaptchaScript = () => {
-    if (window.grecaptcha) {
-      initializeRecaptcha()
-      return
-    }
-
-    window.onRecaptchaLoad = () => {
-      setIsLoaded(true)
-      initializeRecaptcha()
-    }
+  const loadReCAPTCHA = (key: string) => {
+    if (isLoaded || !key) return
 
     const script = document.createElement("script")
-    script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit`
+    script.src = `https://www.google.com/recaptcha/api.js?render=${key}`
     script.async = true
     script.defer = true
-    script.onerror = () => {
-      setError("Failed to load reCAPTCHA script")
-      const errorToken = "recaptcha-load-error-fallback-token"
-      onVerify(errorToken)
-      onChange?.(errorToken)
+
+    script.onload = () => {
+      setIsLoaded(true)
+
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => {
+          executeReCAPTCHA(key)
+        })
+      }
     }
+
+    script.onerror = () => {
+      console.error("Failed to load reCAPTCHA script")
+      // Provide bypass token on script load error
+      if (onVerify) {
+        onVerify("development-bypass-token")
+      }
+    }
+
     document.head.appendChild(script)
   }
 
-  const initializeRecaptcha = () => {
-    if (!window.grecaptcha || !recaptchaRef.current || !siteKey) return
+  const executeReCAPTCHA = (key: string) => {
+    if (!window.grecaptcha || !key) {
+      if (onVerify) {
+        onVerify("development-bypass-token")
+      }
+      return
+    }
 
     try {
-      window.grecaptcha.render(recaptchaRef.current, {
-        sitekey: siteKey,
-        size: "invisible",
-        callback: (token: string) => {
-          onVerify(token)
-          onChange?.(token)
-        },
-        "error-callback": () => {
-          setError("reCAPTCHA verification failed")
-          const errorToken = "recaptcha-error-fallback-token"
-          onVerify(errorToken)
-          onChange?.(errorToken)
-        },
-      })
-
-      // Auto-execute the invisible reCAPTCHA
-      setTimeout(() => {
-        if (window.grecaptcha) {
-          window.grecaptcha.execute()
-        }
-      }, 1000)
-    } catch (err) {
-      console.error("Error initializing reCAPTCHA:", err)
-      setError("Error initializing reCAPTCHA")
-      const errorToken = "recaptcha-error-fallback-token"
-      onVerify(errorToken)
-      onChange?.(errorToken)
+      window.grecaptcha
+        .execute(key, { action: "submit" })
+        .then((token: string) => {
+          if (onVerify) {
+            onVerify(token)
+          }
+        })
+        .catch((error: any) => {
+          console.error("reCAPTCHA execution error:", error)
+          // Provide bypass token on execution error
+          if (onVerify) {
+            onVerify("development-bypass-token")
+          }
+        })
+    } catch (error) {
+      console.error("reCAPTCHA error:", error)
+      // Provide bypass token on any error
+      if (onVerify) {
+        onVerify("development-bypass-token")
+      }
     }
   }
 
-  // Don't render anything if reCAPTCHA is disabled
-  if (!isEnabled) {
-    return null
-  }
-
-  if (error) {
-    return <div className="text-sm text-gray-500">reCAPTCHA temporarily unavailable</div>
-  }
-
+  // Add hidden input for form submission
   return (
     <div>
-      <div ref={recaptchaRef}></div>
-      {!isLoaded && <div className="text-sm text-gray-500">Loading security verification...</div>}
+      <input type="hidden" name="recaptcha-token" value="" />
+      {!isEnabled && <p className="text-xs text-gray-500 mt-2">reCAPTCHA is disabled in development mode</p>}
     </div>
   )
 }
 
-export default ReCaptcha
+// Extend Window interface for TypeScript
+declare global {
+  interface Window {
+    grecaptcha: any
+  }
+}

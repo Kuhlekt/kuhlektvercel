@@ -1,10 +1,80 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
+  },
+  webpack: (config, { isServer, dev }) => {
+    // Handle potential module resolution issues
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+      stream: false,
+      url: false,
+      zlib: false,
+      http: false,
+      https: false,
+      assert: false,
+      os: false,
+      path: false,
+      buffer: false,
+      util: false,
+      events: false,
+      querystring: false,
+      child_process: false,
+      worker_threads: false,
+      perf_hooks: false,
+    };
+    
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'bcryptjs'];
+    }
+    
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@': path.resolve(__dirname, './'),
+        'server-only': false,
+      };
+    }
+    
+    // Add proper handling for .mjs files
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
+    });
+    
+    if (!dev && !isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks.cacheGroups,
+            vendor: {
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
+              chunks: 'all',
+              priority: 10,
+            },
+          },
+        },
+      };
+    }
+    
+    return config;
   },
   images: {
     remotePatterns: [
@@ -15,11 +85,45 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    domains: ['hebbkx1anhila5yf.public.blob.vercel-storage.com'],
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['crypto'],
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+        ],
+      },
+      {
+        source: '/admin/(.*)',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate, private',
+          },
+        ],
+      },
+    ]
   },
 }
 

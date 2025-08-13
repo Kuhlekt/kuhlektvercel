@@ -1,56 +1,76 @@
-import bcrypt from "bcryptjs"
+"use server"
+
 import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+import { createHmac } from "crypto"
 
-const ADMIN_SESSION_COOKIE = "admin-session"
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12)
+async function generateSecureToken(userId: string): Promise<string> {
+  const secret = process.env.ADMIN_2FA_SECRET || "fallback-secret"
+  const timestamp = Date.now().toString()
+  const payload = `${userId}:${timestamp}`
+  const signature = createHmac("sha256", secret).update(payload).digest("hex")
+  return `${Buffer.from(payload).toString("base64")}.${signature}`
 }
 
-export async function verifyAdminPassword(password: string, hashedPassword: string): Promise<boolean> {
-  // For development, use plain text comparison
-  // In production, you should hash the admin password
-  const adminPassword = process.env.ADMIN_PASSWORD
-  if (!adminPassword) {
-    console.error("ADMIN_PASSWORD not configured")
+async function validateSecureToken(token: string): Promise<{ valid: boolean; expired: boolean }> {
+  try {
+    const [payloadB64, signature] = token.split(".")
+    if (!payloadB64 || !signature) return { valid: false, expired: false }
+
+    const payload = Buffer.from(payloadB64, "base64").toString()
+    const [userId, timestamp] = payload.split(":")
+
+    // Verify signature
+    const secret = process.env.ADMIN_2FA_SECRET || "fallback-secret"
+    const expectedSignature = createHmac("sha256", secret).update(payload).digest("hex")
+
+    if (signature !== expectedSignature) {
+      return { valid: false, expired: false }
+    }
+
+    // Check expiration (24 hours)
+    const tokenAge = Date.now() - Number.parseInt(timestamp)
+    const maxAge = 24 * 60 * 60 * 1000 // 24 hours
+
+    return {
+      valid: true,
+      expired: tokenAge > maxAge,
+    }
+  } catch {
+    return { valid: false, expired: false }
+  }
+}
+
+export async function isAdminAuthenticated(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies()
+    const adminToken = cookieStore.get("admin-token")
+
+    if (!adminToken) {
+      return false
+    }
+
+    const validation = await validateSecureToken(adminToken.value)
+    return validation.valid && !validation.expired
+  } catch (error) {
+    console.error("Admin auth check error:", error)
     return false
   }
-
-  return password === adminPassword
 }
 
-export async function verifyAdminSession(): Promise<boolean> {
-  const cookieStore = cookies()
-  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)
+export async function setAdminAuthenticated(): Promise<void> {
+  const cookieStore = await cookies()
+  const secureToken = await generateSecureToken("admin")
 
-  if (!sessionCookie) {
-    return false
-  }
-
-  // In a real app, you'd verify the session token against a database
-  // For now, we'll just check if the cookie exists and has the right value
-  return sessionCookie.value === "authenticated"
-}
-
-export async function createAdminSession() {
-  const cookieStore = cookies()
-  cookieStore.set(ADMIN_SESSION_COOKIE, "authenticated", {
+  cookieStore.set("admin-token", secureToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24, // 24 hours
+    path: "/admin", // Restrict cookie scope to admin paths
   })
 }
 
-export async function destroyAdminSession() {
-  const cookieStore = cookies()
-  cookieStore.delete(ADMIN_SESSION_COOKIE)
-}
-
-export async function requireAdminAuth() {
-  const isAuthenticated = await verifyAdminSession()
-  if (!isAuthenticated) {
-    redirect("/admin/login")
-  }
+export async function clearAdminAuthentication(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.delete("admin-token")
 }

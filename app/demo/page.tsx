@@ -1,6 +1,7 @@
+"use client"
 import { Suspense } from "react"
 import DemoFormComponent from "./demo-form-component"
-import { VisitorTracker } from "@/components/visitor-tracker"
+import VisitorTracker from "@/components/visitor-tracker"
 
 export default function DemoPage() {
   return (

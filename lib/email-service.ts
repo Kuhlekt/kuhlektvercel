@@ -1,6 +1,150 @@
-import { sendEmail } from "./aws-ses"
+"use server"
 
-interface DemoRequestData {
+import { sendEmailWithSES } from "./aws-ses"
+
+interface EmailOptions {
+  to: string | string[]
+  subject: string
+  text?: string
+  html?: string
+}
+
+function validateEmailInput(options: EmailOptions): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  // Validate recipients
+  const recipients = Array.isArray(options.to) ? options.to : [options.to]
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  for (const email of recipients) {
+    if (!email || typeof email !== "string" || !emailRegex.test(email)) {
+      errors.push(`Invalid email address: ${email}`)
+    }
+  }
+
+  // Validate subject
+  if (!options.subject || typeof options.subject !== "string" || options.subject.length > 998) {
+    errors.push("Invalid subject line")
+  }
+
+  // Validate content
+  if (!options.text && !options.html) {
+    errors.push("Email must have text or HTML content")
+  }
+
+  // Check for potential injection attempts
+  const suspiciousPatterns = [/bcc:/i, /cc:/i, /to:/i, /from:/i, /content-type:/i, /mime-version:/i, /\r\n/g, /\n\r/g]
+
+  const checkContent = `${options.subject} ${options.text || ""} ${options.html || ""}`
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(checkContent)) {
+      errors.push("Suspicious content detected")
+      break
+    }
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+export async function sendEmail(options: EmailOptions) {
+  // Check if we're on the server
+  if (typeof window !== "undefined") {
+    throw new Error("Email service can only be used on the server")
+  }
+
+  const validation = validateEmailInput(options)
+  if (!validation.valid) {
+    console.error("Email validation failed:", validation.errors)
+    return {
+      success: false,
+      error: "Invalid email parameters: " + validation.errors.join(", "),
+    }
+  }
+
+  try {
+    const recipient = Array.isArray(options.to) ? options.to[0] : options.to
+
+    // Use AWS SES to send the email
+    const result = await sendEmailWithSES({
+      to: recipient,
+      subject: options.subject,
+      text: options.text || "",
+      html: options.html,
+    })
+
+    if (result.success) {
+      console.log("Email sent successfully:", result.messageId)
+      return {
+        success: true,
+        messageId: result.messageId,
+      }
+    } else {
+      console.error("Email sending failed:", result.message)
+      return {
+        success: false,
+        error: result.message,
+      }
+    }
+  } catch (error) {
+    console.error("Email service error:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+export async function sendContactEmail(data: {
+  name: string
+  email: string
+  company?: string
+  message: string
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+
+  const subject = `New Contact Form Submission from ${data.name}`
+  const text = `
+Name: ${data.name}
+Email: ${data.email}
+Company: ${data.company || "Not provided"}
+
+Message:
+${data.message}
+
+Submitted at: ${new Date().toLocaleString()}
+  `
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1f2937;">New Contact Form Submission</h2>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Contact Information</h3>
+        <p><strong>Name:</strong> ${data.name}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
+      </div>
+
+      <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Message</h3>
+        <p style="white-space: pre-wrap;">${data.message}</p>
+      </div>
+
+      <div style="margin-top: 30px; color: #6b7280; font-size: 12px;">
+        <p>Submitted at: ${new Date().toLocaleString()}</p>
+      </div>
+    </div>
+  `
+
+  return await sendEmailWithSES({
+    to: adminEmail,
+    subject,
+    text,
+    html,
+  })
+}
+
+export async function sendDemoRequestEmail(data: {
   firstName: string
   lastName: string
   email: string
@@ -9,110 +153,76 @@ interface DemoRequestData {
   phone?: string
   companySize?: string
   currentSolution?: string
-  timeline?: string
   challenges?: string
-  affiliateCode?: string
-  affiliateInfo?: any
+  timeline?: string
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+
+  const subject = `New Demo Request from ${data.firstName} ${data.lastName} at ${data.company}`
+  const text = `
+Demo Request Details:
+
+Name: ${data.firstName} ${data.lastName}
+Email: ${data.email}
+Phone: ${data.phone || "Not provided"}
+Company: ${data.company}
+Job Title: ${data.jobTitle || "Not provided"}
+
+Company Size: ${data.companySize || "Not specified"}
+Current Solution: ${data.currentSolution || "Not specified"}
+Timeline: ${data.timeline || "Not specified"}
+
+${data.challenges ? `Challenges:\n${data.challenges}` : ""}
+
+Submitted at: ${new Date().toLocaleString()}
+  `
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1f2937;">New Demo Request</h2>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Contact Information</h3>
+        <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Phone:</strong> ${data.phone || "Not provided"}</p>
+        <p><strong>Company:</strong> ${data.company}</p>
+        <p><strong>Job Title:</strong> ${data.jobTitle || "Not provided"}</p>
+      </div>
+
+      <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Company Details</h3>
+        <p><strong>Company Size:</strong> ${data.companySize || "Not specified"}</p>
+        <p><strong>Current Solution:</strong> ${data.currentSolution || "Not specified"}</p>
+        <p><strong>Timeline:</strong> ${data.timeline || "Not specified"}</p>
+      </div>
+
+      ${
+        data.challenges
+          ? `
+      <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Challenges</h3>
+        <p style="white-space: pre-wrap;">${data.challenges}</p>
+      </div>
+      `
+          : ""
+      }
+
+      <div style="margin-top: 30px; color: #6b7280; font-size: 12px;">
+        <p>Submitted at: ${new Date().toLocaleString()}</p>
+      </div>
+    </div>
+  `
+
+  return await sendEmailWithSES({
+    to: adminEmail,
+    subject,
+    text,
+    html,
+  })
 }
 
-interface ContactFormData {
-  firstName: string
-  lastName: string
-  email: string
-  company?: string
-  phone?: string
-  message: string
-}
+export { sendEmailWithSES }
 
-export async function sendDemoRequestEmail(data: DemoRequestData): Promise<boolean> {
-  try {
-    const subject = `New Demo Request from ${data.firstName} ${data.lastName}`
-    
-    const html = `
-      <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
-      <p><strong>Email:</strong> ${data.email}</p>
-      <p><strong>Company:</strong> ${data.company}</p>
-      ${data.jobTitle ? `<p><strong>Job Title:</strong> ${data.jobTitle}</p>` : ''}
-      ${data.phone ? `<p><strong>Phone:</strong> ${data.phone}</p>` : ''}
-      ${data.companySize ? `<p><strong>Company Size:</strong> ${data.companySize}</p>` : ''}
-      ${data.currentSolution ? `<p><strong>Current Solution:</strong> ${data.currentSolution}</p>` : ''}
-      ${data.timeline ? `<p><strong>Timeline:</strong> ${data.timeline}</p>` : ''}
-      ${data.challenges ? `<p><strong>Challenges:</strong> ${data.challenges}</p>` : ''}
-      ${data.affiliateCode ? `<p><strong>Affiliate Code:</strong> ${data.affiliateCode}</p>` : ''}
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-    `
-
-    const text = `
-      New Demo Request
-      
-      Name: ${data.firstName} ${data.lastName}
-      Email: ${data.email}
-      Company: ${data.company}
-      ${data.jobTitle ? `Job Title: ${data.jobTitle}` : ''}
-      ${data.phone ? `Phone: ${data.phone}` : ''}
-      ${data.companySize ? `Company Size: ${data.companySize}` : ''}
-      ${data.currentSolution ? `Current Solution: ${data.currentSolution}` : ''}
-      ${data.timeline ? `Timeline: ${data.timeline}` : ''}
-      ${data.challenges ? `Challenges: ${data.challenges}` : ''}
-      ${data.affiliateCode ? `Affiliate Code: ${data.affiliateCode}` : ''}
-      
-      Submitted: ${new Date().toLocaleString()}
-    `
-
-    const result = await sendEmail({
-      to: [process.env.AWS_SES_FROM_EMAIL || "demo@kuhlekt.com"],
-      subject,
-      html,
-      text,
-    })
-
-    return result.success
-  } catch (error) {
-    console.error("Failed to send demo request email:", error)
-    return false
-  }
-}
-
-export async function sendContactEmail(data: ContactFormData): Promise<boolean> {
-  try {
-    const subject = `New Contact Form Submission from ${data.firstName} ${data.lastName}`
-    
-    const html = `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
-      <p><strong>Email:</strong> ${data.email}</p>
-      ${data.company ? `<p><strong>Company:</strong> ${data.company}</p>` : ''}
-      ${data.phone ? `<p><strong>Phone:</strong> ${data.phone}</p>` : ''}
-      <p><strong>Message:</strong></p>
-      <p>${data.message.replace(/\n/g, '<br>')}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-    `
-
-    const text = `
-      New Contact Form Submission
-      
-      Name: ${data.firstName} ${data.lastName}
-      Email: ${data.email}
-      ${data.company ? `Company: ${data.company}` : ''}
-      ${data.phone ? `Phone: ${data.phone}` : ''}
-      
-      Message:
-      ${data.message}
-      
-      Submitted: ${new Date().toLocaleString()}
-    `
-
-    const result = await sendEmail({
-      to: [process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com"],
-      subject,
-      html,
-      text,
-    })
-
-    return result.success
-  } catch (error) {
-    console.error("Failed to send contact email:", error)
-    return false
-  }
-}
+// Legacy export for backward compatibility
+export const sendEmailLegacy = sendEmailWithSES
