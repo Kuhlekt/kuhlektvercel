@@ -39,3 +39,16 @@ export async function changePassword(formData: FormData) {
   // For this demo, we'll just return success
   return { success: "Password changed successfully" }
 }
+
+export async function changePasswordAction(formData: FormData) {
+  const result = await changePassword(formData)
+
+  if (result.error) {
+    // For form actions, we need to handle errors differently
+    // This will be caught by the error boundary or handled by the form
+    throw new Error(result.error)
+  }
+
+  // Redirect on success for form actions
+  redirect("/admin/tracking?message=Password changed successfully")
+}
