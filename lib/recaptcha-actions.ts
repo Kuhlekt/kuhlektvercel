@@ -60,7 +60,7 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
 }
 
 export async function getRecaptchaSiteKey(): Promise<string> {
-  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY
+  const siteKey = process.env.RECAPTCHA_SITE_KEY
 
   if (!siteKey) {
     console.warn("RECAPTCHA_SITE_KEY not configured")
