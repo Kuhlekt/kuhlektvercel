@@ -12,7 +12,11 @@ export function CareersModal({ isOpen, onClose }: CareersModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <div className="flex justify-center mb-6">
-          <img src="/placeholder.svg?height=60&width=200" alt="Kuhlekt Logo" className="h-15" />
+          <img
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20175%20Pxls%20-%20Copy-XpKgxRxOaDyrzfZ8DZg8a2eIxxWGyP.png"
+            alt="Kuhlekt Logo"
+            className="h-15"
+          />
         </div>
 
         <DialogHeader>
