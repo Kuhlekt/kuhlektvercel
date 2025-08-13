@@ -110,3 +110,31 @@ Submitted at: ${new Date().toISOString()}
     }
   }
 }
+
+export async function testAWSSES() {
+  try {
+    const testResult = await sendEmailWithSES({
+      to: [process.env.ADMIN_EMAIL || "admin@kuhlekt.com"],
+      subject: "AWS SES Test Email",
+      body: "This is a test email to verify AWS SES configuration is working properly.",
+    })
+
+    if (testResult.success) {
+      return {
+        success: true,
+        message: "Test email sent successfully!",
+      }
+    } else {
+      return {
+        success: false,
+        error: `Failed to send test email: ${testResult.error}`,
+      }
+    }
+  } catch (error) {
+    console.error("AWS SES test error:", error)
+    return {
+      success: false,
+      error: "An unexpected error occurred while testing AWS SES.",
+    }
+  }
+}

@@ -1,29 +1,18 @@
 "use server"
 
-export async function getRecaptchaSiteKey(): Promise<string> {
-  const siteKey = process.env.RECAPTCHA_SITE_KEY
-  if (!siteKey) {
-    console.warn("RECAPTCHA_SITE_KEY not configured")
-    return ""
-  }
-  return siteKey
+export async function getRecaptchaSiteKey() {
+  return process.env.RECAPTCHA_SITE_KEY || ""
 }
 
-export async function verifyRecaptcha(token: string): Promise<{
-  success: boolean
-  score?: number
-  action?: string
-  error?: string
-}> {
+export async function verifyRecaptcha(token: string) {
   try {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
     if (!secretKey) {
-      console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification in development")
+      console.error("RECAPTCHA_SECRET_KEY is not configured")
       return {
-        success: true,
-        score: 0.9,
-        action: "submit",
+        success: false,
+        error: "reCAPTCHA is not properly configured",
       }
     }
 
@@ -34,7 +23,16 @@ export async function verifyRecaptcha(token: string): Promise<{
       }
     }
 
-    // Verify the token with Google's reCAPTCHA API
+    // For development/testing, allow bypass if secret key is 'test'
+    if (secretKey === "test") {
+      console.log("Using test reCAPTCHA - bypassing verification")
+      return {
+        success: true,
+        score: 0.9,
+        action: "submit",
+      }
+    }
+
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
       headers: {
@@ -47,40 +45,30 @@ export async function verifyRecaptcha(token: string): Promise<{
     })
 
     if (!response.ok) {
-      throw new Error(`reCAPTCHA API request failed: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
 
-    if (!data.success) {
+    if (data.success) {
+      return {
+        success: true,
+        score: data.score || 1.0,
+        action: data.action || "submit",
+      }
+    } else {
       console.error("reCAPTCHA verification failed:", data["error-codes"])
       return {
         success: false,
         error: "reCAPTCHA verification failed",
+        errorCodes: data["error-codes"],
       }
-    }
-
-    // For reCAPTCHA v3, check the score
-    if (data.score !== undefined) {
-      const score = Number.parseFloat(data.score)
-      if (score < 0.5) {
-        return {
-          success: false,
-          error: "Low reCAPTCHA score - possible bot activity",
-        }
-      }
-    }
-
-    return {
-      success: true,
-      score: data.score,
-      action: data.action,
     }
   } catch (error) {
-    console.error("reCAPTCHA verification error:", error)
+    console.error("Error verifying reCAPTCHA:", error)
     return {
       success: false,
-      error: "reCAPTCHA verification failed",
+      error: "Failed to verify reCAPTCHA",
     }
   }
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Admin Dashboard - Kuhlekt",
-  description: "Admin dashboard for Kuhlekt website management",
+  description: "Admin dashboard for Kuhlekt",
   robots: {
     index: false,
     follow: false,
@@ -11,22 +11,14 @@ export const metadata: Metadata = {
     noarchive: true,
     nosnippet: true,
     noimageindex: true,
-    googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
-      noarchive: true,
-      nosnippet: true,
-    },
+    notranslate: true,
   },
   other: {
-    robots: "noindex, nofollow, noarchive, nosnippet, noimageindex, nocache",
-    googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    bingbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    slurp: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    duckduckbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    baiduspider: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    yandexbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    googlebot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    bingbot: "noindex,nofollow,noarchive,nosnippet",
+    duckduckbot: "noindex,nofollow",
+    baiduspider: "noindex,nofollow",
+    yandexbot: "noindex,nofollow",
   },
 }
 
@@ -37,14 +29,13 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, nocache" />
-      <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="slurp" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="baiduspider" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="yandexbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <div className="min-h-screen bg-gray-50">{children}</div>
+      <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex,notranslate" />
+      <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
+      <meta name="bingbot" content="noindex,nofollow,noarchive,nosnippet" />
+      <meta name="duckduckbot" content="noindex,nofollow" />
+      <meta name="baiduspider" content="noindex,nofollow" />
+      <meta name="yandexbot" content="noindex,nofollow" />
+      {children}
     </>
   )
 }

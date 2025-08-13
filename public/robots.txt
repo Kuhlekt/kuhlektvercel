@@ -3,42 +3,12 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/admin/
 
-# Block all bots from admin areas
-User-agent: Googlebot
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: Bingbot
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: Slurp
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: DuckDuckBot
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: Baiduspider
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: YandexBot
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: facebookexternalhit
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: Twitterbot
-Disallow: /admin/
-Disallow: /api/admin/
-
-User-agent: LinkedInBot
-Disallow: /admin/
-Disallow: /api/admin/
+# Block specific admin paths
+Disallow: /admin/login
+Disallow: /admin/visitors
+Disallow: /admin/tracking
+Disallow: /admin/setup-2fa
+Disallow: /admin/change-password
 
 # Allow public pages
 Allow: /
