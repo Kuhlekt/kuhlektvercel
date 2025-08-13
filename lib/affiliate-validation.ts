@@ -1,23 +1,15 @@
-"use server"
-
 export interface AffiliateInfo {
-  code: string
-  name: string
-  commission: number
-  isActive: boolean
-  isValid: boolean
+  code?: string
+  name?: string
+  commission?: number
+  isActive?: boolean
+  isValid?: boolean
   category?: string
   discount?: number
   description?: string
   partnerName?: string
   discountPercent?: number
   commissionRate?: number
-}
-
-export interface AffiliateValidation {
-  isValid: boolean
-  discount: number
-  code?: string
 }
 
 // Predefined list of valid affiliate codes
@@ -35,11 +27,6 @@ export const VALID_AFFILIATE_CODES = [
   "REFERRAL10",
   "CONSULTANT",
   "BETA2024",
-  "PARTNER10",
-  "REFERRAL15",
-  "EARLY20",
-  "VIP25",
-  "BETA30",
 ]
 
 // Predefined affiliate codes with their details
@@ -93,12 +80,6 @@ const AFFILIATE_CODES = {
     commission: 25,
     isActive: true,
   },
-  // Predefined affiliate codes with their respective discounts
-  PARTNER10: 10,
-  REFERRAL15: 15,
-  EARLY20: 20,
-  VIP25: 25,
-  BETA30: 30,
 } as const
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -362,7 +343,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
 /**
  * Validates if an affiliate code is in the approved list
  * @param code - The affiliate code to validate
- * @returns true if valid, false otherwise
+ * @returns AffiliateInfo object
  */
 export function validateAffiliate(code: string): AffiliateInfo {
   const upperCode = code.toUpperCase().trim()
@@ -391,32 +372,17 @@ export function validateAffiliate(code: string): AffiliateInfo {
 }
 
 /**
- * Validates an affiliate code and returns it in uppercase if valid
+ * Validates an affiliate code and returns boolean
  * @param code - The affiliate code to validate
- * @returns The validated code in uppercase or null if invalid
+ * @returns boolean indicating if code is valid
  */
-export function validateAffiliateCode(code: string): AffiliateValidation {
+export function validateAffiliateCode(code: string): boolean {
   if (!code || typeof code !== "string") {
-    return {
-      isValid: false,
-      discount: 0,
-    }
+    return false
   }
 
-  const normalizedCode = code.trim().toUpperCase()
-
-  if (normalizedCode in AFFILIATE_CODES) {
-    return {
-      isValid: true,
-      discount: AFFILIATE_CODES[normalizedCode as keyof typeof AFFILIATE_CODES],
-      code: normalizedCode,
-    }
-  }
-
-  return {
-    isValid: false,
-    discount: 0,
-  }
+  const upperCode = code.toUpperCase().trim()
+  return upperCode in AFFILIATE_CODES
 }
 
 /**
@@ -446,9 +412,9 @@ export function formatAffiliateCode(code: string): string {
 }
 
 /**
- * Validates if an affiliate code is in the approved list and returns partner type
+ * Gets affiliate information for a given code
  * @param code - The affiliate code to validate
- * @returns Object with isValid boolean and partner string if valid, null otherwise
+ * @returns AffiliateInfo object
  */
 export function getAffiliateInfo(code: string): AffiliateInfo {
   if (!validateAffiliateCode(code)) {
@@ -513,11 +479,6 @@ export function getAffiliateDiscount(code: string): number {
     REFERRAL10: 10,
     CONSULTANT: 20,
     BETA2024: 25,
-    PARTNER10: 10,
-    REFERRAL15: 15,
-    EARLY20: 20,
-    VIP25: 25,
-    BETA30: 30,
   }
 
   return discounts[normalizedCode] || 0
@@ -525,51 +486,4 @@ export function getAffiliateDiscount(code: string): number {
 
 export function getAllAffiliateCodes(): string[] {
   return Object.keys(AFFILIATE_CODES)
-}
-
-export function getAvailableAffiliateCodes(): Array<{ code: string; discount: number }> {
-  return Object.entries(AFFILIATE_CODES).map(([code, discount]) => ({
-    code,
-    discount,
-  }))
-}
-
-export function calculateDiscountedPrice(
-  originalPrice: number,
-  affiliateCode?: string,
-): {
-  originalPrice: number
-  discountPercent: number
-  discountAmount: number
-  finalPrice: number
-} {
-  if (!affiliateCode) {
-    return {
-      originalPrice,
-      discountPercent: 0,
-      discountAmount: 0,
-      finalPrice: originalPrice,
-    }
-  }
-
-  const validation = validateAffiliateCode(affiliateCode)
-
-  if (!validation.isValid) {
-    return {
-      originalPrice,
-      discountPercent: 0,
-      discountAmount: 0,
-      finalPrice: originalPrice,
-    }
-  }
-
-  const discountAmount = (originalPrice * validation.discount) / 100
-  const finalPrice = originalPrice - discountAmount
-
-  return {
-    originalPrice,
-    discountPercent: validation.discount,
-    discountAmount,
-    finalPrice: Math.max(0, finalPrice), // Ensure price doesn't go below 0
-  }
 }
