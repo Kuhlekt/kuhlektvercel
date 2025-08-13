@@ -1,7 +1,8 @@
 "use server"
 
-import { sendDemoRequestEmail } from "@/lib/email-service"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { sendEmail } from "@/lib/aws-ses"
+import { validateAffiliate } from "@/lib/affiliate-validation"
+import { verifyCaptcha } from "@/lib/captcha"
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
@@ -52,57 +53,67 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Validate affiliate code if provided
-    let isValidAffiliate = true
-    if (affiliateCode?.trim()) {
-      isValidAffiliate = validateAffiliateCode(affiliateCode.trim())
-      if (!isValidAffiliate) {
-        return {
-          success: false,
-          message: "Invalid affiliate code provided",
-          errors: { affiliateCode: "Invalid affiliate code" },
-        }
+    // Verify reCAPTCHA (non-blocking)
+    let captchaVerified = false
+    if (captchaToken && captchaToken !== "development-mode") {
+      try {
+        captchaVerified = await verifyCaptcha(captchaToken)
+      } catch (error) {
+        console.error("reCAPTCHA verification error:", error)
+        // Continue with form submission even if reCAPTCHA fails
       }
     }
 
-    // Prepare email data
-    const emailData = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      company: company.trim(),
-      phone: phone.trim(),
-      jobTitle: jobTitle?.trim() || "",
-      companySize: companySize?.trim() || "",
-      currentSolution: currentSolution?.trim() || "",
-      timeline: timeline?.trim() || "",
-      challenges: challenges?.trim() || "",
-      affiliateCode: affiliateCode?.trim() || "",
-      captchaToken: captchaToken || "",
+    // Validate affiliate code if provided
+    let validAffiliate = null
+    if (affiliateCode?.trim()) {
+      validAffiliate = validateAffiliate(affiliateCode.trim())
     }
 
+    // Prepare email content
+    const emailSubject = `New Demo Request from ${firstName} ${lastName} at ${company}`
+    const emailBody = `
+      <h2>New Demo Request</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      ${jobTitle ? `<p><strong>Job Title:</strong> ${jobTitle}</p>` : ""}
+      ${companySize ? `<p><strong>Company Size:</strong> ${companySize}</p>` : ""}
+      ${currentSolution ? `<p><strong>Current Solution:</strong> ${currentSolution}</p>` : ""}
+      ${timeline ? `<p><strong>Timeline:</strong> ${timeline}</p>` : ""}
+      ${challenges ? `<p><strong>Challenges:</strong></p><p>${challenges}</p>` : ""}
+      ${validAffiliate ? `<p><strong>Affiliate Code:</strong> ${affiliateCode} (Valid)</p>` : ""}
+      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
+      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+    `
+
     // Send email
-    const emailResult = await sendDemoRequestEmail(emailData)
+    const emailResult = await sendEmail({
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      html: emailBody,
+    })
 
     if (!emailResult.success) {
+      console.error("Failed to send demo request email:", emailResult.error)
       return {
         success: false,
-        message: "Failed to send demo request. Please try again or contact support.",
+        message: "There was an error submitting your demo request. Please try again or contact us directly.",
         errors: {},
       }
     }
 
     return {
       success: true,
-      message:
-        "Demo request submitted successfully! We'll contact you within 24 hours to schedule your personalized demo.",
+      message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
       errors: {},
     }
   } catch (error) {
     console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "An unexpected error occurred. Please try again.",
       errors: {},
     }
   }

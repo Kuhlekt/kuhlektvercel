@@ -1,6 +1,7 @@
 "use server"
 
-import { sendContactEmail } from "@/lib/email-service"
+import { sendEmail } from "@/lib/aws-ses"
+import { verifyCaptcha } from "@/lib/captcha"
 
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
@@ -51,22 +52,40 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Prepare email data
-    const emailData = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      company: company.trim(),
-      phone: phone.trim(),
-      subject: subject.trim(),
-      message: message?.trim() || "",
-      captchaToken: captchaToken || "",
+    // Verify reCAPTCHA (non-blocking)
+    let captchaVerified = false
+    if (captchaToken && captchaToken !== "development-mode") {
+      try {
+        captchaVerified = await verifyCaptcha(captchaToken)
+      } catch (error) {
+        console.error("reCAPTCHA verification error:", error)
+        // Continue with form submission even if reCAPTCHA fails
+      }
     }
 
+    // Prepare email content
+    const emailSubject = `Contact Form: ${subject} - ${firstName} ${lastName}`
+    const emailBody = `
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      <p><strong>Subject:</strong> ${subject}</p>
+      ${message ? `<p><strong>Message:</strong></p><p>${message}</p>` : ""}
+      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
+      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+    `
+
     // Send email
-    const emailResult = await sendContactEmail(emailData)
+    const emailResult = await sendEmail({
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      html: emailBody,
+    })
 
     if (!emailResult.success) {
+      console.error("Failed to send contact email:", emailResult.error)
       return {
         success: false,
         message: "Failed to send message. Please try again or contact support directly.",

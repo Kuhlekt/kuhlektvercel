@@ -12,16 +12,14 @@ interface AffiliateInfo {
 const VALID_AFFILIATE_CODES = [
   "PARTNER001",
   "PARTNER002",
-  "PARTNER003",
   "RESELLER001",
   "RESELLER002",
   "CHANNEL001",
   "CHANNEL002",
   "REFERRAL001",
   "REFERRAL002",
-  "PROMO2024",
-  "EARLY2024",
-  "BETA2024",
+  "DEMO2024",
+  "SPECIAL2024",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
