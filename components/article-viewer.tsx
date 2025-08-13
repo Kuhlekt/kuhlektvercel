@@ -23,6 +23,50 @@ interface ArticleViewerProps {
   onBack: () => void
 }
 
+// Function to process content and render images properly
+function processArticleContent(content: string): string {
+  let processedContent = content
+
+  // Replace image placeholders with actual images
+  processedContent = processedContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
+    // Check if we have stored images in global reference
+    const storedImages = (window as any).textareaImages || []
+    const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
+
+    if (imageData && imageData.dataUrl) {
+      return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
+    }
+
+    // If no stored image found, return a placeholder div
+    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
+      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
+    </div>`
+  })
+
+  // Convert URLs to actual images
+  processedContent = processedContent.replace(
+    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
+    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
+  )
+
+  // Convert data URLs to images
+  processedContent = processedContent.replace(
+    /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
+    '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
+  )
+
+  // Remove HTML tags except for images and basic formatting
+  processedContent = processedContent
+    .replace(/<(?!img|br|p|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[^>]*>/gi, "")
+    .replace(/<\/(?!img|br|p|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[^>]*>/gi, "")
+
+  // Convert line breaks to proper spacing
+  processedContent = processedContent.replace(/\n\n/g, "<br><br>")
+  processedContent = processedContent.replace(/\n/g, "<br>")
+
+  return processedContent
+}
+
 export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }: ArticleViewerProps) {
   const [currentArticle, setCurrentArticle] = useState(article)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -40,6 +84,8 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
       setShowDeleteDialog(false)
     }
   }
+
+  const processedContent = processArticleContent(currentArticle.content)
 
   return (
     <div className="space-y-6">
@@ -109,7 +155,15 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
         </CardHeader>
 
         <CardContent>
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: currentArticle.content }} />
+          <div
+            className="prose max-w-none text-gray-800 leading-relaxed"
+            style={{
+              lineHeight: "1.7",
+              fontSize: "16px",
+              fontFamily: "system-ui, -apple-system, sans-serif",
+            }}
+            dangerouslySetInnerHTML={{ __html: processedContent }}
+          />
         </CardContent>
       </Card>
 

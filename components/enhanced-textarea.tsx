@@ -18,7 +18,7 @@ export interface ImageData {
 interface EnhancedTextareaProps {
   value: string
   onChange: (value: string) => void
-  onImagesChange?: (images: ImageData[]) => void // Add callback for image changes
+  onImagesChange?: (images: ImageData[]) => void
   placeholder?: string
   rows?: number
   disabled?: boolean
@@ -41,13 +41,14 @@ export function EnhancedTextarea({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Notify parent when images change
+  // Notify parent when images change and update global reference
   useEffect(() => {
     if (onImagesChange) {
       onImagesChange(images)
     }
-    // Also update global reference for backward compatibility
+    // Update global reference for article viewer to access
     ;(window as any).textareaImages = images
+    console.log("Updated global textareaImages:", images)
   }, [images, onImagesChange])
 
   // Generate unique placeholder for image

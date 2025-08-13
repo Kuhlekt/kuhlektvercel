@@ -12,7 +12,7 @@ interface SearchResultsProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Enhanced function to extract clean text content from HTML
+// Enhanced function to extract clean text content from HTML and process images
 function extractCleanText(html: string): string {
   // Create a temporary div to parse HTML properly
   const tempDiv = document.createElement("div")
@@ -22,13 +22,19 @@ function extractCleanText(html: string): string {
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
+  // Process image placeholders
+  let processedHtml = html
+  processedHtml = processedHtml.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, "[Image: $2]")
+
+  // Replace data URLs with [Image] placeholder for preview
+  processedHtml = processedHtml.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "[Image]")
+  processedHtml = processedHtml.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "[Image]")
+
+  // Update temp div with processed HTML
+  tempDiv.innerHTML = processedHtml
+
   // Get text content
   let text = tempDiv.textContent || tempDiv.innerText || ""
-
-  // Remove data URLs and image references
-  text = text.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "")
-  text = text.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "")
-  text = text.replace(/\[IMAGE:[^\]]+\]/gi, "[Image]")
 
   // Clean up CSS-related text
   text = text.replace(/style\s*=\s*["'][^"']*["']/gi, "")
@@ -47,7 +53,8 @@ function extractCleanText(html: string): string {
       cleaned.length > 15 &&
       !cleaned.match(/^(max-width|height|auto|margin|padding|border|display)/i) &&
       !cleaned.match(/^\d+$/) &&
-      cleaned.split(" ").length > 2
+      cleaned.split(" ").length > 2 &&
+      cleaned !== "[Image]"
     )
   })
 
@@ -127,7 +134,7 @@ export function SearchResults({ results, categories, query, onArticleSelect }: S
 
           return (
             <Card
-              key={`${article.id}-${article.updatedAt.getTime()}`} // Updated line
+              key={`${article.id}-${article.updatedAt.getTime()}`}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onArticleSelect(article)}
             >
