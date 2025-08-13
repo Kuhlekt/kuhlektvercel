@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Edit, Trash2, ArrowLeft, Calendar, User, Tag } from "lucide-react"
+import { Edit, Trash2, ArrowLeft, Calendar, User, Tag, Hash, Clock } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
@@ -134,8 +134,22 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
               </div>
               {currentArticle.updatedAt.getTime() !== currentArticle.createdAt.getTime() && (
                 <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4" />
+                  <Clock className="h-4 w-4" />
                   <span>Updated {currentArticle.updatedAt.toLocaleDateString()}</span>
+                </div>
+              )}
+              {currentArticle.editCount && currentArticle.editCount > 0 && (
+                <div className="flex items-center space-x-1">
+                  <Hash className="h-4 w-4" />
+                  <span>
+                    {currentArticle.editCount} edit{currentArticle.editCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+              {currentArticle.lastEditedBy && (
+                <div className="flex items-center space-x-1">
+                  <Edit className="h-4 w-4" />
+                  <span>Last edited by {currentArticle.lastEditedBy}</span>
                 </div>
               )}
             </div>

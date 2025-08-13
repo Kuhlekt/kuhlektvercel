@@ -83,6 +83,7 @@ export default function KnowledgeBase() {
               ...article,
               createdAt: new Date(article.createdAt),
               updatedAt: new Date(article.updatedAt),
+              editCount: 0,
             })),
             subcategories: (category.subcategories || []).map((subcategory) => ({
               ...subcategory,
@@ -90,6 +91,7 @@ export default function KnowledgeBase() {
                 ...article,
                 createdAt: new Date(article.createdAt),
                 updatedAt: new Date(article.updatedAt),
+                editCount: 0,
               })),
             })),
           }))
@@ -265,6 +267,7 @@ export default function KnowledgeBase() {
       id: Date.now().toString(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      editCount: 0,
     }
 
     const updatedCategories = categories.map((category) => {
@@ -378,6 +381,7 @@ export default function KnowledgeBase() {
         : undefined,
       performedBy: currentUser?.username || "anonymous",
       timestamp: new Date(),
+      details: `Edit #${articleData.editCount || 1}`,
     }
 
     updatedAuditLog.unshift(newAuditEntry)
@@ -643,6 +647,7 @@ export default function KnowledgeBase() {
           <EditArticleForm
             article={editingArticle}
             categories={categories}
+            currentUser={currentUser}
             onSubmit={handleEditArticle}
             onCancel={() => {
               setCurrentView("browse")

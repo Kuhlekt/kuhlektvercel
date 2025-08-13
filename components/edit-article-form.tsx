@@ -10,28 +10,129 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Save, Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Save, Eye, EyeOff, ArrowLeft, Clock, Edit, User, Hash } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
-import { Textarea } from "@/components/ui/textarea"
+import { EnhancedTextarea } from "./enhanced-textarea"
+import type { ImageData } from "./enhanced-textarea"
 
 interface EditArticleFormProps {
   article: Article
   categories: Category[]
+  currentUser?: { username: string } | null
   onSubmit: (articleData: Omit<Article, "createdAt">) => void
   onCancel: () => void
 }
 
-export function EditArticleForm({ article, categories, onSubmit, onCancel }: EditArticleFormProps) {
+// Function to convert content back to editable format
+function convertToEditableContent(content: string): string {
+  let editableContent = content
+
+  // Convert <img> tags back to placeholders for editing
+  editableContent = editableContent.replace(
+    /<img[^>]+src="(data:image[^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi,
+    (match, src, alt) => {
+      // Try to extract filename from alt text or use generic name
+      const filename = alt || "image"
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+
+      // Store the image data globally for the textarea to access
+      if (!(window as any).editingImages) {
+        ;(window as any).editingImages = []
+      }
+
+      const placeholder = `[IMAGE:${id}:${filename}]`
+      ;(window as any).editingImages.push({
+        id,
+        dataUrl: src,
+        name: filename,
+        placeholder,
+      })
+
+      return placeholder
+    },
+  )
+
+  // Convert other image references to placeholders
+  editableContent = editableContent.replace(/<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi, (match, src, alt) => {
+    const filename = alt || src.split("/").pop() || "image"
+    return `[Image: ${filename}]`
+  })
+
+  // Remove other HTML tags but preserve line breaks
+  editableContent = editableContent
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<p[^>]*>/gi, "")
+    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+    .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+    .replace(/<i>(.*?)<\/i>/gi, "*$1*")
+    .replace(/<[^>]*>/g, "")
+
+  // Clean up extra whitespace
+  editableContent = editableContent.replace(/\n\s*\n\s*\n/g, "\n\n").trim()
+
+  return editableContent
+}
+
+// Function to convert editable content back to display format
+function convertToDisplayContent(content: string): string {
+  let displayContent = content
+
+  // Convert markdown-like formatting to HTML
+  displayContent = displayContent
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/\n/g, "<br>")
+
+  // Wrap in paragraphs
+  if (displayContent && !displayContent.startsWith("<p>")) {
+    displayContent = "<p>" + displayContent + "</p>"
+  }
+
+  // Process image placeholders
+  displayContent = displayContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
+    // Check if we have stored images
+    const storedImages = (window as any).textareaImages || (window as any).editingImages || []
+    const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
+
+    if (imageData && imageData.dataUrl) {
+      return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
+    }
+
+    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
+      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
+    </div>`
+  })
+
+  return displayContent
+}
+
+export function EditArticleForm({ article, categories, currentUser, onSubmit, onCancel }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title)
-  const [content, setContent] = useState(article.content)
+  const [content, setContent] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState(article.categoryId)
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(article.subcategoryId || "none")
   const [tags, setTags] = useState(article.tags.join(", "))
   const [showPreview, setShowPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [images, setImages] = useState<ImageData[]>([])
 
   const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
+
+  // Initialize content for editing
+  useEffect(() => {
+    const editableContent = convertToEditableContent(article.content)
+    setContent(editableContent)
+
+    // Set up initial images from existing content
+    const existingImages = (window as any).editingImages || []
+    setImages(existingImages)
+    ;(window as any).textareaImages = existingImages
+  }, [article.content])
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -40,7 +141,7 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     }
   }, [selectedCategoryId, article.categoryId])
 
-  // Add useEffect to debug content changes
+  // Debug content changes
   useEffect(() => {
     console.log("Content state changed:", content)
   }, [content])
@@ -73,10 +174,13 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     setIsSubmitting(true)
 
     try {
+      // Convert content back to display format
+      const displayContent = convertToDisplayContent(content)
+
       const updatedArticle = {
         id: article.id,
         title: title.trim(),
-        content: content.trim(),
+        content: displayContent,
         categoryId: selectedCategoryId,
         subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
         tags: tags
@@ -85,6 +189,8 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
           .filter((tag) => tag.length > 0),
         updatedAt: new Date(),
         createdBy: article.createdBy,
+        editCount: (article.editCount || 0) + 1,
+        lastEditedBy: currentUser?.username || "anonymous",
       }
 
       console.log("Submitting updated article:", updatedArticle)
@@ -96,7 +202,13 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
     }
   }
 
+  const handleImagesChange = (newImages: ImageData[]) => {
+    setImages(newImages)
+  }
+
   const renderPreview = () => {
+    const previewContent = convertToDisplayContent(content)
+
     return (
       <div className="prose max-w-none">
         <h1 className="text-2xl font-bold mb-4">{title || "Untitled Article"}</h1>
@@ -120,7 +232,7 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
             ))}
         </div>
 
-        <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
+        <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: previewContent }} />
       </div>
     )
   }
@@ -143,6 +255,37 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
       </CardHeader>
 
       <CardContent>
+        {/* Article History Info */}
+        <Alert className="mb-6">
+          <Edit className="h-4 w-4" />
+          <AlertDescription>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <Clock className="h-3 w-3" />
+                <span>Created: {article.createdAt.toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Clock className="h-3 w-3" />
+                <span>Last Updated: {article.updatedAt.toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Hash className="h-3 w-3" />
+                <span>Edit Count: {article.editCount || 0}</span>
+              </div>
+              {article.lastEditedBy && (
+                <div className="flex items-center space-x-1">
+                  <User className="h-3 w-3" />
+                  <span>Last Edited By: {article.lastEditedBy}</span>
+                </div>
+              )}
+              <div className="flex items-center space-x-1">
+                <User className="h-3 w-3" />
+                <span>Created By: {article.createdBy}</span>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -213,30 +356,26 @@ export function EditArticleForm({ article, categories, onSubmit, onCancel }: Edi
                   <TabsTrigger value="preview">Preview</TabsTrigger>
                 </TabsList>
                 <TabsContent value="edit" className="mt-4">
-                  <div className="border rounded-lg">
-                    <Textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Write your article content here..."
-                      className="min-h-[300px] border-0 resize-none focus:ring-0"
-                      rows={15}
-                    />
-                  </div>
+                  <EnhancedTextarea
+                    value={content}
+                    onChange={setContent}
+                    onImagesChange={handleImagesChange}
+                    placeholder="Write your article content here..."
+                    rows={15}
+                  />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-4">
                   <div className="border rounded-md p-4 min-h-[300px] bg-gray-50">{renderPreview()}</div>
                 </TabsContent>
               </Tabs>
             ) : (
-              <div className="border rounded-lg">
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write your article content here..."
-                  className="min-h-[300px] border-0 resize-none focus:ring-0"
-                  rows={15}
-                />
-              </div>
+              <EnhancedTextarea
+                value={content}
+                onChange={setContent}
+                onImagesChange={handleImagesChange}
+                placeholder="Write your article content here..."
+                rows={15}
+              />
             )}
           </div>
 

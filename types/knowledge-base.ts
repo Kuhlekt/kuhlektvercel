@@ -8,6 +8,8 @@ export interface Article {
   createdAt: Date
   updatedAt: Date
   createdBy: string
+  editCount?: number
+  lastEditedBy?: string
 }
 
 export interface Subcategory {
