@@ -2,10 +2,8 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
   // Add security headers for admin routes
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+  if (request.nextUrl.pathname.startsWith("/admin")) {
     const response = NextResponse.next()
 
     // Prevent indexing and caching
@@ -26,5 +24,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*"],
 }
