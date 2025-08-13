@@ -18,7 +18,7 @@ const initialState = {
   errors: {},
 }
 
-export function ContactFormComponent() {
+export default function ContactFormComponent() {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
   const [captchaToken, setCaptchaToken] = useState<string>("")
 

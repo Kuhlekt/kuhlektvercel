@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Menu, X } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { Menu, X } from "lucide-react"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -21,7 +22,7 @@ export function Header() {
         <div className="flex lg:flex-1">
           <Link href="/" className="-m-1.5 p-1.5">
             <span className="sr-only">Kuhlekt</span>
-            <img className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" />
+            <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
           </Link>
         </div>
         <div className="flex lg:hidden">
@@ -39,7 +40,7 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-cyan-600 transition-colors"
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600"
             >
               {item.name}
             </Link>
@@ -47,12 +48,14 @@ export function Header() {
         </div>
         <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
           <Link href="/contact">
-            <Button variant="outline" className="bg-transparent">
-              Contact Us
+            <Button variant="outline" size="sm">
+              Contact
             </Button>
           </Link>
           <Link href="/demo">
-            <Button className="bg-cyan-500 hover:bg-cyan-600">Get Demo</Button>
+            <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600">
+              Get Demo
+            </Button>
           </Link>
         </div>
       </nav>
@@ -64,7 +67,7 @@ export function Header() {
             <div className="flex items-center justify-between">
               <Link href="/" className="-m-1.5 p-1.5">
                 <span className="sr-only">Kuhlekt</span>
-                <img className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" />
+                <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
               </Link>
               <button
                 type="button"
@@ -95,11 +98,11 @@ export function Header() {
                     className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Contact Us
+                    Contact
                   </Link>
                   <Link
                     href="/demo"
-                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-cyan-600 hover:bg-gray-50"
+                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-white bg-cyan-500 hover:bg-cyan-600"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Get Demo
