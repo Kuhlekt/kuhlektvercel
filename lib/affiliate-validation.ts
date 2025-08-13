@@ -347,30 +347,13 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
  * @param code - The affiliate code to validate
  * @returns true if valid, false otherwise
  */
-export async function validateAffiliate(code: string): Promise<AffiliateInfo> {
+export async function validateAffiliate(code: string): Promise<boolean> {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
   const upperCode = code.toUpperCase().trim()
-  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
-
-  if (!affiliate) {
-    return {
-      code: upperCode,
-      name: "",
-      commission: 0,
-      isActive: false,
-      isValid: false,
-    }
-  }
-
-  return {
-    code: upperCode,
-    name: affiliate.name || "",
-    commission: affiliate.commission || 0,
-    isActive: affiliate.isActive || false,
-    isValid: affiliate.isValid,
-    partnerName: affiliate.partnerName,
-    discountPercent: affiliate.discountPercent,
-    commissionRate: affiliate.commissionRate,
-  }
+  return upperCode in AFFILIATE_CODES || VALID_AFFILIATE_CODES.includes(upperCode)
 }
 
 /**
@@ -489,4 +472,35 @@ export async function getAffiliateDiscount(code: string): Promise<number> {
 
 export async function getAllAffiliateCodes(): Promise<string[]> {
   return Object.keys(AFFILIATE_CODES)
+}
+
+/**
+ * Validates if an affiliate code is in the approved list (async version)
+ * @param code - The affiliate code to validate
+ * @returns AffiliateInfo object with validation details
+ */
+export async function validateAffiliateAsync(code: string): Promise<AffiliateInfo> {
+  const upperCode = code.toUpperCase().trim()
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+
+  if (!affiliate) {
+    return {
+      code: upperCode,
+      name: "",
+      commission: 0,
+      isActive: false,
+      isValid: false,
+    }
+  }
+
+  return {
+    code: upperCode,
+    name: affiliate.name || "",
+    commission: affiliate.commission || 0,
+    isActive: affiliate.isActive || false,
+    isValid: affiliate.isValid,
+    partnerName: affiliate.partnerName,
+    discountPercent: affiliate.discountPercent,
+    commissionRate: affiliate.commissionRate,
+  }
 }
