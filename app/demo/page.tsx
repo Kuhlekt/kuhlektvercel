@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
@@ -21,7 +20,6 @@ export default function DemoPage() {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const [siteKey, setSiteKey] = useState<string>("")
   const [affiliateCode, setAffiliateCode] = useState("")
-  const [companySize, setCompanySize] = useState("")
 
   useEffect(() => {
     // Fetch reCAPTCHA site key
@@ -49,11 +47,6 @@ export default function DemoPage() {
     try {
       const formData = new FormData(event.currentTarget)
 
-      // Add company size to form data
-      if (companySize) {
-        formData.append("companySize", companySize)
-      }
-
       // Add reCAPTCHA token to form data
       if (recaptchaToken) {
         formData.append("recaptchaToken", recaptchaToken)
@@ -66,7 +59,6 @@ export default function DemoPage() {
         // Reset form
         event.currentTarget.reset()
         setAffiliateCode("")
-        setCompanySize("")
         setRecaptchaToken(null)
       } else {
         setMessage({ type: "error", text: result.message })
@@ -163,46 +155,16 @@ export default function DemoPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      required
-                      placeholder="Enter your phone number"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="jobTitle">Job Title *</Label>
-                    <Input
-                      id="jobTitle"
-                      name="jobTitle"
-                      type="text"
-                      required
-                      placeholder="Enter your job title"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <Label htmlFor="companySize">Company Size *</Label>
-                  <Select name="companySize" value={companySize} onValueChange={setCompanySize} required>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select your company size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 employees</SelectItem>
-                      <SelectItem value="11-50">11-50 employees</SelectItem>
-                      <SelectItem value="51-200">51-200 employees</SelectItem>
-                      <SelectItem value="201-500">201-500 employees</SelectItem>
-                      <SelectItem value="501-1000">501-1000 employees</SelectItem>
-                      <SelectItem value="1000+">1000+ employees</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    placeholder="Enter your phone number"
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>

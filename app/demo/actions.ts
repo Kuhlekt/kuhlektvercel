@@ -17,14 +17,12 @@ export async function submitDemoRequest(formData: FormData): Promise<DemoRequest
     const email = formData.get("email")?.toString() || ""
     const company = formData.get("company")?.toString() || ""
     const phone = formData.get("phone")?.toString() || ""
-    const jobTitle = formData.get("jobTitle")?.toString() || ""
-    const companySize = formData.get("companySize")?.toString() || ""
     const challenges = formData.get("challenges")?.toString() || ""
     const affiliate = formData.get("affiliate")?.toString() || ""
     const recaptchaToken = formData.get("recaptchaToken")?.toString() || ""
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !company || !phone || !jobTitle || !companySize) {
+    if (!firstName || !lastName || !email || !company || !phone) {
       return {
         success: false,
         message: "Please fill in all required fields.",
@@ -68,8 +66,6 @@ export async function submitDemoRequest(formData: FormData): Promise<DemoRequest
 - Email: ${email}
 - Company: ${company}
 - Phone: ${phone}
-- Job Title: ${jobTitle}
-- Company Size: ${companySize}
 
 ${challenges ? `**AR Challenges:**\n${challenges}\n` : ""}
 ${affiliateInfo}

@@ -77,9 +77,9 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
+        <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600">Get in touch with our team</p>
+          <p className="text-xl text-gray-600">Get in touch with our team for any questions or support</p>
         </div>
 
         <Card className="shadow-xl">
@@ -156,25 +156,13 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  placeholder="Enter your phone number"
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="subject">Subject *</Label>
                 <Input
                   id="subject"
                   name="subject"
                   type="text"
                   required
-                  placeholder="What is this regarding?"
+                  placeholder="Enter the subject of your message"
                   className="mt-1"
                 />
               </div>
@@ -184,7 +172,7 @@ export default function ContactPage() {
                 <Textarea
                   id="message"
                   name="message"
-                  placeholder="Tell us more about your inquiry..."
+                  placeholder="Enter your message or question..."
                   className="mt-1 min-h-[120px]"
                 />
               </div>
