@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import Image from "next/image"
 import { CheckCircle } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
@@ -27,48 +26,32 @@ export default function AboutPage() {
 
         {/* Main Content Section */}
         <section className="py-16 px-4">
-          <div className="container mx-auto max-w-6xl">
-            <div className="grid lg:grid-cols-2 gap-16 items-start">
-              {/* Left Column */}
-              <div className="space-y-12">
-                {/* Our Mission */}
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
-                  <p className="text-gray-600 text-lg leading-relaxed">
-                    To transform accounts receivable from a manual, reactive process into a strategic, automated
-                    function that improves cash flow and customer relationships.
-                  </p>
-                </div>
+          <div className="container mx-auto max-w-4xl">
+            {/* Our Mission */}
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                To transform accounts receivable from a manual, reactive process into a strategic, automated function
+                that improves cash flow and customer relationships.
+              </p>
+            </div>
 
-                {/* What We Believe */}
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">What We Believe</h2>
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
-                      <p className="text-gray-600 text-lg">Finance teams shouldn't waste time on manual collections</p>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
-                      <p className="text-gray-600 text-lg">Credit management should be data-driven and proactive</p>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
-                      <p className="text-gray-600 text-lg">Customers deserve a transparent, self-service experience</p>
-                    </div>
-                  </div>
+            {/* What We Believe */}
+            <div className="mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">What We Believe</h2>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-gray-600 text-lg">Finance teams shouldn't waste time on manual collections</p>
                 </div>
-              </div>
-
-              {/* Right Column - Image */}
-              <div className="flex justify-center lg:justify-end">
-                <Image
-                  src="/images/manual-vs-automated-comparison.png"
-                  alt="Manual AR Chaos vs Automated with Kuhlekt comparison"
-                  width={500}
-                  height={400}
-                  className="rounded-lg shadow-lg max-w-full h-auto"
-                />
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-gray-600 text-lg">Credit management should be data-driven and proactive</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                  <p className="text-gray-600 text-lg">Customers deserve a transparent, self-service experience</p>
+                </div>
               </div>
             </div>
           </div>

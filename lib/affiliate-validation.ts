@@ -6,11 +6,21 @@ export interface AffiliateInfo {
   commission: number
   isActive: boolean
   isValid: boolean
+  category?: string
+  discount?: number
+  description?: string
 }
 
 // Predefined list of valid affiliate codes
 const VALID_AFFILIATE_CODES = [
   "PARTNER2024",
+  "GROWTH2024",
+  "STARTUP2024",
+  "ENTERPRISE2024",
+  "REFERRAL2024",
+  "BETA2024",
+  "EARLY2024",
+  "PREMIUM2024",
   "REFERRAL123",
   "CONSULTANT",
   "ADVISOR",
@@ -18,7 +28,6 @@ const VALID_AFFILIATE_CODES = [
   "RESELLER",
   "CHANNEL",
   "DEMO2024",
-  "EARLY2024",
 ]
 
 // Predefined affiliate codes and their information
@@ -341,28 +350,17 @@ export function validateAffiliate(code: string): AffiliateInfo {
  * @param code - The affiliate code to validate
  * @returns The validated code in uppercase or null if invalid
  */
-export async function validateAffiliateCode(code: string): Promise<AffiliateInfo> {
+export async function validateAffiliateCode(code: string): Promise<boolean> {
   try {
     if (!code || typeof code !== "string") {
-      return { isValid: false, code: "", name: "", commission: 0, isActive: false }
+      return false
     }
 
-    const upperCode = code.trim().toUpperCase()
-
-    if (AFFILIATE_CODES[upperCode]) {
-      return {
-        isValid: AFFILIATE_CODES[upperCode].isActive,
-        code: upperCode,
-        name: AFFILIATE_CODES[upperCode].name,
-        commission: AFFILIATE_CODES[upperCode].commission,
-        isActive: AFFILIATE_CODES[upperCode].isActive,
-      }
-    }
-
-    return { isValid: false, code: upperCode, name: "", commission: 0, isActive: false }
+    const normalizedCode = code.trim().toUpperCase()
+    return VALID_AFFILIATE_CODES.includes(normalizedCode)
   } catch (error) {
     console.error("Error validating affiliate code:", error)
-    return { isValid: false, code: "", name: "", commission: 0, isActive: false }
+    return false
   }
 }
 
@@ -371,7 +369,7 @@ export async function validateAffiliateCode(code: string): Promise<AffiliateInfo
  * @returns Array of valid affiliate codes
  */
 export function getValidAffiliateCodes(): string[] {
-  return Object.keys(AFFILIATE_CODES).filter((code) => AFFILIATE_CODES[code as keyof typeof AFFILIATE_CODES].isActive)
+  return [...VALID_AFFILIATE_CODES]
 }
 
 /**
@@ -411,6 +409,9 @@ export function getAffiliateInfo(code: string): AffiliateInfo | null {
     commission: affiliate.commission,
     isActive: affiliate.isActive,
     isValid: affiliate.isValid,
+    category: affiliate.category,
+    discount: affiliate.discount,
+    description: affiliate.description,
   }
 }
 
@@ -434,4 +435,8 @@ export function getAllAffiliates(): AffiliateInfo[] {
 
 export function getActiveAffiliates(): AffiliateInfo[] {
   return getAllAffiliates().filter((affiliate) => affiliate.isActive)
+}
+
+export function isAffiliateCodeRequired(): boolean {
+  return false // Affiliate codes are optional
 }
