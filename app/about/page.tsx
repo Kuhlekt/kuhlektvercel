@@ -19,55 +19,45 @@ export default function AboutPage() {
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-6">About Kuhlekt</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're revolutionizing accounts receivable management for businesses of all sizes.
+              We help businesses optimize their accounts receivable processes through intelligent automation and
+              data-driven insights.
             </p>
           </div>
         </section>
 
-        {/* Mission Section */}
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
-              <p className="text-lg text-gray-600 mb-8">
-                To help businesses optimize their cash flow through intelligent automation and data-driven insights.
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* Mission & Vision */}
-        <section className="py-20 bg-white">
+        <section className="py-20">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
-                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Our Vision</h2>
-                <p className="text-xl text-gray-600 mb-8">
-                  To be the leading provider of AR solutions that drive growth and success for our clients.
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Our Mission</h2>
+                <p className="text-lg text-gray-600 mb-8">
+                  To empower businesses with intelligent accounts receivable solutions that accelerate cash flow, reduce
+                  operational costs, and strengthen customer relationships through automation and analytics.
                 </p>
 
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900">Data-Driven Insights</h4>
-                      <p className="text-gray-600">Utilizing advanced analytics to improve cash flow management</p>
+                      <h4 className="font-semibold text-gray-900">Innovation First</h4>
+                      <p className="text-gray-600">Leveraging cutting-edge AI and machine learning technologies</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900">Scalability</h4>
-                      <p className="text-gray-600">Tailored solutions for businesses of all sizes</p>
+                      <h4 className="font-semibold text-gray-900">Customer Success</h4>
+                      <p className="text-gray-600">Dedicated to delivering measurable results and ROI</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-semibold text-gray-900">Simplicity</h4>
-                      <p className="text-gray-600">Intuitive platform for seamless AR management</p>
+                      <h4 className="font-semibold text-gray-900">Continuous Improvement</h4>
+                      <p className="text-gray-600">Always evolving to meet changing business needs</p>
                     </div>
                   </div>
                 </div>
@@ -208,38 +198,42 @@ export default function AboutPage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Our Values</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">The principles that guide everything we do</p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Innovation</h3>
+            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Innovation</h3>
                 <p className="text-gray-600">We constantly push the boundaries of what's possible in AR automation.</p>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Customer First</h3>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Customer First</h3>
                 <p className="text-gray-600">Every decision we make is guided by what's best for our customers.</p>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Excellence</h3>
-                <p className="text-gray-600">We strive for excellence in everything we do, from product to support.</p>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Results Driven</h3>
+                <p className="text-gray-600">We measure our success by the tangible results we deliver.</p>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Transparency</h3>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Transparency</h3>
                 <p className="text-gray-600">
                   We believe in open, honest communication with our customers, partners, and team members. No hidden
                   fees, no surprises, just clear expectations.
                 </p>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Results Driven</h3>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Excellence</h3>
                 <p className="text-gray-600">
-                  We measure our success by the tangible results we deliver. Every feature and improvement is designed
-                  to drive measurable ROI for our clients.
+                  We strive for excellence in everything we do, from product development to customer support, always
+                  raising the bar for ourselves and the industry.
                 </p>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Growth Mindset</h3>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Growth Mindset</h3>
                 <p className="text-gray-600">
                   We embrace challenges as opportunities to learn and grow. Continuous improvement is at the heart of
                   our culture and product development.
