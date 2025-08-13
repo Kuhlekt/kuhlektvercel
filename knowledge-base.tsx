@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Eye, X } from "lucide-react"
+import { Search, Eye, X, Home } from "lucide-react"
 
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
@@ -22,6 +22,13 @@ import { initialUsers } from "./data/initial-users"
 import { initialAuditLog } from "./data/initial-audit-log"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 
+type NavigationContext = {
+  type: "all" | "search" | "filtered"
+  searchQuery?: string
+  selectedCategories?: Set<string>
+  selectedSubcategories?: Set<string>
+}
+
 export default function KnowledgeBase() {
   const [categories, setCategories] = useState<Category[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -32,6 +39,7 @@ export default function KnowledgeBase() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
   const [selectedSubcategories, setSelectedSubcategories] = useState<Set<string>>(new Set())
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
+  const [navigationContext, setNavigationContext] = useState<NavigationContext>({ type: "all" })
   const [currentView, setCurrentView] = useState<"browse" | "add" | "edit" | "admin">("browse")
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -148,6 +156,7 @@ export default function KnowledgeBase() {
     if (!query.trim()) {
       console.log("Empty query, clearing results")
       setSearchResults([])
+      setNavigationContext({ type: "all" })
       return
     }
 
@@ -194,12 +203,14 @@ export default function KnowledgeBase() {
 
     console.log("Search results:", results)
     setSearchResults(results)
+    setNavigationContext({ type: "search", searchQuery: query })
   }
 
   const handleClearSearch = () => {
     console.log("Clearing search")
     setSearchQuery("")
     setSearchResults([])
+    setNavigationContext({ type: "all" })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -222,6 +233,17 @@ export default function KnowledgeBase() {
     setSelectedCategories(newSelected)
     console.log("Selected categories:", Array.from(newSelected))
 
+    // Update navigation context
+    if (newSelected.size > 0 || selectedSubcategories.size > 0) {
+      setNavigationContext({
+        type: "filtered",
+        selectedCategories: newSelected,
+        selectedSubcategories,
+      })
+    } else {
+      setNavigationContext({ type: "all" })
+    }
+
     // Clear search when category selection changes
     if (searchQuery) {
       setSearchQuery("")
@@ -243,6 +265,17 @@ export default function KnowledgeBase() {
     setSelectedSubcategories(newSelected)
     console.log("Selected subcategories:", Array.from(newSelected))
 
+    // Update navigation context
+    if (selectedCategories.size > 0 || newSelected.size > 0) {
+      setNavigationContext({
+        type: "filtered",
+        selectedCategories,
+        selectedSubcategories: newSelected,
+      })
+    } else {
+      setNavigationContext({ type: "all" })
+    }
+
     // Clear search when subcategory selection changes
     if (searchQuery) {
       setSearchQuery("")
@@ -261,8 +294,43 @@ export default function KnowledgeBase() {
     console.log("Setting selected article:", currentArticle)
 
     setSelectedArticle(currentArticle)
+  }
+
+  const handleBackToArticles = () => {
+    setSelectedArticle(null)
+    // Navigation context is preserved, so we return to the previous state
+  }
+
+  const handleResetFilters = () => {
+    setSelectedCategories(new Set())
+    setSelectedSubcategories(new Set())
     setSearchQuery("")
     setSearchResults([])
+    setNavigationContext({ type: "all" })
+  }
+
+  const getNavigationTitle = () => {
+    switch (navigationContext.type) {
+      case "search":
+        return `Search Results for "${navigationContext.searchQuery}"`
+      case "filtered":
+        const categoryCount = navigationContext.selectedCategories?.size || 0
+        const subcategoryCount = navigationContext.selectedSubcategories?.size || 0
+        return `Filtered Articles (${categoryCount + subcategoryCount} filters)`
+      default:
+        return "All Articles"
+    }
+  }
+
+  const getBackButtonText = () => {
+    switch (navigationContext.type) {
+      case "search":
+        return "Back to Search Results"
+      case "filtered":
+        return "Back to Filtered Articles"
+      default:
+        return "Back to All Articles"
+    }
   }
 
   const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
@@ -580,19 +648,17 @@ export default function KnowledgeBase() {
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Categories</h2>
-                    {selectedCategories.size > 0 || selectedSubcategories.size > 0 ? (
+                    {(selectedCategories.size > 0 || selectedSubcategories.size > 0 || searchQuery) && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          console.log("Clearing all selections")
-                          setSelectedCategories(new Set())
-                          setSelectedSubcategories(new Set())
-                        }}
+                        onClick={handleResetFilters}
+                        className="flex items-center space-x-1 bg-transparent"
                       >
-                        Clear
+                        <Home className="h-3 w-3" />
+                        <span>Reset</span>
                       </Button>
-                    ) : null}
+                    )}
                   </div>
                   <CategoryTree
                     categories={categories}
@@ -610,7 +676,8 @@ export default function KnowledgeBase() {
                   <ArticleViewer
                     article={selectedArticle}
                     categories={categories}
-                    onBack={() => setSelectedArticle(null)}
+                    onBack={handleBackToArticles}
+                    backButtonText={getBackButtonText()}
                     onEdit={
                       currentUser?.role === "admin"
                         ? (article) => {
@@ -636,6 +703,7 @@ export default function KnowledgeBase() {
                     selectedCategories={selectedCategories}
                     selectedSubcategories={selectedSubcategories}
                     onArticleSelect={handleArticleSelect}
+                    navigationTitle={getNavigationTitle()}
                   />
                 )}
               </div>

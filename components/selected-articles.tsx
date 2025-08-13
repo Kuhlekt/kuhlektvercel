@@ -10,6 +10,7 @@ interface SelectedArticlesProps {
   selectedCategories: Set<string>
   selectedSubcategories: Set<string>
   onArticleSelect: (article: Article) => void
+  navigationTitle?: string
 }
 
 // Function to extract clean text preview from content
@@ -70,6 +71,7 @@ export function SelectedArticles({
   selectedCategories,
   selectedSubcategories,
   onArticleSelect,
+  navigationTitle = "All Articles",
 }: SelectedArticlesProps) {
   // Get filtered articles based on selected categories and subcategories
   const getFilteredArticles = (): Article[] => {
@@ -136,7 +138,7 @@ export function SelectedArticles({
           <p className="text-lg mb-2">No articles found</p>
           <p className="text-sm">
             {selectedCategories.size > 0 || selectedSubcategories.size > 0
-              ? "Try selecting different categories or clear your selection"
+              ? "Try selecting different categories or reset your filters"
               : "No articles available in the knowledge base"}
           </p>
         </div>
@@ -148,8 +150,7 @@ export function SelectedArticles({
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-sm p-4">
         <h2 className="text-xl font-semibold mb-2">
-          {selectedCategories.size > 0 || selectedSubcategories.size > 0 ? "Filtered Articles" : "All Articles"} (
-          {filteredArticles.length})
+          {navigationTitle} ({filteredArticles.length})
         </h2>
         <p className="text-gray-600">
           {selectedCategories.size > 0 || selectedSubcategories.size > 0

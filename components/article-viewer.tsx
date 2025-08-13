@@ -21,6 +21,7 @@ interface ArticleViewerProps {
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
   onBack: () => void
+  backButtonText?: string
 }
 
 // Function to process content and render images properly
@@ -79,7 +80,14 @@ function processArticleContent(content: string): string {
   return processedContent
 }
 
-export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }: ArticleViewerProps) {
+export function ArticleViewer({
+  article,
+  categories,
+  onEdit,
+  onDelete,
+  onBack,
+  backButtonText = "Back to Articles",
+}: ArticleViewerProps) {
   const [currentArticle, setCurrentArticle] = useState(article)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -111,7 +119,7 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Articles</span>
+          <span>{backButtonText}</span>
         </Button>
 
         {(onEdit || onDelete) && (
