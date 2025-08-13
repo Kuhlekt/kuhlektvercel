@@ -4,23 +4,9 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import {
-  Users,
-  Eye,
-  MousePointer,
-  Download,
-  Search,
-  Filter,
-  RefreshCw,
-  Globe,
-  Smartphone,
-  Monitor,
-  Tablet,
-} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Eye, Download, RefreshCw, Search, Users, MousePointer, Clock, TrendingUp } from "lucide-react"
 import Link from "next/link"
 
 interface Visitor {
@@ -31,112 +17,95 @@ interface Visitor {
   page: string
   referrer: string
   location?: {
-    country: string
-    city: string
-    region: string
+    country?: string
+    city?: string
   }
-  device: {
-    type: "desktop" | "mobile" | "tablet"
-    browser: string
-    os: string
-  }
-  sessionId: string
-  isActive: boolean
-  pageViews: number
-  timeOnSite: number
-  utmSource?: string
-  utmMedium?: string
-  utmCampaign?: string
-}
-
-// Function to get all visitors from localStorage
-function getAllVisitors(): Visitor[] {
-  if (typeof window === "undefined") return []
-
-  try {
-    const visitors = localStorage.getItem("visitors")
-    return visitors ? JSON.parse(visitors) : []
-  } catch (error) {
-    console.error("Error loading visitors:", error)
-    return []
-  }
+  sessionDuration?: number
+  pageViews?: number
+  isActive?: boolean
 }
 
 export default function VisitorsPage() {
   const [visitors, setVisitors] = useState<Visitor[]>([])
   const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterDevice, setFilterDevice] = useState<string>("all")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [filterCountry, setFilterCountry] = useState("all")
+  const [filterPage, setFilterPage] = useState("all")
+  const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Load visitors data
+  // Load visitor data
   useEffect(() => {
     const loadVisitors = () => {
-      const visitorData = getAllVisitors()
-      setVisitors(visitorData)
-      setLoading(false)
+      try {
+        const storedVisitors = localStorage.getItem("kuhlekt_visitors")
+        if (storedVisitors) {
+          const parsedVisitors = JSON.parse(storedVisitors)
+          setVisitors(parsedVisitors)
+          setFilteredVisitors(parsedVisitors)
+        }
+      } catch (error) {
+        console.error("Error loading visitors:", error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     loadVisitors()
 
-    // Auto-refresh every 5 seconds if enabled
+    // Set up real-time updates
     let interval: NodeJS.Timeout
-    if (autoRefresh) {
+    if (isRealTimeEnabled) {
       interval = setInterval(loadVisitors, 5000)
     }
 
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [autoRefresh])
+  }, [isRealTimeEnabled])
 
   // Filter visitors based on search and filters
   useEffect(() => {
     let filtered = visitors
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(
         (visitor) =>
           visitor.ip.includes(searchTerm) ||
           visitor.page.toLowerCase().includes(searchTerm.toLowerCase()) ||
           visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.location?.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          visitor.location?.city.toLowerCase().includes(searchTerm.toLowerCase()),
+          visitor.location?.country?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.location?.city?.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
-    // Device filter
-    if (filterDevice !== "all") {
-      filtered = filtered.filter((visitor) => visitor.device.type === filterDevice)
+    if (filterCountry !== "all") {
+      filtered = filtered.filter((visitor) => visitor.location?.country === filterCountry)
     }
 
-    // Status filter
-    if (filterStatus !== "all") {
-      if (filterStatus === "active") {
-        filtered = filtered.filter((visitor) => visitor.isActive)
-      } else if (filterStatus === "inactive") {
-        filtered = filtered.filter((visitor) => !visitor.isActive)
-      }
+    if (filterPage !== "all") {
+      filtered = filtered.filter((visitor) => visitor.page === filterPage)
     }
 
     setFilteredVisitors(filtered)
-  }, [visitors, searchTerm, filterDevice, filterStatus])
+  }, [visitors, searchTerm, filterCountry, filterPage])
 
-  // Calculate stats
+  // Calculate statistics
   const stats = {
-    total: visitors.length,
-    active: visitors.filter((v) => v.isActive).length,
-    pageViews: visitors.reduce((sum, v) => sum + v.pageViews, 0),
-    avgTimeOnSite:
-      visitors.length > 0 ? Math.round(visitors.reduce((sum, v) => sum + v.timeOnSite, 0) / visitors.length / 1000) : 0,
+    totalVisitors: visitors.length,
+    activeVisitors: visitors.filter((v) => v.isActive).length,
+    totalPageViews: visitors.reduce((sum, v) => sum + (v.pageViews || 1), 0),
+    avgSessionDuration:
+      visitors.length > 0
+        ? Math.round(visitors.reduce((sum, v) => sum + (v.sessionDuration || 0), 0) / visitors.length)
+        : 0,
   }
 
-  const handleExportCSV = () => {
-    if (filteredVisitors.length === 0) return
+  // Get unique countries and pages for filters
+  const uniqueCountries = Array.from(new Set(visitors.map((v) => v.location?.country).filter(Boolean)))
+  const uniquePages = Array.from(new Set(visitors.map((v) => v.page)))
 
+  const exportToCSV = () => {
     const headers = [
       "Timestamp",
       "IP Address",
@@ -144,65 +113,53 @@ export default function VisitorsPage() {
       "Referrer",
       "Country",
       "City",
-      "Device Type",
-      "Browser",
-      "OS",
+      "User Agent",
+      "Session Duration",
       "Page Views",
-      "Time on Site (seconds)",
-      "Status",
-      "UTM Source",
-      "UTM Medium",
-      "UTM Campaign",
     ]
-
-    const csvData = filteredVisitors.map((visitor) => [
-      new Date(visitor.timestamp).toISOString(),
-      visitor.ip,
-      visitor.page,
-      visitor.referrer,
-      visitor.location?.country || "",
-      visitor.location?.city || "",
-      visitor.device.type,
-      visitor.device.browser,
-      visitor.device.os,
-      visitor.pageViews,
-      Math.round(visitor.timeOnSite / 1000),
-      visitor.isActive ? "Active" : "Inactive",
-      visitor.utmSource || "",
-      visitor.utmMedium || "",
-      visitor.utmCampaign || "",
-    ])
-
-    const csvContent = [headers, ...csvData].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+    const csvContent = [
+      headers.join(","),
+      ...filteredVisitors.map((visitor) =>
+        [
+          new Date(visitor.timestamp).toISOString(),
+          visitor.ip,
+          `"${visitor.page}"`,
+          `"${visitor.referrer}"`,
+          visitor.location?.country || "",
+          visitor.location?.city || "",
+          `"${visitor.userAgent}"`,
+          visitor.sessionDuration || 0,
+          visitor.pageViews || 1,
+        ].join(","),
+      ),
+    ].join("\n")
 
     const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
+    const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `visitors-${new Date().toISOString().split("T")[0]}.csv`
-    document.body.appendChild(a)
+    a.download = `kuhlekt-visitors-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    window.URL.revokeObjectURL(url)
   }
 
-  const getDeviceIcon = (type: string) => {
-    switch (type) {
-      case "mobile":
-        return <Smartphone className="h-4 w-4" />
-      case "tablet":
-        return <Tablet className="h-4 w-4" />
-      default:
-        return <Monitor className="h-4 w-4" />
-    }
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -211,85 +168,92 @@ export default function VisitorsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
-            <p className="text-gray-600">Monitor and analyze website visitors in real-time</p>
+            <p className="text-gray-600 mt-2">Monitor and analyze website visitor activity in real-time</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Switch id="auto-refresh" checked={autoRefresh} onCheckedChange={setAutoRefresh} />
-              <Label htmlFor="auto-refresh" className="text-sm">
-                Auto-refresh
-              </Label>
-            </div>
+          <div className="flex gap-3">
             <Link href="/admin/tracking">
               <Button variant="outline">
-                <Eye className="h-4 w-4 mr-2" />
-                Analytics
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Analytics Dashboard
               </Button>
             </Link>
+            <Button
+              variant={isRealTimeEnabled ? "default" : "outline"}
+              onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRealTimeEnabled ? "animate-spin" : ""}`} />
+              {isRealTimeEnabled ? "Real-time On" : "Real-time Off"}
+            </Button>
+            <Button onClick={exportToCSV} disabled={filteredVisitors.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Visitors</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalVisitors}</p>
+                </div>
+                <Users className="w-8 h-8 text-blue-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Now</CardTitle>
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Now</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.activeVisitors}</p>
+                </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pageViews}</div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Page Views</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalPageViews}</p>
+                </div>
+                <MousePointer className="w-8 h-8 text-purple-500" />
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Time on Site</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.avgTimeOnSite}s</div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg. Session</p>
+                  <p className="text-3xl font-bold text-gray-900">{formatDuration(stats.avgSessionDuration)}</p>
+                </div>
+                <Clock className="w-8 h-8 text-orange-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters and Search */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search by IP, page, referrer, or location..."
                     value={searchTerm}
@@ -298,31 +262,32 @@ export default function VisitorsPage() {
                   />
                 </div>
               </div>
-              <Select value={filterDevice} onValueChange={setFilterDevice}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by device" />
+              <Select value={filterCountry} onValueChange={setFilterCountry}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by country" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Devices</SelectItem>
-                  <SelectItem value="desktop">Desktop</SelectItem>
-                  <SelectItem value="mobile">Mobile</SelectItem>
-                  <SelectItem value="tablet">Tablet</SelectItem>
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {uniqueCountries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by status" />
+              <Select value={filterPage} onValueChange={setFilterPage}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by page" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Visitors</SelectItem>
-                  <SelectItem value="active">Active Only</SelectItem>
-                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                  <SelectItem value="all">All Pages</SelectItem>
+                  {uniquePages.map((page) => (
+                    <SelectItem key={page} value={page}>
+                      {page}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleExportCSV} disabled={filteredVisitors.length === 0}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -330,16 +295,19 @@ export default function VisitorsPage() {
         {/* Visitors Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Visitors ({filteredVisitors.length})</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Visitor Activity ({filteredVisitors.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {filteredVisitors.length === 0 ? (
               <div className="text-center py-12">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No visitors found</h3>
-                <p className="text-gray-600">
+                <p className="text-gray-500">
                   {visitors.length === 0
-                    ? "No visitors have been tracked yet. Visitors will appear here once they visit your site."
+                    ? "No visitor data has been collected yet. Visitors will appear here once they start browsing your site."
                     : "No visitors match your current filters. Try adjusting your search criteria."}
                 </p>
               </div>
@@ -348,77 +316,39 @@ export default function VisitorsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4 font-medium">Visitor</th>
-                      <th className="text-left p-4 font-medium">Location</th>
-                      <th className="text-left p-4 font-medium">Device</th>
-                      <th className="text-left p-4 font-medium">Activity</th>
-                      <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Timestamp</th>
+                      <th className="text-left p-3 font-medium text-gray-600">IP Address</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Page</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Location</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Referrer</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Session</th>
+                      <th className="text-left p-3 font-medium text-gray-600">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredVisitors.map((visitor) => (
                       <tr key={visitor.id} className="border-b hover:bg-gray-50">
-                        <td className="p-4">
-                          <div className="space-y-1">
-                            <div className="font-medium">{visitor.ip}</div>
-                            <div className="text-sm text-gray-600">{new Date(visitor.timestamp).toLocaleString()}</div>
-                            <div className="text-sm text-blue-600">{visitor.page}</div>
-                            {visitor.referrer && <div className="text-xs text-gray-500">From: {visitor.referrer}</div>}
+                        <td className="p-3 text-sm text-gray-900">{new Date(visitor.timestamp).toLocaleString()}</td>
+                        <td className="p-3 text-sm font-mono text-gray-900">{visitor.ip}</td>
+                        <td className="p-3 text-sm text-blue-600 hover:text-blue-800">
+                          <a href={visitor.page} target="_blank" rel="noopener noreferrer">
+                            {visitor.page}
+                          </a>
+                        </td>
+                        <td className="p-3 text-sm text-gray-600">
+                          {visitor.location?.country && visitor.location?.city
+                            ? `${visitor.location.city}, ${visitor.location.country}`
+                            : visitor.location?.country || "Unknown"}
+                        </td>
+                        <td className="p-3 text-sm text-gray-600 max-w-xs truncate">{visitor.referrer || "Direct"}</td>
+                        <td className="p-3 text-sm text-gray-600">
+                          <div className="flex flex-col">
+                            <span>{formatDuration(visitor.sessionDuration || 0)}</span>
+                            <span className="text-xs text-gray-400">{visitor.pageViews || 1} pages</span>
                           </div>
                         </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <div className="text-sm">
-                                {visitor.location?.city || "Unknown"}, {visitor.location?.country || "Unknown"}
-                              </div>
-                              {visitor.location?.region && (
-                                <div className="text-xs text-gray-500">{visitor.location.region}</div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            {getDeviceIcon(visitor.device.type)}
-                            <div>
-                              <div className="text-sm capitalize">{visitor.device.type}</div>
-                              <div className="text-xs text-gray-500">
-                                {visitor.device.browser} • {visitor.device.os}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="space-y-1">
-                            <div className="text-sm">
-                              {visitor.pageViews} page{visitor.pageViews !== 1 ? "s" : ""}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {Math.round(visitor.timeOnSite / 1000)}s on site
-                            </div>
-                            {(visitor.utmSource || visitor.utmMedium || visitor.utmCampaign) && (
-                              <div className="flex gap-1 flex-wrap">
-                                {visitor.utmSource && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {visitor.utmSource}
-                                  </Badge>
-                                )}
-                                {visitor.utmMedium && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {visitor.utmMedium}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge
-                            variant={visitor.isActive ? "default" : "secondary"}
-                            className={visitor.isActive ? "bg-green-100 text-green-800" : ""}
-                          >
+                        <td className="p-3">
+                          <Badge variant={visitor.isActive ? "default" : "secondary"}>
                             {visitor.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </td>

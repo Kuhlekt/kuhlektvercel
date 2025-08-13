@@ -2,11 +2,14 @@ import type React from "react"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Admin Dashboard",
+  title: "Admin Dashboard - Kuhlekt",
   robots: {
     index: false,
     follow: false,
     nocache: true,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true,
     googleBot: {
       index: false,
       follow: false,
