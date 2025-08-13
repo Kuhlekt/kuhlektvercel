@@ -134,7 +134,7 @@ function VisitorTrackerComponent() {
 }
 
 // Main component with error boundary
-export default function VisitorTracker() {
+export function VisitorTracker() {
   try {
     return <VisitorTrackerComponent />
   } catch (error) {
@@ -142,3 +142,6 @@ export default function VisitorTracker() {
     return null
   }
 }
+
+// Also provide as default export for compatibility
+export default VisitorTracker
