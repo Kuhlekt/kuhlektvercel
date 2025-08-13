@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Tag, Camera, FileText } from "lucide-react"
+import { Clock, Tag, Camera } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SelectedArticlesProps {
@@ -12,55 +12,31 @@ interface SelectedArticlesProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Enhanced function to extract clean text content from HTML and process images
+// Function to extract clean text preview from content
 function extractCleanText(html: string): string {
-  // Create a temporary div to parse HTML properly
   const tempDiv = document.createElement("div")
   tempDiv.innerHTML = html
 
-  // Remove script and style elements
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
-  // Process image placeholders
   let processedHtml = html
   processedHtml = processedHtml.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, "[Image: $2]")
-
-  // Replace data URLs with [Image] placeholder for preview
   processedHtml = processedHtml.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "[Image]")
   processedHtml = processedHtml.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "[Image]")
 
-  // Update temp div with processed HTML
   tempDiv.innerHTML = processedHtml
 
-  // Get text content
   let text = tempDiv.textContent || tempDiv.innerText || ""
-
-  // Clean up CSS-related text
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, "")
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, "")
-  text = text.replace(/(width|height|margin|padding|color|font|background):\s*[^;]+;?/gi, "")
-  text = text.replace(/\d+px/gi, "")
-  text = text.replace(/(rgb|rgba|hex|#)[^;\s]*/gi, "")
-
-  // Normalize whitespace
   text = text.replace(/\s+/g, " ").trim()
 
-  // Split into sentences and filter meaningful ones
   const sentences = text.split(/[.!?]+/).filter((sentence) => {
     const cleaned = sentence.trim()
-    return (
-      cleaned.length > 15 &&
-      !cleaned.match(/^(max-width|height|auto|margin|padding|border|display)/i) &&
-      !cleaned.match(/^\d+$/) &&
-      cleaned.split(" ").length > 2 &&
-      cleaned !== "[Image]"
-    )
+    return cleaned.length > 15 && cleaned.split(" ").length > 2 && cleaned !== "[Image]"
   })
 
-  // Return first meaningful sentences
-  const preview = sentences.slice(0, 3).join(". ").trim()
-  return preview.length > 200 ? preview.substring(0, 200) + "..." : preview
+  const preview = sentences.slice(0, 2).join(". ").trim()
+  return preview.length > 150 ? preview.substring(0, 150) + "..." : preview
 }
 
 // Function to check if content contains images
@@ -79,63 +55,45 @@ export function SelectedArticles({
   selectedSubcategories,
   onArticleSelect,
 }: SelectedArticlesProps) {
-  // Get articles based on selected categories and subcategories
+  // Get filtered articles based on selected categories and subcategories
   const getFilteredArticles = (): Article[] => {
-    console.log("SelectedArticles - Getting filtered articles")
-    console.log("Selected categories:", Array.from(selectedCategories))
-    console.log("Selected subcategories:", Array.from(selectedSubcategories))
-
     const articles: Article[] = []
 
-    // If no specific selection, show recent articles from all categories
-    if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
-      console.log("No selections, showing all articles")
-      categories.forEach((category) => {
-        if (Array.isArray(category.articles)) {
-          articles.push(...category.articles)
-        }
-        if (Array.isArray(category.subcategories)) {
-          category.subcategories.forEach((subcategory) => {
-            if (Array.isArray(subcategory.articles)) {
-              articles.push(...subcategory.articles)
-            }
-          })
-        }
-      })
-    } else {
-      // Show articles from selected categories and subcategories
-      categories.forEach((category) => {
-        // If category is selected, include its direct articles
-        if (selectedCategories.has(category.id)) {
-          console.log(`Including articles from selected category: ${category.name}`)
-          if (Array.isArray(category.articles)) {
-            articles.push(...category.articles)
+    categories.forEach((category) => {
+      // If no categories selected, show all
+      const showAllCategories = selectedCategories.size === 0 && selectedSubcategories.size === 0
+      const categorySelected = selectedCategories.has(category.id)
+
+      if (showAllCategories || categorySelected) {
+        // Add category articles
+        category.articles.forEach((article) => {
+          articles.push(article)
+        })
+
+        // Add subcategory articles
+        category.subcategories.forEach((subcategory) => {
+          const subcategorySelected = selectedSubcategories.has(subcategory.id)
+
+          if (showAllCategories || categorySelected || subcategorySelected) {
+            subcategory.articles.forEach((article) => {
+              articles.push(article)
+            })
           }
-        }
+        })
+      } else {
+        // Check if any subcategories are selected for this category
+        category.subcategories.forEach((subcategory) => {
+          if (selectedSubcategories.has(subcategory.id)) {
+            subcategory.articles.forEach((article) => {
+              articles.push(article)
+            })
+          }
+        })
+      }
+    })
 
-        // Check subcategories
-        if (Array.isArray(category.subcategories)) {
-          category.subcategories.forEach((subcategory) => {
-            if (selectedSubcategories.has(subcategory.id)) {
-              console.log(`Including articles from selected subcategory: ${subcategory.name}`)
-              if (Array.isArray(subcategory.articles)) {
-                articles.push(...subcategory.articles)
-              }
-            }
-          })
-        }
-      })
-    }
-
-    // Sort by updated date (most recent first) and remove duplicates
-    const uniqueArticles = articles.filter(
-      (article, index, self) => index === self.findIndex((a) => a.id === article.id),
-    )
-
-    const sortedArticles = uniqueArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-
-    console.log(`Filtered articles count: ${sortedArticles.length}`)
-    return sortedArticles
+    // Sort by updated date (most recent first)
+    return articles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
   }
 
   const getCategoryInfo = (categoryId: string, subcategoryId?: string) => {
@@ -155,25 +113,15 @@ export function SelectedArticles({
 
   const filteredArticles = getFilteredArticles()
 
-  const getHeaderText = () => {
-    if (selectedCategories.size === 0 && selectedSubcategories.size === 0) {
-      return "Recent Articles"
-    }
-
-    const selectedCount = selectedCategories.size + selectedSubcategories.size
-    return `Filtered Articles (${selectedCount} selection${selectedCount !== 1 ? "s" : ""})`
-  }
-
   if (filteredArticles.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <div className="text-gray-500">
           <p className="text-lg mb-2">No articles found</p>
           <p className="text-sm">
             {selectedCategories.size > 0 || selectedSubcategories.size > 0
               ? "Try selecting different categories or clear your selection"
-              : "Start by adding some articles to your knowledge base"}
+              : "No articles available in the knowledge base"}
           </p>
         </div>
       </div>
@@ -183,9 +131,14 @@ export function SelectedArticles({
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold mb-2">{getHeaderText()}</h2>
+        <h2 className="text-xl font-semibold mb-2">
+          {selectedCategories.size > 0 || selectedSubcategories.size > 0 ? "Filtered Articles" : "All Articles"} (
+          {filteredArticles.length})
+        </h2>
         <p className="text-gray-600">
-          Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? "s" : ""}
+          {selectedCategories.size > 0 || selectedSubcategories.size > 0
+            ? `Showing articles from selected categories`
+            : `Browse all available articles`}
         </p>
       </div>
 

@@ -2,11 +2,8 @@
 
 import type React from "react"
 import type { ReactElement } from "react"
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { ImageIcon, Upload, AlertCircle, CheckCircle, X } from "lucide-react"
 
 export interface ImageData {
   id: string
@@ -29,351 +26,122 @@ export function EnhancedTextarea({
   value,
   onChange,
   onImagesChange,
-  placeholder,
+  placeholder = "Write your content here...",
   rows = 10,
   disabled = false,
   className = "",
 }: EnhancedTextareaProps): ReactElement {
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [lastAction, setLastAction] = useState<string>("")
-  const [error, setError] = useState<string>("")
   const [images, setImages] = useState<ImageData[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Notify parent when images change and update global reference
   useEffect(() => {
-    console.log("=== ENHANCED TEXTAREA IMAGES CHANGED ===")
-    console.log("New images:", images)
+    // Initialize with existing images from global storage
+    const existingImages = (window as any).textareaImages || []
+    if (existingImages.length > 0) {
+      setImages(existingImages)
+    }
+  }, [])
 
+  useEffect(() => {
+    // Update global storage when images change
+    ;(window as any).textareaImages = images
     if (onImagesChange) {
       onImagesChange(images)
     }
-    // Update global reference immediately
-    ;(window as any).textareaImages = images
-    console.log("Updated global textareaImages:", (window as any).textareaImages)
+    console.log("Enhanced textarea images updated:", images)
   }, [images, onImagesChange])
 
-  // Generate unique placeholder for image
-  const generateImagePlaceholder = (imageName: string) => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-    return { id, placeholder: `[IMAGE:${id}:${imageName}]` }
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items)
+    const imageItems = items.filter((item) => item.type.startsWith("image/"))
+
+    if (imageItems.length > 0) {
+      e.preventDefault()
+
+      for (const item of imageItems) {
+        const file = item.getAsFile()
+        if (file) {
+          await processImageFile(file)
+        }
+      }
+    }
   }
 
-  // Simple function to insert text at cursor
-  const insertAtCursor = useCallback(
-    (textToInsert: string) => {
-      const textarea = textareaRef.current
-      if (!textarea) return
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
 
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-      const newValue = value.substring(0, start) + textToInsert + value.substring(end)
+    for (const file of files) {
+      await processImageFile(file)
+    }
+  }
 
-      onChange(newValue)
+  const processImageFile = async (file: File) => {
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+      const placeholder = `[IMAGE:${id}:${file.name}]`
 
-      // Set cursor position after inserted text
-      setTimeout(() => {
-        textarea.focus()
-        const newPosition = start + textToInsert.length
-        textarea.setSelectionRange(newPosition, newPosition)
-      }, 0)
-    },
-    [value, onChange],
-  )
-
-  // Handle paste events
-  const handlePaste = useCallback(
-    async (e: React.ClipboardEvent) => {
-      const clipboardData = e.clipboardData
-      if (!clipboardData) return
-
-      // Check for image files first
-      const files = Array.from(clipboardData.files)
-      const imageFiles = files.filter((f) => f.type.startsWith("image/"))
-
-      if (imageFiles.length > 0) {
-        e.preventDefault()
-        setIsProcessing(true)
-        setError("")
-
-        try {
-          const file = imageFiles[0]
-          const reader = new FileReader()
-
-          reader.onload = (event) => {
-            const dataUrl = event.target?.result as string
-            if (dataUrl) {
-              const imageName = file.name || "pasted-image"
-              const { id, placeholder } = generateImagePlaceholder(imageName)
-
-              const imageData: ImageData = {
-                id,
-                dataUrl,
-                name: imageName,
-                placeholder,
-              }
-
-              console.log("=== ADDING PASTED IMAGE ===")
-              console.log("Image data:", imageData)
-
-              setImages((prev) => {
-                const newImages = [...prev, imageData]
-                console.log("Updated images array after paste:", newImages)
-                return newImages
-              })
-
-              insertAtCursor(`\n\n${placeholder}\n\n`)
-              setLastAction(`Image pasted: ${imageName}`)
-            }
-          }
-
-          reader.onerror = () => {
-            setError("Failed to read image file")
-          }
-
-          reader.readAsDataURL(file)
-        } catch (error) {
-          setError("Failed to process pasted image")
-        }
-
-        setIsProcessing(false)
-        return
+      const newImage: ImageData = {
+        id,
+        dataUrl,
+        name: file.name,
+        placeholder,
       }
 
-      // Check for image items if no files
-      const items = Array.from(clipboardData.items)
-      const imageItems = items.filter((i) => i.type.startsWith("image/"))
+      console.log("Processing new image:", newImage)
 
-      if (imageItems.length > 0) {
-        e.preventDefault()
-        setIsProcessing(true)
-        setError("")
+      // Add image to state
+      setImages((prev) => [...prev, newImage])
 
-        try {
-          const item = imageItems[0]
-          const file = item.getAsFile()
+      // Insert placeholder at cursor position
+      if (textareaRef.current) {
+        const textarea = textareaRef.current
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd
+        const newValue = value.substring(0, start) + "\n" + placeholder + "\n" + value.substring(end)
+        onChange(newValue)
 
-          if (file) {
-            const reader = new FileReader()
-
-            reader.onload = (event) => {
-              const dataUrl = event.target?.result as string
-              if (dataUrl) {
-                const imageName = file.name || "clipboard-image"
-                const { id, placeholder } = generateImagePlaceholder(imageName)
-
-                const imageData: ImageData = {
-                  id,
-                  dataUrl,
-                  name: imageName,
-                  placeholder,
-                }
-
-                console.log("=== ADDING CLIPBOARD IMAGE ===")
-                console.log("Image data:", imageData)
-
-                setImages((prev) => {
-                  const newImages = [...prev, imageData]
-                  console.log("Updated images array after clipboard:", newImages)
-                  return newImages
-                })
-
-                insertAtCursor(`\n\n${placeholder}\n\n`)
-                setLastAction(`Image pasted from clipboard`)
-              }
-            }
-
-            reader.onerror = () => {
-              setError("Failed to read clipboard image")
-            }
-
-            reader.readAsDataURL(file)
-          }
-        } catch (error) {
-          setError("Failed to process clipboard image")
-        }
-
-        setIsProcessing(false)
+        // Restore cursor position
+        setTimeout(() => {
+          const newPosition = start + placeholder.length + 2
+          textarea.setSelectionRange(newPosition, newPosition)
+          textarea.focus()
+        }, 0)
       }
-    },
-    [insertAtCursor],
-  )
+    } catch (error) {
+      console.error("Error processing image:", error)
+    }
+  }
 
-  // Handle file upload
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || [])
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"))
-
-      if (imageFiles.length === 0) return
-
-      setIsProcessing(true)
-      setError("")
-
-      try {
-        const file = imageFiles[0]
-        const reader = new FileReader()
-
-        reader.onload = (event) => {
-          const dataUrl = event.target?.result as string
-          if (dataUrl) {
-            const imageName = file.name
-            const { id, placeholder } = generateImagePlaceholder(imageName)
-
-            const imageData: ImageData = {
-              id,
-              dataUrl,
-              name: imageName,
-              placeholder,
-            }
-
-            console.log("=== ADDING UPLOADED IMAGE ===")
-            console.log("Image data:", imageData)
-
-            setImages((prev) => {
-              const newImages = [...prev, imageData]
-              console.log("Updated images array after upload:", newImages)
-              return newImages
-            })
-
-            insertAtCursor(`\n\n${placeholder}\n\n`)
-            setLastAction(`File uploaded: ${imageName}`)
-          }
-        }
-
-        reader.onerror = () => {
-          setError("Failed to read uploaded file")
-        }
-
-        reader.readAsDataURL(file)
-      } catch (error) {
-        setError("Failed to process uploaded file")
-      }
-
-      setIsProcessing(false)
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    },
-    [insertAtCursor],
-  )
-
-  // Remove image
-  const removeImage = useCallback(
-    (imageId: string) => {
-      setImages((prev) => {
-        const imageToRemove = prev.find((img) => img.id === imageId)
-        if (imageToRemove) {
-          // Remove placeholder from text
-          const newValue = value.replace(imageToRemove.placeholder, "")
-          onChange(newValue)
-        }
-        const newImages = prev.filter((img) => img.id !== imageId)
-        console.log("Images after removal:", newImages)
-        return newImages
-      })
-    },
-    [value, onChange],
-  )
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            className="flex items-center space-x-1"
-          >
-            <Upload className="h-3 w-3" />
-            <span>Upload Image</span>
-          </Button>
-        </div>
-
-        {images.length > 0 && (
-          <div className="flex items-center space-x-1 text-sm text-green-600">
-            <ImageIcon className="h-3 w-3" />
-            <span>{images.length} image(s)</span>
-          </div>
-        )}
-      </div>
-
-      <Alert>
-        <ImageIcon className="h-4 w-4" />
-        <AlertDescription>
-          <p>
-            <strong>Paste images directly:</strong> Copy any image and press Ctrl+V (or Cmd+V on Mac)
-          </p>
-        </AlertDescription>
-      </Alert>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {lastAction && !error && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription className="text-green-700">{lastAction}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Show attached images */}
+    <div className="space-y-2">
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        placeholder={placeholder}
+        rows={rows}
+        disabled={disabled}
+        className={`min-h-[200px] resize-none ${className}`}
+      />
       {images.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Attached Images:</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {images.map((image) => (
-              <div key={image.id} className="relative group">
-                <img
-                  src={image.dataUrl || "/placeholder.svg"}
-                  alt={image.name}
-                  className="w-full h-20 object-cover rounded border"
-                />
-                <button
-                  onClick={() => removeImage(image.id)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-                <div className="text-xs text-gray-500 mt-1 truncate">{image.name}</div>
-              </div>
-            ))}
-          </div>
+        <div className="text-xs text-gray-500">
+          {images.length} image{images.length !== 1 ? "s" : ""} attached
         </div>
       )}
-
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onPaste={handlePaste}
-          placeholder={placeholder}
-          rows={rows}
-          disabled={disabled || isProcessing}
-          className={`${className} ${isProcessing ? "opacity-50" : ""}`}
-        />
-
-        {isProcessing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded">
-            <div className="flex items-center space-x-2 text-blue-600">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm">Processing image...</span>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
