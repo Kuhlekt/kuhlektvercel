@@ -18,12 +18,19 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
     const fetchConfig = async () => {
       try {
         const response = await fetch("/api/recaptcha-config")
-        const config = await response.json()
-        setSiteKey(config.siteKey || "")
-        setIsEnabled(config.enabled || false)
+        if (response.ok) {
+          const config = await response.json()
+          setSiteKey(config.siteKey || "")
+          setIsEnabled(config.enabled || false)
+        } else {
+          console.warn("Failed to fetch reCAPTCHA config, using bypass token")
+          const fallbackToken = "development-mode-token"
+          onVerify?.(fallbackToken)
+          onChange?.(fallbackToken)
+        }
       } catch (error) {
-        console.error("Failed to fetch reCAPTCHA config:", error)
-        // Provide fallback token for development
+        console.error("Error fetching reCAPTCHA config:", error)
+        // Provide bypass token for development
         const fallbackToken = "development-mode-token"
         onVerify?.(fallbackToken)
         onChange?.(fallbackToken)
@@ -36,7 +43,7 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
   useEffect(() => {
     if (!isEnabled || !siteKey || isLoaded) return
 
-    const loadRecaptcha = () => {
+    const loadReCaptcha = () => {
       if (typeof window !== "undefined" && window.grecaptcha) {
         window.grecaptcha.ready(() => {
           try {
@@ -76,7 +83,7 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
         script.src = "https://www.google.com/recaptcha/api.js"
         script.async = true
         script.defer = true
-        script.onload = loadRecaptcha
+        script.onload = loadReCaptcha
         script.onerror = () => {
           console.error("Failed to load reCAPTCHA script, providing fallback token")
           const fallbackToken = "recaptcha-script-error-token"
@@ -87,7 +94,7 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
       }
     }
 
-    loadRecaptcha()
+    loadReCaptcha()
 
     return () => {
       if (widgetId.current !== null && window.grecaptcha) {

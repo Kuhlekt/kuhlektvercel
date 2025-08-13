@@ -10,7 +10,7 @@ export interface AffiliateInfo {
   discountPercentage?: number
 }
 
-// Predefined affiliate codes with their information
+// Define affiliate codes and their information
 const AFFILIATE_CODES: Record<string, AffiliateInfo> = {
   PARTNER001: {
     name: "Strategic Partner Alpha",
@@ -145,11 +145,11 @@ export function getAffiliateInfo(code: string): AffiliateInfo {
     return { isValid: false }
   }
 
-  const normalizedCode = normalizeAffiliateCode(code)
-  const affiliate = AFFILIATE_CODES[normalizedCode]
+  const upperCode = normalizeAffiliateCode(code)
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
   return {
-    code: normalizedCode,
+    code: upperCode,
     name: affiliate.name,
     isValid: true,
     isActive: affiliate.isActive,
@@ -158,17 +158,12 @@ export function getAffiliateInfo(code: string): AffiliateInfo {
   }
 }
 
-// Additional utility functions for affiliate management
-const affiliatePartners = {
-  ...AFFILIATE_CODES,
-}
-
 export function getAllAffiliatePartners(): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isValid)
+  return Object.values(AFFILIATE_CODES).filter((partner) => partner.isValid)
 }
 
 export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isValid && partner.category === category)
+  return Object.values(AFFILIATE_CODES).filter((partner) => partner.isValid && partner.category === category)
 }
 
 export function getAllAffiliates(): AffiliateInfo[] {

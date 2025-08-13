@@ -7,7 +7,7 @@ import { verifyCaptcha } from "@/lib/captcha"
 export interface DemoFormState {
   success: boolean
   message: string
-  errors: Record<string, string>
+  errors?: Record<string, string>
 }
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
@@ -36,8 +36,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     if (!phone) errors.phone = "Phone number is required"
 
     // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (email && !emailRegex.test(email)) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
@@ -85,8 +84,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       firstName,
       lastName,
       email,
-      company,
       phone,
+      company,
       jobTitle,
       companySize,
       currentSolution,
@@ -106,15 +105,13 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
 
     return {
       success: true,
-      message: "Demo request submitted successfully! We'll contact you within 24 hours.",
-      errors: {},
+      message: "Thank you! Your demo request has been submitted successfully. We'll contact you within 24 hours.",
     }
   } catch (error) {
     console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "An error occurred while submitting your request. Please try again.",
-      errors: {},
+      message: "An unexpected error occurred. Please try again later.",
     }
   }
 }

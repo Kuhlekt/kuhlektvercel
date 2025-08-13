@@ -72,7 +72,7 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
 
     return {
       success: true,
-      message: "Message sent successfully! We'll get back to you within 24 hours.",
+      message: "Thank you for your message! We'll get back to you within 24 hours.",
       errors: {},
     }
   } catch (error) {
@@ -91,8 +91,8 @@ export async function testAWSSES(): Promise<{ success: boolean; message: string 
       firstName: "Test",
       lastName: "User",
       email: "test@example.com",
-      company: "Test Company",
       phone: "555-123-4567",
+      company: "Test Company",
       message: "This is a test message to verify AWS SES configuration.",
     })
 
