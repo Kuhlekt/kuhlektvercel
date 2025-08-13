@@ -43,13 +43,15 @@ export function EnhancedTextarea({
 
   // Notify parent when images change and update global reference
   useEffect(() => {
-    console.log("Enhanced textarea images changed:", images)
+    console.log("=== ENHANCED TEXTAREA IMAGES CHANGED ===")
+    console.log("New images:", images)
+
     if (onImagesChange) {
       onImagesChange(images)
     }
-    // Update global reference for article viewer to access
+    // Update global reference immediately
     ;(window as any).textareaImages = images
-    console.log("Updated global textareaImages:", images)
+    console.log("Updated global textareaImages:", (window as any).textareaImages)
   }, [images, onImagesChange])
 
   // Generate unique placeholder for image
@@ -112,12 +114,15 @@ export function EnhancedTextarea({
                 placeholder,
               }
 
-              console.log("Adding pasted image to textarea:", imageData)
+              console.log("=== ADDING PASTED IMAGE ===")
+              console.log("Image data:", imageData)
+
               setImages((prev) => {
                 const newImages = [...prev, imageData]
                 console.log("Updated images array after paste:", newImages)
                 return newImages
               })
+
               insertAtCursor(`\n\n${placeholder}\n\n`)
               setLastAction(`Image pasted: ${imageName}`)
             }
@@ -165,12 +170,15 @@ export function EnhancedTextarea({
                   placeholder,
                 }
 
-                console.log("Adding clipboard image:", imageData)
+                console.log("=== ADDING CLIPBOARD IMAGE ===")
+                console.log("Image data:", imageData)
+
                 setImages((prev) => {
                   const newImages = [...prev, imageData]
                   console.log("Updated images array after clipboard:", newImages)
                   return newImages
                 })
+
                 insertAtCursor(`\n\n${placeholder}\n\n`)
                 setLastAction(`Image pasted from clipboard`)
               }
@@ -220,12 +228,15 @@ export function EnhancedTextarea({
               placeholder,
             }
 
-            console.log("Adding uploaded image:", imageData)
+            console.log("=== ADDING UPLOADED IMAGE ===")
+            console.log("Image data:", imageData)
+
             setImages((prev) => {
               const newImages = [...prev, imageData]
               console.log("Updated images array after upload:", newImages)
               return newImages
             })
+
             insertAtCursor(`\n\n${placeholder}\n\n`)
             setLastAction(`File uploaded: ${imageName}`)
           }

@@ -1,25 +1,3 @@
-export interface User {
-  id: string
-  username: string
-  email: string
-  role: "admin" | "editor" | "viewer"
-  createdAt: Date
-  lastLogin?: Date
-}
-
-export interface Category {
-  id: string
-  name: string
-  description?: string
-  subcategories: Subcategory[]
-}
-
-export interface Subcategory {
-  id: string
-  name: string
-  description?: string
-}
-
 export interface Article {
   id: string
   title: string
@@ -34,24 +12,41 @@ export interface Article {
   lastEditedBy?: string
 }
 
-export interface AuditLogEntry {
+export interface Subcategory {
   id: string
-  action: "create" | "update" | "delete" | "login" | "logout"
-  entityType: "article" | "category" | "user"
-  entityId: string
-  userId: string
-  username: string
-  timestamp: Date
-  details?: string
-  oldValue?: any
-  newValue?: any
+  name: string
+  articles: Article[]
 }
 
-export interface KnowledgeBaseState {
-  categories: Category[]
+export interface Category {
+  id: string
+  name: string
+  subcategories: Subcategory[]
   articles: Article[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  currentUser: User | null
-  isAuthenticated: boolean
+  expanded: boolean
+}
+
+export interface KnowledgeBase {
+  categories: Category[]
+}
+
+export interface User {
+  id: string
+  username: string
+  password: string
+  role: "admin" | "editor" | "viewer"
+  createdAt: Date
+  lastLogin?: Date
+}
+
+export interface AuditLogEntry {
+  id: string
+  action: "article_created" | "article_deleted" | "article_updated"
+  articleId: string
+  articleTitle: string
+  categoryName: string
+  subcategoryName?: string
+  performedBy: string
+  timestamp: Date
+  details?: string
 }

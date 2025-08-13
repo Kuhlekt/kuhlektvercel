@@ -32,11 +32,9 @@ function convertToEditableContent(content: string): string {
   editableContent = editableContent.replace(
     /<img[^>]+src="(data:image[^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi,
     (match, src, alt) => {
-      // Try to extract filename from alt text or use generic name
       const filename = alt || "image"
       const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
 
-      // Store the image data globally for the textarea to access
       if (!(window as any).editingImages) {
         ;(window as any).editingImages = []
       }
@@ -49,7 +47,6 @@ function convertToEditableContent(content: string): string {
         placeholder,
       })
 
-      // Also store in textareaImages for consistency
       if (!(window as any).textareaImages) {
         ;(window as any).textareaImages = []
       }
@@ -69,7 +66,6 @@ function convertToEditableContent(content: string): string {
     const filename = alt || src.split("/").pop() || "image"
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
 
-    // Store URL-based images too
     if (!(window as any).editingImages) {
       ;(window as any).editingImages = []
     }
@@ -80,7 +76,7 @@ function convertToEditableContent(content: string): string {
     const placeholder = `[IMAGE:${id}:${filename}]`
     const imageData = {
       id,
-      dataUrl: src.startsWith("http") ? src : src, // Keep URL as is
+      dataUrl: src,
       name: filename,
       placeholder,
     }
@@ -111,31 +107,44 @@ function convertToEditableContent(content: string): string {
 function convertToDisplayContent(content: string, availableImages: ImageData[] = []): string {
   let displayContent = content
 
-  console.log("Converting content to display:", content)
-  console.log("Available images for conversion:", availableImages)
+  console.log("=== CONVERTING TO DISPLAY ===")
+  console.log("Input content:", content)
+  console.log("Available images:", availableImages)
+
+  // Create a map of all available images for faster lookup
+  const imageMap = new Map<string, ImageData>()
+
+  // Add images from parameter
+  availableImages.forEach((img) => {
+    imageMap.set(img.id, img)
+    imageMap.set(img.placeholder, img)
+  })
+
+  // Add images from global storage
+  const globalImages = (window as any).textareaImages || []
+  globalImages.forEach((img: ImageData) => {
+    imageMap.set(img.id, img)
+    imageMap.set(img.placeholder, img)
+  })
+
+  console.log("Image map created:", imageMap)
 
   // Process image placeholders FIRST before any other processing
   displayContent = displayContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
-    console.log("Processing image placeholder:", { match, id, filename })
+    console.log("Processing placeholder:", { match, id, filename })
 
-    // Check available images first (from current editing session)
-    let imageData = availableImages.find((img) => img.id === id || img.placeholder === match)
-
-    // If not found, check global storage
-    if (!imageData) {
-      const storedImages = (window as any).textareaImages || (window as any).editingImages || []
-      imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
-    }
+    // Try to find image by ID first, then by full placeholder
+    const imageData = imageMap.get(id) || imageMap.get(match)
 
     console.log("Found image data:", imageData)
 
     if (imageData && imageData.dataUrl) {
       const imgTag = `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-      console.log("Generated img tag:", imgTag)
+      console.log("Generated img tag for:", filename)
       return imgTag
     }
 
-    console.log("No image data found, returning placeholder")
+    console.log("No image data found, returning placeholder div")
     return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
       <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
     </div>`
@@ -152,21 +161,8 @@ function convertToDisplayContent(content: string, availableImages: ImageData[] =
   if (displayContent && !displayContent.startsWith("<p>") && !displayContent.includes("<img")) {
     displayContent = "<p>" + displayContent + "</p>"
   } else if (displayContent && !displayContent.startsWith("<p>")) {
-    // Handle mixed content with images
     displayContent = displayContent.replace(/^([^<]+)/, "<p>$1</p>")
   }
-
-  // Convert standalone URLs to actual images
-  displayContent = displayContent.replace(
-    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
-    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
-
-  // Convert standalone data URLs to images
-  displayContent = displayContent.replace(
-    /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
-    '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
 
   console.log("Final display content:", displayContent)
   return displayContent
@@ -187,11 +183,12 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
 
   // Initialize content for editing
   useEffect(() => {
+    console.log("Initializing edit form with article:", article.title)
     const editableContent = convertToEditableContent(article.content)
     setContent(editableContent)
 
-    // Set up initial images from existing content
     const existingImages = (window as any).editingImages || []
+    console.log("Setting initial images:", existingImages)
     setImages(existingImages)
     ;(window as any).textareaImages = existingImages
   }, [article.content])
@@ -203,50 +200,18 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
     }
   }, [selectedCategoryId, article.categoryId])
 
-  // Debug content changes
-  useEffect(() => {
-    console.log("Content state changed:", content)
-  }, [content])
-
-  useEffect(() => {
-    console.log("Title state changed:", title)
-  }, [title])
-
-  useEffect(() => {
-    console.log("Images state changed in edit form:", images)
-  }, [images])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    console.log("Form submission started")
-    console.log("Current form values:", { title, content, selectedCategoryId, selectedSubcategoryId, tags })
-
-    if (!title.trim()) {
-      console.error("Title is required")
-      return
-    }
-
-    if (!content.trim()) {
-      console.error("Content is required")
-      return
-    }
-
-    if (!selectedCategoryId) {
-      console.error("Category is required")
+    if (!title.trim() || !content.trim() || !selectedCategoryId) {
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      // Ensure images are properly stored before conversion
       const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
-      console.log("Current images before submit:", currentImages)
-
-      // Convert content back to display format
       const displayContent = convertToDisplayContent(content, currentImages)
-      console.log("Display content after conversion:", displayContent)
 
       const updatedArticle = {
         id: article.id,
@@ -264,7 +229,6 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
         lastEditedBy: currentUser?.username || "anonymous",
       }
 
-      console.log("Submitting updated article:", updatedArticle)
       onSubmit(updatedArticle)
     } catch (error) {
       console.error("Error updating article:", error)
@@ -274,20 +238,20 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
   }
 
   const handleImagesChange = (newImages: ImageData[]) => {
-    console.log("Images changed in edit form:", newImages)
+    console.log("=== IMAGES CHANGED IN EDIT FORM ===")
+    console.log("New images:", newImages)
     setImages(newImages)
-    // Ensure global storage is updated immediately
     ;(window as any).textareaImages = newImages
+    console.log("Updated global textareaImages:", (window as any).textareaImages)
   }
 
   const renderPreview = () => {
-    // Use current images for preview - prioritize local state over global
+    console.log("=== RENDERING PREVIEW ===")
     const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
-    console.log("Rendering preview with images:", currentImages)
-    console.log("Preview content:", content)
+    console.log("Current images for preview:", currentImages)
+    console.log("Content for preview:", content)
 
     const previewContent = convertToDisplayContent(content, currentImages)
-    console.log("Preview HTML:", previewContent)
 
     return (
       <div className="prose max-w-none">
@@ -335,7 +299,6 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
       </CardHeader>
 
       <CardContent>
-        {/* Article History Info */}
         <Alert className="mb-6">
           <Edit className="h-4 w-4" />
           <AlertDescription>
