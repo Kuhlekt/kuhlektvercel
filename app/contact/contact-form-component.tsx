@@ -118,7 +118,7 @@ export default function ContactFormComponent() {
           <div className="space-y-8">
             <Card className="shadow-xl">
               <CardHeader>
-                <CardTitle>Get in Touch</CardTitle>
+                <CardTitle>Contact Information</CardTitle>
                 <CardDescription>Multiple ways to reach our team</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
