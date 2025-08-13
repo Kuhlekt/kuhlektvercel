@@ -1,208 +1,213 @@
 import { Suspense } from "react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle } from "lucide-react"
-import Image from "next/image"
 import VisitorTracker from "@/components/visitor-tracker"
 
 export default function SolutionsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <>
       <Suspense fallback={null}>
         <VisitorTracker />
       </Suspense>
 
-      {/* Hero Section */}
-      <section id="sme-credit-management" className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl lg:text-6xl font-bold mb-6 text-gray-900">
-            Built for Finance Teams in B2B and Enterprise
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">Trusted by 0000's+ finance team members</p>
-        </div>
-      </section>
+      <div className="min-h-screen bg-white">
+        {/* Hero Section */}
+        <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-20">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-4xl lg:text-5xl font-bold mb-6">Built for Finance Teams in B2B and Enterprise</h1>
+            <p className="text-xl lg:text-2xl text-blue-100 max-w-3xl mx-auto">
+              Comprehensive accounts receivable solutions designed to accelerate cash flow and reduce operational costs
+            </p>
+          </div>
+        </section>
 
-      {/* Solutions Grid */}
-      <section id="enterprise-receivables" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* SME Credit Management Tools */}
-            <Card className="p-8 hover:shadow-lg transition-shadow bg-white" id="sme-credit-management">
-              <CardContent className="p-0">
-                <div className="mb-6 bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+        {/* Solutions Grid */}
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {/* SME Credit Management Tools */}
+              <Card className="overflow-hidden">
+                <div className="aspect-video relative">
                   <Image
                     src="/images/sme-credit-management.png"
-                    alt="Small Business Credit Management workflow showing new account onboarding, automated collections, and payments"
-                    width={400}
-                    height={200}
-                    className="max-w-full max-h-full object-contain rounded-lg"
+                    alt="SME Credit Management Tools"
+                    fill
+                    className="object-cover"
                   />
                 </div>
-
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">SME Credit Management Tools</h3>
-                <p className="text-gray-600 mb-6">
-                  Tools designed for lean finance teams to manage credit limits, automate AR, and reduce risk.
-                </p>
-
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Simplified credit application process</span>
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">SME Credit Management Tools</h3>
+                  <p className="text-gray-600 mb-6">
+                    Streamline credit decisions for small and medium enterprises with automated scoring, limit
+                    management, and risk assessment tools.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Automated credit scoring and approval workflows</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Real-time credit limit monitoring and alerts</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Integration with credit bureaus and data providers</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Automated collections for small teams</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Basic risk assessment tools</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Enterprise Receivables Software */}
-            <Card className="p-8 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="mb-6 bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+              {/* Enterprise Receivables Software */}
+              <Card className="overflow-hidden">
+                <div className="aspect-video relative">
                   <Image
                     src="/images/enterprise-receivables-dashboard.png"
-                    alt="Enterprise Receivables Software dashboard showing 4-stage workflow"
-                    width={400}
-                    height={200}
-                    className="max-w-full max-h-full object-contain rounded-lg"
+                    alt="Enterprise Receivables Software"
+                    fill
+                    className="object-cover"
                   />
                 </div>
-
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Enterprise Receivables Software</h3>
-                <p className="text-gray-600 mb-6">
-                  Scalable workflows for large, distributed teams with complex credit and collections processes.
-                </p>
-
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Multi-entity support</span>
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Enterprise Receivables Software</h3>
+                  <p className="text-gray-600 mb-6">
+                    Comprehensive AR management platform for large enterprises with complex billing cycles and multiple
+                    subsidiaries.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Multi-entity and multi-currency support</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Advanced analytics and executive dashboards</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Seamless ERP and accounting system integration</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Advanced workflow automation</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Enterprise-grade reporting</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Corporate Debt Collection System */}
-            <Card className="p-8 hover:shadow-lg transition-shadow bg-white" id="corporate-debt-collection">
-              <CardContent className="p-0">
-                <div className="mb-6 bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+              {/* Corporate Debt Collection System */}
+              <Card className="overflow-hidden">
+                <div className="aspect-video relative">
                   <Image
                     src="/images/debt-collection-system.png"
-                    alt="Corporate Debt Collection System interface with AI-powered prioritization and professional users"
-                    width={400}
-                    height={200}
-                    className="max-w-full max-h-full object-contain rounded-lg"
+                    alt="Corporate Debt Collection System"
+                    fill
+                    className="object-cover"
                   />
                 </div>
-
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Corporate Debt Collection System</h3>
-                <p className="text-gray-600 mb-6">
-                  Systematically automate collection sequences with smart prioritization and workflow automation.
-                </p>
-
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">AI-powered collection prioritization</span>
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Corporate Debt Collection System</h3>
+                  <p className="text-gray-600 mb-6">
+                    AI-powered collections platform that prioritizes accounts, automates communications, and maximizes
+                    recovery rates.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Intelligent account prioritization and segmentation</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Automated dunning sequences and payment reminders</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Compliance management and audit trails</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Automated escalation paths</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Legal integration for severe cases</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Credit Control Software for Businesses */}
-            <Card className="p-8 hover:shadow-lg transition-shadow bg-white" id="credit-control-software">
-              <CardContent className="p-0">
-                <div className="mb-6 bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+              {/* Credit Control Software for Businesses */}
+              <Card className="overflow-hidden">
+                <div className="aspect-video relative">
                   <Image
                     src="/images/credit-control-software.png"
-                    alt="Credit Control Software dashboard showing credit limit management, approval workflows, and risk scoring"
-                    width={400}
-                    height={200}
-                    className="max-w-full max-h-full object-contain rounded-lg"
+                    alt="Credit Control Software for Businesses"
+                    fill
+                    className="object-cover"
                   />
                 </div>
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Credit Control Software for Businesses</h3>
+                  <p className="text-gray-600 mb-6">
+                    End-to-end credit control solution that manages the entire customer lifecycle from application to
+                    payment.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Customer onboarding and credit application processing</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Ongoing credit monitoring and limit adjustments</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Dispute management and resolution workflows</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
 
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Credit Control Software for Businesses</h3>
-                <p className="text-gray-600 mb-6">
-                  Centralize all your credit control activities—from approvals to overdue escalations.
-                </p>
+        {/* Benefits Section */}
+        <section className="py-20 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Why Choose Kuhlekt</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Our solutions are built on three core pillars that ensure success for your finance team
+              </p>
+            </div>
 
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Credit limit management</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Approval workflows</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                    <span className="text-gray-700">Risk scoring and monitoring</span>
-                  </div>
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Additional Benefits Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Why Choose Our Solutions?</h2>
-            <p className="text-xl text-gray-600">Tailored for different business sizes and complexity levels</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-cyan-600" />
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Scalable Architecture</h3>
+                <p className="text-gray-600">
+                  Built to grow with your business, from startup to enterprise, handling millions of transactions with
+                  ease.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Scalable Architecture</h3>
-              <p className="text-gray-600">Solutions that grow with your business, from SME to enterprise scale</p>
-            </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-cyan-600" />
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Industry Expertise</h3>
+                <p className="text-gray-600">
+                  Developed by finance professionals who understand the unique challenges of B2B accounts receivable
+                  management.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Industry Expertise</h3>
-              <p className="text-gray-600">Built by finance professionals who understand your challenges</p>
-            </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-cyan-600" />
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="h-8 w-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Proven Results</h3>
+                <p className="text-gray-600">
+                  Our clients typically see 35% reduction in DSO and 50% improvement in collection efficiency within 90
+                  days.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Proven Results</h3>
-              <p className="text-gray-600">Trusted by 0000's+ finance team members</p>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   )
 }

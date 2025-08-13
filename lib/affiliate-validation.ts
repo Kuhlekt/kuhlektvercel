@@ -8,8 +8,24 @@ interface AffiliateInfo {
   isActive: boolean
 }
 
-// List of valid affiliate codes
-const VALID_AFFILIATE_CODES = ["PARTNER001", "PARTNER002", "RESELLER001", "AGENCY001", "REFERRAL001"]
+// Predefined list of valid affiliate codes
+const VALID_AFFILIATE_CODES = [
+  "PARTNER001",
+  "PARTNER002",
+  "PARTNER003",
+  "RESELLER001",
+  "RESELLER002",
+  "CONSULTANT001",
+  "CONSULTANT002",
+  "REFERRAL001",
+  "REFERRAL002",
+  "CHANNEL001",
+  "CHANNEL002",
+  "STRATEGIC001",
+  "STRATEGIC002",
+  "INTEGRATION001",
+  "INTEGRATION002",
+]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
@@ -280,20 +296,6 @@ export function normalizeAffiliateCode(code: string): string | null {
   return VALID_AFFILIATE_CODES.includes(normalized) ? normalized : null
 }
 
-export async function validateAffiliateCode(code: string): Promise<string | null> {
-  if (!code || typeof code !== "string") {
-    return null
-  }
-
-  const upperCode = code.toUpperCase().trim()
-
-  if (VALID_AFFILIATE_CODES.includes(upperCode)) {
-    return upperCode
-  }
-
-  return null
-}
-
 export function getAllAffiliatePartners(): AffiliateInfo[] {
   return Object.values(affiliatePartners).filter((partner) => partner.isActive)
 }
@@ -312,4 +314,42 @@ export function formatAffiliateCode(affiliate: string | undefined): string {
 
   const validated = normalizeAffiliateCode(affiliate)
   return validated || "Unknown"
+}
+
+/**
+ * Validates if an affiliate code is in the approved list and returns partner type
+ * @param code - The affiliate code to validate
+ * @returns Object with isValid boolean and partner string if valid
+ */
+export function getAffiliateInfo(code: string): { isValid: boolean; partner?: string } {
+  const isValid = validateAffiliate(code)
+
+  if (!isValid) {
+    return { isValid: false }
+  }
+
+  const normalizedCode = code.trim().toUpperCase()
+
+  // Extract partner type from code
+  let partner = "Unknown"
+  if (normalizedCode.startsWith("PARTNER")) {
+    partner = "Strategic Partner"
+  } else if (normalizedCode.startsWith("RESELLER")) {
+    partner = "Authorized Reseller"
+  } else if (normalizedCode.startsWith("CONSULTANT")) {
+    partner = "Implementation Consultant"
+  } else if (normalizedCode.startsWith("REFERRAL")) {
+    partner = "Referral Partner"
+  } else if (normalizedCode.startsWith("CHANNEL")) {
+    partner = "Channel Partner"
+  } else if (normalizedCode.startsWith("STRATEGIC")) {
+    partner = "Strategic Alliance"
+  } else if (normalizedCode.startsWith("INTEGRATION")) {
+    partner = "Integration Partner"
+  }
+
+  return {
+    isValid: true,
+    partner,
+  }
 }

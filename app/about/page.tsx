@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, TrendingUp, Users, Award, Target, Zap, ArrowRight } from "lucide-react"
 import VisitorTracker from "@/components/visitor-tracker"
 import Link from "next/link"
-import Button from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 
 export default function AboutPage() {
   return (
