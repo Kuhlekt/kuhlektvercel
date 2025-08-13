@@ -1,9 +1,15 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
+import { sendContactEmail } from "@/lib/email-service"
 import { verifyCaptcha } from "@/lib/captcha"
 
-export async function submitContactForm(prevState: any, formData: FormData) {
+interface ContactFormState {
+  success: boolean
+  message: string
+  errors?: Record<string, string>
+}
+
+export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
   try {
     // Extract form data
     const firstName = formData.get("firstName") as string
@@ -12,9 +18,9 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
     const message = formData.get("message") as string
-    const captchaToken = formData.get("captchaToken") as string
+    const recaptchaToken = formData.get("recaptchaToken") as string
 
-    // Validate required fields
+    // Validation
     const errors: Record<string, string> = {}
 
     if (!firstName?.trim()) {
@@ -31,14 +37,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       errors.email = "Please enter a valid email address"
     }
 
-    if (!company?.trim()) {
-      errors.company = "Company name is required"
-    }
-
-    if (!phone?.trim()) {
-      errors.phone = "Phone number is required"
-    }
-
     if (Object.keys(errors).length > 0) {
       return {
         success: false,
@@ -47,57 +45,34 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify reCAPTCHA (non-blocking)
-    let captchaVerified = false
-    if (captchaToken && captchaToken !== "development-mode") {
-      try {
-        captchaVerified = await verifyCaptcha(captchaToken)
-      } catch (error) {
-        console.error("reCAPTCHA verification error:", error)
-        // Continue with form submission even if reCAPTCHA fails
-      }
-    }
-
-    // Prepare email content
-    const emailSubject = `Contact Form Submission - ${firstName} ${lastName}`
-    const emailBody = `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Company:</strong> ${company}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
-      ${message ? `<p><strong>Message:</strong></p><p>${message}</p>` : ""}
-      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-    `
-
-    // Send email
-    const emailResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      html: emailBody,
-    })
-
-    if (!emailResult.success) {
-      console.error("Failed to send contact email:", emailResult.error)
+    // Verify reCAPTCHA
+    const captchaResult = await verifyCaptcha(recaptchaToken)
+    if (!captchaResult.success) {
       return {
         success: false,
-        message: "Failed to send message. Please try again or contact support directly.",
-        errors: {},
+        message: "reCAPTCHA verification failed. Please try again.",
       }
     }
+
+    // Send email
+    await sendContactEmail({
+      firstName,
+      lastName,
+      email,
+      company: company || "",
+      phone: phone || "",
+      message: message || "",
+    })
 
     return {
       success: true,
-      message: "Message sent successfully! We'll get back to you within 24 hours.",
-      errors: {},
+      message: "Thank you for your message! We'll get back to you within 24 hours.",
     }
   } catch (error) {
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
-      errors: {},
+      message: "Something went wrong. Please try again or contact us directly.",
     }
   }
 }
