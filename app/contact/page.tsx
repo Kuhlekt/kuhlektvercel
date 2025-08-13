@@ -19,9 +19,20 @@ export default function ContactPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const [affiliateCode, setAffiliateCode] = useState("")
+  const [siteKey, setSiteKey] = useState<string>("")
 
-  // Auto-populate affiliate code from visitor data
   useEffect(() => {
+    // Fetch reCAPTCHA site key
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then((data) => {
+        setSiteKey(data.siteKey || "")
+      })
+      .catch((error) => {
+        console.error("Error loading reCAPTCHA config:", error)
+      })
+
+    // Auto-populate affiliate code from visitor data
     const visitorData = getVisitorData()
     if (visitorData?.affiliate) {
       setAffiliateCode(visitorData.affiliate)
@@ -167,12 +178,15 @@ export default function ContactPage() {
                   />
                 </div>
 
-                <div className="flex justify-center">
-                  <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
-                    onChange={(token) => setRecaptchaToken(token)}
-                  />
-                </div>
+                {siteKey && (
+                  <div className="flex justify-center">
+                    <ReCAPTCHA
+                      sitekey={siteKey}
+                      onChange={(token) => setRecaptchaToken(token)}
+                      onExpired={() => setRecaptchaToken(null)}
+                    />
+                  </div>
+                )}
 
                 <Button
                   type="submit"
