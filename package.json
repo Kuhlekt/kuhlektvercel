@@ -40,7 +40,9 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
