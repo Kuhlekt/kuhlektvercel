@@ -1,10 +1,7 @@
 import { Suspense } from "react"
 import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, ArrowRight } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
 
 export default function AboutPage() {
   return (
@@ -185,105 +182,6 @@ export default function AboutPage() {
                   our culture and product development.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Team Section */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Leadership Team</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Meet the experienced professionals leading Kuhlekt's mission
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Image
-                    src="/images/sarah-johnson-headshot.png"
-                    alt="Sarah Johnson, CEO"
-                    width={120}
-                    height={120}
-                    className="rounded-full mx-auto mb-4"
-                  />
-                  <h3 className="text-xl font-semibold mb-1">Sarah Johnson</h3>
-                  <p className="text-blue-600 font-medium mb-3">CEO & Co-Founder</p>
-                  <p className="text-gray-600 text-sm">
-                    Former CFO with 15+ years in finance operations. Led AR transformations at Fortune 500 companies.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Image
-                    src="/images/michael-chen-asian.png"
-                    alt="Michael Chen, CTO"
-                    width={120}
-                    height={120}
-                    className="rounded-full mx-auto mb-4"
-                  />
-                  <h3 className="text-xl font-semibold mb-1">Michael Chen</h3>
-                  <p className="text-blue-600 font-medium mb-3">CTO & Co-Founder</p>
-                  <p className="text-gray-600 text-sm">
-                    Technology leader with expertise in AI/ML and fintech. Previously built scalable platforms at
-                    leading tech companies.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Image
-                    src="/images/jessica-rodriguez-hispanic.png"
-                    alt="Jessica Rodriguez, VP of Customer Success"
-                    width={120}
-                    height={120}
-                    className="rounded-full mx-auto mb-4"
-                  />
-                  <h3 className="text-xl font-semibold mb-1">Jessica Rodriguez</h3>
-                  <p className="text-blue-600 font-medium mb-3">VP of Customer Success</p>
-                  <p className="text-gray-600 text-sm">
-                    Customer success expert with deep AR domain knowledge. Ensures every client achieves their cash flow
-                    goals.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl lg:text-4xl font-bold mb-6">Ready to Join Our Success Story?</h2>
-              <p className="text-xl text-blue-100 mb-8">
-                Discover how Kuhlekt can transform your accounts receivable process and accelerate your cash flow
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
-                  <Link href="/demo">
-                    Get Free Demo <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="border-white text-white hover:bg-white hover:text-blue-700 bg-transparent"
-                >
-                  <Link href="/contact">Contact Us</Link>
-                </Button>
-              </div>
-
-              <p className="text-sm text-blue-200 mt-4">
-                No credit card required • 30-day free trial • Setup in minutes
-              </p>
             </div>
           </div>
         </section>
