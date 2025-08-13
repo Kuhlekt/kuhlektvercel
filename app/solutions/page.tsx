@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle } from "lucide-react"
-import VisitorTracker from "@/components/visitor-tracker"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function SolutionsPage() {
   return (
