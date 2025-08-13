@@ -9,17 +9,17 @@ interface AffiliateInfo {
 }
 
 // Predefined list of valid affiliate codes
-const VALID_AFFILIATES = [
+const VALID_AFFILIATE_CODES = [
   "PARTNER001",
   "PARTNER002",
   "PARTNER003",
-  "RESELLER001",
-  "RESELLER002",
+  "REFERRAL001",
+  "REFERRAL002",
   "AGENCY001",
   "AGENCY002",
   "CONSULTANT001",
-  "REFERRAL001",
-  "MARKETING001",
+  "CONSULTANT002",
+  "RESELLER001",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -256,15 +256,18 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
   },
 }
 
-export function validateAffiliateCode(code: string): AffiliateInfo | null {
-  const upperCode = code.toUpperCase().trim()
-  const affiliate = affiliatePartners[upperCode]
-
-  if (!affiliate || !affiliate.isActive) {
+export async function validateAffiliateCode(code: string): Promise<string | null> {
+  if (!code || typeof code !== "string") {
     return null
   }
 
-  return affiliate
+  const upperCode = code.toUpperCase().trim()
+
+  if (VALID_AFFILIATE_CODES.includes(upperCode)) {
+    return upperCode
+  }
+
+  return null
 }
 
 export function getAllAffiliatePartners(): AffiliateInfo[] {
@@ -284,7 +287,7 @@ export function validateAffiliate(affiliate: string | undefined): string | undef
   if (!affiliate) return undefined
 
   const upperAffiliate = affiliate.toUpperCase().trim()
-  return VALID_AFFILIATES.includes(upperAffiliate) ? upperAffiliate : undefined
+  return VALID_AFFILIATE_CODES.includes(upperAffiliate) ? upperAffiliate : undefined
 }
 
 /**
@@ -292,7 +295,7 @@ export function validateAffiliate(affiliate: string | undefined): string | undef
  * @returns Array of valid affiliate codes
  */
 export function getValidAffiliates(): string[] {
-  return [...VALID_AFFILIATES]
+  return [...VALID_AFFILIATE_CODES]
 }
 
 /**
@@ -301,7 +304,7 @@ export function getValidAffiliates(): string[] {
  * @returns True if the code is valid, false otherwise
  */
 export function isValidAffiliateCode(code: string): boolean {
-  return VALID_AFFILIATES.includes(code.toUpperCase().trim())
+  return VALID_AFFILIATE_CODES.includes(code.toUpperCase().trim())
 }
 
 /**

@@ -2,6 +2,10 @@
 
 import { useEffect } from "react"
 import { useSearchParams, usePathname } from "next/navigation"
+import { createClient } from "@supabase/supabase-js"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 // Helper function to generate visitor ID
 function generateVisitorId(): string {
@@ -39,130 +43,56 @@ function VisitorTrackerComponent() {
   const pathname = usePathname()
 
   useEffect(() => {
-    try {
-      // Get or create visitor ID
-      let visitorId = localStorage.getItem("kuhlekt_visitor_id")
-      if (!visitorId) {
-        visitorId = generateVisitorId()
-        localStorage.setItem("kuhlekt_visitor_id", visitorId)
-      }
+    const trackVisitor = async () => {
+      try {
+        // Get UTM parameters
+        const utmSource = searchParams.get("utm_source") || null
+        const utmMedium = searchParams.get("utm_medium") || null
+        const utmCampaign = searchParams.get("utm_campaign") || null
+        const utmTerm = searchParams.get("utm_term") || null
+        const utmContent = searchParams.get("utm_content") || null
 
-      // Get or create session ID
-      let sessionId = sessionStorage.getItem("kuhlekt_session_id")
-      if (!sessionId) {
-        sessionId = generateSessionId()
-        sessionStorage.setItem("kuhlekt_session_id", sessionId)
-      }
+        // Get affiliate code and validate it
+        const affiliateCode = searchParams.get("affiliate") || searchParams.get("ref") || null
+        const validatedAffiliateCode = affiliateCode ? await validateAffiliateCode(affiliateCode) : null
 
-      // Extract UTM parameters and affiliate
-      const utmParams = extractUTMParams(searchParams)
-      const validatedAffiliate = validateAffiliate(utmParams.affiliate)
+        // Get visitor info
+        const userAgent = navigator.userAgent
+        const referrer = document.referrer || null
+        const timestamp = new Date().toISOString()
 
-      // Get referrer
-      const referrer = document.referrer || "direct"
+        // Insert visitor data
+        const { error } = await supabase.from("visitors").insert({
+          page: pathname,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+          utm_term: utmTerm,
+          utm_content: utmContent,
+          affiliate_code: validatedAffiliateCode,
+          user_agent: userAgent,
+          referrer: referrer,
+          visited_at: timestamp,
+        })
 
-      // Get or update visitor data
-      const existingData = localStorage.getItem("kuhlekt_visitor_data")
-      let visitorData = existingData ? JSON.parse(existingData) : null
-
-      const now = new Date().toISOString()
-
-      if (!visitorData) {
-        // New visitor
-        visitorData = {
-          visitorId,
-          sessionId,
-          firstVisit: now,
-          lastVisit: now,
-          pageViews: 1,
-          referrer,
-          userAgent: navigator.userAgent,
-          currentPage: pathname,
-          ...utmParams,
-          affiliate: validatedAffiliate,
+        if (error) {
+          console.error("Error tracking visitor:", error)
         }
-      } else {
-        // Existing visitor
-        visitorData = {
-          ...visitorData,
-          sessionId, // Update session ID
-          lastVisit: now,
-          pageViews: (visitorData.pageViews || 0) + 1,
-          currentPage: pathname,
-          // Update UTM params if they exist in current visit
-          ...(utmParams.utmSource && { utmSource: utmParams.utmSource }),
-          ...(utmParams.utmMedium && { utmMedium: utmParams.utmMedium }),
-          ...(utmParams.utmCampaign && { utmCampaign: utmParams.utmCampaign }),
-          ...(utmParams.utmTerm && { utmTerm: utmParams.utmTerm }),
-          ...(utmParams.utmContent && { utmContent: utmParams.utmContent }),
-          ...(validatedAffiliate && { affiliate: validatedAffiliate }),
-        }
+      } catch (error) {
+        console.error("Error in visitor tracking:", error)
       }
-
-      // Save visitor data
-      localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
-
-      // Update all visitors list for admin
-      const allVisitors = JSON.parse(localStorage.getItem("kuhlekt_all_visitors") || "[]")
-      const existingIndex = allVisitors.findIndex((v: any) => v.visitorId === visitorId)
-
-      if (existingIndex >= 0) {
-        allVisitors[existingIndex] = visitorData
-      } else {
-        allVisitors.push(visitorData)
-      }
-
-      localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
-
-      // Track page history
-      const pageHistory = JSON.parse(localStorage.getItem("kuhlekt_page_history") || "[]")
-      pageHistory.push({
-        page: pathname,
-        timestamp: now,
-        sessionId,
-      })
-
-      // Keep only last 1000 page views
-      if (pageHistory.length > 1000) {
-        pageHistory.splice(0, pageHistory.length - 1000)
-      }
-
-      localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
-
-      // Dispatch storage event for real-time admin updates
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "kuhlekt_visitor_data",
-          newValue: JSON.stringify(visitorData),
-        }),
-      )
-
-      console.log("Visitor tracked:", {
-        visitorId,
-        sessionId,
-        page: pathname,
-        utmParams,
-        affiliate: validatedAffiliate,
-      })
-    } catch (error) {
-      console.error("Error tracking visitor:", error)
     }
+
+    trackVisitor()
   }, [searchParams, pathname])
 
   return null
 }
 
 // Wrapper component with error boundary
-export function VisitorTracker() {
-  try {
-    return <VisitorTrackerComponent />
-  } catch (error) {
-    console.error("VisitorTracker error:", error)
-    return null
-  }
+export default function VisitorTracker() {
+  return <VisitorTrackerComponent />
 }
-
-export default VisitorTracker
 
 // Helper functions for admin use
 export function getVisitorData() {
