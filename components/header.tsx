@@ -5,15 +5,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, X } from 'lucide-react'
-import { cn } from "@/lib/utils"
+import { Menu } from "lucide-react"
 
 const navigation = [
   { name: "Home", href: "/" },
   { name: "Product", href: "/product" },
   { name: "Solutions", href: "/solutions" },
   { name: "About", href: "/about" },
-  { name: "Help", href: "/help" },
 ]
 
 export function Header() {
@@ -72,18 +70,10 @@ export function Header() {
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle className="flex items-center space-x-2">
-                  <Image
-                    src="/images/kuhlekt-logo.jpg"
-                    alt="Kuhlekt Logo"
-                    width={24}
-                    height={24}
-                    className="rounded"
-                  />
+                  <Image src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" width={24} height={24} className="rounded" />
                   <span>Kuhlekt</span>
                 </SheetTitle>
-                <SheetDescription>
-                  Transform your accounts receivable with intelligent automation
-                </SheetDescription>
+                <SheetDescription>Transform your accounts receivable with intelligent automation</SheetDescription>
               </SheetHeader>
               <div className="grid gap-4 py-6">
                 {navigation.map((item) => (

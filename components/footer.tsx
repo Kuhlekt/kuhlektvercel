@@ -3,7 +3,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Facebook, Twitter, Linkedin, Youtube, Mail, Phone, MapPin } from 'lucide-react'
+import { Facebook, Twitter, Linkedin, Youtube, Mail, Phone, MapPin } from "lucide-react"
 import { CareersModal } from "./careers-modal"
 import { PrivacyModal } from "./privacy-modal"
 import { TermsModal } from "./terms-modal"
@@ -18,13 +18,7 @@ export function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Image
-                src="/images/kuhlekt-logo.jpg"
-                alt="Kuhlekt Logo"
-                width={32}
-                height={32}
-                className="rounded"
-              />
+              <Image src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" width={32} height={32} className="rounded" />
               <span className="text-xl font-bold text-white">Kuhlekt</span>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -62,9 +56,6 @@ export function Footer() {
               </Link>
               <Link href="/pricing-table" className="text-sm hover:text-white transition-colors">
                 Pricing
-              </Link>
-              <Link href="/help" className="text-sm hover:text-white transition-colors">
-                Help Center
               </Link>
             </nav>
           </div>
@@ -117,9 +108,7 @@ export function Footer() {
         {/* Bottom Footer */}
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
-            <p className="text-sm text-gray-400">
-              © {currentYear} Kuhlekt, Inc. All rights reserved.
-            </p>
+            <p className="text-sm text-gray-400">© {currentYear} Kuhlekt, Inc. All rights reserved.</p>
             <div className="flex items-center space-x-4 text-sm">
               <PrivacyModal />
               <TermsModal />
