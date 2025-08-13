@@ -8,8 +8,8 @@ export async function verifyCaptcha(token: string): Promise<{ success: boolean; 
     return { success: true }
   }
 
-  // Handle bypass tokens
-  if (token.startsWith("recaptcha-")) {
+  // Handle bypass tokens from disabled/error states
+  if (token && token.startsWith("recaptcha-")) {
     console.log("reCAPTCHA bypass token received:", token)
     return { success: true }
   }
@@ -26,6 +26,10 @@ export async function verifyCaptcha(token: string): Promise<{ success: boolean; 
       },
       body: `secret=${secretKey}&response=${token}`,
     })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
 
     const data = await response.json()
 

@@ -10,7 +10,6 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
   const [siteKey, setSiteKey] = useState<string>("")
   const [isEnabled, setIsEnabled] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const recaptchaRef = useRef<HTMLDivElement>(null)
   const widgetId = useRef<number | null>(null)
 
@@ -23,7 +22,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
           setSiteKey(config.siteKey || "")
           setIsEnabled(config.isEnabled || false)
 
-          // If reCAPTCHA is disabled, provide a bypass token
+          // If reCAPTCHA is disabled, provide a bypass token immediately
           if (!config.isEnabled) {
             onVerify("recaptcha-disabled")
           }
@@ -66,10 +65,15 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
 
               // Execute reCAPTCHA immediately for invisible mode
               setTimeout(() => {
-                if (widgetId.current !== null) {
-                  window.grecaptcha.execute(widgetId.current)
+                if (widgetId.current !== null && window.grecaptcha) {
+                  try {
+                    window.grecaptcha.execute(widgetId.current)
+                  } catch (error) {
+                    console.error("Error executing reCAPTCHA:", error)
+                    onVerify("recaptcha-execute-error")
+                  }
                 }
-              }, 100)
+              }, 500)
             }
             setIsLoaded(true)
           } catch (error) {
@@ -109,22 +113,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
     return null
   }
 
-  return (
-    <div>
-      <div ref={recaptchaRef} className="invisible-recaptcha" />
-      <div className="text-xs text-gray-500 text-center mt-2">
-        This site is protected by reCAPTCHA and the Google{" "}
-        <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">
-          Privacy Policy
-        </a>{" "}
-        and{" "}
-        <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">
-          Terms of Service
-        </a>{" "}
-        apply.
-      </div>
-    </div>
-  )
+  return <div ref={recaptchaRef} style={{ display: "none" }} />
 }
 
 // Global type declaration for grecaptcha
