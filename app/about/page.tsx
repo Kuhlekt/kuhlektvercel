@@ -1,7 +1,10 @@
 import { Suspense } from "react"
+import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
-import { Users, Target, Award, TrendingUp } from "lucide-react"
+import { CheckCircle, ArrowRight } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function AboutPage() {
   return (
@@ -9,163 +12,243 @@ export default function AboutPage() {
       <Suspense fallback={null}>
         <VisitorTracker />
       </Suspense>
+
       <div className="min-h-screen bg-white">
         {/* Hero Section */}
         <section className="py-20 bg-gray-50">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-6">About Kuhlekt</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're revolutionizing accounts receivable management with AI-powered automation that helps businesses
-              accelerate cash flow and reduce manual processes.
+              We help businesses optimize their accounts receivable processes through intelligent automation and
+              data-driven insights.
             </p>
           </div>
         </section>
 
-        {/* Mission Section */}
+        {/* Mission & Vision */}
         <section className="py-20">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">Our Mission</h2>
-              <p className="text-lg text-gray-600 mb-12">
-                To empower finance teams with intelligent automation tools that transform accounts receivable from a
-                manual, time-consuming process into a strategic advantage for business growth.
-              </p>
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Our Mission</h2>
+                <p className="text-lg text-gray-600 mb-8">
+                  To empower businesses with intelligent accounts receivable solutions that accelerate cash flow, reduce
+                  operational costs, and strengthen customer relationships through automation and analytics.
+                </p>
 
-              <div className="grid md:grid-cols-2 gap-12 items-center">
-                <div>
-                  <img
-                    src="/images/v200-businesswoman-hero.png"
-                    alt="Professional businesswoman"
-                    className="rounded-lg shadow-lg"
-                  />
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Innovation First</h4>
+                      <p className="text-gray-600">Leveraging cutting-edge AI and machine learning technologies</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Customer Success</h4>
+                      <p className="text-gray-600">Dedicated to delivering measurable results and ROI</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Continuous Improvement</h4>
+                      <p className="text-gray-600">Always evolving to meet changing business needs</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="text-2xl font-semibold mb-6">Built for Modern Finance Teams</h3>
-                  <p className="text-gray-600 mb-6">
-                    Kuhlekt was founded by finance professionals who experienced firsthand the challenges of managing
-                    accounts receivable in growing businesses. We understand the pain points of manual processes,
-                    delayed payments, and the constant struggle to maintain healthy cash flow.
-                  </p>
-                  <p className="text-gray-600">
-                    Our platform combines industry expertise with cutting-edge technology to deliver solutions that not
-                    only solve today's problems but scale with your business as it grows.
-                  </p>
+              </div>
+
+              <div className="relative">
+                <Image
+                  src="/images/manual-vs-automated-ar.png"
+                  alt="Manual vs Automated AR Process Comparison"
+                  width={600}
+                  height={400}
+                  className="rounded-lg shadow-xl"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Our Story */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Our Story</h2>
+                <p className="text-xl text-gray-600">
+                  Founded by finance professionals who experienced AR challenges firsthand
+                </p>
+              </div>
+
+              <div className="space-y-12">
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">The Problem We Saw</h3>
+                    <p className="text-gray-600 mb-6">
+                      As CFOs and finance leaders, our founders witnessed countless businesses struggling with manual AR
+                      processes, delayed payments, and poor cash flow visibility. Traditional solutions were either too
+                      complex or too simplistic to address real-world challenges.
+                    </p>
+                    <p className="text-gray-600">
+                      We knew there had to be a better way to manage accounts receivable that combined automation with
+                      intelligence, simplicity with power.
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <Image
+                      src="/images/enterprise-receivables-dashboard.png"
+                      alt="Enterprise receivables dashboard showing AR analytics"
+                      width={500}
+                      height={300}
+                      className="rounded-lg shadow-lg"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                  <div className="lg:order-2">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Our Solution</h3>
+                    <p className="text-gray-600 mb-6">
+                      We built Kuhlekt to be the AR platform we wished we had as finance leaders. It combines the power
+                      of AI and automation with the flexibility and insights that growing businesses need.
+                    </p>
+                    <p className="text-gray-600">
+                      Today, we're proud to help hundreds of companies accelerate their cash flow, reduce manual work,
+                      and make data-driven decisions about their receivables.
+                    </p>
+                  </div>
+                  <div className="lg:order-1 relative">
+                    <Image
+                      src="/images/ar-dashboard.png"
+                      alt="Kuhlekt AR dashboard interface"
+                      width={500}
+                      height={300}
+                      className="rounded-lg shadow-lg"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Values Section */}
+        {/* Values */}
         <section className="py-20 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Values</h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                These core principles guide everything we do and shape how we build solutions for our clients.
-              </p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Our Values</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Users className="h-12 w-12 text-cyan-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">Customer-Centric</h3>
-                  <p className="text-gray-600">
-                    Every feature we build starts with understanding our customers' real-world challenges and needs.
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Innovation</h3>
+                <p className="text-gray-600">We constantly push the boundaries of what's possible in AR automation.</p>
+              </div>
 
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Target className="h-12 w-12 text-cyan-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">Results-Driven</h3>
-                  <p className="text-gray-600">
-                    We measure success by the tangible improvements our clients see in their cash flow and efficiency.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Customer First</h3>
+                <p className="text-gray-600">Every decision we make is guided by what's best for our customers.</p>
+              </div>
 
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <Award className="h-12 w-12 text-cyan-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">Excellence</h3>
-                  <p className="text-gray-600">
-                    We're committed to delivering the highest quality solutions with attention to every detail.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Results Driven</h3>
+                <p className="text-gray-600">We measure our success by the tangible results we deliver.</p>
+              </div>
 
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <TrendingUp className="h-12 w-12 text-cyan-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">Innovation</h3>
-                  <p className="text-gray-600">
-                    We continuously evolve our platform with the latest technology to stay ahead of industry needs.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Transparency</h3>
+                <p className="text-gray-600">
+                  We believe in open, honest communication with our customers, partners, and team members. No hidden
+                  fees, no surprises, just clear expectations.
+                </p>
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Excellence</h3>
+                <p className="text-gray-600">
+                  We strive for excellence in everything we do, from product development to customer support, always
+                  raising the bar for ourselves and the industry.
+                </p>
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Growth Mindset</h3>
+                <p className="text-gray-600">
+                  We embrace challenges as opportunities to learn and grow. Continuous improvement is at the heart of
+                  our culture and product development.
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Team Section */}
-        <section className="py-20">
+        <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Leadership Team</h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Meet the experienced professionals leading Kuhlekt's mission to transform accounts receivable
-                management.
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Leadership Team</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Meet the experienced professionals leading Kuhlekt's mission
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
               <Card className="p-6 text-center">
                 <CardContent className="p-0">
-                  <img
+                  <Image
                     src="/images/sarah-johnson-headshot.png"
                     alt="Sarah Johnson, CEO"
-                    className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                    width={120}
+                    height={120}
+                    className="rounded-full mx-auto mb-4"
                   />
-                  <h3 className="text-xl font-semibold mb-2">Sarah Johnson</h3>
-                  <p className="text-cyan-600 font-medium mb-3">CEO & Co-Founder</p>
+                  <h3 className="text-xl font-semibold mb-1">Sarah Johnson</h3>
+                  <p className="text-blue-600 font-medium mb-3">CEO & Co-Founder</p>
                   <p className="text-gray-600 text-sm">
-                    Former CFO with 15+ years in finance operations. Led AR transformation at three high-growth SaaS
-                    companies.
+                    Former CFO with 15+ years in finance operations. Led AR transformations at Fortune 500 companies.
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="p-6 text-center">
                 <CardContent className="p-0">
-                  <img
+                  <Image
                     src="/images/michael-chen-asian.png"
                     alt="Michael Chen, CTO"
-                    className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                    width={120}
+                    height={120}
+                    className="rounded-full mx-auto mb-4"
                   />
-                  <h3 className="text-xl font-semibold mb-2">Michael Chen</h3>
-                  <p className="text-cyan-600 font-medium mb-3">CTO & Co-Founder</p>
+                  <h3 className="text-xl font-semibold mb-1">Michael Chen</h3>
+                  <p className="text-blue-600 font-medium mb-3">CTO & Co-Founder</p>
                   <p className="text-gray-600 text-sm">
-                    Former engineering leader at fintech unicorns. Expert in building scalable financial automation
-                    platforms.
+                    Technology leader with expertise in AI/ML and fintech. Previously built scalable platforms at
+                    leading tech companies.
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="p-6 text-center">
                 <CardContent className="p-0">
-                  <img
+                  <Image
                     src="/images/jessica-rodriguez-hispanic.png"
                     alt="Jessica Rodriguez, VP of Customer Success"
-                    className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                    width={120}
+                    height={120}
+                    className="rounded-full mx-auto mb-4"
                   />
-                  <h3 className="text-xl font-semibold mb-2">Jessica Rodriguez</h3>
-                  <p className="text-cyan-600 font-medium mb-3">VP of Customer Success</p>
+                  <h3 className="text-xl font-semibold mb-1">Jessica Rodriguez</h3>
+                  <p className="text-blue-600 font-medium mb-3">VP of Customer Success</p>
                   <p className="text-gray-600 text-sm">
-                    Customer success expert with deep expertise in finance operations and change management in
-                    enterprise environments.
+                    Customer success expert with deep AR domain knowledge. Ensures every client achieves their cash flow
+                    goals.
                   </p>
                 </CardContent>
               </Card>
@@ -173,26 +256,34 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Contact CTA */}
-        <section className="py-20 bg-cyan-600">
+        {/* CTA Section */}
+        <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold text-white mb-6">Ready to Transform Your AR Process?</h2>
-            <p className="text-xl text-cyan-100 mb-8 max-w-2xl mx-auto">
-              Join hundreds of finance teams who have already accelerated their cash flow with Kuhlekt.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="/demo"
-                className="bg-white text-cyan-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-              >
-                Schedule Demo
-              </a>
-              <a
-                href="/contact"
-                className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-cyan-600 transition-colors"
-              >
-                Contact Us
-              </a>
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl lg:text-4xl font-bold mb-6">Ready to Join Our Success Story?</h2>
+              <p className="text-xl text-blue-100 mb-8">
+                Discover how Kuhlekt can transform your accounts receivable process and accelerate your cash flow
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
+                  <Link href="/demo">
+                    Get Free Demo <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="border-white text-white hover:bg-white hover:text-blue-700 bg-transparent"
+                >
+                  <Link href="/contact">Contact Us</Link>
+                </Button>
+              </div>
+
+              <p className="text-sm text-blue-200 mt-4">
+                No credit card required • 30-day free trial • Setup in minutes
+              </p>
             </div>
           </div>
         </section>
