@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import {
   Users,
   TrendingUp,
@@ -20,6 +21,8 @@ import {
   Calendar,
   Clock,
   ExternalLink,
+  Play,
+  Pause,
 } from "lucide-react"
 
 interface Visitor {
@@ -54,6 +57,9 @@ export default function VisitorsPage() {
   const [filterBy, setFilterBy] = useState("all")
   const [sortBy, setSortBy] = useState("lastVisit")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [refreshInterval, setRefreshInterval] = useState(30) // seconds
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Get all visitors from localStorage
   const getAllVisitors = (): Visitor[] => {
@@ -95,6 +101,24 @@ export default function VisitorsPage() {
     setVisitors(allVisitors)
     setPageHistory(allPageHistory)
     setIsLoading(false)
+  }
+
+  // Setup auto-refresh
+  const setupAutoRefresh = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    if (autoRefresh) {
+      intervalRef.current = setInterval(() => {
+        loadData()
+      }, refreshInterval * 1000)
+    }
+  }
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh)
   }
 
   // Clear all data
@@ -267,13 +291,19 @@ export default function VisitorsPage() {
     setFilteredVisitors(filtered)
   }, [visitors, searchTerm, filterBy, sortBy, sortOrder])
 
+  // Setup auto-refresh when settings change
+  useEffect(() => {
+    setupAutoRefresh()
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [autoRefresh, refreshInterval])
+
   // Initial load
   useEffect(() => {
     loadData()
-
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(loadData, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   // Format date
@@ -328,6 +358,41 @@ export default function VisitorsPage() {
               Analytics Dashboard
             </Button>
           </div>
+
+          {/* Auto-refresh Controls */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={autoRefresh} onCheckedChange={toggleAutoRefresh} />
+                    <span className="text-sm font-medium">Auto Refresh</span>
+                    {autoRefresh ? (
+                      <Play className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Pause className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <Select
+                    value={refreshInterval.toString()}
+                    onValueChange={(value) => setRefreshInterval(Number.parseInt(value))}
+                    disabled={!autoRefresh}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 seconds</SelectItem>
+                      <SelectItem value="30">30 seconds</SelectItem>
+                      <SelectItem value="60">1 minute</SelectItem>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-500">Last updated: {new Date().toLocaleTimeString()}</div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

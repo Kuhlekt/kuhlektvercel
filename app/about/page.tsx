@@ -7,34 +7,14 @@ export default function AboutPage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-teal-50 to-blue-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-                We Help Finance Teams Get Paid Faster, With Less Stress
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Kuhlekt transforms accounts receivable management with intelligent automation, helping businesses reduce
-                DSO and improve cash flow while maintaining strong customer relationships.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button className="bg-teal-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">
-                  Learn More
-                </button>
-                <button className="border border-gray-300 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-                  Contact Us
-                </button>
-              </div>
-            </div>
-            <div className="relative">
-              <Image
-                src="/images/v200-businesswoman-hero.png"
-                alt="Professional businesswoman representing finance team success"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-lg"
-                priority
-              />
-            </div>
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              We Help Finance Teams Get Paid Faster, With Less Stress
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Kuhlekt transforms accounts receivable management with intelligent automation, helping businesses reduce
+              DSO and improve cash flow while maintaining strong customer relationships.
+            </p>
           </div>
         </div>
       </section>
@@ -44,72 +24,76 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                We believe that managing accounts receivable shouldn't be a constant source of stress for finance teams.
+                Our mission is to eliminate the manual, time-consuming processes that keep CFOs awake at night and
+                replace them with intelligent, automated solutions that work seamlessly in the background.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-700">Reduce Days Sales Outstanding (DSO) by up to 40%</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-700">Automate 80% of routine collection activities</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-700">Improve customer satisfaction through personalized communication</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-700">Provide real-time visibility into cash flow forecasting</p>
+                </div>
+              </div>
+            </div>
+            <div className="relative">
               <Image
                 src="/images/manual-vs-automated-ar.png"
-                alt="Comparison between manual and automated accounts receivable processes"
+                alt="Manual vs Automated AR Management Comparison"
                 width={600}
                 height={400}
                 className="rounded-lg shadow-lg"
               />
             </div>
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
-              <p className="text-lg text-gray-600 mb-6">
-                We believe that managing accounts receivable shouldn't be a source of stress for finance teams. Our
-                mission is to eliminate the manual, time-consuming tasks that prevent finance professionals from
-                focusing on strategic initiatives.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Reduce manual work through intelligent automation</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Improve cash flow with faster payment collection</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-600 mt-1 flex-shrink-0" />
-                  <p className="text-gray-700">Maintain positive customer relationships</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Our Beliefs Section */}
+      {/* Beliefs Section */}
       <section className="bg-gray-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Beliefs</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              These core principles guide everything we do at Kuhlekt
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">What We Believe</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Our core beliefs drive everything we do, from product development to customer support.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-12 h-12 text-teal-600 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Automation First</h3>
+              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Automation Should Be Intelligent</h3>
               <p className="text-gray-600">
-                Technology should handle repetitive tasks, freeing humans to focus on relationship building and
-                strategic decisions.
+                We don't believe in one-size-fits-all automation. Our AI learns your business patterns and adapts to
+                provide personalized, context-aware solutions.
               </p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-12 h-12 text-teal-600 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Customer-Centric</h3>
+              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Relationships Matter</h3>
               <p className="text-gray-600">
-                Every collection interaction should strengthen, not strain, the relationship between businesses and
-                their customers.
+                Getting paid faster shouldn't come at the expense of customer relationships. Our platform helps maintain
+                positive interactions while improving collection rates.
               </p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-12 h-12 text-teal-600 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Data-Driven</h3>
+              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Data Drives Decisions</h3>
               <p className="text-gray-600">
-                Intelligent insights from data should inform every decision, from payment predictions to collection
-                strategies.
+                Every action should be backed by data. We provide comprehensive analytics and insights to help you make
+                informed decisions about your AR strategy.
               </p>
             </div>
           </div>
@@ -122,77 +106,20 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-8">Our Story</h2>
           <div className="space-y-6 text-lg text-gray-600">
             <p>
-              Kuhlekt was founded by finance professionals who experienced firsthand the frustrations of manual accounts
-              receivable management. Spending countless hours on repetitive tasks, chasing payments, and managing
-              spreadsheets, they knew there had to be a better way.
+              Kuhlekt was born from the frustration of watching talented finance professionals spend countless hours on
+              manual, repetitive tasks that technology should handle. Our founders, having worked in both finance and
+              technology roles, witnessed firsthand how outdated AR processes were holding businesses back.
             </p>
             <p>
-              After years of working with enterprise finance teams, we discovered that the biggest challenge wasn't just
-              collecting payments—it was doing so efficiently while maintaining positive customer relationships.
-              Traditional AR solutions were either too complex for mid-market companies or too simplistic for growing
-              businesses.
+              We started with a simple question: "What if accounts receivable could run itself?" This led us to develop
+              an AI-powered platform that not only automates routine tasks but actually gets smarter over time, learning
+              from each interaction to improve outcomes.
             </p>
             <p>
-              Today, Kuhlekt serves finance teams across industries, helping them reduce DSO by up to 30% while
-              improving customer satisfaction. We're proud to be the AR automation platform that grows with your
-              business, from startup to enterprise.
+              Today, we're proud to help hundreds of businesses transform their AR operations, reduce stress for finance
+              teams, and improve cash flow predictability. But we're just getting started – our vision is to make
+              intelligent AR automation accessible to businesses of all sizes.
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Team Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
-            <p className="text-xl text-gray-600">
-              Finance and technology experts dedicated to transforming AR management
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-              <Image
-                src="/images/sarah-johnson-headshot.png"
-                alt="Sarah Johnson, CEO"
-                width={200}
-                height={200}
-                className="rounded-full mx-auto mb-4"
-              />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Sarah Johnson</h3>
-              <p className="text-teal-600 font-medium mb-3">CEO & Co-Founder</p>
-              <p className="text-gray-600">
-                Former CFO with 15+ years in finance operations, passionate about eliminating manual AR processes.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-              <Image
-                src="/images/michael-chen-asian.png"
-                alt="Michael Chen, CTO"
-                width={200}
-                height={200}
-                className="rounded-full mx-auto mb-4"
-              />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Michael Chen</h3>
-              <p className="text-teal-600 font-medium mb-3">CTO & Co-Founder</p>
-              <p className="text-gray-600">
-                Technology leader specializing in AI and automation, with expertise in financial software systems.
-              </p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-              <Image
-                src="/images/jessica-rodriguez-hispanic.png"
-                alt="Jessica Rodriguez, VP of Customer Success"
-                width={200}
-                height={200}
-                className="rounded-full mx-auto mb-4"
-              />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Jessica Rodriguez</h3>
-              <p className="text-teal-600 font-medium mb-3">VP of Customer Success</p>
-              <p className="text-gray-600">
-                Customer success expert focused on helping finance teams achieve their AR automation goals.
-              </p>
-            </div>
           </div>
         </div>
       </section>

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Users,
   TrendingUp,
@@ -16,6 +18,8 @@ import {
   PieChart,
   Download,
   Trash2,
+  Pause,
+  Activity,
 } from "lucide-react"
 
 interface Visitor {
@@ -46,6 +50,10 @@ export default function TrackingPage() {
   const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("24h")
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval, setRefreshInterval] = useState(30) // seconds
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Get all visitors from localStorage
   const getAllVisitors = (): Visitor[] => {
@@ -86,7 +94,26 @@ export default function TrackingPage() {
     const allPageHistory = getPageHistory()
     setVisitors(allVisitors)
     setPageHistory(allPageHistory)
+    setLastUpdated(new Date())
     setIsLoading(false)
+  }
+
+  // Setup auto-refresh
+  const setupAutoRefresh = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    if (autoRefresh) {
+      intervalRef.current = setInterval(() => {
+        loadData()
+      }, refreshInterval * 1000)
+    }
+  }
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh)
   }
 
   // Clear all data
@@ -323,13 +350,19 @@ export default function TrackingPage() {
     }
   }
 
+  // Setup auto-refresh when settings change
+  useEffect(() => {
+    setupAutoRefresh()
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [autoRefresh, refreshInterval])
+
   // Initial load
   useEffect(() => {
     loadData()
-
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(loadData, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   const analytics = calculateAnalytics()
@@ -377,6 +410,47 @@ export default function TrackingPage() {
               Analytics Dashboard
             </Button>
           </div>
+
+          {/* Auto-refresh Controls */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={autoRefresh} onCheckedChange={toggleAutoRefresh} />
+                    <span className="text-sm font-medium">Auto Refresh</span>
+                    {autoRefresh ? (
+                      <div className="flex items-center gap-1">
+                        <Activity className="w-4 h-4 text-green-500 animate-pulse" />
+                        <span className="text-xs text-green-600">Active</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Pause className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs text-gray-500">Paused</span>
+                      </div>
+                    )}
+                  </div>
+                  <Select
+                    value={refreshInterval.toString()}
+                    onValueChange={(value) => setRefreshInterval(Number.parseInt(value))}
+                    disabled={!autoRefresh}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 seconds</SelectItem>
+                      <SelectItem value="30">30 seconds</SelectItem>
+                      <SelectItem value="60">1 minute</SelectItem>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Time Range Filter */}
           <div className="flex gap-2">
