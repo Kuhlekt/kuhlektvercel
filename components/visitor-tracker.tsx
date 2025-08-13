@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, Suspense } from "react"
+import { useEffect } from "react"
 import { useSearchParams, usePathname } from "next/navigation"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 function VisitorTrackerComponent() {
   const searchParams = useSearchParams()
@@ -17,30 +18,41 @@ function VisitorTrackerComponent() {
         const utmTerm = searchParams.get("utm_term") || ""
         const utmContent = searchParams.get("utm_content") || ""
 
-        // Extract affiliate code
+        // Extract and validate affiliate code
         const affiliateCode = searchParams.get("affiliate") || searchParams.get("ref") || ""
+        const isValidAffiliate = affiliateCode ? validateAffiliateCode(affiliateCode) : false
 
-        // Get visitor info
+        // Get referrer
+        const referrer = document.referrer || ""
+
+        // Get user agent
+        const userAgent = navigator.userAgent || ""
+
+        // Get screen resolution
+        const screenResolution = `${screen.width}x${screen.height}`
+
+        // Get timestamp
+        const timestamp = new Date().toISOString()
+
+        // Create visitor data
         const visitorData = {
           page: pathname,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          referrer: document.referrer,
+          timestamp,
+          referrer,
+          userAgent,
+          screenResolution,
           utmSource,
           utmMedium,
           utmCampaign,
           utmTerm,
           utmContent,
           affiliateCode,
-          sessionId: sessionStorage.getItem("sessionId") || Math.random().toString(36).substring(7),
+          isValidAffiliate,
+          sessionId: getOrCreateSessionId(),
+          visitorId: getOrCreateVisitorId(),
         }
 
-        // Store session ID
-        if (!sessionStorage.getItem("sessionId")) {
-          sessionStorage.setItem("sessionId", visitorData.sessionId)
-        }
-
-        // Track the visit
+        // Send to tracking endpoint
         await fetch("/api/track-visitor", {
           method: "POST",
           headers: {
@@ -48,6 +60,17 @@ function VisitorTrackerComponent() {
           },
           body: JSON.stringify(visitorData),
         })
+
+        // Store in localStorage for admin dashboard
+        const existingData = JSON.parse(localStorage.getItem("visitorHistory") || "[]")
+        existingData.push(visitorData)
+
+        // Keep only last 100 entries
+        if (existingData.length > 100) {
+          existingData.splice(0, existingData.length - 100)
+        }
+
+        localStorage.setItem("visitorHistory", JSON.stringify(existingData))
       } catch (error) {
         console.error("Error tracking visitor:", error)
       }
@@ -59,16 +82,32 @@ function VisitorTrackerComponent() {
   return null
 }
 
-function VisitorTrackerWrapper() {
+function getOrCreateSessionId(): string {
+  let sessionId = sessionStorage.getItem("kuhlekt_session_id")
+  if (!sessionId) {
+    sessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
+    sessionStorage.setItem("kuhlekt_session_id", sessionId)
+  }
+  return sessionId
+}
+
+function getOrCreateVisitorId(): string {
+  let visitorId = localStorage.getItem("kuhlekt_visitor_id")
+  if (!visitorId) {
+    visitorId = "visitor_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
+    localStorage.setItem("kuhlekt_visitor_id", visitorId)
+  }
+  return visitorId
+}
+
+// Error boundary wrapper
+function VisitorTracker() {
   return (
-    <Suspense fallback={null}>
+    <div suppressHydrationWarning>
       <VisitorTrackerComponent />
-    </Suspense>
+    </div>
   )
 }
 
-export function VisitorTracker() {
-  return <VisitorTrackerWrapper />
-}
-
+export { VisitorTracker }
 export default VisitorTracker
