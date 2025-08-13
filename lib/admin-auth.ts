@@ -9,7 +9,15 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyAdminPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword)
+  // For development, use plain text comparison
+  // In production, you should hash the admin password
+  const adminPassword = process.env.ADMIN_PASSWORD
+  if (!adminPassword) {
+    console.error("ADMIN_PASSWORD not configured")
+    return false
+  }
+
+  return password === adminPassword
 }
 
 export async function verifyAdminSession(): Promise<boolean> {

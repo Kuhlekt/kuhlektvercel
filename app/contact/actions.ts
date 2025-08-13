@@ -50,10 +50,10 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
 
     // Verify reCAPTCHA
     const captchaResult = await verifyCaptcha(captchaToken || "")
-    if (!captchaResult.success) {
+    if (!captchaResult) {
       return {
         success: false,
-        message: captchaResult.error || "Security verification failed",
+        message: "Security verification failed",
         errors: {},
       }
     }
