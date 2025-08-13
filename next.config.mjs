@@ -6,7 +6,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Handle potential module resolution issues
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -22,10 +22,17 @@ const nextConfig = {
       assert: false,
       os: false,
       path: false,
+      buffer: false,
+      util: false,
+      events: false,
+      querystring: false,
+      child_process: false,
+      worker_threads: false,
+      perf_hooks: false,
     };
     
     if (isServer) {
-      config.externals = [...(config.externals || []), 'bcryptjs'];
+      config.externals = [...(config.externals || []), 'bcryptjs', '@supabase/auth-helpers-nextjs', '@supabase/supabase-js'];
     }
     
     // Optimize bundle splitting
@@ -33,20 +40,35 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@': require('path').resolve(__dirname, './'),
+        'server-only': false,
       };
     }
     
+    // Add proper handling for .mjs files
     config.module.rules.push({
-      test: /\.(js|ts|tsx)$/,
-      exclude: /node_modules/,
-      use: {
-        loader: 'babel-loader',
-        options: {
-          presets: ['next/babel'],
-          plugins: []
-        }
-      }
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
     });
+    
+    // Optimize chunk splitting for better performance
+    if (!dev && !isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks.cacheGroups,
+            supabase: {
+              name: 'supabase',
+              test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+              chunks: 'all',
+              priority: 10,
+            },
+          },
+        },
+      };
+    }
     
     return config;
   },
