@@ -1,93 +1,138 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
+import { sendEmailWithSES } from "@/lib/aws-ses"
 import { validateAffiliate } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/captcha"
+
+interface DemoFormData {
+  firstName: string
+  lastName: string
+  businessEmail: string
+  companyName: string
+  phoneNumber: string
+  arChallenges?: string
+  affiliateCode?: string
+}
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const businessEmail = formData.get("businessEmail") as string
-    const companyName = formData.get("companyName") as string
-    const phoneNumber = formData.get("phoneNumber") as string
-    const arChallenges = formData.get("arChallenges") as string
-    const affiliateCode = formData.get("affiliateCode") as string
-    const captchaToken = formData.get("captchaToken") as string
+    const data: DemoFormData = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      businessEmail: formData.get("businessEmail") as string,
+      companyName: formData.get("companyName") as string,
+      phoneNumber: formData.get("phoneNumber") as string,
+      arChallenges: (formData.get("arChallenges") as string) || "",
+      affiliateCode: (formData.get("affiliateCode") as string) || "",
+    }
 
     // Validate required fields
-    if (!firstName || !lastName || !businessEmail || !companyName || !phoneNumber) {
+    const requiredFields = ["firstName", "lastName", "businessEmail", "companyName", "phoneNumber"]
+    const missingFields = requiredFields.filter((field) => !data[field as keyof DemoFormData])
+
+    if (missingFields.length > 0) {
       return {
         success: false,
-        message: "Please fill in all required fields.",
+        message: `Missing required fields: ${missingFields.join(", ")}`,
       }
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(businessEmail)) {
+    if (!emailRegex.test(data.businessEmail)) {
       return {
         success: false,
-        message: "Please enter a valid business email address.",
-      }
-    }
-
-    // Verify reCAPTCHA (non-blocking)
-    let captchaVerified = false
-    if (captchaToken) {
-      try {
-        captchaVerified = await verifyCaptcha(captchaToken)
-      } catch (error) {
-        console.error("reCAPTCHA verification error:", error)
-        // Continue with form submission even if reCAPTCHA fails
+        message: "Please enter a valid email address",
       }
     }
 
     // Validate affiliate code if provided
-    let validAffiliate = null
-    if (affiliateCode) {
-      validAffiliate = validateAffiliate(affiliateCode)
+    let affiliateStatus = ""
+    if (data.affiliateCode) {
+      const isValidAffiliate = validateAffiliate(data.affiliateCode)
+      affiliateStatus = isValidAffiliate
+        ? `✅ Valid affiliate code: ${data.affiliateCode.toUpperCase()}`
+        : `⚠️ Invalid affiliate code: ${data.affiliateCode}`
     }
 
     // Prepare email content
-    const emailSubject = `New Demo Request from ${firstName} ${lastName} at ${companyName}`
-    const emailBody = `
-      <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${businessEmail}</p>
-      <p><strong>Company:</strong> ${companyName}</p>
-      <p><strong>Phone:</strong> ${phoneNumber}</p>
-      ${arChallenges ? `<p><strong>AR Challenges:</strong></p><p>${arChallenges}</p>` : ""}
-      ${validAffiliate ? `<p><strong>Affiliate Code:</strong> ${affiliateCode} (Valid)</p>` : ""}
-      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+    const emailSubject = `New Demo Request from ${data.firstName} ${data.lastName} - ${data.companyName}`
+
+    const emailText = `
+New Demo Request Received
+
+Contact Information:
+- Name: ${data.firstName} ${data.lastName}
+- Email: ${data.businessEmail}
+- Company: ${data.companyName}
+- Phone: ${data.phoneNumber}
+
+AR Challenges:
+${data.arChallenges || "Not specified"}
+
+${affiliateStatus ? `Affiliate Information:\n${affiliateStatus}` : ""}
+
+Submitted: ${new Date().toLocaleString()}
+    `.trim()
+
+    const emailHtml = `
+      <h2>New Demo Request Received</h2>
+      
+      <h3>Contact Information:</h3>
+      <ul>
+        <li><strong>Name:</strong> ${data.firstName} ${data.lastName}</li>
+        <li><strong>Email:</strong> ${data.businessEmail}</li>
+        <li><strong>Company:</strong> ${data.companyName}</li>
+        <li><strong>Phone:</strong> ${data.phoneNumber}</li>
+      </ul>
+
+      <h3>AR Challenges:</h3>
+      <p>${data.arChallenges || "Not specified"}</p>
+
+      ${affiliateStatus ? `<h3>Affiliate Information:</h3><p>${affiliateStatus}</p>` : ""}
+
+      <p><small>Submitted: ${new Date().toLocaleString()}</small></p>
     `
 
     // Send email
-    const emailResult = await sendEmail({
+    const emailResult = await sendEmailWithSES({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
-      html: emailBody,
+      text: emailText,
+      html: emailHtml,
     })
 
-    if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
+    if (emailResult.success) {
       return {
-        success: false,
-        message: "There was an error submitting your demo request. Please try again or contact us directly.",
+        success: true,
+        message:
+          "Demo request submitted successfully! We'll contact you within 24 hours to schedule your personalized demo.",
+      }
+    } else {
+      // Log the submission even if email fails
+      console.log("Demo request logged for manual follow-up:", {
+        ...data,
+        timestamp: new Date().toISOString(),
+        emailError: emailResult.message,
+      })
+
+      return {
+        success: true,
+        message: "Demo request received! We'll contact you within 24 hours to schedule your personalized demo.",
       }
     }
+  } catch (error) {
+    console.error("Demo submission error:", error)
+
+    // Log the submission for manual follow-up
+    console.log("Demo request logged for manual follow-up due to error:", {
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : "Unknown error",
+    })
 
     return {
-      success: true,
-      message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
-    }
-  } catch (error) {
-    console.error("Demo request submission error:", error)
-    return {
       success: false,
-      message: "An unexpected error occurred. Please try again.",
+      message: "There was an error submitting your request. Please try again or contact us directly.",
     }
   }
 }

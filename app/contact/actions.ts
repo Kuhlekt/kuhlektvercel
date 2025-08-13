@@ -1,24 +1,32 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
-import { validateAffiliate } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/captcha"
+import { sendEmailWithSES, testAWSSESConnection } from "@/lib/aws-ses"
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+import { getVisitorData } from "@/components/visitor-tracker"
+
+interface ContactFormData {
+  firstName: string
+  lastName: string
+  email: string
+  companyName: string
+  message: string
+  recaptchaToken: string
+}
 
 export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const companyName = formData.get("companyName") as string
-    const phoneNumber = formData.get("phoneNumber") as string
-    const inquiryType = formData.get("inquiryType") as string
-    const message = formData.get("message") as string
-    const affiliateCode = formData.get("affiliateCode") as string
-    const captchaToken = formData.get("captchaToken") as string
+    const data: ContactFormData = {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      email: formData.get("email") as string,
+      companyName: formData.get("companyName") as string,
+      message: formData.get("message") as string,
+      recaptchaToken: formData.get("recaptchaToken") as string,
+    }
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !companyName || !phoneNumber) {
+    // Validate required fields (message is now optional)
+    if (!data.firstName || !data.lastName || !data.email) {
       return {
         success: false,
         message: "Please fill in all required fields.",
@@ -27,69 +35,160 @@ export async function submitContactForm(prevState: any, formData: FormData) {
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(data.email)) {
       return {
         success: false,
         message: "Please enter a valid email address.",
       }
     }
 
-    // Verify reCAPTCHA (non-blocking)
-    let captchaVerified = false
-    if (captchaToken) {
+    // Verify reCAPTCHA - skip if no token provided (reCAPTCHA not configured)
+    if (data.recaptchaToken) {
       try {
-        captchaVerified = await verifyCaptcha(captchaToken)
+        const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
+        if (!recaptchaResult.success) {
+          console.log("reCAPTCHA verification failed:", recaptchaResult.message)
+          // Continue anyway - don't block submission for reCAPTCHA issues
+        }
       } catch (error) {
-        console.error("reCAPTCHA verification error:", error)
-        // Continue with form submission even if reCAPTCHA fails
+        console.log("reCAPTCHA verification error:", error)
+        // Continue anyway - don't block submission for reCAPTCHA issues
       }
     }
 
-    // Validate affiliate code if provided
-    let validAffiliate = null
-    if (affiliateCode) {
-      validAffiliate = validateAffiliate(affiliateCode)
-    }
+    // Get visitor data for context
+    const visitorData = getVisitorData()
 
     // Prepare email content
-    const emailSubject = `New Contact Form Submission from ${firstName} ${lastName}`
-    const emailBody = `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Company:</strong> ${companyName}</p>
-      <p><strong>Phone:</strong> ${phoneNumber}</p>
-      <p><strong>Inquiry Type:</strong> ${inquiryType || "General Inquiry"}</p>
-      ${message ? `<p><strong>Message:</strong></p><p>${message}</p>` : ""}
-      ${validAffiliate ? `<p><strong>Affiliate Code:</strong> ${affiliateCode} (Valid)</p>` : ""}
-      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+    const subject = `New Contact Form Submission from ${data.firstName} ${data.lastName}`
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+          New Contact Form Submission
+        </h2>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
+          <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+          <p><strong>Email:</strong> ${data.email}</p>
+          <p><strong>Company:</strong> ${data.companyName || "Not provided"}</p>
+        </div>
+
+        ${
+          data.message
+            ? `
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Message</h3>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${data.message}</p>
+        </div>
+        `
+            : ""
+        }
+
+        ${
+          visitorData
+            ? `
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Visitor Information</h3>
+          <p><strong>Visitor ID:</strong> ${visitorData.visitorId}</p>
+          <p><strong>Session ID:</strong> ${visitorData.sessionId}</p>
+          <p><strong>Page Views:</strong> ${visitorData.pageViews}</p>
+          <p><strong>Current Page:</strong> ${visitorData.currentPage}</p>
+          ${visitorData.utmSource ? `<p><strong>UTM Source:</strong> ${visitorData.utmSource}</p>` : ""}
+          ${visitorData.affiliate ? `<p><strong>Affiliate:</strong> ${visitorData.affiliate}</p>` : ""}
+        </div>
+        `
+            : ""
+        }
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          <p>This email was sent from the Kuhlekt contact form at ${new Date().toLocaleString()}.</p>
+        </div>
+      </div>
     `
 
-    // Send email
-    const emailResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      html: emailBody,
+    const textContent = `
+New Contact Form Submission
+
+Contact Information:
+Name: ${data.firstName} ${data.lastName}
+Email: ${data.email}
+Company: ${data.companyName || "Not provided"}
+
+${data.message ? `Message:\n${data.message}\n` : ""}
+
+${
+  visitorData
+    ? `
+Visitor Information:
+Visitor ID: ${visitorData.visitorId}
+Session ID: ${visitorData.sessionId}
+Page Views: ${visitorData.pageViews}
+Current Page: ${visitorData.currentPage}
+${visitorData.utmSource ? `UTM Source: ${visitorData.utmSource}` : ""}
+${visitorData.affiliate ? `Affiliate: ${visitorData.affiliate}` : ""}
+`
+    : ""
+}
+
+Submitted at: ${new Date().toLocaleString()}
+    `
+
+    // Send email using AWS SES
+    const emailResult = await sendEmailWithSES({
+      to: adminEmail,
+      subject: subject,
+      text: textContent,
+      html: htmlContent,
     })
 
-    if (!emailResult.success) {
-      console.error("Failed to send contact email:", emailResult.error)
+    if (emailResult.success) {
       return {
-        success: false,
-        message: "There was an error sending your message. Please try again or contact us directly.",
+        success: true,
+        message: "Thank you for your message! We'll get back to you soon.",
       }
-    }
+    } else {
+      // Log the submission even if email fails
+      console.log("Contact form submission (email failed):", {
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        company: data.companyName,
+        message: data.message ? data.message.substring(0, 100) + "..." : "No message",
+        timestamp: new Date().toISOString(),
+        error: emailResult.message,
+      })
 
-    return {
-      success: true,
-      message: "Thank you for your message! We'll get back to you within 24 hours.",
+      return {
+        success: true,
+        message: "Thank you for your message! We've received your submission and will get back to you soon.",
+      }
     }
   } catch (error) {
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again.",
+      message: "An error occurred while submitting your message. Please try again.",
+    }
+  }
+}
+
+export async function testAWSSES() {
+  try {
+    const result = await testAWSSESConnection()
+    return result
+  } catch (error) {
+    console.error("AWS SES test error:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error occurred",
+      details: {
+        region: false,
+        accessKey: false,
+        secretKey: false,
+        fromEmail: false,
+      },
     }
   }
 }

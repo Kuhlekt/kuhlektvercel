@@ -12,19 +12,14 @@ interface AffiliateInfo {
 const VALID_AFFILIATE_CODES = [
   "PARTNER001",
   "PARTNER002",
-  "PARTNER003",
-  "RESELLER001",
-  "RESELLER002",
-  "CONSULTANT001",
-  "CONSULTANT002",
-  "REFERRAL001",
-  "REFERRAL002",
+  "RESELLER01",
+  "RESELLER02",
   "CHANNEL001",
   "CHANNEL002",
-  "STRATEGIC001",
-  "STRATEGIC002",
-  "INTEGRATION001",
-  "INTEGRATION002",
+  "REFERRAL01",
+  "REFERRAL02",
+  "PROMO2024",
+  "SPECIAL01",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -271,7 +266,8 @@ export function validateAffiliate(code: string): boolean {
     return false
   }
 
-  return VALID_AFFILIATE_CODES.includes(code.toUpperCase())
+  const normalizedCode = code.trim().toUpperCase()
+  return VALID_AFFILIATE_CODES.includes(normalizedCode)
 }
 
 /**
@@ -284,8 +280,8 @@ export function validateAffiliateCode(code: string): string | null {
     return null
   }
 
-  const upperCode = code.toUpperCase().trim()
-  return VALID_AFFILIATE_CODES.includes(upperCode) ? upperCode : null
+  const normalizedCode = code.trim().toUpperCase()
+  return VALID_AFFILIATE_CODES.includes(normalizedCode) ? normalizedCode : null
 }
 
 /**
@@ -299,15 +295,51 @@ export function getValidAffiliateCodes(): string[] {
 /**
  * Normalizes an affiliate code to uppercase
  * @param code - The affiliate code to normalize
- * @returns Normalized code or null if invalid
+ * @returns Normalized code
  */
-export function normalizeAffiliateCode(code: string): string | null {
-  if (!code || typeof code !== "string") {
+export function normalizeAffiliateCode(code: string): string {
+  return code.trim().toUpperCase()
+}
+
+/**
+ * Formats an affiliate code for display
+ * @param code - The affiliate code to format
+ * @returns Formatted affiliate code
+ */
+export function formatAffiliateCode(code: string): string {
+  return normalizeAffiliateCode(code)
+}
+
+/**
+ * Validates if an affiliate code is in the approved list and returns partner type
+ * @param code - The affiliate code to validate
+ * @returns Object with isValid boolean and partner string if valid, null otherwise
+ */
+export function getAffiliateInfo(code: string) {
+  const normalizedCode = normalizeAffiliateCode(code)
+
+  if (!VALID_AFFILIATE_CODES.includes(normalizedCode)) {
     return null
   }
 
-  const normalized = code.toUpperCase()
-  return VALID_AFFILIATE_CODES.includes(normalized) ? normalized : null
+  // Return basic info for valid codes
+  return {
+    code: normalizedCode,
+    isValid: true,
+    type: normalizedCode.startsWith("PARTNER")
+      ? "partner"
+      : normalizedCode.startsWith("RESELLER")
+        ? "reseller"
+        : normalizedCode.startsWith("CHANNEL")
+          ? "channel"
+          : normalizedCode.startsWith("REFERRAL")
+            ? "referral"
+            : normalizedCode.startsWith("PROMO")
+              ? "promo"
+              : normalizedCode.startsWith("SPECIAL")
+                ? "special"
+                : "other",
+  }
 }
 
 export function getAllAffiliatePartners(): AffiliateInfo[] {
@@ -316,54 +348,4 @@ export function getAllAffiliatePartners(): AffiliateInfo[] {
 
 export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
   return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
-}
-
-/**
- * Formats an affiliate code for display
- * @param affiliate - The affiliate code to format
- * @returns Formatted affiliate code or 'Direct' if invalid
- */
-export function formatAffiliateCode(affiliate: string | undefined): string {
-  if (!affiliate) return "Direct"
-
-  const validated = normalizeAffiliateCode(affiliate)
-  return validated || "Unknown"
-}
-
-/**
- * Validates if an affiliate code is in the approved list and returns partner type
- * @param code - The affiliate code to validate
- * @returns Object with isValid boolean and partner string if valid
- */
-export function getAffiliateInfo(code: string): { isValid: boolean; partner?: string } {
-  const isValid = validateAffiliate(code)
-
-  if (!isValid) {
-    return { isValid: false }
-  }
-
-  const normalizedCode = code.trim().toUpperCase()
-
-  // Extract partner type from code
-  let partner = "Unknown"
-  if (normalizedCode.startsWith("PARTNER")) {
-    partner = "Strategic Partner"
-  } else if (normalizedCode.startsWith("RESELLER")) {
-    partner = "Authorized Reseller"
-  } else if (normalizedCode.startsWith("CONSULTANT")) {
-    partner = "Implementation Consultant"
-  } else if (normalizedCode.startsWith("REFERRAL")) {
-    partner = "Referral Partner"
-  } else if (normalizedCode.startsWith("CHANNEL")) {
-    partner = "Channel Partner"
-  } else if (normalizedCode.startsWith("STRATEGIC")) {
-    partner = "Strategic Alliance"
-  } else if (normalizedCode.startsWith("INTEGRATION")) {
-    partner = "Integration Partner"
-  }
-
-  return {
-    isValid: true,
-    partner,
-  }
 }
