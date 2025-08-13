@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, XCircle, AlertCircle, Mail, Settings, Send } from "lucide-react"
-import { testEmailSystem, sendTestEmail } from "./actions"
+import { testEmailSystem, sendTestEmail, testEmailSend } from "./actions"
 
 interface TestResult {
   success: boolean
@@ -27,6 +27,8 @@ export default function EmailTestPage() {
   const [isTestingConfig, setIsTestingConfig] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [testEmail, setTestEmail] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleConfigTest = async () => {
     setIsTestingConfig(true)
@@ -80,6 +82,23 @@ export default function EmailTestPage() {
     } finally {
       setIsSendingEmail(false)
     }
+  }
+
+  const handleTest = async () => {
+    setLoading(true)
+    setResult(null)
+
+    try {
+      const response = await testEmailSend()
+      setResult(response)
+    } catch (error) {
+      setResult({
+        success: false,
+        message: "Test failed: " + (error instanceof Error ? error.message : "Unknown error"),
+      })
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -301,6 +320,27 @@ export default function EmailTestPage() {
                   <div className="text-xs text-gray-500">Always available</div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* New Email Sending Test Card */}
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle>Email Service Test</CardTitle>
+              <CardDescription>Test the email sending functionality</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button onClick={handleTest} disabled={loading} className="w-full">
+                {loading ? "Testing..." : "Test Email Service"}
+              </Button>
+
+              {result && (
+                <Alert className={result.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+                  <AlertDescription className={result.success ? "text-green-800" : "text-red-800"}>
+                    {result.message}
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </div>

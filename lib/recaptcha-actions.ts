@@ -5,18 +5,7 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
     const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
     if (!secretKey) {
-      console.log("reCAPTCHA not configured - allowing submission")
-      return { success: true }
-    }
-
-    // Handle bypass tokens
-    if (token.startsWith("recaptcha-")) {
-      console.log("reCAPTCHA bypass token received:", token)
-      return { success: true }
-    }
-
-    if (!token) {
-      return { success: false, error: "reCAPTCHA verification required" }
+      return { success: false, error: "reCAPTCHA not configured" }
     }
 
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {

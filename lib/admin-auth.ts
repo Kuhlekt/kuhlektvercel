@@ -30,3 +30,12 @@ export async function clearAdminAuthentication(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete("admin-token")
 }
+
+export async function verifyAdminSession(): Promise<boolean> {
+  const sessionCookie = cookies().get("admin_session")
+  return sessionCookie?.value === "authenticated"
+}
+
+export async function clearAdminSession(): Promise<void> {
+  cookies().delete("admin_session")
+}

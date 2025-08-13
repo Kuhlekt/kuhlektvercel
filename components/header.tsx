@@ -2,119 +2,119 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Menu, X } from 'lucide-react'
 import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Menu, X } from 'lucide-react'
+import { cn } from "@/lib/utils"
+
+const navigation = [
+  { name: "Home", href: "/" },
+  { name: "Product", href: "/product" },
+  { name: "Solutions", href: "/solutions" },
+  { name: "About", href: "/about" },
+  { name: "Help", href: "/help" },
+]
 
 export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
-              alt="Kuhlekt Logo"
-              width={120}
-              height={40}
-              className="h-8 w-auto"
-              priority
-            />
-          </Link>
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <Image
+                src="/images/kuhlekt-logo.jpg"
+                alt="Kuhlekt Logo"
+                width={32}
+                height={32}
+                className="rounded"
+                priority
+              />
+              <span className="text-xl font-bold text-gray-900">Kuhlekt</span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
-              Home
-            </Link>
-            <Link href="/product" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
-              Product
-            </Link>
-            <Link href="/solutions" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
-              Solutions
-            </Link>
-            <Link href="/about" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
-              About
-            </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
-              Contact
-            </Link>
+          <nav className="hidden md:flex items-center space-x-8">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                {item.name}
+              </Link>
+            ))}
           </nav>
 
-          {/* CTA Button */}
-          <div className="hidden md:flex">
-            <Link href="/demo">
-              <Button className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-6 py-2 transition-colors duration-200">
-                Schedule a Demo
-              </Button>
-            </Link>
+          {/* Desktop CTA Buttons */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Button variant="ghost" asChild>
+              <Link href="/contact">Contact</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/demo">Get Demo</Link>
+            </Button>
           </div>
 
           {/* Mobile menu button */}
-          <button
-            onClick={toggleMenu}
-            className="md:hidden p-2 rounded-md text-gray-700 hover:text-cyan-600 hover:bg-gray-100 transition-colors duration-200"
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle className="flex items-center space-x-2">
+                  <Image
+                    src="/images/kuhlekt-logo.jpg"
+                    alt="Kuhlekt Logo"
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
+                  <span>Kuhlekt</span>
+                </SheetTitle>
+                <SheetDescription>
+                  Transform your accounts receivable with intelligent automation
+                </SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-4 py-6">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center py-2 text-lg font-medium"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                <div className="border-t pt-4 mt-4">
+                  <div className="grid gap-2">
+                    <Button variant="ghost" className="justify-start" asChild>
+                      <Link href="/contact" onClick={() => setIsOpen(false)}>
+                        Contact
+                      </Link>
+                    </Button>
+                    <Button className="justify-start" asChild>
+                      <Link href="/demo" onClick={() => setIsOpen(false)}>
+                        Get Demo
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 bg-white">
-            <div className="flex flex-col space-y-4">
-              <Link
-                href="/"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <Link
-                href="/product"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Product
-              </Link>
-              <Link
-                href="/solutions"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Solutions
-              </Link>
-              <Link
-                href="/about"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                href="/contact"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
-              </Link>
-              <Link href="/demo" onClick={() => setIsMenuOpen(false)}>
-                <Button className="bg-cyan-600 hover:bg-cyan-700 text-white w-full font-medium py-2 transition-colors duration-200">
-                  Schedule a Demo
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   )
 }
-
-export default Header

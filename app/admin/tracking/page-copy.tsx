@@ -1,304 +1,204 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Users,
-  Eye,
-  MousePointer,
-  Clock,
-  Globe,
-  Smartphone,
-  Monitor,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-} from "lucide-react"
+import { RefreshCw, Users, Eye, Globe, MousePointer } from "lucide-react"
 
-// Mock data for demonstration
-const mockData = {
-  totalVisitors: 1247,
-  pageViews: 3891,
-  avgSessionDuration: "3m 42s",
-  bounceRate: "34.2%",
-  topPages: [
-    { path: "/", views: 892, title: "Home" },
-    { path: "/solutions", views: 456, title: "Solutions" },
-    { path: "/pricing", views: 234, title: "Pricing" },
-    { path: "/about", views: 189, title: "About" },
-    { path: "/contact", views: 167, title: "Contact" },
-  ],
-  recentVisitors: [
-    {
-      id: 1,
-      ip: "192.168.1.1",
-      location: "New York, US",
-      device: "Desktop",
-      browser: "Chrome",
-      timestamp: "2 minutes ago",
-      pages: 3,
-    },
-    {
-      id: 2,
-      ip: "10.0.0.1",
-      location: "London, UK",
-      device: "Mobile",
-      browser: "Safari",
-      timestamp: "5 minutes ago",
-      pages: 1,
-    },
-    {
-      id: 3,
-      ip: "172.16.0.1",
-      location: "Toronto, CA",
-      device: "Tablet",
-      browser: "Firefox",
-      timestamp: "8 minutes ago",
-      pages: 2,
-    },
-  ],
-  deviceStats: {
-    desktop: 65,
-    mobile: 28,
-    tablet: 7,
-  },
-  browserStats: {
-    chrome: 45,
-    safari: 23,
-    firefox: 18,
-    edge: 14,
-  },
+interface TrackingData {
+  totalVisitors: number
+  uniqueVisitors: number
+  pageViews: number
+  topPages: Array<{ page: string; views: number }>
+  recentActivity: Array<{
+    id: string
+    action: string
+    page: string
+    timestamp: string
+    userAgent: string
+  }>
 }
 
 export default function TrackingPageCopy() {
+  const [trackingData, setTrackingData] = useState<TrackingData>({
+    totalVisitors: 0,
+    uniqueVisitors: 0,
+    pageViews: 0,
+    topPages: [],
+    recentActivity: [],
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadTrackingData()
+  }, [])
+
+  const loadTrackingData = () => {
+    setLoading(true)
+
+    // Simulate loading data
+    setTimeout(() => {
+      setTrackingData({
+        totalVisitors: 1247,
+        uniqueVisitors: 892,
+        pageViews: 3456,
+        topPages: [
+          { page: "/", views: 1234 },
+          { page: "/demo", views: 567 },
+          { page: "/contact", views: 345 },
+          { page: "/about", views: 234 },
+          { page: "/solutions", views: 189 },
+        ],
+        recentActivity: [
+          {
+            id: "1",
+            action: "Page View",
+            page: "/demo",
+            timestamp: "2024-01-15T10:30:00Z",
+            userAgent: "Mozilla/5.0...",
+          },
+          {
+            id: "2",
+            action: "Form Submit",
+            page: "/contact",
+            timestamp: "2024-01-15T10:25:00Z",
+            userAgent: "Mozilla/5.0...",
+          },
+        ],
+      })
+      setLoading(false)
+    }, 1000)
+  }
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString()
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow">
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Website Analytics</h1>
-          <p className="text-gray-600">Monitor your website traffic and visitor behavior in real-time</p>
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Tracking Analytics</h1>
+        <Button onClick={loadTrackingData} disabled={loading} size="sm">
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockData.totalVisitors.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                +12.5% from last week
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Page Views</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockData.pageViews.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                +8.2% from last week
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockData.avgSessionDuration}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
-                -2.1% from last week
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{mockData.bounceRate}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingDown className="h-3 w-3 mr-1 text-green-500" />
-                -5.3% from last week
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Top Pages */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Pages</CardTitle>
-              <CardDescription>Most visited pages in the last 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockData.topPages.map((page, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-600">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium">{page.title}</p>
-                        <p className="text-sm text-gray-500">{page.path}</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">{page.views} views</Badge>
-                  </div>
-                ))}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="w-8 h-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Visitors</p>
+                <p className="text-2xl font-bold text-gray-900">{trackingData.totalVisitors.toLocaleString()}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Recent Visitors */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Visitors</CardTitle>
-              <CardDescription>Latest visitor activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockData.recentVisitors.map((visitor) => (
-                  <div key={visitor.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{visitor.location}</p>
-                        <p className="text-sm text-gray-500">
-                          {visitor.device} • {visitor.browser}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{visitor.pages} pages</p>
-                      <p className="text-xs text-gray-500">{visitor.timestamp}</p>
-                    </div>
-                  </div>
-                ))}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Eye className="w-8 h-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Unique Visitors</p>
+                <p className="text-2xl font-bold text-gray-900">{trackingData.uniqueVisitors.toLocaleString()}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Device and Browser Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Device Types</CardTitle>
-              <CardDescription>Visitor breakdown by device type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Monitor className="h-4 w-4 text-blue-600" />
-                    <span>Desktop</span>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Globe className="w-8 h-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Page Views</p>
+                <p className="text-2xl font-bold text-gray-900">{trackingData.pageViews.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <MousePointer className="w-8 h-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Bounce Rate</p>
+                <p className="text-2xl font-bold text-gray-900">23.4%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Pages */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Pages</CardTitle>
+            <CardDescription>Most visited pages on your site</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {trackingData.topPages.map((page, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Badge variant="outline" className="mr-2">
+                      {index + 1}
+                    </Badge>
+                    <span className="font-medium">{page.page}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${mockData.deviceStats.desktop}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium">{mockData.deviceStats.desktop}%</span>
-                  </div>
+                  <span className="text-gray-600">{page.views.toLocaleString()} views</span>
                 </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Smartphone className="h-4 w-4 text-green-600" />
-                    <span>Mobile</span>
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Latest visitor actions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {trackingData.recentActivity.map((activity) => (
+                <div key={activity.id} className="border-b border-gray-200 pb-4 last:border-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant={activity.action === "Page View" ? "secondary" : "default"}>{activity.action}</Badge>
+                    <span className="text-sm text-gray-500">{formatTimestamp(activity.timestamp)}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-600 h-2 rounded-full"
-                        style={{ width: `${mockData.deviceStats.mobile}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium">{mockData.deviceStats.mobile}%</span>
-                  </div>
+                  <p className="text-sm text-gray-900 font-medium">{activity.page}</p>
+                  <p className="text-xs text-gray-500 truncate">{activity.userAgent}</p>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4 text-purple-600" />
-                    <span>Tablet</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-purple-600 h-2 rounded-full"
-                        style={{ width: `${mockData.deviceStats.tablet}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium">{mockData.deviceStats.tablet}%</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Browser Usage</CardTitle>
-              <CardDescription>Visitor breakdown by browser</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(mockData.browserStats).map(([browser, percentage]) => (
-                  <div key={browser} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-gray-300 rounded"></div>
-                      <span className="capitalize">{browser}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${percentage}%` }}></div>
-                      </div>
-                      <span className="text-sm font-medium">{percentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-8 flex justify-between items-center">
-          <div className="flex space-x-4">
-            <Button variant="outline">Export Data</Button>
-            <Button variant="outline">Generate Report</Button>
-          </div>
-          <div className="flex space-x-2">
-            <Button asChild>
-              <a href="/admin/visitors">View All Visitors</a>
-            </Button>
-            <Button asChild variant="outline">
-              <a href="/admin/change-password">Change Password</a>
-            </Button>
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

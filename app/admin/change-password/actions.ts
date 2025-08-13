@@ -1,41 +1,26 @@
 "use server"
 
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import bcrypt from "bcryptjs"
+import { revalidatePath } from "next/cache"
+import { verifyAdminPassword, hashPassword } from "@/lib/admin-auth"
 
-export async function changePassword(formData: FormData) {
-  const cookieStore = cookies()
-  const adminSession = cookieStore.get("admin-session")
-
-  if (!adminSession) {
-    redirect("/admin/login")
-  }
-
-  const currentPassword = formData.get("currentPassword") as string
-  const newPassword = formData.get("newPassword") as string
-  const confirmPassword = formData.get("confirmPassword") as string
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return { error: "All fields are required" }
-  }
-
-  if (newPassword !== confirmPassword) {
-    return { error: "New passwords do not match" }
-  }
-
-  if (newPassword.length < 8) {
-    return { error: "New password must be at least 8 characters long" }
-  }
-
+export async function changePassword(currentPassword: string, newPassword: string) {
   // Verify current password
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
-
-  if (!isCurrentPasswordValid) {
-    return { error: "Current password is incorrect" }
+  if (!verifyAdminPassword(currentPassword)) {
+    return { success: false, message: "Current password is incorrect" }
   }
 
-  // In a real application, you would update the password in the database
-  // For this demo, we'll just return success
-  return { success: "Password changed successfully" }
+  // Validate new password
+  if (newPassword.length < 8) {
+    return { success: false, message: "New password must be at least 8 characters long" }
+  }
+
+  // Hash and save new password
+  const hashedNewPassword = await hashPassword(newPassword)
+  process.env.ADMIN_PASSWORD = hashedNewPassword
+
+  console.log("Admin password changed successfully")
+
+  revalidatePath("/admin")
+  redirect("/admin")
 }
