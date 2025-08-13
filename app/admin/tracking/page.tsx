@@ -103,7 +103,7 @@ export default function TrackingPage() {
 
     // Basic stats
     const totalVisitors = filteredVisitors.length
-    const uniqueVisitors = new Set(filteredVisitors.map((v) => v.ip)).size
+    const uniqueVisitors = filteredVisitors.length > 0 ? new Set(filteredVisitors.map((v) => v.ip)).size : 0
     const activeVisitors = filteredVisitors.filter((v) => v.isActive).length
     const totalPageViews = filteredPageHistory.length
 
@@ -124,7 +124,14 @@ export default function TrackingPage() {
     // Traffic sources
     const sources = filteredVisitors.reduce(
       (acc, visitor) => {
-        const source = visitor.referrer ? new URL(visitor.referrer).hostname : "Direct"
+        let source = "Direct"
+        if (visitor.referrer && visitor.referrer !== "(direct)") {
+          try {
+            source = new URL(visitor.referrer).hostname
+          } catch {
+            source = "Referral"
+          }
+        }
         acc[source] = (acc[source] || 0) + 1
         return acc
       },
@@ -152,19 +159,18 @@ export default function TrackingPage() {
       .map(([country, visits]) => ({ country, visits }))
 
     // Calculate bounce rate (visitors who viewed only one page)
-    const sessionsWithMultiplePages = new Set(
-      filteredPageHistory.reduce(
-        (acc, page) => {
-          acc[page.sessionId] = (acc[page.sessionId] || 0) + 1
-          return acc
-        },
-        {} as Record<string, number>,
-      ),
+    const sessionPageCounts = filteredPageHistory.reduce(
+      (acc, page) => {
+        acc[page.sessionId] = (acc[page.sessionId] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
     )
 
-    const totalSessions = new Set(filteredVisitors.map((v) => v.sessionId)).size
+    const totalSessions = filteredVisitors.length > 0 ? new Set(filteredVisitors.map((v) => v.sessionId)).size : 0
+    const sessionsWithMultiplePages = Object.values(sessionPageCounts).filter((count) => count > 1).length
     const bounceRate =
-      totalSessions > 0 ? Math.round(((totalSessions - sessionsWithMultiplePages.size) / totalSessions) * 100) : 0
+      totalSessions > 0 ? Math.round(((totalSessions - sessionsWithMultiplePages) / totalSessions) * 100) : 0
 
     // Average pages per session
     const avgPagesPerSession = totalSessions > 0 ? Math.round((totalPageViews / totalSessions) * 10) / 10 : 0

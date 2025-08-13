@@ -3,22 +3,37 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/admin/
 
-# Block specific admin paths
-Disallow: /admin/login
-Disallow: /admin/visitors
-Disallow: /admin/tracking
-Disallow: /admin/setup-2fa
-Disallow: /admin/change-password
+# Block all bots from admin areas
+User-agent: *
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/admin
+Disallow: /api/admin/
 
-# Allow public pages
-Allow: /
-Allow: /about
-Allow: /contact
-Allow: /demo
-Allow: /product
-Allow: /solutions
-Allow: /pricing-table
-Allow: /help
+# Specific bot restrictions
+User-agent: Googlebot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Bingbot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Slurp
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: DuckDuckBot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Baiduspider
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: YandexBot
+Disallow: /admin/
+Disallow: /api/admin/
 
 # Sitemap
 Sitemap: https://kuhlekt.com/sitemap.xml

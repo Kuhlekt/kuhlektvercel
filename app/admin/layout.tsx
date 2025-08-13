@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Admin Dashboard - Kuhlekt",
-  description: "Admin dashboard for Kuhlekt",
+  description: "Administrative dashboard for Kuhlekt",
   robots: {
     index: false,
     follow: false,
@@ -14,11 +14,12 @@ export const metadata: Metadata = {
     notranslate: true,
   },
   other: {
-    googlebot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
-    bingbot: "noindex,nofollow,noarchive,nosnippet",
-    duckduckbot: "noindex,nofollow",
-    baiduspider: "noindex,nofollow",
-    yandexbot: "noindex,nofollow",
+    googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    bingbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    slurp: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    duckduckbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    baiduspider: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    yandexbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
   },
 }
 
@@ -29,13 +30,14 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex,notranslate" />
-      <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
-      <meta name="bingbot" content="noindex,nofollow,noarchive,nosnippet" />
-      <meta name="duckduckbot" content="noindex,nofollow" />
-      <meta name="baiduspider" content="noindex,nofollow" />
-      <meta name="yandexbot" content="noindex,nofollow" />
-      {children}
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, nocache" />
+      <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="slurp" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="baiduspider" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="yandexbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <div className="admin-layout">{children}</div>
     </>
   )
 }
