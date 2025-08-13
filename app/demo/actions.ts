@@ -13,7 +13,7 @@ interface DemoFormData {
   affiliateCode?: string
 }
 
-export async function submitDemoRequest(formData: FormData) {
+export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
     // Extract form data
     const data: DemoFormData = {
@@ -126,9 +126,8 @@ Submitted: ${new Date().toLocaleString()}
 
     // Log the submission for manual follow-up
     console.log("Demo request logged for manual follow-up due to error:", {
-      formData: Object.fromEntries(formData.entries()),
-      error: error instanceof Error ? error.message : "Unknown error",
       timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : "Unknown error",
     })
 
     return {

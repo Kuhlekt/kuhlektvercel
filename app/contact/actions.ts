@@ -5,26 +5,28 @@ import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 import { getVisitorData } from "@/components/visitor-tracker"
 
 interface ContactFormData {
-  name: string
+  firstName: string
+  lastName: string
   email: string
-  company: string
+  companyName: string
   message: string
   recaptchaToken: string
 }
 
-export async function submitContactForm(formData: FormData) {
+export async function submitContactForm(prevState: any, formData: FormData) {
   try {
     // Extract form data
     const data: ContactFormData = {
-      name: formData.get("name") as string,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
-      company: formData.get("company") as string,
+      companyName: formData.get("companyName") as string,
       message: formData.get("message") as string,
       recaptchaToken: formData.get("recaptchaToken") as string,
     }
 
     // Validate required fields
-    if (!data.name || !data.email || !data.message) {
+    if (!data.firstName || !data.lastName || !data.email || !data.message) {
       return {
         success: false,
         message: "Please fill in all required fields.",
@@ -56,7 +58,7 @@ export async function submitContactForm(formData: FormData) {
 
     // Prepare email content
     const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
-    const subject = `New Contact Form Submission from ${data.name}`
+    const subject = `New Contact Form Submission from ${data.firstName} ${data.lastName}`
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -66,9 +68,9 @@ export async function submitContactForm(formData: FormData) {
         
         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
-          <p><strong>Name:</strong> ${data.name}</p>
+          <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
           <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
+          <p><strong>Company:</strong> ${data.companyName || "Not provided"}</p>
         </div>
 
         <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -102,9 +104,9 @@ export async function submitContactForm(formData: FormData) {
 New Contact Form Submission
 
 Contact Information:
-Name: ${data.name}
+Name: ${data.firstName} ${data.lastName}
 Email: ${data.email}
-Company: ${data.company || "Not provided"}
+Company: ${data.companyName || "Not provided"}
 
 Message:
 ${data.message}
@@ -142,9 +144,9 @@ Submitted at: ${new Date().toLocaleString()}
     } else {
       // Log the submission even if email fails
       console.log("Contact form submission (email failed):", {
-        name: data.name,
+        name: `${data.firstName} ${data.lastName}`,
         email: data.email,
-        company: data.company,
+        company: data.companyName,
         message: data.message.substring(0, 100) + "...",
         timestamp: new Date().toISOString(),
         error: emailResult.message,
