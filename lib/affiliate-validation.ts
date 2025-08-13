@@ -13,16 +13,18 @@ const VALID_AFFILIATES = [
   "PARTNER001",
   "PARTNER002",
   "PARTNER003",
-  "RESELLER01",
-  "RESELLER02",
+  "RESELLER001",
+  "RESELLER002",
   "CHANNEL001",
   "CHANNEL002",
-  "REFERRAL01",
-  "REFERRAL02",
-  "AFFILIATE01",
-  "AFFILIATE02",
-  "PROMO2024",
-  "SPECIAL001",
+  "REFERRAL001",
+  "REFERRAL002",
+  "AFFILIATE001",
+  "AFFILIATE002",
+  "DEMO001",
+  "DEMO002",
+  "TRIAL001",
+  "TRIAL002",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -278,21 +280,35 @@ export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
   return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
 }
 
-export function validateAffiliate(code: string): boolean {
-  if (!code || typeof code !== "string") {
+/**
+ * Validates if an affiliate code is in the approved list
+ * @param affiliateCode - The affiliate code to validate
+ * @returns boolean - True if valid, false otherwise
+ */
+export function validateAffiliate(affiliateCode: string): boolean {
+  if (!affiliateCode || typeof affiliateCode !== "string") {
     return false
   }
 
   // Convert to uppercase for case-insensitive comparison
-  const upperCode = code.trim().toUpperCase()
+  const normalizedCode = affiliateCode.trim().toUpperCase()
 
-  return VALID_AFFILIATES.includes(upperCode)
+  return VALID_AFFILIATES.includes(normalizedCode)
 }
 
+/**
+ * Gets the list of valid affiliate codes
+ * @returns string[] - Array of valid affiliate codes
+ */
 export function getValidAffiliates(): string[] {
   return [...VALID_AFFILIATES]
 }
 
-export function isValidAffiliateCode(code: string): boolean {
-  return validateAffiliate(code)
+/**
+ * Alternative function name for consistency
+ * @param affiliateCode - The affiliate code to validate
+ * @returns boolean - True if valid, false otherwise
+ */
+export function isValidAffiliateCode(affiliateCode: string): boolean {
+  return validateAffiliate(affiliateCode)
 }
