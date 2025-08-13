@@ -113,7 +113,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
     return null
   }
 
-  return <div ref={recaptchaRef} style={{ display: "none" }} />
+  return <div ref={recaptchaRef} className="invisible-recaptcha" />
 }
 
 // Global type declaration for grecaptcha

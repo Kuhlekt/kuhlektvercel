@@ -1,23 +1,21 @@
-export async function verifyCaptcha(token: string): Promise<boolean> {
-  // If it's a bypass token (for disabled reCAPTCHA or errors), allow it
-  if (
-    token === "recaptcha-disabled" ||
-    token === "recaptcha-config-error" ||
-    token === "recaptcha-fetch-error" ||
-    token === "recaptcha-error" ||
-    token === "recaptcha-expired" ||
-    token === "recaptcha-render-error" ||
-    token === "recaptcha-execute-error" ||
-    token === "recaptcha-script-error"
-  ) {
-    console.log("reCAPTCHA bypassed:", token)
-    return true
+"use server"
+
+export async function verifyCaptcha(token: string): Promise<{ success: boolean; error?: string }> {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY
+
+  if (!secretKey) {
+    console.log("reCAPTCHA not configured - allowing submission")
+    return { success: true }
   }
 
-  // If no reCAPTCHA secret key is configured, allow bypass
-  if (!process.env.RECAPTCHA_SECRET_KEY) {
-    console.log("reCAPTCHA secret key not configured, bypassing verification")
-    return true
+  // Handle bypass tokens from disabled/error states
+  if (token && token.startsWith("recaptcha-")) {
+    console.log("reCAPTCHA bypass token received:", token)
+    return { success: true }
+  }
+
+  if (!token) {
+    return { success: false, error: "CAPTCHA verification required" }
   }
 
   try {
@@ -26,17 +24,24 @@ export async function verifyCaptcha(token: string): Promise<boolean> {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY,
-        response: token,
-      }),
+      body: `secret=${secretKey}&response=${token}`,
     })
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
     const data = await response.json()
-    return data.success === true
+
+    if (data.success) {
+      console.log("reCAPTCHA verification successful")
+      return { success: true }
+    } else {
+      console.error("reCAPTCHA verification failed:", data["error-codes"])
+      return { success: false, error: "CAPTCHA verification failed" }
+    }
   } catch (error) {
-    console.error("reCAPTCHA verification error:", error)
-    // On error, allow the request to proceed (fail open)
-    return true
+    console.error("CAPTCHA verification error:", error)
+    return { success: false, error: "CAPTCHA verification error" }
   }
 }
