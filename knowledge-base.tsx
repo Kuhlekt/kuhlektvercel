@@ -252,9 +252,13 @@ export default function KnowledgeBase() {
 
   const handleArticleSelect = (article: Article) => {
     console.log("Article selected:", article.title)
+    console.log("Article content:", article.content)
 
     // Get the most current version of the article from categories state
     const currentArticle = getCurrentArticleData(article.id) || article
+
+    // Ensure images are available for viewing
+    console.log("Setting selected article:", currentArticle)
 
     setSelectedArticle(currentArticle)
     setSearchQuery("")
@@ -335,6 +339,10 @@ export default function KnowledgeBase() {
           ...articleData,
           createdAt: editingArticle!.createdAt,
         }
+
+        // Ensure images are preserved in the content
+        console.log("Saving article with content:", updatedArticle.content)
+        console.log("Current images in memory:", (window as any).textareaImages)
 
         console.log("Adding updated article to category:", updatedArticle)
 

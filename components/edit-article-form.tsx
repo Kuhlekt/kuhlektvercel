@@ -49,14 +49,45 @@ function convertToEditableContent(content: string): string {
         placeholder,
       })
 
+      // Also store in textareaImages for consistency
+      if (!(window as any).textareaImages) {
+        ;(window as any).textareaImages = []
+      }
+      ;(window as any).textareaImages.push({
+        id,
+        dataUrl: src,
+        name: filename,
+        placeholder,
+      })
+
       return placeholder
     },
   )
 
-  // Convert other image references to placeholders
+  // Convert regular image URLs to placeholders
   editableContent = editableContent.replace(/<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi, (match, src, alt) => {
     const filename = alt || src.split("/").pop() || "image"
-    return `[Image: ${filename}]`
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+
+    // Store URL-based images too
+    if (!(window as any).editingImages) {
+      ;(window as any).editingImages = []
+    }
+    if (!(window as any).textareaImages) {
+      ;(window as any).textareaImages = []
+    }
+
+    const placeholder = `[IMAGE:${id}:${filename}]`
+    const imageData = {
+      id,
+      dataUrl: src.startsWith("http") ? src : src, // Keep URL as is
+      name: filename,
+      placeholder,
+    }
+    ;(window as any).editingImages.push(imageData)
+    ;(window as any).textareaImages.push(imageData)
+
+    return placeholder
   })
 
   // Remove other HTML tags but preserve line breaks
@@ -103,9 +134,21 @@ function convertToDisplayContent(content: string): string {
     }
 
     return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
-      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
-    </div>`
+    <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
+  </div>`
   })
+
+  // Convert URLs to actual images
+  displayContent = displayContent.replace(
+    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
+    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
+  )
+
+  // Convert data URLs to images
+  displayContent = displayContent.replace(
+    /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
+    '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
+  )
 
   return displayContent
 }
@@ -174,8 +217,13 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
     setIsSubmitting(true)
 
     try {
+      // Ensure images are properly stored before conversion
+      const currentImages = (window as any).textareaImages || []
+      console.log("Current images before submit:", currentImages)
+
       // Convert content back to display format
       const displayContent = convertToDisplayContent(content)
+      console.log("Display content after conversion:", displayContent)
 
       const updatedArticle = {
         id: article.id,

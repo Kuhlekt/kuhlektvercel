@@ -30,20 +30,24 @@ function processArticleContent(content: string): string {
   // Replace image placeholders with actual images
   processedContent = processedContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
     // Check if we have stored images in global reference
-    const storedImages = (window as any).textareaImages || []
+    const storedImages = (window as any).textareaImages || (window as any).editingImages || []
     const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
 
+    console.log("Looking for image:", { id, filename, match, storedImages })
+
     if (imageData && imageData.dataUrl) {
+      console.log("Found image data:", imageData)
       return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
     }
 
     // If no stored image found, return a placeholder div
+    console.log("No image data found for:", { id, filename })
     return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
       <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
     </div>`
   })
 
-  // Convert URLs to actual images
+  // Convert URLs to actual images (handle both HTTP and data URLs)
   processedContent = processedContent.replace(
     /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
     '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
@@ -54,6 +58,15 @@ function processArticleContent(content: string): string {
     /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
     '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
   )
+
+  // Also check for any remaining img tags that might have been stored directly
+  processedContent = processedContent.replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, (match, src) => {
+    // If it's already a properly formatted img tag, just ensure proper styling
+    if (match.includes("style=")) {
+      return match
+    }
+    return `<img src="${src}" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
+  })
 
   // Remove HTML tags except for images and basic formatting
   processedContent = processedContent
@@ -74,6 +87,12 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
   useEffect(() => {
     setCurrentArticle(article)
   }, [article])
+
+  useEffect(() => {
+    console.log("ArticleViewer received article:", currentArticle)
+    console.log("Article content:", currentArticle.content)
+    console.log("Current stored images:", (window as any).textareaImages)
+  }, [currentArticle])
 
   const category = categories.find((cat) => cat.id === currentArticle.categoryId)
   const subcategory = category?.subcategories.find((sub) => sub.id === currentArticle.subcategoryId)
