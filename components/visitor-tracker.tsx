@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 
 interface VisitorData {
@@ -22,9 +22,14 @@ interface VisitorData {
 export function VisitorTracker() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (typeof window === "undefined") return
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return
 
     try {
       // Generate or get visitor ID
@@ -50,15 +55,13 @@ export function VisitorTracker() {
         console.error("Error parsing visitor data:", e)
       }
 
-      // Extract UTM parameters
-      const utmSource = searchParams.get("utm_source") || undefined
-      const utmMedium = searchParams.get("utm_medium") || undefined
-      const utmCampaign = searchParams.get("utm_campaign") || undefined
-      const utmTerm = searchParams.get("utm_term") || undefined
-      const utmContent = searchParams.get("utm_content") || undefined
+      const utmSource = searchParams?.get("utm_source") || undefined
+      const utmMedium = searchParams?.get("utm_medium") || undefined
+      const utmCampaign = searchParams?.get("utm_campaign") || undefined
+      const utmTerm = searchParams?.get("utm_term") || undefined
+      const utmContent = searchParams?.get("utm_content") || undefined
 
-      // Extract affiliate code
-      const affiliate = searchParams.get("affiliate") || searchParams.get("ref") || undefined
+      const affiliate = searchParams?.get("affiliate") || searchParams?.get("ref") || undefined
 
       // Create visitor data
       const visitorData: VisitorData = {
@@ -151,7 +154,7 @@ export function VisitorTracker() {
     } catch (error) {
       console.error("Error tracking visitor:", error)
     }
-  }, [pathname, searchParams])
+  }, [pathname, searchParams, mounted])
 
   return null
 }
