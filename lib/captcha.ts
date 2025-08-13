@@ -1,17 +1,13 @@
 "use server"
 
+// Server-side CAPTCHA verification
 export async function verifyCaptcha(token: string): Promise<{ success: boolean; error?: string }> {
+  // Access secret key directly here instead of importing from config
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
   if (!secretKey) {
-    console.log("reCAPTCHA not configured - allowing submission")
-    return { success: true }
-  }
-
-  // Handle bypass tokens from disabled/error states
-  if (token && token.startsWith("recaptcha-")) {
-    console.log("reCAPTCHA bypass token received:", token)
-    return { success: true }
+    console.log("reCAPTCHA not configured - skipping verification")
+    return { success: true } // Allow form submission if CAPTCHA not configured
   }
 
   if (!token) {
@@ -26,10 +22,6 @@ export async function verifyCaptcha(token: string): Promise<{ success: boolean; 
       },
       body: `secret=${secretKey}&response=${token}`,
     })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
 
     const data = await response.json()
 
