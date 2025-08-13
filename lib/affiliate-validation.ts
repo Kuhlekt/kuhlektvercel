@@ -1,11 +1,11 @@
 "use server"
 
 export interface AffiliateInfo {
+  code: string
+  name: string
+  commission: number
+  isActive: boolean
   isValid: boolean
-  code?: string
-  name?: string
-  commission?: number
-  tier?: string
 }
 
 // Predefined list of valid affiliate codes
@@ -18,39 +18,35 @@ const VALID_AFFILIATE_CODES = [
   "RESELLER",
   "CHANNEL",
   "DEMO2024",
+  "EARLY2024",
 ]
 
-// Predefined affiliate codes for validation
-const AFFILIATE_CODES: Record<string, Omit<AffiliateInfo, "isValid">> = {
+// Predefined affiliate codes and their information
+const AFFILIATE_CODES = {
   PARTNER001: {
-    code: "PARTNER001",
-    name: "Strategic Partner Alpha",
+    name: "TechPartner Solutions",
     commission: 15,
-    tier: "gold",
+    isActive: true,
   },
   PARTNER002: {
-    code: "PARTNER002",
-    name: "Strategic Partner Beta",
-    commission: 12,
-    tier: "silver",
-  },
-  REFERRAL001: {
-    code: "REFERRAL001",
-    name: "Customer Referral Program",
-    commission: 10,
-    tier: "bronze",
-  },
-  CONSULTANT001: {
-    code: "CONSULTANT001",
-    name: "Consulting Partner",
+    name: "FinanceExperts Inc",
     commission: 20,
-    tier: "platinum",
+    isActive: true,
+  },
+  PARTNER003: {
+    name: "BusinessGrowth LLC",
+    commission: 12,
+    isActive: false,
   },
   DEMO2024: {
-    code: "DEMO2024",
     name: "Demo Campaign 2024",
-    commission: 5,
-    tier: "standard",
+    commission: 10,
+    isActive: true,
+  },
+  EARLY2024: {
+    name: "Early Adopter Program",
+    commission: 25,
+    isActive: true,
   },
 }
 
@@ -64,6 +60,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 10,
     description: "Accounting firm partnership program",
     isValid: true,
+    isActive: true,
   },
   "CPA-GOLD": {
     code: "CPA-GOLD",
@@ -73,6 +70,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 12,
     description: "Premium CPA firm partnership",
     isValid: true,
+    isActive: true,
   },
   BOOKKEEP: {
     code: "BOOKKEEP",
@@ -82,6 +80,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 8,
     description: "Bookkeeping services partnership",
     isValid: true,
+    isActive: true,
   },
 
   // Technology Partners
@@ -93,6 +92,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 15,
     description: "Technology integration partnership",
     isValid: true,
+    isActive: true,
   },
   "SAAS-ALLY": {
     code: "SAAS-ALLY",
@@ -102,6 +102,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 20,
     description: "SaaS ecosystem partnership",
     isValid: true,
+    isActive: true,
   },
   "CLOUD-PRO": {
     code: "CLOUD-PRO",
@@ -111,6 +112,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 12,
     description: "Cloud consulting partnership",
     isValid: true,
+    isActive: true,
   },
 
   // Consultants
@@ -122,6 +124,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 18,
     description: "Business process consulting partnership",
     isValid: true,
+    isActive: true,
   },
   "FINANCE-EXP": {
     code: "FINANCE-EXP",
@@ -131,6 +134,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 15,
     description: "Financial consulting partnership",
     isValid: true,
+    isActive: true,
   },
   "AR-SPECIALIST": {
     code: "AR-SPECIALIST",
@@ -140,6 +144,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 20,
     description: "AR specialization partnership",
     isValid: true,
+    isActive: true,
   },
 
   // Resellers
@@ -151,6 +156,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 25,
     description: "Authorized reseller program",
     isValid: true,
+    isActive: true,
   },
   "CHANNEL-1": {
     code: "CHANNEL-1",
@@ -160,6 +166,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 22,
     description: "Channel partner program",
     isValid: true,
+    isActive: true,
   },
   "DIST-NETWORK": {
     code: "DIST-NETWORK",
@@ -169,6 +176,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 20,
     description: "Distribution partnership",
     isValid: true,
+    isActive: true,
   },
 
   // Industry Specific
@@ -180,6 +188,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 14,
     description: "Manufacturing industry specialization",
     isValid: true,
+    isActive: true,
   },
   "HEALTHCARE-AR": {
     code: "HEALTHCARE-AR",
@@ -189,6 +198,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 16,
     description: "Healthcare industry partnership",
     isValid: true,
+    isActive: true,
   },
   "RETAIL-PLUS": {
     code: "RETAIL-PLUS",
@@ -198,6 +208,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 12,
     description: "Retail industry specialization",
     isValid: true,
+    isActive: true,
   },
 
   // Special Programs
@@ -209,6 +220,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 5,
     description: "Special startup program",
     isValid: true,
+    isActive: true,
   },
   NONPROFIT: {
     code: "NONPROFIT",
@@ -218,6 +230,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 0,
     description: "Nonprofit discount program",
     isValid: true,
+    isActive: true,
   },
   EDUCATION: {
     code: "EDUCATION",
@@ -227,6 +240,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 0,
     description: "Educational discount program",
     isValid: true,
+    isActive: true,
   },
 
   // Regional Partners
@@ -238,6 +252,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 13,
     description: "West Coast regional partnership",
     isValid: true,
+    isActive: true,
   },
   "MIDWEST-PRO": {
     code: "MIDWEST-PRO",
@@ -247,6 +262,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 12,
     description: "Midwest regional partnership",
     isValid: true,
+    isActive: true,
   },
   SOUTHEAST: {
     code: "SOUTHEAST",
@@ -256,6 +272,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 14,
     description: "Southeast regional partnership",
     isValid: true,
+    isActive: true,
   },
 
   // VIP Partners
@@ -267,6 +284,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 30,
     description: "Platinum tier VIP partnership",
     isValid: true,
+    isActive: true,
   },
   "VIP-GOLD": {
     code: "VIP-GOLD",
@@ -276,6 +294,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 25,
     description: "Gold tier VIP partnership",
     isValid: true,
+    isActive: true,
   },
   ENTERPRISE: {
     code: "ENTERPRISE",
@@ -285,6 +304,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     commission: 20,
     description: "Enterprise partnership program",
     isValid: true,
+    isActive: true,
   },
 }
 
@@ -293,13 +313,27 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
  * @param code - The affiliate code to validate
  * @returns true if valid, false otherwise
  */
-export function validateAffiliate(code: string): boolean {
-  if (!code || typeof code !== "string") {
-    return false
+export function validateAffiliate(code: string): AffiliateInfo {
+  const upperCode = code.toUpperCase().trim()
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+
+  if (!affiliate) {
+    return {
+      code: upperCode,
+      name: "",
+      commission: 0,
+      isActive: false,
+      isValid: false,
+    }
   }
 
-  const normalizedCode = code.trim().toUpperCase()
-  return VALID_AFFILIATE_CODES.includes(normalizedCode)
+  return {
+    code: upperCode,
+    name: affiliate.name,
+    commission: affiliate.commission,
+    isActive: affiliate.isActive,
+    isValid: affiliate.isActive, // Only valid if active
+  }
 }
 
 /**
@@ -310,22 +344,25 @@ export function validateAffiliate(code: string): boolean {
 export async function validateAffiliateCode(code: string): Promise<AffiliateInfo> {
   try {
     if (!code || typeof code !== "string") {
-      return { isValid: false }
+      return { isValid: false, code: "", name: "", commission: 0, isActive: false }
     }
 
-    const normalizedCode = code.trim().toUpperCase()
+    const upperCode = code.trim().toUpperCase()
 
-    if (AFFILIATE_CODES[normalizedCode]) {
+    if (AFFILIATE_CODES[upperCode]) {
       return {
-        isValid: true,
-        ...AFFILIATE_CODES[normalizedCode],
+        isValid: AFFILIATE_CODES[upperCode].isActive,
+        code: upperCode,
+        name: AFFILIATE_CODES[upperCode].name,
+        commission: AFFILIATE_CODES[upperCode].commission,
+        isActive: AFFILIATE_CODES[upperCode].isActive,
       }
     }
 
-    return { isValid: false }
+    return { isValid: false, code: upperCode, name: "", commission: 0, isActive: false }
   } catch (error) {
     console.error("Error validating affiliate code:", error)
-    return { isValid: false }
+    return { isValid: false, code: "", name: "", commission: 0, isActive: false }
   }
 }
 
@@ -334,7 +371,7 @@ export async function validateAffiliateCode(code: string): Promise<AffiliateInfo
  * @returns Array of valid affiliate codes
  */
 export function getValidAffiliateCodes(): string[] {
-  return [...VALID_AFFILIATE_CODES]
+  return Object.keys(AFFILIATE_CODES).filter((code) => AFFILIATE_CODES[code as keyof typeof AFFILIATE_CODES].isActive)
 }
 
 /**
@@ -361,14 +398,20 @@ export function formatAffiliateCode(code: string): string {
  * @returns Object with isValid boolean and partner string if valid, null otherwise
  */
 export function getAffiliateInfo(code: string): AffiliateInfo | null {
-  const normalizedCode = code.trim().toUpperCase()
-  if (AFFILIATE_CODES[normalizedCode]) {
-    return {
-      isValid: true,
-      ...AFFILIATE_CODES[normalizedCode],
-    }
+  const upperCode = code.trim().toUpperCase()
+  const affiliate = affiliatePartners[upperCode as keyof typeof affiliatePartners]
+
+  if (!affiliate) {
+    return null
   }
-  return null
+
+  return {
+    code: upperCode,
+    name: affiliate.name,
+    commission: affiliate.commission,
+    isActive: affiliate.isActive,
+    isValid: affiliate.isValid,
+  }
 }
 
 export function getAllAffiliatePartners(): AffiliateInfo[] {
@@ -379,6 +422,16 @@ export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
   return Object.values(affiliatePartners).filter((partner) => partner.isValid && partner.category === category)
 }
 
-export function getAllAffiliateCodes(): string[] {
-  return Object.keys(AFFILIATE_CODES)
+export function getAllAffiliates(): AffiliateInfo[] {
+  return Object.entries(AFFILIATE_CODES).map(([code, info]) => ({
+    code,
+    name: info.name,
+    commission: info.commission,
+    isActive: info.isActive,
+    isValid: info.isActive,
+  }))
+}
+
+export function getActiveAffiliates(): AffiliateInfo[] {
+  return getAllAffiliates().filter((affiliate) => affiliate.isActive)
 }

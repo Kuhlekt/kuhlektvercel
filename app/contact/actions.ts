@@ -1,18 +1,11 @@
 "use server"
 
-import { sendContactEmail } from "@/lib/email-service"
+import { sendEmail } from "@/lib/aws-ses"
 
 export interface ContactFormState {
-  success?: boolean
-  message?: string
-  errors?: {
-    firstName?: string
-    lastName?: string
-    email?: string
-    company?: string
-    message?: string
-    recaptcha?: string
-  }
+  success: boolean
+  message: string
+  errors: Record<string, string>
 }
 
 const initialState: ContactFormState = {
@@ -21,21 +14,19 @@ const initialState: ContactFormState = {
   errors: {},
 }
 
-export async function submitContactForm(
-  prevState: ContactFormState = initialState,
-  formData: FormData,
-): Promise<ContactFormState> {
+export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
   try {
-    // Extract form data with null safety
-    const firstName = formData.get("firstName")?.toString()?.trim() || ""
-    const lastName = formData.get("lastName")?.toString()?.trim() || ""
-    const email = formData.get("email")?.toString()?.trim() || ""
-    const company = formData.get("company")?.toString()?.trim() || ""
-    const message = formData.get("message")?.toString()?.trim() || ""
-    const recaptchaToken = formData.get("recaptcha")?.toString()?.trim() || ""
+    // Extract and validate form data
+    const firstName = formData.get("firstName")?.toString()?.trim()
+    const lastName = formData.get("lastName")?.toString()?.trim()
+    const email = formData.get("email")?.toString()?.trim()
+    const company = formData.get("company")?.toString()?.trim()
+    const phone = formData.get("phone")?.toString()?.trim()
+    const message = formData.get("message")?.toString()?.trim()
+    const captchaToken = formData.get("captchaToken")?.toString()?.trim()
 
     // Validation
-    const errors: ContactFormState["errors"] = {}
+    const errors: Record<string, string> = {}
 
     if (!firstName) {
       errors.firstName = "First name is required"
@@ -51,17 +42,8 @@ export async function submitContactForm(
       errors.email = "Please enter a valid email address"
     }
 
-    if (!company) {
-      errors.company = "Company name is required"
-    }
-
     if (!message) {
       errors.message = "Message is required"
-    }
-
-    // Validate reCAPTCHA (allow development token)
-    if (!recaptchaToken) {
-      errors.recaptcha = "Please complete the reCAPTCHA verification"
     }
 
     if (Object.keys(errors).length > 0) {
@@ -72,28 +54,40 @@ export async function submitContactForm(
       }
     }
 
-    // Send email
-    try {
-      await sendContactEmail({
-        firstName,
-        lastName,
-        email,
-        company,
-        message,
-      })
+    // Prepare email content
+    const emailSubject = `Contact Form Message from ${firstName} ${lastName}`
+    const emailBody = `
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      ${company ? `<p><strong>Company:</strong> ${company}</p>` : ""}
+      ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+      <p><strong>Message:</strong></p>
+      <p>${message}</p>
+      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+      <p><strong>reCAPTCHA Token:</strong> ${captchaToken || "Not provided"}</p>
+    `
 
-      return {
-        success: true,
-        message: "Thank you for your message! We'll get back to you within 24 hours.",
-        errors: {},
-      }
-    } catch (emailError) {
-      console.error("Email sending error:", emailError)
+    // Send email
+    const emailResult = await sendEmail({
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      html: emailBody,
+    })
+
+    if (!emailResult.success) {
+      console.error("Failed to send contact form email:", emailResult.error)
       return {
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
         errors: {},
       }
+    }
+
+    return {
+      success: true,
+      message: "Thank you for your message! We'll get back to you within 24 hours.",
+      errors: {},
     }
   } catch (error) {
     console.error("Contact form submission error:", error)

@@ -1,18 +1,17 @@
 "use client"
 
-import type React from "react"
-import { useActionState, useRef } from "react"
+import { useActionState, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Mail, Phone, MapPin } from "lucide-react"
-import ReCaptcha from "@/components/recaptcha"
-import { submitContactForm, type ContactFormState } from "./actions"
+import { CheckCircle, AlertCircle, Loader2, Mail, Phone, MapPin } from "lucide-react"
+import { submitContactForm } from "./actions"
+import ReCAPTCHA from "@/components/recaptcha"
 
-const initialState: ContactFormState = {
+const initialState = {
   success: false,
   message: "",
   errors: {},
@@ -20,28 +19,7 @@ const initialState: ContactFormState = {
 
 export default function ContactFormComponent() {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
-  const formRef = useRef<HTMLFormElement>(null)
-  const recaptchaTokenRef = useRef<string>("")
-
-  const handleRecaptchaVerify = (token: string) => {
-    recaptchaTokenRef.current = token
-  }
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const formData = new FormData(event.currentTarget)
-    formData.set("recaptcha", recaptchaTokenRef.current)
-
-    // Submit the form
-    await formAction(formData)
-
-    // Reset form if successful
-    if (state?.success && formRef.current) {
-      formRef.current.reset()
-      recaptchaTokenRef.current = ""
-    }
-  }
+  const [captchaToken, setCaptchaToken] = useState("")
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -49,10 +27,10 @@ export default function ContactFormComponent() {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Get in Touch</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Contact Us</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Ready to transform your accounts receivable process? Contact us today to learn how Kuhlekt can help your
-              finance team get paid faster with less stress.
+              Have questions about Kuhlekt? We're here to help. Reach out to our team and we'll get back to you within
+              24 hours.
             </p>
           </div>
 
@@ -60,12 +38,12 @@ export default function ContactFormComponent() {
             {/* Contact Form */}
             <Card className="shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl">Send us a Message</CardTitle>
-                <CardDescription>We'll get back to you within 24 hours.</CardDescription>
+                <CardTitle className="text-2xl">Send us a message</CardTitle>
+                <CardDescription>Fill out the form below and we'll get back to you soon.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form action={formAction} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
@@ -73,12 +51,11 @@ export default function ContactFormComponent() {
                         name="firstName"
                         type="text"
                         required
-                        className={state?.errors?.firstName ? "border-red-500" : ""}
+                        className={state.errors?.firstName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state?.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
+                      {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name *</Label>
                       <Input
@@ -86,37 +63,34 @@ export default function ContactFormComponent() {
                         name="lastName"
                         type="text"
                         required
-                        className={state?.errors?.lastName ? "border-red-500" : ""}
+                        className={state.errors?.lastName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state?.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
+                      {state.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
                       required
-                      className={state?.errors?.email ? "border-red-500" : ""}
+                      className={state.errors?.email ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state?.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
+                    {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company Name *</Label>
-                    <Input
-                      id="company"
-                      name="company"
-                      type="text"
-                      required
-                      className={state?.errors?.company ? "border-red-500" : ""}
-                      disabled={isPending}
-                    />
-                    {state?.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
+                    <Label htmlFor="company">Company</Label>
+                    <Input id="company" name="company" type="text" disabled={isPending} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" name="phone" type="tel" disabled={isPending} />
                   </div>
 
                   <div className="space-y-2">
@@ -126,23 +100,25 @@ export default function ContactFormComponent() {
                       name="message"
                       rows={5}
                       required
-                      placeholder="Tell us about your accounts receivable challenges or questions..."
-                      className={state?.errors?.message ? "border-red-500" : ""}
+                      className={state.errors?.message ? "border-red-500" : ""}
+                      placeholder="Tell us how we can help you..."
                       disabled={isPending}
                     />
-                    {state?.errors?.message && <p className="text-sm text-red-600">{state.errors.message}</p>}
+                    {state.errors?.message && <p className="text-sm text-red-600">{state.errors.message}</p>}
                   </div>
 
-                  <div className="space-y-2">
-                    <ReCaptcha
-                      onVerify={handleRecaptchaVerify}
-                      onError={(error) => console.error("reCAPTCHA error:", error)}
-                    />
-                    {state?.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
-                  </div>
+                  <input type="hidden" name="captchaToken" value={captchaToken} />
+                  <ReCAPTCHA onVerify={setCaptchaToken} />
 
                   <Button type="submit" className="w-full" disabled={isPending}>
-                    {isPending ? "Sending..." : "Send Message"}
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending Message...
+                      </>
+                    ) : (
+                      "Send Message"
+                    )}
                   </Button>
 
                   {state.message && (
@@ -165,8 +141,8 @@ export default function ContactFormComponent() {
             <div className="space-y-8">
               <Card className="shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-2xl">Contact Information</CardTitle>
-                  <CardDescription>Get in touch with our team</CardDescription>
+                  <CardTitle className="text-2xl">Get in Touch</CardTitle>
+                  <CardDescription>Multiple ways to reach our team</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-start space-x-4">
@@ -205,37 +181,35 @@ export default function ContactFormComponent() {
 
               <Card className="shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-xl">Why Choose Kuhlekt?</CardTitle>
+                  <CardTitle className="text-xl">Quick Response Times</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-3xl font-bold text-blue-600">35%</div>
-                    <div className="text-sm text-gray-600">Average DSO Reduction</div>
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="text-gray-700">General Inquiries</span>
+                    <span className="font-semibold text-blue-600">&lt; 24 hours</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">80%</div>
-                      <div className="text-xs text-gray-600">Less Manual Work</div>
-                    </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">2 Weeks</div>
-                      <div className="text-xs text-gray-600">Implementation</div>
-                    </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-gray-700">Demo Requests</span>
+                    <span className="font-semibold text-green-600">&lt; 4 hours</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                    <span className="text-gray-700">Support Issues</span>
+                    <span className="font-semibold text-purple-600">&lt; 2 hours</span>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-xl">Prefer a Demo?</CardTitle>
+                  <CardTitle className="text-xl">Prefer to Schedule a Call?</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 mb-4">
-                    See Kuhlekt in action with a personalized demo tailored to your business needs.
+                    Book a 15-minute discovery call to discuss your accounts receivable challenges and see how Kuhlekt
+                    can help.
                   </p>
-                  <Button asChild className="w-full">
-                    <a href="/demo">Schedule a Demo</a>
+                  <Button className="w-full bg-transparent" variant="outline">
+                    Schedule Discovery Call
                   </Button>
                 </CardContent>
               </Card>
