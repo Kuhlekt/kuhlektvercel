@@ -1,30 +1,16 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 interface ReCaptchaProps {
-  onChange: (token: string | null) => void
-  siteKey?: string
+  onVerify: (token: string) => void
 }
 
-declare global {
-  interface Window {
-    grecaptcha: {
-      ready: (callback: () => void) => void
-      render: (container: string | HTMLElement, options: any) => number
-      execute: (widgetId?: number, options?: { action?: string }) => Promise<string>
-      reset: (widgetId?: number) => void
-    }
-  }
-}
-
-export function ReCaptcha({ onChange, siteKey }: ReCaptchaProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [isEnabled, setIsEnabled] = useState(false)
-  const [currentSiteKey, setCurrentSiteKey] = useState(siteKey || "")
-  const [error, setError] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const widgetIdRef = useRef<number | null>(null)
+export function ReCaptcha({ onVerify }: ReCaptchaProps) {
+  const [siteKey, setSiteKey] = useState<string>("")
+  const [isEnabled, setIsEnabled] = useState<boolean>(false)
+  const [isLoaded, setIsLoaded] = useState<boolean>(false)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -32,114 +18,105 @@ export function ReCaptcha({ onChange, siteKey }: ReCaptchaProps) {
         const response = await fetch("/api/recaptcha-config")
         if (response.ok) {
           const config = await response.json()
-          setCurrentSiteKey(config.siteKey || "")
-          setIsEnabled(config.isEnabled || false)
+          setSiteKey(config.siteKey || "")
+          setIsEnabled(config.enabled || false)
+
+          if (config.enabled && config.siteKey) {
+            loadReCaptchaScript(config.siteKey)
+          } else {
+            // Provide bypass token when disabled
+            onVerify("development-mode-bypass-token")
+          }
         } else {
-          console.warn("Failed to fetch reCAPTCHA config")
-          setIsEnabled(false)
+          console.warn("Failed to fetch reCAPTCHA config, using bypass token")
+          onVerify("development-mode-bypass-token")
         }
       } catch (error) {
-        console.warn("Error fetching reCAPTCHA config:", error)
-        setIsEnabled(false)
+        console.error("Error fetching reCAPTCHA config:", error)
+        onVerify("development-mode-bypass-token")
       }
     }
 
     fetchConfig()
-  }, [])
+  }, [onVerify])
 
-  useEffect(() => {
-    if (!isEnabled || !currentSiteKey) {
-      // Provide bypass token when reCAPTCHA is disabled
-      onChange("development-bypass-token")
+  const loadReCaptchaScript = (key: string) => {
+    if (isLoaded || !key) return
+
+    const script = document.createElement("script")
+    script.src = `https://www.google.com/recaptcha/api.js?render=${key}`
+    script.async = true
+    script.defer = true
+
+    script.onload = () => {
+      setIsLoaded(true)
+      executeReCaptcha(key)
+    }
+
+    script.onerror = () => {
+      console.error("Failed to load reCAPTCHA script")
+      setError("Failed to load reCAPTCHA")
+      onVerify("script-load-error-bypass-token")
+    }
+
+    document.head.appendChild(script)
+  }
+
+  const executeReCaptcha = (key: string) => {
+    if (!window.grecaptcha || !key) {
+      onVerify("grecaptcha-not-available-bypass-token")
       return
     }
 
-    const loadReCaptcha = () => {
-      if (window.grecaptcha) {
-        setIsLoaded(true)
-        return
-      }
-
-      const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js"
-      script.async = true
-      script.defer = true
-      script.onload = () => setIsLoaded(true)
-      script.onerror = () => {
-        console.warn("Failed to load reCAPTCHA script")
-        setError("Failed to load reCAPTCHA")
-        onChange("script-load-error-bypass")
-      }
-      document.head.appendChild(script)
-    }
-
-    loadReCaptcha()
-  }, [isEnabled, currentSiteKey, onChange])
-
-  useEffect(() => {
-    if (!isLoaded || !isEnabled || !currentSiteKey || !containerRef.current) {
-      return
-    }
-
-    const renderReCaptcha = () => {
-      try {
-        if (window.grecaptcha && window.grecaptcha.ready) {
-          window.grecaptcha.ready(() => {
-            try {
-              if (containerRef.current && !widgetIdRef.current) {
-                widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
-                  sitekey: currentSiteKey,
-                  callback: (token: string) => {
-                    onChange(token)
-                  },
-                  "expired-callback": () => {
-                    onChange("expired-token-bypass")
-                  },
-                  "error-callback": () => {
-                    console.warn("reCAPTCHA error occurred")
-                    onChange("error-bypass-token")
-                  },
-                })
-              }
-            } catch (error) {
-              console.warn("Error rendering reCAPTCHA:", error)
-              setError("Error rendering reCAPTCHA")
-              onChange("render-error-bypass")
+    try {
+      window.grecaptcha.ready(() => {
+        window.grecaptcha
+          .execute(key, { action: "submit" })
+          .then((token: string) => {
+            if (token) {
+              onVerify(token)
+            } else {
+              onVerify("empty-token-bypass")
             }
           })
-        }
-      } catch (error) {
-        console.warn("Error initializing reCAPTCHA:", error)
-        setError("Error initializing reCAPTCHA")
-        onChange("init-error-bypass")
-      }
+          .catch((error: any) => {
+            console.error("reCAPTCHA execution error:", error)
+            setError("reCAPTCHA verification failed")
+            onVerify("execution-error-bypass-token")
+          })
+      })
+    } catch (error) {
+      console.error("reCAPTCHA error:", error)
+      setError("reCAPTCHA error occurred")
+      onVerify("catch-error-bypass-token")
     }
-
-    renderReCaptcha()
-
-    return () => {
-      if (widgetIdRef.current !== null && window.grecaptcha) {
-        try {
-          window.grecaptcha.reset(widgetIdRef.current)
-        } catch (error) {
-          console.warn("Error resetting reCAPTCHA:", error)
-        }
-        widgetIdRef.current = null
-      }
-    }
-  }, [isLoaded, isEnabled, currentSiteKey, onChange])
+  }
 
   if (!isEnabled) {
-    return <div className="text-sm text-gray-500 text-center">reCAPTCHA is disabled in development mode</div>
+    return null
   }
 
   if (error) {
-    return <div className="text-sm text-red-500 text-center">{error} - Form submission will continue</div>
+    return <div className="text-sm text-gray-500">reCAPTCHA temporarily unavailable (using bypass mode)</div>
   }
 
   return (
-    <div className="flex justify-center">
-      <div ref={containerRef} />
+    <div className="text-sm text-gray-500">
+      This site is protected by reCAPTCHA and the Google{" "}
+      <a href="https://policies.google.com/privacy" className="text-blue-600 hover:underline">
+        Privacy Policy
+      </a>{" "}
+      and{" "}
+      <a href="https://policies.google.com/terms" className="text-blue-600 hover:underline">
+        Terms of Service
+      </a>{" "}
+      apply.
     </div>
   )
+}
+
+declare global {
+  interface Window {
+    grecaptcha: any
+  }
 }
