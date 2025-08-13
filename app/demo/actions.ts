@@ -1,65 +1,33 @@
 "use server"
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
-import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 import { getVisitorData } from "@/components/visitor-tracker"
-
-interface DemoRequestData {
-  firstName: string
-  lastName: string
-  email: string
-  company: string
-  jobTitle: string
-  phone: string
-  companySize: string
-  currentSolution: string
-  challenges: string
-  timeline: string
-  recaptchaToken: string
-}
 
 export async function submitDemoRequest(formData: FormData) {
   try {
     // Extract form data
-    const data: DemoRequestData = {
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: formData.get("email") as string,
-      company: formData.get("company") as string,
-      jobTitle: formData.get("jobTitle") as string,
-      phone: formData.get("phone") as string,
-      companySize: formData.get("companySize") as string,
-      currentSolution: formData.get("currentSolution") as string,
-      challenges: formData.get("challenges") as string,
-      timeline: formData.get("timeline") as string,
-      recaptchaToken: formData.get("recaptchaToken") as string,
-    }
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const role = formData.get("role") as string
+    const affiliateCode = formData.get("affiliateCode") as string
+    const challenges = formData.get("challenges") as string
 
     // Validate required fields
-    if (!data.firstName || !data.lastName || !data.email || !data.company) {
+    if (!firstName || !lastName || !email || !company) {
       return {
         success: false,
-        message: "Please fill in all required fields.",
+        error: "Please fill in all required fields.",
       }
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email)) {
+    if (!emailRegex.test(email)) {
       return {
         success: false,
-        message: "Please enter a valid email address.",
-      }
-    }
-
-    // Verify reCAPTCHA
-    if (data.recaptchaToken) {
-      const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
-      if (!recaptchaResult.success) {
-        return {
-          success: false,
-          message: "reCAPTCHA verification failed. Please try again.",
-        }
+        error: "Please enter a valid email address.",
       }
     }
 
@@ -68,7 +36,7 @@ export async function submitDemoRequest(formData: FormData) {
 
     // Prepare email content
     const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
-    const subject = `New Demo Request from ${data.firstName} ${data.lastName} at ${data.company}`
+    const subject = `New Demo Request from ${firstName} ${lastName} at ${company}`
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -78,26 +46,29 @@ export async function submitDemoRequest(formData: FormData) {
         
         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
-          <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
-          <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Phone:</strong> ${data.phone || "Not provided"}</p>
-          <p><strong>Company:</strong> ${data.company}</p>
-          <p><strong>Job Title:</strong> ${data.jobTitle || "Not provided"}</p>
-        </div>
-
-        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #374151; margin-top: 0;">Company Details</h3>
-          <p><strong>Company Size:</strong> ${data.companySize || "Not specified"}</p>
-          <p><strong>Current Solution:</strong> ${data.currentSolution || "Not specified"}</p>
-          <p><strong>Timeline:</strong> ${data.timeline || "Not specified"}</p>
+          <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Company:</strong> ${company}</p>
+          <p><strong>Role:</strong> ${role || "Not specified"}</p>
         </div>
 
         ${
-          data.challenges
+          affiliateCode
             ? `
         <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Affiliate Information</h3>
+          <p><strong>Affiliate Code:</strong> ${affiliateCode}</p>
+        </div>
+        `
+            : ""
+        }
+
+        ${
+          challenges
+            ? `
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Challenges</h3>
-          <p style="white-space: pre-wrap; line-height: 1.6;">${data.challenges}</p>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${challenges}</p>
         </div>
         `
             : ""
@@ -129,18 +100,14 @@ export async function submitDemoRequest(formData: FormData) {
 New Demo Request
 
 Contact Information:
-Name: ${data.firstName} ${data.lastName}
-Email: ${data.email}
-Phone: ${data.phone || "Not provided"}
-Company: ${data.company}
-Job Title: ${data.jobTitle || "Not provided"}
+Name: ${firstName} ${lastName}
+Email: ${email}
+Company: ${company}
+Role: ${role || "Not specified"}
 
-Company Details:
-Company Size: ${data.companySize || "Not specified"}
-Current Solution: ${data.currentSolution || "Not specified"}
-Timeline: ${data.timeline || "Not specified"}
+${affiliateCode ? `Affiliate Code: ${affiliateCode}\n` : ""}
 
-${data.challenges ? `Challenges:\n${data.challenges}\n` : ""}
+${challenges ? `Challenges:\n${challenges}\n` : ""}
 
 ${
   visitorData
@@ -176,9 +143,9 @@ Submitted at: ${new Date().toLocaleString()}
     } else {
       // Log the submission even if email fails
       console.log("Demo request submission (email failed):", {
-        name: `${data.firstName} ${data.lastName}`,
-        email: data.email,
-        company: data.company,
+        name: `${firstName} ${lastName}`,
+        email: email,
+        company: company,
         timestamp: new Date().toISOString(),
         error: emailResult.message,
       })
@@ -192,7 +159,7 @@ Submitted at: ${new Date().toLocaleString()}
     console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "An error occurred while submitting your demo request. Please try again.",
+      error: "An error occurred while submitting your demo request. Please try again.",
     }
   }
 }

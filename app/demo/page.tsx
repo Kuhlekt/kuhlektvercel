@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,10 +19,13 @@ export default function DemoPage() {
   const [role, setRole] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setIsSubmitting(true)
     setMessage("")
     setError("")
+
+    const formData = new FormData(event.currentTarget)
 
     // Add role to form data
     if (role) {
@@ -39,6 +44,7 @@ export default function DemoPage() {
         setError(result.error || "Failed to submit demo request")
       }
     } catch (error) {
+      console.error("Demo form submission error:", error)
       setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -108,7 +114,7 @@ export default function DemoPage() {
                 </p>
               </div>
 
-              <form ref={formRef} action={handleSubmit} className="space-y-6">
+              <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
@@ -205,12 +211,11 @@ export default function DemoPage() {
 
                 <div>
                   <Label htmlFor="challenges" className="text-sm font-medium text-gray-700">
-                    What are your biggest AR challenges?
+                    What are your biggest AR challenges? (Optional)
                   </Label>
                   <Textarea
                     id="challenges"
                     name="challenges"
-                    required
                     placeholder="Tell us about your current process and challenges..."
                     className="mt-1 min-h-[100px]"
                     rows={4}
