@@ -1,42 +1,13 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { useState, useRef } from "react"
 import { submitDemoRequest } from "./actions"
-import ReCAPTCHA from "react-google-recaptcha"
-import { getVisitorData } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const [siteKey, setSiteKey] = useState<string>("")
-  const [affiliateCode, setAffiliateCode] = useState("")
   const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    fetch("/api/recaptcha-config")
-      .then((res) => res.json())
-      .then((data) => {
-        setSiteKey(data.siteKey || "")
-      })
-      .catch((error) => {
-        console.error("Error loading reCAPTCHA config:", error)
-      })
-
-    const visitorData = getVisitorData()
-    if (visitorData?.affiliate) {
-      setAffiliateCode(visitorData.affiliate)
-    }
-  }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -46,10 +17,6 @@ export default function DemoPage() {
     try {
       const formData = new FormData(event.currentTarget)
 
-      if (recaptchaToken) {
-        formData.append("recaptchaToken", recaptchaToken)
-      }
-
       const result = await submitDemoRequest(formData)
 
       if (result.success) {
@@ -57,8 +24,6 @@ export default function DemoPage() {
         if (formRef.current) {
           formRef.current.reset()
         }
-        setAffiliateCode("")
-        setRecaptchaToken(null)
       } else {
         setMessage({ type: "error", text: result.message })
       }
@@ -74,183 +39,120 @@ export default function DemoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Request a Demo</h1>
-          <p className="text-xl text-gray-600">See how Kuhlekt can transform your accounts receivable process</p>
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Request a Demo</h1>
+          <p className="text-lg text-gray-600">
+            Fill out the form below and we'll contact you to schedule a demonstration.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-2xl">Schedule Your Demo</CardTitle>
-              <CardDescription>Fill out the form below and we'll schedule a personalized demonstration</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {message && (
-                <Alert
-                  className={`mb-6 ${message.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-                >
-                  {message.type === "success" ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                  )}
-                  <AlertDescription className={message.type === "success" ? "text-green-800" : "text-red-800"}>
-                    {message.text}
-                  </AlertDescription>
-                </Alert>
-              )}
+        <div className="bg-white rounded-lg shadow-md p-8">
+          {message && (
+            <div
+              className={`mb-6 p-4 rounded-md ${
+                message.type === "success"
+                  ? "bg-green-50 border border-green-200 text-green-800"
+                  : "bg-red-50 border border-red-200 text-red-800"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
 
-              <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      required
-                      placeholder="Enter your first name"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      required
-                      placeholder="Enter your last name"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name *
+                </label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your first name"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your last name"
+                />
+              </div>
+            </div>
 
-                <div>
-                  <Label htmlFor="email">Business Email *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="Enter your business email"
-                    className="mt-1"
-                  />
-                </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your email address"
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    name="company"
-                    type="text"
-                    required
-                    placeholder="Enter your company name"
-                    className="mt-1"
-                  />
-                </div>
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name *
+              </label>
+              <input
+                type="text"
+                id="company"
+                name="company"
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your company name"
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    required
-                    placeholder="Enter your phone number"
-                    className="mt-1"
-                  />
-                </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your phone number"
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="challenges">What are your biggest AR challenges? (Optional)</Label>
-                  <Textarea
-                    id="challenges"
-                    name="challenges"
-                    placeholder="Tell us about your current challenges with accounts receivable..."
-                    className="mt-1 min-h-[100px]"
-                  />
-                </div>
+            <div>
+              <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+                Tell us about your needs
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="What specific credit management challenges are you facing?"
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="affiliate">Affiliate/Referral Code (Optional)</Label>
-                  <Input
-                    id="affiliate"
-                    name="affiliate"
-                    type="text"
-                    value={affiliateCode}
-                    onChange={(e) => setAffiliateCode(e.target.value)}
-                    placeholder="Enter referral code if you have one"
-                    className="mt-1"
-                  />
-                </div>
-
-                {siteKey && (
-                  <div className="flex justify-center">
-                    <ReCAPTCHA
-                      sitekey={siteKey}
-                      onChange={(token) => setRecaptchaToken(token)}
-                      onExpired={() => setRecaptchaToken(null)}
-                    />
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !recaptchaToken}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting Request...
-                    </>
-                  ) : (
-                    "Request Demo"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-xl">Why Choose Kuhlekt?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Reduce DSO by up to 30%
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Automate 80% of manual AR tasks
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Improve cash flow predictability
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Seamless integration with existing systems
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    24/7 customer support
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Industry-leading security standards
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-md font-semibold transition-colors"
+            >
+              {isSubmitting ? "Submitting Request..." : "Request Demo"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

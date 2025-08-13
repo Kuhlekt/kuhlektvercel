@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from 'lucide-react'
 import Image from "next/image"
 
 export function Header() {
@@ -32,16 +31,28 @@ export function Header() {
             <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
               Home
             </Link>
-            <Link href="/product" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/product"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Product
             </Link>
-            <Link href="/solutions" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/solutions"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Solutions
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/about"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               About
             </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+            <Link
+              href="/contact"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+            >
               Contact
             </Link>
           </nav>
@@ -61,7 +72,7 @@ export function Header() {
             className="md:hidden p-2 rounded-md text-gray-700 hover:text-cyan-600 hover:bg-gray-100 transition-colors duration-200"
             aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isMenuOpen ? <span className="text-xl">×</span> : <span className="text-xl">☰</span>}
           </button>
         </div>
 

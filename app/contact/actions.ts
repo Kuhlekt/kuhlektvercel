@@ -5,26 +5,30 @@ import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 import { getVisitorData } from "@/components/visitor-tracker"
 
 interface ContactFormData {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   company: string
   message: string
+  affiliate: string
   recaptchaToken: string
 }
 
 export async function submitContactForm(formData: FormData) {
   try {
     // Extract form data
-    const data: ContactFormData = {
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      company: formData.get("company") as string,
-      message: formData.get("message") as string,
-      recaptchaToken: formData.get("recaptchaToken") as string,
-    }
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
+    const affiliate = formData.get("affiliate") as string
+    const recaptchaToken = formData.get("recaptchaToken") as string
+
+    const fullName = `${firstName} ${lastName}`.trim()
 
     // Validate required fields
-    if (!data.name || !data.email || !data.message) {
+    if (!firstName || !lastName || !email) {
       return {
         success: false,
         message: "Please fill in all required fields.",
@@ -33,20 +37,19 @@ export async function submitContactForm(formData: FormData) {
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email)) {
+    if (!emailRegex.test(email)) {
       return {
         success: false,
         message: "Please enter a valid email address.",
       }
     }
 
-    // Verify reCAPTCHA
-    if (data.recaptchaToken) {
-      const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken)
       if (!recaptchaResult.success) {
         return {
           success: false,
-          message: "reCAPTCHA verification failed. Please try again.",
+          message: recaptchaResult.error || "reCAPTCHA verification failed. Please try again.",
         }
       }
     }
@@ -56,7 +59,7 @@ export async function submitContactForm(formData: FormData) {
 
     // Prepare email content
     const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
-    const subject = `New Contact Form Submission from ${data.name}`
+    const subject = `New Contact Form Submission from ${fullName}`
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -66,15 +69,22 @@ export async function submitContactForm(formData: FormData) {
         
         <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
-          <p><strong>Name:</strong> ${data.name}</p>
-          <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
+          <p><strong>Name:</strong> ${fullName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Company:</strong> ${company}</p>
+          ${affiliate ? `<p><strong>Affiliate Code:</strong> ${affiliate}</p>` : ""}
         </div>
 
+        ${
+          message
+            ? `
         <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Message</h3>
-          <p style="white-space: pre-wrap; line-height: 1.6;">${data.message}</p>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
         </div>
+        `
+            : ""
+        }
 
         ${
           visitorData
@@ -102,12 +112,12 @@ export async function submitContactForm(formData: FormData) {
 New Contact Form Submission
 
 Contact Information:
-Name: ${data.name}
-Email: ${data.email}
-Company: ${data.company || "Not provided"}
+Name: ${fullName}
+Email: ${email}
+Company: ${company}
+${affiliate ? `Affiliate Code: ${affiliate}` : ""}
 
-Message:
-${data.message}
+${message ? `Message:\n${message}\n` : ""}
 
 ${
   visitorData
@@ -142,10 +152,10 @@ Submitted at: ${new Date().toLocaleString()}
     } else {
       // Log the submission even if email fails
       console.log("Contact form submission (email failed):", {
-        name: data.name,
-        email: data.email,
-        company: data.company,
-        message: data.message.substring(0, 100) + "...",
+        name: fullName,
+        email: email,
+        company: company,
+        message: message ? message.substring(0, 100) + "..." : "No message",
         timestamp: new Date().toISOString(),
         error: emailResult.message,
       })

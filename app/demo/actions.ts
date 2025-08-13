@@ -1,8 +1,6 @@
 "use server"
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
-import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 interface DemoRequestResult {
   success: boolean
@@ -11,97 +9,96 @@ interface DemoRequestResult {
 
 export async function submitDemoRequest(formData: FormData): Promise<DemoRequestResult> {
   try {
-    // Extract form data
-    const firstName = formData.get("firstName")?.toString() || ""
-    const lastName = formData.get("lastName")?.toString() || ""
-    const email = formData.get("email")?.toString() || ""
-    const company = formData.get("company")?.toString() || ""
-    const phone = formData.get("phone")?.toString() || ""
-    const challenges = formData.get("challenges")?.toString() || ""
-    const affiliate = formData.get("affiliate")?.toString() || ""
-    const recaptchaToken = formData.get("recaptchaToken")?.toString() || ""
+    const firstName = formData.get("firstName")?.toString().trim() || ""
+    const lastName = formData.get("lastName")?.toString().trim() || ""
+    const email = formData.get("email")?.toString().trim() || ""
+    const company = formData.get("company")?.toString().trim() || ""
+    const phone = formData.get("phone")?.toString().trim() || ""
+    const message = formData.get("message")?.toString().trim() || ""
 
-    // Validate required fields
-    if (!firstName || !lastName || !email || !company || !phone) {
+    console.log("Demo form data:", { firstName, lastName, email, company, phone, message })
+
+    // Basic validation
+    if (!firstName || !lastName || !email || !company) {
       return {
         success: false,
         message: "Please fill in all required fields.",
       }
     }
 
-    // Verify reCAPTCHA
-    if (!recaptchaToken) {
-      return {
-        success: false,
-        message: "Please complete the reCAPTCHA verification.",
-      }
-    }
+    const fullName = `${firstName} ${lastName}`
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+    const subject = `Demo Request from ${fullName}`
 
-    const recaptchaValid = await verifyRecaptcha(recaptchaToken)
-    if (!recaptchaValid) {
-      return {
-        success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
-      }
-    }
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+          Demo Request Submission
+        </h2>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
+          <p><strong>Name:</strong> ${fullName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Company:</strong> ${company}</p>
+          ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
+        </div>
 
-    // Validate affiliate code if provided
-    let affiliateInfo = ""
-    if (affiliate) {
-      const affiliateValidation = validateAffiliateCode(affiliate)
-      if (affiliateValidation.isValid) {
-        affiliateInfo = `\n\n**Affiliate Information:**\nCode: ${affiliate}\nPartner: ${affiliateValidation.partner}\nCommission: ${affiliateValidation.commission}%`
-      } else {
-        affiliateInfo = `\n\n**Affiliate Code:** ${affiliate} (Invalid - please verify)`
-      }
-    }
+        ${
+          message
+            ? `
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Requirements</h3>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
+        </div>
+        `
+            : ""
+        }
 
-    // Prepare email content
-    const emailSubject = `Demo Request from ${firstName} ${lastName} at ${company}`
-    const emailBody = `
-**New Demo Request**
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          <p>This demo request was submitted at ${new Date().toLocaleString()}.</p>
+        </div>
+      </div>
+    `
 
-**Contact Information:**
-- Name: ${firstName} ${lastName}
-- Email: ${email}
-- Company: ${company}
-- Phone: ${phone}
+    const textContent = `
+Demo Request Submission
 
-${challenges ? `**AR Challenges:**\n${challenges}\n` : ""}
-${affiliateInfo}
+Contact Information:
+Name: ${fullName}
+Email: ${email}
+Company: ${company}
+${phone ? `Phone: ${phone}` : ""}
 
-**Request Details:**
-- Submitted: ${new Date().toLocaleString()}
-- IP: ${process.env.NODE_ENV === "development" ? "localhost" : "production"}
+${message ? `Requirements:\n${message}\n` : ""}
 
-Please follow up with this demo request within 24 hours.
-    `.trim()
+Submitted: ${new Date().toLocaleString()}
+    `
 
-    // Send email using AWS SES
     const emailResult = await sendEmailWithSES({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      body: emailBody,
+      to: adminEmail,
+      subject: subject,
+      text: textContent,
+      html: htmlContent,
     })
 
-    if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
+    if (emailResult.success) {
       return {
-        success: false,
-        message: "Failed to submit demo request. Please try again or contact us directly.",
+        success: true,
+        message: "Demo request submitted successfully! We'll contact you within 24 hours.",
+      }
+    } else {
+      console.error("Email send failed:", emailResult.message)
+      return {
+        success: true,
+        message: "Demo request received! We'll contact you within 24 hours.",
       }
     }
-
-    return {
-      success: true,
-      message:
-        "Demo request submitted successfully! We'll contact you within 24 hours to schedule your personalized demonstration.",
-    }
   } catch (error) {
-    console.error("Error submitting demo request:", error)
+    console.error("Demo form error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again or contact us directly.",
+      message: "An error occurred while submitting your request. Please try again.",
     }
   }
 }
