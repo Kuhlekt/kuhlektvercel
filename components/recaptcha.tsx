@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface ReCAPTCHAProps {
   onVerify: (token: string) => void
@@ -16,20 +16,43 @@ declare global {
 export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
   const recaptchaRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<number | null>(null)
+  const [siteKey, setSiteKey] = useState<string>("")
+  const [isEnabled, setIsEnabled] = useState(false)
 
   useEffect(() => {
+    // Fetch site key from server
+    async function fetchSiteKey() {
+      try {
+        const response = await fetch("/api/recaptcha-config")
+        const data = await response.json()
+        setSiteKey(data.siteKey)
+        setIsEnabled(data.isEnabled)
+      } catch (error) {
+        console.error("Failed to fetch reCAPTCHA config:", error)
+        setIsEnabled(false)
+      }
+    }
+
+    fetchSiteKey()
+  }, [])
+
+  useEffect(() => {
+    if (!isEnabled || !siteKey) return
+
     const loadRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.render && recaptchaRef.current) {
         try {
           widgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+            sitekey: siteKey,
             size: "invisible",
             callback: onVerify,
             "error-callback": () => {
               console.error("reCAPTCHA error")
+              onVerify("")
             },
             "expired-callback": () => {
               console.log("reCAPTCHA expired")
+              onVerify("")
             },
           })
 
@@ -71,7 +94,18 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
         }
       }
     }
-  }, [onVerify])
+  }, [onVerify, siteKey, isEnabled])
+
+  // If reCAPTCHA is not enabled, automatically call onVerify with a dummy token
+  useEffect(() => {
+    if (!isEnabled) {
+      onVerify("development-mode")
+    }
+  }, [isEnabled, onVerify])
+
+  if (!isEnabled) {
+    return null
+  }
 
   return <div ref={recaptchaRef} className="invisible-recaptcha" />
 }

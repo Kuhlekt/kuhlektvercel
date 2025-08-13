@@ -1,18 +1,11 @@
 "use server"
 
 import { sendDemoRequestEmail } from "@/lib/email-service"
-import { validateAffiliate } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/captcha"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-interface DemoFormState {
-  success: boolean
-  message: string
-  errors?: Record<string, string>
-}
-
-export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
+export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    // Extract form data with consistent field names
+    // Extract form data
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
     const email = formData.get("email") as string
@@ -29,84 +22,88 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     // Validate required fields
     const errors: Record<string, string> = {}
 
-    if (!firstName || firstName.trim().length === 0) {
+    if (!firstName?.trim()) {
       errors.firstName = "First name is required"
     }
 
-    if (!lastName || lastName.trim().length === 0) {
+    if (!lastName?.trim()) {
       errors.lastName = "Last name is required"
     }
 
-    if (!email || email.trim().length === 0) {
+    if (!email?.trim()) {
       errors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
-    if (!company || company.trim().length === 0) {
+    if (!company?.trim()) {
       errors.company = "Company name is required"
     }
 
-    if (!phone || phone.trim().length === 0) {
+    if (!phone?.trim()) {
       errors.phone = "Phone number is required"
     }
 
     if (Object.keys(errors).length > 0) {
       return {
         success: false,
-        message: "Please fix the errors below",
+        message: "Please correct the errors below",
         errors,
       }
     }
 
-    // Verify reCAPTCHA (non-blocking)
-    let captchaVerified = false
-    if (captchaToken) {
-      try {
-        captchaVerified = await verifyCaptcha(captchaToken)
-      } catch (error) {
-        console.error("reCAPTCHA verification error:", error)
-        // Continue with form submission even if reCAPTCHA fails
+    // Validate affiliate code if provided
+    let isValidAffiliate = true
+    if (affiliateCode?.trim()) {
+      isValidAffiliate = validateAffiliateCode(affiliateCode.trim())
+      if (!isValidAffiliate) {
+        return {
+          success: false,
+          message: "Invalid affiliate code provided",
+          errors: { affiliateCode: "Invalid affiliate code" },
+        }
       }
     }
 
-    // Validate affiliate code if provided
-    let validAffiliate = null
-    if (affiliateCode && affiliateCode.trim().length > 0) {
-      validAffiliate = validateAffiliate(affiliateCode.trim())
-    }
-
-    // Send email using the email service
-    const emailResult = await sendDemoRequestEmail({
+    // Prepare email data
+    const emailData = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
       company: company.trim(),
+      phone: phone.trim(),
       jobTitle: jobTitle?.trim() || "",
-      phone: phone?.trim() || "",
       companySize: companySize?.trim() || "",
       currentSolution: currentSolution?.trim() || "",
-      challenges: challenges?.trim() || "",
       timeline: timeline?.trim() || "",
-    })
+      challenges: challenges?.trim() || "",
+      affiliateCode: affiliateCode?.trim() || "",
+      captchaToken: captchaToken || "",
+    }
+
+    // Send email
+    const emailResult = await sendDemoRequestEmail(emailData)
 
     if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
       return {
         success: false,
-        message: "There was an error submitting your demo request. Please try again or contact us directly.",
+        message: "Failed to send demo request. Please try again or contact support.",
+        errors: {},
       }
     }
 
     return {
       success: true,
-      message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
+      message:
+        "Demo request submitted successfully! We'll contact you within 24 hours to schedule your personalized demo.",
+      errors: {},
     }
   } catch (error) {
     console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again.",
+      message: "An unexpected error occurred. Please try again later.",
+      errors: {},
     }
   }
 }

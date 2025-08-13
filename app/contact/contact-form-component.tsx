@@ -43,61 +43,100 @@ export default function ContactFormComponent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Contact Us</h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Ready to transform your accounts receivable process? Get in touch with our team to learn how Kuhlekt can
-              help you reduce DSO and improve cash flow.
+            <p className="text-xl text-gray-600">
+              Get in touch with our team. We're here to help you streamline your accounts receivable process.
             </p>
           </div>
 
           {/* Contact Form */}
           <Card className="shadow-xl">
             <CardHeader>
-              <CardTitle className="text-2xl">Get in Touch</CardTitle>
-              <CardDescription>Fill out the form below and we'll get back to you within 24 hours.</CardDescription>
+              <CardTitle className="text-2xl">Send us a message</CardTitle>
+              <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="name"
-                      name="name"
+                      id="firstName"
+                      name="firstName"
                       type="text"
                       required
-                      className={state.errors?.name ? "border-red-500" : ""}
+                      className={state.errors?.firstName ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.name && <p className="text-sm text-red-600">{state.errors.name}</p>}
+                    {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="lastName">Last Name *</Label>
                     <Input
-                      id="email"
-                      name="email"
-                      type="email"
+                      id="lastName"
+                      name="lastName"
+                      type="text"
                       required
-                      className={state.errors?.email ? "border-red-500" : ""}
+                      className={state.errors?.lastName ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
+                    {state.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    className={state.errors?.email ? "border-red-500" : ""}
+                    disabled={isPending}
+                  />
+                  {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company Name *</Label>
                   <Input
                     id="company"
                     name="company"
                     type="text"
+                    required
                     className={state.errors?.company ? "border-red-500" : ""}
                     disabled={isPending}
                   />
                   {state.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    className={state.errors?.phone ? "border-red-500" : ""}
+                    disabled={isPending}
+                  />
+                  {state.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Subject *</Label>
+                  <Input
+                    id="subject"
+                    name="subject"
+                    type="text"
+                    required
+                    className={state.errors?.subject ? "border-red-500" : ""}
+                    disabled={isPending}
+                  />
+                  {state.errors?.subject && <p className="text-sm text-red-600">{state.errors.subject}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -106,7 +145,7 @@ export default function ContactFormComponent() {
                     id="message"
                     name="message"
                     rows={4}
-                    placeholder="Tell us about your accounts receivable challenges or questions..."
+                    placeholder="Tell us how we can help you..."
                     className={state.errors?.message ? "border-red-500" : ""}
                     disabled={isPending}
                   />
