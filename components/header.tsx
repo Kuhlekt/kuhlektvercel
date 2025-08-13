@@ -2,9 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
-import Image from "next/image"
+import { Button } from "@/components/ui/button"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -22,13 +21,7 @@ export function Header() {
         <div className="flex lg:flex-1">
           <Link href="/" className="-m-1.5 p-1.5">
             <span className="sr-only">Kuhlekt</span>
-            <Image
-              className="h-8 w-auto"
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
-              alt="Kuhlekt Logo"
-              width={120}
-              height={32}
-            />
+            <img className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" />
           </Link>
         </div>
         <div className="flex lg:hidden">
@@ -46,7 +39,7 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600"
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-cyan-600 transition-colors"
             >
               {item.name}
             </Link>
@@ -54,12 +47,12 @@ export function Header() {
         </div>
         <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
           <Link href="/contact">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" className="bg-transparent">
               Contact Us
             </Button>
           </Link>
           <Link href="/demo">
-            <Button size="sm">Get Demo</Button>
+            <Button className="bg-cyan-500 hover:bg-cyan-600">Get Demo</Button>
           </Link>
         </div>
       </nav>
@@ -71,13 +64,7 @@ export function Header() {
             <div className="flex items-center justify-between">
               <Link href="/" className="-m-1.5 p-1.5">
                 <span className="sr-only">Kuhlekt</span>
-                <Image
-                  className="h-8 w-auto"
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
-                  alt="Kuhlekt Logo"
-                  width={120}
-                  height={32}
-                />
+                <img className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" />
               </Link>
               <button
                 type="button"
@@ -103,13 +90,19 @@ export function Header() {
                   ))}
                 </div>
                 <div className="py-6 space-y-2">
-                  <Link href="/contact" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full bg-transparent">
-                      Contact Us
-                    </Button>
+                  <Link
+                    href="/contact"
+                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Contact Us
                   </Link>
-                  <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full">Get Demo</Button>
+                  <Link
+                    href="/demo"
+                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-cyan-600 hover:bg-gray-50"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Get Demo
                   </Link>
                 </div>
               </div>
@@ -121,5 +114,4 @@ export function Header() {
   )
 }
 
-// Export as default as well to support both import styles
 export default Header
