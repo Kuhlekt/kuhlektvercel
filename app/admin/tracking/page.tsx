@@ -4,26 +4,40 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, TrendingUp, MapPin, Eye, MousePointer, Globe, RefreshCw, BarChart3, PieChart } from "lucide-react"
+import {
+  Users,
+  TrendingUp,
+  MapPin,
+  Eye,
+  MousePointer,
+  Globe,
+  RefreshCw,
+  BarChart3,
+  PieChart,
+  Download,
+  Trash2,
+} from "lucide-react"
 
 interface Visitor {
-  id: string
-  timestamp: number
-  ip: string
-  userAgent: string
-  page: string
-  referrer: string
-  location?: {
-    country: string
-    city: string
-  }
+  visitorId: string
   sessionId: string
-  isActive: boolean
+  firstVisit: string
+  lastVisit: string
+  pageViews: number
+  referrer: string
+  userAgent: string
+  currentPage: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmTerm?: string
+  utmContent?: string
+  affiliate?: string
 }
 
 interface PageHistory {
   page: string
-  timestamp: number
+  timestamp: string
   sessionId: string
 }
 
@@ -35,8 +49,10 @@ export default function TrackingPage() {
 
   // Get all visitors from localStorage
   const getAllVisitors = (): Visitor[] => {
+    if (typeof window === "undefined") return []
+
     try {
-      const stored = localStorage.getItem("kuhlekt_visitors")
+      const stored = localStorage.getItem("kuhlekt_all_visitors")
       if (stored) {
         const parsed = JSON.parse(stored)
         return Array.isArray(parsed) ? parsed : []
@@ -49,6 +65,8 @@ export default function TrackingPage() {
 
   // Get page history from localStorage
   const getPageHistory = (): PageHistory[] => {
+    if (typeof window === "undefined") return []
+
     try {
       const stored = localStorage.getItem("kuhlekt_page_history")
       if (stored) {
@@ -71,9 +89,77 @@ export default function TrackingPage() {
     setIsLoading(false)
   }
 
+  // Clear all data
+  const clearAllData = () => {
+    if (typeof window === "undefined") return
+
+    if (confirm("Are you sure you want to clear all tracking data? This action cannot be undone.")) {
+      localStorage.removeItem("kuhlekt_all_visitors")
+      localStorage.removeItem("kuhlekt_page_history")
+      localStorage.removeItem("kuhlekt_visitor_data")
+      localStorage.removeItem("kuhlekt_visitor_id")
+      sessionStorage.removeItem("kuhlekt_session_id")
+
+      setVisitors([])
+      setPageHistory([])
+
+      alert("All tracking data has been cleared.")
+    }
+  }
+
+  // Export data as CSV
+  const exportData = () => {
+    if (visitors.length === 0) {
+      alert("No data to export")
+      return
+    }
+
+    const csvHeaders = [
+      "Visitor ID",
+      "Session ID",
+      "First Visit",
+      "Last Visit",
+      "Page Views",
+      "Referrer",
+      "Current Page",
+      "UTM Source",
+      "UTM Medium",
+      "UTM Campaign",
+      "Affiliate",
+      "User Agent",
+    ]
+
+    const csvData = visitors.map((visitor) => [
+      visitor.visitorId,
+      visitor.sessionId,
+      visitor.firstVisit,
+      visitor.lastVisit,
+      visitor.pageViews,
+      visitor.referrer,
+      visitor.currentPage,
+      visitor.utmSource || "",
+      visitor.utmMedium || "",
+      visitor.utmCampaign || "",
+      visitor.affiliate || "",
+      visitor.userAgent,
+    ])
+
+    const csvContent = [csvHeaders, ...csvData].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-visitor-data-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
   // Filter data by time range
   const getFilteredData = () => {
-    const now = Date.now()
+    const now = new Date().getTime()
     const timeRanges = {
       "1h": 60 * 60 * 1000,
       "24h": 24 * 60 * 60 * 1000,
@@ -84,15 +170,17 @@ export default function TrackingPage() {
 
     const timeRange_ms = timeRanges[timeRange as keyof typeof timeRanges] || timeRanges["24h"]
 
-    const filteredVisitors =
-      timeRange_ms === Number.POSITIVE_INFINITY
-        ? visitors
-        : visitors.filter((visitor) => now - visitor.timestamp <= timeRange_ms)
+    const filteredVisitors = visitors.filter((visitor) => {
+      if (timeRange_ms === Number.POSITIVE_INFINITY) return true
+      const visitTime = new Date(visitor.lastVisit).getTime()
+      return now - visitTime <= timeRange_ms
+    })
 
-    const filteredPageHistory =
-      timeRange_ms === Number.POSITIVE_INFINITY
-        ? pageHistory
-        : pageHistory.filter((page) => now - page.timestamp <= timeRange_ms)
+    const filteredPageHistory = pageHistory.filter((page) => {
+      if (timeRange_ms === Number.POSITIVE_INFINITY) return true
+      const pageTime = new Date(page.timestamp).getTime()
+      return now - pageTime <= timeRange_ms
+    })
 
     return { filteredVisitors, filteredPageHistory }
   }
@@ -103,8 +191,7 @@ export default function TrackingPage() {
 
     // Basic stats
     const totalVisitors = filteredVisitors.length
-    const uniqueVisitors = filteredVisitors.length > 0 ? new Set(filteredVisitors.map((v) => v.ip)).size : 0
-    const activeVisitors = filteredVisitors.filter((v) => v.isActive).length
+    const uniqueVisitors = filteredVisitors.length > 0 ? new Set(filteredVisitors.map((v) => v.visitorId)).size : 0
     const totalPageViews = filteredPageHistory.length
 
     // Top pages
@@ -125,7 +212,7 @@ export default function TrackingPage() {
     const sources = filteredVisitors.reduce(
       (acc, visitor) => {
         let source = "Direct"
-        if (visitor.referrer && visitor.referrer !== "(direct)") {
+        if (visitor.referrer && visitor.referrer !== "direct" && visitor.referrer !== "(direct)") {
           try {
             source = new URL(visitor.referrer).hostname
           } catch {
@@ -143,20 +230,20 @@ export default function TrackingPage() {
       .slice(0, 5)
       .map(([source, visits]) => ({ source, visits }))
 
-    // Countries
-    const countries = filteredVisitors.reduce(
+    // UTM campaigns
+    const campaigns = filteredVisitors.reduce(
       (acc, visitor) => {
-        const country = visitor.location?.country || "Unknown"
-        acc[country] = (acc[country] || 0) + 1
+        const campaign = visitor.utmCampaign || "None"
+        acc[campaign] = (acc[campaign] || 0) + 1
         return acc
       },
       {} as Record<string, number>,
     )
 
-    const topCountries = Object.entries(countries)
+    const topCampaigns = Object.entries(campaigns)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map(([country, visits]) => ({ country, visits }))
+      .map(([campaign, visits]) => ({ campaign, visits }))
 
     // Calculate bounce rate (visitors who viewed only one page)
     const sessionPageCounts = filteredPageHistory.reduce(
@@ -178,11 +265,10 @@ export default function TrackingPage() {
     return {
       totalVisitors,
       uniqueVisitors,
-      activeVisitors,
       totalPageViews,
       topPages,
       topSources,
-      topCountries,
+      topCampaigns,
       bounceRate,
       avgPagesPerSession,
     }
@@ -191,6 +277,10 @@ export default function TrackingPage() {
   // Initial load
   useEffect(() => {
     loadData()
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const analytics = calculateAnalytics()
@@ -203,8 +293,16 @@ export default function TrackingPage() {
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={loadData}>
-                <RefreshCw className="w-4 h-4 mr-2" />
+              <Button variant="outline" size="sm" onClick={exportData} disabled={visitors.length === 0}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearAllData}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Data
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
             </div>
@@ -347,26 +445,26 @@ export default function TrackingPage() {
 
         {/* Additional Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Top Countries */}
+          {/* UTM Campaigns */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
-                Top Countries
+                UTM Campaigns
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {analytics.topCountries.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No location data available</p>
+              {analytics.topCampaigns.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No campaign data available</p>
               ) : (
                 <div className="space-y-4">
-                  {analytics.topCountries.map((country, index) => (
-                    <div key={country.country} className="flex items-center justify-between">
+                  {analytics.topCampaigns.map((campaign, index) => (
+                    <div key={campaign.campaign} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
-                        <span className="font-medium">{country.country}</span>
+                        <span className="font-medium">{campaign.campaign}</span>
                       </div>
-                      <Badge variant="secondary">{country.visits} visits</Badge>
+                      <Badge variant="secondary">{campaign.visits} visits</Badge>
                     </div>
                   ))}
                 </div>
@@ -385,8 +483,8 @@ export default function TrackingPage() {
             <CardContent>
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Active Visitors</span>
-                  <Badge variant="default">{analytics.activeVisitors}</Badge>
+                  <span className="font-medium">Total Sessions</span>
+                  <Badge variant="default">{new Set(visitors.map((v) => v.sessionId)).size}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Avg. Pages/Session</span>
