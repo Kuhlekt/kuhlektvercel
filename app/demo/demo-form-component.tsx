@@ -1,315 +1,264 @@
 "use client"
 
+import { useState } from "react"
 import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, XCircle, Clock, Users, TrendingUp, Shield } from "lucide-react"
-import { submitDemoForm } from "./actions"
+import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
-import { useState } from "react"
+import { submitDemoRequest } from "./actions"
 
 const initialState = {
   success: false,
   message: "",
+  errors: {},
 }
 
 export default function DemoFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitDemoForm, initialState)
+  const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
   const [captchaToken, setCaptchaToken] = useState<string>("")
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Request Your Free Demo</h1>
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Request a Demo</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how Kuhlekt can transform your accounts receivable process. Get a personalized demo tailored to your
-              business needs.
+              See how Kuhlekt can transform your accounts receivable process. Schedule a personalized demo with our team
+              and discover how to reduce DSO by up to 35%.
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-2 gap-12">
             {/* Demo Form */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Schedule Your Demo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form action={formAction} className="space-y-6">
-                    <input type="hidden" name="captchaToken" value={captchaToken} />
+            <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-2xl">Schedule Your Demo</CardTitle>
+                <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={formAction} className="space-y-6">
+                  <input type="hidden" name="captchaToken" value={captchaToken} />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name *</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          type="text"
-                          required
-                          className="mt-1"
-                          placeholder="John"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          type="text"
-                          required
-                          className="mt-1"
-                          placeholder="Smith"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="email">Business Email *</Label>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        className="mt-1"
-                        placeholder="john.smith@company.com"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="companyName">Company Name *</Label>
-                        <Input
-                          id="companyName"
-                          name="companyName"
-                          type="text"
-                          required
-                          className="mt-1"
-                          placeholder="Your Company Inc."
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phoneNumber">Phone Number *</Label>
-                        <Input
-                          id="phoneNumber"
-                          name="phoneNumber"
-                          type="tel"
-                          required
-                          className="mt-1"
-                          placeholder="+1 (555) 123-4567"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="jobTitle">Job Title *</Label>
-                      <Input
-                        id="jobTitle"
-                        name="jobTitle"
+                        id="firstName"
+                        name="firstName"
                         type="text"
                         required
-                        className="mt-1"
-                        placeholder="CFO, Finance Manager, etc."
+                        className={state.errors?.firstName ? "border-red-500" : ""}
                       />
+                      {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
-
-                    <div>
-                      <Label htmlFor="companySize">Company Size</Label>
-                      <Select name="companySize">
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select company size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1-10">1-10 employees</SelectItem>
-                          <SelectItem value="11-50">11-50 employees</SelectItem>
-                          <SelectItem value="51-200">51-200 employees</SelectItem>
-                          <SelectItem value="201-500">201-500 employees</SelectItem>
-                          <SelectItem value="500+">500+ employees</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="currentArProcess">Current AR Process</Label>
-                      <Select name="currentArProcess">
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="How do you currently manage AR?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual processes (Excel, email)</SelectItem>
-                          <SelectItem value="basic-software">Basic accounting software</SelectItem>
-                          <SelectItem value="erp">ERP system</SelectItem>
-                          <SelectItem value="ar-software">Dedicated AR software</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="painPoints">Main Pain Points (Optional)</Label>
-                      <Textarea
-                        id="painPoints"
-                        name="painPoints"
-                        rows={3}
-                        className="mt-1"
-                        placeholder="What challenges are you facing with your current AR process?"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="timeframe">Implementation Timeframe</Label>
-                      <Select name="timeframe">
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="When are you looking to implement?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="immediate">Immediate (within 1 month)</SelectItem>
-                          <SelectItem value="short-term">Short-term (1-3 months)</SelectItem>
-                          <SelectItem value="medium-term">Medium-term (3-6 months)</SelectItem>
-                          <SelectItem value="long-term">Long-term (6+ months)</SelectItem>
-                          <SelectItem value="exploring">Just exploring options</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input
-                        id="affiliateCode"
-                        name="affiliateCode"
+                        id="lastName"
+                        name="lastName"
                         type="text"
-                        className="mt-1"
-                        placeholder="Enter affiliate code if you have one"
+                        required
+                        className={state.errors?.lastName ? "border-red-500" : ""}
                       />
+                      {state.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                     </div>
+                  </div>
 
-                    <div className="flex justify-center">
-                      <ReCAPTCHA onVerify={setCaptchaToken} />
-                    </div>
-
-                    {state?.message && (
-                      <Alert className={state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                        <div className="flex items-center gap-2">
-                          {state.success ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-600" />
-                          )}
-                          <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
-                            {state.message}
-                          </AlertDescription>
-                        </div>
-                      </Alert>
+                  <div className="space-y-2">
+                    <Label htmlFor="businessEmail">Business Email *</Label>
+                    <Input
+                      id="businessEmail"
+                      name="businessEmail"
+                      type="email"
+                      required
+                      className={state.errors?.businessEmail ? "border-red-500" : ""}
+                    />
+                    {state.errors?.businessEmail && (
+                      <p className="text-sm text-red-600">{state.errors.businessEmail}</p>
                     )}
+                  </div>
 
-                    <Button
-                      type="submit"
-                      disabled={isPending}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company Name *</Label>
+                    <Input
+                      id="companyName"
+                      name="companyName"
+                      type="text"
+                      required
+                      className={state.errors?.companyName ? "border-red-500" : ""}
+                    />
+                    {state.errors?.companyName && <p className="text-sm text-red-600">{state.errors.companyName}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      type="tel"
+                      required
+                      className={state.errors?.phoneNumber ? "border-red-500" : ""}
+                    />
+                    {state.errors?.phoneNumber && <p className="text-sm text-red-600">{state.errors.phoneNumber}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="arChallenges">Current AR Challenges (Optional)</Label>
+                    <Textarea
+                      id="arChallenges"
+                      name="arChallenges"
+                      rows={3}
+                      placeholder="Tell us about your current accounts receivable challenges..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
+                    <Input
+                      id="affiliateCode"
+                      name="affiliateCode"
+                      type="text"
+                      placeholder="Enter affiliate code if you have one"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <ReCAPTCHA onVerify={setCaptchaToken} />
+
+                    <Button type="submit" className="w-full" disabled={isPending || !captchaToken}>
                       {isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Requesting Demo...
+                          Scheduling Demo...
                         </>
                       ) : (
-                        "Request Free Demo"
+                        "Schedule Demo"
                       )}
                     </Button>
+                  </div>
 
-                    <p className="text-sm text-gray-500 text-center">
-                      * Required fields. We'll contact you within 24 hours.
-                    </p>
-                  </form>
+                  {state.message && (
+                    <Alert className={state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
+                      {state.success ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
+                        {state.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Demo Benefits */}
+            <div className="space-y-8">
+              <Card className="shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-2xl">What You'll See in Your Demo</CardTitle>
+                  <CardDescription>Discover how Kuhlekt can transform your AR process</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-start space-x-4">
+                    <TrendingUp className="h-6 w-6 text-blue-600 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Real-time Dashboard</h3>
+                      <p className="text-gray-600">See live AR metrics, aging reports, and cash flow projections</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4">
+                    <Users className="h-6 w-6 text-blue-600 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Customer Portal</h3>
+                      <p className="text-gray-600">Self-service portal for customers to view and pay invoices</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4">
+                    <Shield className="h-6 w-6 text-blue-600 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Automated Collections</h3>
+                      <p className="text-gray-600">Smart workflows that reduce manual work by 80%</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4">
+                    <Clock className="h-6 w-6 text-blue-600 mt-1" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Quick Implementation</h3>
+                      <p className="text-gray-600">Go live in as little as 2 weeks with our proven process</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Benefits Sidebar */}
-            <div className="space-y-6">
-              <Card>
+              <Card className="shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-lg">What You'll See in Your Demo</CardTitle>
+                  <CardTitle className="text-xl">Proven Results</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <TrendingUp className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-sm">Real-time AR Dashboard</h4>
-                      <p className="text-sm text-gray-600">See your complete receivables overview at a glance</p>
-                    </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-3xl font-bold text-blue-600">35%</div>
+                    <div className="text-sm text-gray-600">Average DSO Reduction</div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-sm">Automated Workflows</h4>
-                      <p className="text-sm text-gray-600">Streamline follow-ups and payment reminders</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">80%</div>
+                      <div className="text-xs text-gray-600">Less Manual Work</div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Users className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-sm">Customer Portal</h4>
-                      <p className="text-sm text-gray-600">Self-service payment and dispute resolution</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-sm">Risk Management</h4>
-                      <p className="text-sm text-gray-600">AI-powered credit scoring and risk assessment</p>
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">2 Weeks</div>
+                      <div className="text-xs text-gray-600">Implementation</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-lg">Demo Process</CardTitle>
+                  <CardTitle className="text-xl">Demo Process</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                       1
                     </div>
-                    <p className="text-sm">We'll contact you within 24 hours</p>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Discovery Call</h4>
+                      <p className="text-sm text-gray-600">15-minute call to understand your needs</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
+
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                       2
                     </div>
-                    <p className="text-sm">Schedule a convenient time for your demo</p>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Personalized Demo</h4>
+                      <p className="text-sm text-gray-600">45-minute demo tailored to your business</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
+
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                       3
                     </div>
-                    <p className="text-sm">30-minute personalized demonstration</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
-                      4
+                    <div>
+                      <h4 className="font-medium text-gray-900">Implementation Plan</h4>
+                      <p className="text-sm text-gray-600">Custom roadmap for your success</p>
                     </div>
-                    <p className="text-sm">Q&A and next steps discussion</p>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">Typical Results</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• 40% reduction in DSO</li>
-                    <li>• 60% less manual work</li>
-                    <li>• 25% improvement in cash flow</li>
-                    <li>• 90% faster month-end close</li>
-                  </ul>
                 </CardContent>
               </Card>
             </div>
