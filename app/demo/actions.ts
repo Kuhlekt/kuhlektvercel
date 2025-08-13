@@ -1,49 +1,56 @@
 "use server"
 
 import { sendDemoRequestEmail } from "@/lib/email-service"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/captcha"
+import { verifyCaptcha } from "@/lib/recaptcha-actions"
 
-export interface DemoFormState {
+interface DemoFormState {
   success: boolean
   message: string
-  errors?: Record<string, string>
+  errors: Record<string, string>
 }
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
     // Extract form data
-    const firstName = formData.get("firstName")?.toString()?.trim() || ""
-    const lastName = formData.get("lastName")?.toString()?.trim() || ""
-    const email = formData.get("email")?.toString()?.trim() || ""
-    const company = formData.get("company")?.toString()?.trim() || ""
-    const phone = formData.get("phone")?.toString()?.trim() || ""
-    const jobTitle = formData.get("jobTitle")?.toString()?.trim() || ""
-    const companySize = formData.get("companySize")?.toString()?.trim() || ""
-    const currentSolution = formData.get("currentSolution")?.toString()?.trim() || ""
-    const timeline = formData.get("timeline")?.toString()?.trim() || ""
-    const challenges = formData.get("challenges")?.toString()?.trim() || ""
-    const affiliateCode = formData.get("affiliateCode")?.toString()?.trim() || ""
-    const recaptchaToken = formData.get("recaptchaToken")?.toString()?.trim() || ""
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const jobTitle = formData.get("jobTitle") as string
+    const phone = formData.get("phone") as string
+    const companySize = formData.get("companySize") as string
+    const currentSolution = formData.get("currentSolution") as string
+    const timeline = formData.get("timeline") as string
+    const challenges = formData.get("challenges") as string
+    const captchaToken = formData.get("captchaToken") as string
 
     // Validation
     const errors: Record<string, string> = {}
 
-    if (!firstName) errors.firstName = "First name is required"
-    if (!lastName) errors.lastName = "Last name is required"
-    if (!email) errors.email = "Email is required"
-    if (!company) errors.company = "Company name is required"
-    if (!phone) errors.phone = "Phone number is required"
+    if (!firstName?.trim()) {
+      errors.firstName = "First name is required"
+    }
 
-    // Email validation
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!lastName?.trim()) {
+      errors.lastName = "Last name is required"
+    }
+
+    if (!email?.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
-    // Phone validation
-    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
-    if (phone && !phoneRegex.test(phone.replace(/[\s\-$$$$]/g, ""))) {
-      errors.phone = "Please enter a valid phone number"
+    if (!company?.trim()) {
+      errors.company = "Company name is required"
+    }
+
+    if (!jobTitle?.trim()) {
+      errors.jobTitle = "Job title is required"
+    }
+
+    if (!companySize?.trim()) {
+      errors.companySize = "Company size is required"
     }
 
     if (Object.keys(errors).length > 0) {
@@ -54,64 +61,43 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       }
     }
 
-    // Verify reCAPTCHA
-    const captchaValid = await verifyCaptcha(recaptchaToken)
-    if (!captchaValid) {
-      return {
-        success: false,
-        message: "Please complete the reCAPTCHA verification",
-        errors: {},
-      }
-    }
-
-    // Validate affiliate code if provided
-    let affiliateInfo = null
-    if (affiliateCode) {
-      const isValidAffiliate = validateAffiliateCode(affiliateCode)
-      if (!isValidAffiliate) {
-        errors.affiliateCode = "Invalid affiliate code"
+    // Verify reCAPTCHA if token is provided and not disabled
+    if (captchaToken && captchaToken !== "disabled" && captchaToken !== "error") {
+      const captchaValid = await verifyCaptcha(captchaToken)
+      if (!captchaValid) {
         return {
           success: false,
-          message: "Please check your affiliate code",
-          errors,
+          message: "Security verification failed. Please try again.",
+          errors: {},
         }
       }
-      affiliateInfo = { code: affiliateCode, isValid: true }
     }
 
-    // Send demo request email
-    const emailSent = await sendDemoRequestEmail({
+    // Send email notification
+    await sendDemoRequestEmail({
       firstName,
       lastName,
       email,
-      phone,
       company,
       jobTitle,
+      phone: phone || undefined,
       companySize,
-      currentSolution,
-      timeline,
-      challenges,
-      affiliateCode,
-      affiliateInfo,
+      currentSolution: currentSolution || undefined,
+      timeline: timeline || undefined,
+      challenges: challenges || undefined,
     })
-
-    if (!emailSent) {
-      return {
-        success: false,
-        message: "Failed to send demo request. Please try again.",
-        errors: {},
-      }
-    }
 
     return {
       success: true,
-      message: "Thank you! Your demo request has been submitted successfully. We'll contact you within 24 hours.",
+      message: "Thank you for your interest! We'll contact you within 24 hours to schedule your personalized demo.",
+      errors: {},
     }
   } catch (error) {
-    console.error("Demo request submission error:", error)
+    console.error("Demo request error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "There was an error submitting your request. Please try again or contact us directly.",
+      errors: {},
     }
   }
 }

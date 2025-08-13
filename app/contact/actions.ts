@@ -1,9 +1,9 @@
 "use server"
 
 import { sendContactEmail } from "@/lib/email-service"
-import { verifyCaptcha } from "@/lib/captcha"
+import { verifyCaptcha } from "@/lib/recaptcha-actions"
 
-export interface ContactFormState {
+interface ContactFormState {
   success: boolean
   message: string
   errors: Record<string, string>
@@ -12,26 +12,38 @@ export interface ContactFormState {
 export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
   try {
     // Extract form data
-    const firstName = formData.get("firstName")?.toString()?.trim() || ""
-    const lastName = formData.get("lastName")?.toString()?.trim() || ""
-    const email = formData.get("email")?.toString()?.trim() || ""
-    const company = formData.get("company")?.toString()?.trim() || ""
-    const phone = formData.get("phone")?.toString()?.trim() || ""
-    const message = formData.get("message")?.toString()?.trim() || ""
-    const captchaToken = formData.get("captchaToken")?.toString()?.trim() || ""
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const phone = formData.get("phone") as string
+    const subject = formData.get("subject") as string
+    const message = formData.get("message") as string
+    const captchaToken = formData.get("captchaToken") as string
 
     // Validation
     const errors: Record<string, string> = {}
 
-    if (!firstName) errors.firstName = "First name is required"
-    if (!lastName) errors.lastName = "Last name is required"
-    if (!email) errors.email = "Email is required"
-    if (!message) errors.message = "Message is required"
+    if (!firstName?.trim()) {
+      errors.firstName = "First name is required"
+    }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (email && !emailRegex.test(email)) {
+    if (!lastName?.trim()) {
+      errors.lastName = "Last name is required"
+    }
+
+    if (!email?.trim()) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
+    }
+
+    if (!subject?.trim()) {
+      errors.subject = "Subject is required"
+    }
+
+    if (!message?.trim()) {
+      errors.message = "Message is required"
     }
 
     if (Object.keys(errors).length > 0) {
@@ -42,69 +54,40 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Verify reCAPTCHA
-    const captchaValid = await verifyCaptcha(captchaToken)
-    if (!captchaValid) {
-      return {
-        success: false,
-        message: "Please complete the reCAPTCHA verification",
-        errors: {},
+    // Verify reCAPTCHA if token is provided and not disabled
+    if (captchaToken && captchaToken !== "disabled" && captchaToken !== "error") {
+      const captchaValid = await verifyCaptcha(captchaToken)
+      if (!captchaValid) {
+        return {
+          success: false,
+          message: "Security verification failed. Please try again.",
+          errors: {},
+        }
       }
     }
 
-    // Send contact email
-    const emailSent = await sendContactEmail({
+    // Send email notification
+    await sendContactEmail({
       firstName,
       lastName,
       email,
-      company,
-      phone,
+      company: company || undefined,
+      phone: phone || undefined,
+      subject,
       message,
     })
 
-    if (!emailSent) {
-      return {
-        success: false,
-        message: "Failed to send message. Please try again.",
-        errors: {},
-      }
-    }
-
     return {
       success: true,
-      message: "Thank you for your message! We'll get back to you within 24 hours.",
+      message: "Thank you for your message! We'll get back to you within 2 hours during business hours.",
       errors: {},
     }
   } catch (error) {
-    console.error("Contact form submission error:", error)
+    console.error("Contact form error:", error)
     return {
       success: false,
-      message: "An error occurred while sending your message. Please try again.",
+      message: "There was an error sending your message. Please try again or contact us directly.",
       errors: {},
-    }
-  }
-}
-
-export async function testAWSSES(): Promise<{ success: boolean; message: string }> {
-  try {
-    const testResult = await sendContactEmail({
-      firstName: "Test",
-      lastName: "User",
-      email: "test@example.com",
-      phone: "555-123-4567",
-      company: "Test Company",
-      message: "This is a test message to verify AWS SES configuration.",
-    })
-
-    return {
-      success: testResult,
-      message: testResult ? "AWS SES test successful" : "AWS SES test failed",
-    }
-  } catch (error) {
-    console.error("AWS SES test error:", error)
-    return {
-      success: false,
-      message: `AWS SES test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     }
   }
 }

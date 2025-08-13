@@ -5,44 +5,34 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const visitorData = await request.json()
+    const body = await request.json()
 
-    // For now, just log the visitor data since we don't have the Supabase table set up
-    console.log("Visitor tracked:", {
-      page: visitorData.page,
-      timestamp: visitorData.timestamp,
-      utmSource: visitorData.utmSource,
-      affiliate: visitorData.affiliate,
-      visitorId: visitorData.visitorId?.slice(0, 10) + "...",
+    // Log visitor data for now (since Supabase table doesn't exist)
+    console.log("Visitor tracking data:", {
+      page: body.page,
+      referrer: body.referrer,
+      utm_source: body.utm_source,
+      utm_medium: body.utm_medium,
+      utm_campaign: body.utm_campaign,
+      affiliate_id: body.affiliate_id,
+      timestamp: body.timestamp,
     })
 
-    // TODO: Set up Supabase table 'visitor_tracking' with columns:
+    // TODO: When ready to implement database tracking, create a Supabase table called 'visitor_tracking' with columns:
     // - id (uuid, primary key)
-    // - visitor_id (text)
-    // - session_id (text)
-    // - timestamp (timestamptz)
     // - page (text)
-    // - referrer (text)
+    // - referrer (text, nullable)
+    // - utm_source (text, nullable)
+    // - utm_medium (text, nullable)
+    // - utm_campaign (text, nullable)
+    // - affiliate_id (text, nullable)
     // - user_agent (text)
-    // - utm_source (text)
-    // - utm_medium (text)
-    // - utm_campaign (text)
-    // - utm_term (text)
-    // - utm_content (text)
-    // - affiliate (text)
-    // - created_at (timestamptz, default now())
+    // - created_at (timestamp with time zone, default now())
 
-    // Insert visitor data into Supabase
-    // const { error } = await supabase.from("visitor_tracking").insert([visitorData])
-
-    // if (error) {
-    //   console.error("Error inserting visitor data:", error)
-    //   return NextResponse.json({ error: "Failed to track visitor" }, { status: 500 })
-    // }
-
-    return NextResponse.json({ success: true })
+    // For now, just return success
+    return NextResponse.json({ success: true, message: "Visitor tracked (logged only)" })
   } catch (error) {
     console.error("Error tracking visitor:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to track visitor" }, { status: 500 })
   }
 }

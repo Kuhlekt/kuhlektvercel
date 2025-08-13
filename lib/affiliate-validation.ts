@@ -10,6 +10,14 @@ export interface AffiliateInfo {
   discountPercentage?: number
 }
 
+export interface AffiliateData {
+  affiliateId?: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  referrer?: string
+}
+
 // Define affiliate codes and their information
 const AFFILIATE_CODES: Record<string, AffiliateInfo> = {
   PARTNER001: {
@@ -205,4 +213,85 @@ export function getAffiliateDiscount(code: string): number {
 
 export function getAllAffiliateCodes(): string[] {
   return Object.keys(AFFILIATE_CODES)
+}
+
+/**
+ * Validates an affiliate ID and returns boolean
+ * @param affiliateId - The affiliate ID to validate
+ * @returns true if valid, false otherwise
+ */
+export function validateAffiliateId(affiliateId: string): boolean {
+  // Basic validation - affiliate ID should be alphanumeric and 6-20 characters
+  const affiliateRegex = /^[a-zA-Z0-9]{6,20}$/
+  return affiliateRegex.test(affiliateId)
+}
+
+/**
+ * Extracts affiliate data from URL search parameters and referrer
+ * @param searchParams - URL search parameters
+ * @param referrer - Referrer URL
+ * @returns AffiliateData object
+ */
+export function extractAffiliateData(searchParams: URLSearchParams, referrer?: string): AffiliateData {
+  const affiliateId = searchParams.get("affiliate_id")
+  const utmSource = searchParams.get("utm_source")
+  const utmMedium = searchParams.get("utm_medium")
+  const utmCampaign = searchParams.get("utm_campaign")
+
+  return {
+    affiliateId: affiliateId && validateAffiliateId(affiliateId) ? affiliateId : undefined,
+    utmSource: utmSource || undefined,
+    utmMedium: utmMedium || undefined,
+    utmCampaign: utmCampaign || undefined,
+    referrer: referrer || undefined,
+  }
+}
+
+/**
+ * Generates a tracking pixel URL with affiliate data
+ * @param affiliateData - Affiliate data object
+ * @returns Tracking pixel URL
+ */
+export function generateTrackingPixel(affiliateData: AffiliateData): string {
+  const params = new URLSearchParams()
+
+  if (affiliateData.affiliateId) {
+    params.append("affiliate_id", affiliateData.affiliateId)
+  }
+  if (affiliateData.utmSource) {
+    params.append("utm_source", affiliateData.utmSource)
+  }
+  if (affiliateData.utmMedium) {
+    params.append("utm_medium", affiliateData.utmMedium)
+  }
+  if (affiliateData.utmCampaign) {
+    params.append("utm_campaign", affiliateData.utmCampaign)
+  }
+
+  return `/api/track-conversion?${params.toString()}`
+}
+
+/**
+ * Validates if the referrer is from a trusted domain
+ * @param referrer - Referrer URL
+ * @returns true if referrer is trusted, false otherwise
+ */
+export function isValidReferrer(referrer: string): boolean {
+  try {
+    const url = new URL(referrer)
+    // Add your trusted referrer domains here
+    const trustedDomains = [
+      "google.com",
+      "bing.com",
+      "yahoo.com",
+      "duckduckgo.com",
+      "linkedin.com",
+      "twitter.com",
+      "facebook.com",
+    ]
+
+    return trustedDomains.some((domain) => url.hostname.includes(domain))
+  } catch {
+    return false
+  }
 }
