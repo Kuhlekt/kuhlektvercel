@@ -2,268 +2,328 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, AlertCircle, Loader2, Mail, Phone, MapPin } from "lucide-react"
 import { submitContactForm } from "./actions"
-import Image from "next/image"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { getVisitorData } from "@/components/visitor-tracker"
+import ReCAPTCHA from "react-google-recaptcha"
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    company: "",
+    message: "",
+    affiliate: "",
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
-  const formRef = useRef<HTMLFormElement>(null)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: "success" | "error" | null
+    message: string
+  }>({ type: null, message: "" })
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const [siteKey, setSiteKey] = useState<string>("")
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  useEffect(() => {
+    // Load reCAPTCHA site key
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then((data) => setSiteKey(data.siteKey))
+      .catch((error) => console.error("Error loading reCAPTCHA config:", error))
+
+    // Auto-populate affiliate code from visitor data
+    const visitorData = getVisitorData()
+    if (visitorData?.affiliate) {
+      setFormData((prev) => ({ ...prev, affiliate: visitorData.affiliate }))
+    }
+  }, [])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!recaptchaToken) {
+      setSubmitStatus({
+        type: "error",
+        message: "Please complete the reCAPTCHA verification.",
+      })
+      return
+    }
+
     setIsSubmitting(true)
-    setMessage("")
-    setError("")
-
-    const formData = new FormData(event.currentTarget)
+    setSubmitStatus({ type: null, message: "" })
 
     try {
-      const result = await submitContactForm(formData)
+      const formDataToSubmit = new FormData()
+      formDataToSubmit.append("firstName", formData.firstName)
+      formDataToSubmit.append("lastName", formData.lastName)
+      formDataToSubmit.append("email", formData.email)
+      formDataToSubmit.append("company", formData.company)
+      formDataToSubmit.append("message", formData.message)
+      formDataToSubmit.append("affiliate", formData.affiliate)
+      formDataToSubmit.append("recaptchaToken", recaptchaToken)
+
+      const result = await submitContactForm(formDataToSubmit)
 
       if (result.success) {
-        setMessage(result.message || "Message sent successfully!")
-        // Clear form on success
-        formRef.current?.reset()
+        setSubmitStatus({
+          type: "success",
+          message: result.message || "Message sent successfully! We'll get back to you soon.",
+        })
+        // Reset form
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          company: "",
+          message: "",
+          affiliate: "",
+        })
+        setRecaptchaToken(null)
       } else {
-        setError(result.error || "Failed to send message")
+        setSubmitStatus({
+          type: "error",
+          message: result.message || "Failed to send message. Please try again.",
+        })
       }
     } catch (error) {
       console.error("Contact form submission error:", error)
-      setError("An unexpected error occurred. Please try again.")
+      setSubmitStatus({
+        type: "error",
+        message: "An unexpected error occurred. Please try again.",
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">Get in Touch</h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Ready to transform your accounts receivable process? Contact our team to learn how Kuhlekt can help your
-              business.
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
+          <p className="text-xl text-gray-600">Get in touch with our team to learn more about Kuhlekt</p>
+        </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Contact Information */}
-            <div className="bg-gray-50 p-8 lg:p-12 rounded-lg">
-              <div className="mb-8">
-                <Image src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={40} className="mb-6" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Let's Start a Conversation</h2>
-                <p className="text-gray-600 mb-8">
-                  Our team of AR automation experts is here to help you streamline your collections process and improve
-                  cash flow.
-                </p>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Contact Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Send us a Message</CardTitle>
+              <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {submitStatus.type && (
+                <Alert
+                  className={`mb-6 ${submitStatus.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                >
+                  {submitStatus.type === "success" ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <AlertDescription className={submitStatus.type === "success" ? "text-green-800" : "text-red-800"}>
+                    {submitStatus.message}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="bg-cyan-500 p-3 rounded-lg">
-                    <Mail className="h-6 w-6 text-white" />
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">
+                      First Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      required
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      placeholder="Enter your first name"
+                    />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Email Us</h3>
+                    <Label htmlFor="lastName">
+                      Last Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      required
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Enter your last name"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">
+                    Email Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter your business email"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="company">
+                    Company Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="company"
+                    name="company"
+                    type="text"
+                    required
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    placeholder="Enter your company name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="message">Message (Optional)</Label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    placeholder="Tell us how we can help you..."
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="affiliate">Affiliate/Referral Code (Optional)</Label>
+                  <Input
+                    id="affiliate"
+                    name="affiliate"
+                    type="text"
+                    value={formData.affiliate}
+                    onChange={handleInputChange}
+                    placeholder="Enter referral code if you have one"
+                  />
+                </div>
+
+                {siteKey && (
+                  <div className="flex justify-center">
+                    <ReCAPTCHA
+                      sitekey={siteKey}
+                      onChange={(token) => setRecaptchaToken(token)}
+                      onExpired={() => setRecaptchaToken(null)}
+                    />
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={isSubmitting || !recaptchaToken}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Message...
+                    </>
+                  ) : (
+                    "Send Message"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <div className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Get in Touch</CardTitle>
+                <CardDescription>Reach out to us through any of these channels</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <Mail className="h-6 w-6 text-blue-600 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Email</h3>
                     <p className="text-gray-600">info@kuhlekt.com</p>
-                    <p className="text-gray-600">support@kuhlekt.com</p>
+                    <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="bg-cyan-500 p-3 rounded-lg">
-                    <Phone className="h-6 w-6 text-white" />
-                  </div>
+                <div className="flex items-start space-x-4">
+                  <Phone className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Call Us</h3>
+                    <h3 className="font-semibold text-gray-900">Phone</h3>
                     <p className="text-gray-600">+1 (555) 123-4567</p>
-                    <p className="text-sm text-gray-500">Mon-Fri 9AM-6PM EST</p>
+                    <p className="text-sm text-gray-500">Monday - Friday, 9 AM - 6 PM EST</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="bg-cyan-500 p-3 rounded-lg">
-                    <MapPin className="h-6 w-6 text-white" />
-                  </div>
+                <div className="flex items-start space-x-4">
+                  <MapPin className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Visit Us</h3>
-                    <p className="text-gray-600">123 Business Ave</p>
-                    <p className="text-gray-600">Suite 100</p>
-                    <p className="text-gray-600">New York, NY 10001</p>
+                    <h3 className="font-semibold text-gray-900">Office</h3>
+                    <p className="text-gray-600">
+                      123 Business Ave
+                      <br />
+                      Suite 100
+                      <br />
+                      New York, NY 10001
+                    </p>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-4">Why Choose Kuhlekt?</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• Reduce DSO by up to 30%</li>
-                  <li>• Automate 80% of manual AR tasks</li>
-                  <li>• Improve cash flow predictability</li>
-                  <li>• 24/7 customer support</li>
-                  <li>• Easy integration with existing systems</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Contact Form */}
-            <div className="bg-white">
-              <div className="bg-white border border-gray-200 rounded-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
-
-                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                        First name *
-                      </Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
-                        required
-                        placeholder="John"
-                        className="mt-1"
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                        Last name *
-                      </Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
-                        required
-                        placeholder="Doe"
-                        className="mt-1"
-                        disabled={isSubmitting}
-                      />
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Business Hours</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Monday - Friday</span>
+                    <span className="font-medium">9:00 AM - 6:00 PM EST</span>
                   </div>
-
-                  <div>
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                      Email *
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      placeholder="john.doe@company.com"
-                      className="mt-1"
-                      disabled={isSubmitting}
-                    />
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Saturday</span>
+                    <span className="font-medium">10:00 AM - 2:00 PM EST</span>
                   </div>
-
-                  <div>
-                    <Label htmlFor="company" className="text-sm font-medium text-gray-700">
-                      Company *
-                    </Label>
-                    <Input
-                      id="company"
-                      name="company"
-                      type="text"
-                      required
-                      placeholder="Acme Inc."
-                      className="mt-1"
-                      disabled={isSubmitting}
-                    />
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sunday</span>
+                    <span className="font-medium">Closed</span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                  <div>
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Phone (Optional)
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                      className="mt-1"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
-                      Subject *
-                    </Label>
-                    <Input
-                      id="subject"
-                      name="subject"
-                      type="text"
-                      required
-                      placeholder="How can we help you?"
-                      className="mt-1"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="message" className="text-sm font-medium text-gray-700">
-                      Message (Optional)
-                    </Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      placeholder="Tell us more about your needs..."
-                      className="mt-1 min-h-[120px]"
-                      rows={5}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="affiliateCode" className="text-sm font-medium text-gray-700">
-                      Affiliate Code (Optional)
-                    </Label>
-                    <Input
-                      id="affiliateCode"
-                      name="affiliateCode"
-                      type="text"
-                      placeholder="Enter your affiliate code if you have one"
-                      className="mt-1"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-3 text-lg font-semibold"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Sending..." : "Send Message"}
-                  </Button>
-
-                  <p className="text-sm text-gray-500 text-center">* Required fields. We'll respond within 24 hours.</p>
-                </form>
-
-                {message && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800">{message}</p>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-800">{error}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Need a Demo?</CardTitle>
+                <CardDescription>See Kuhlekt in action with a personalized demonstration</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild className="w-full">
+                  <a href="/demo">Request a Demo</a>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

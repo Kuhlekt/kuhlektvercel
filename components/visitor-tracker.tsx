@@ -84,7 +84,7 @@ function dispatchStorageEvent(key: string, newValue: any) {
   }
 }
 
-export default function VisitorTracker() {
+export function VisitorTracker() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
