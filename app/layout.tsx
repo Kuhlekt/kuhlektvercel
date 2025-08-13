@@ -5,62 +5,26 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Kuhlekt - AI-Powered Accounts Receivable Management",
+  title: "Kuhlekt - AR Automation & Digital Collections Platform",
   description:
-    "Transform your accounts receivable with Kuhlekt's AI-driven platform. Reduce DSO by 40% and increase collection rates by 60%. Get started with a free demo today.",
-  keywords: "accounts receivable, collections, AI, automation, DSO, cash flow, invoice management",
-  authors: [{ name: "Kuhlekt" }],
-  creator: "Kuhlekt",
-  publisher: "Kuhlekt",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://kuhlekt.com"),
-  openGraph: {
-    title: "Kuhlekt - AI-Powered Accounts Receivable Management",
-    description:
-      "Transform your accounts receivable with Kuhlekt's AI-driven platform. Reduce DSO by 40% and increase collection rates by 60%.",
-    url: "/",
-    siteName: "Kuhlekt",
-    images: [
+    "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO, improve cash flow, and streamline collections.",
+  keywords: "accounts receivable, AR automation, digital collections, cash flow management, invoice processing",
+  icons: {
+    icon: [
       {
-        url: "/images/kuhlekt-dashboard-interface.png",
-        width: 1200,
-        height: 630,
-        alt: "Kuhlekt Dashboard Interface",
+        url: "/favicon.gif",
+        type: "image/gif",
       },
     ],
-    locale: "en_US",
-    type: "website",
+    shortcut: "/favicon.gif",
+    apple: "/favicon.gif",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Kuhlekt - AI-Powered Accounts Receivable Management",
-    description:
-      "Transform your accounts receivable with Kuhlekt's AI-driven platform. Reduce DSO by 40% and increase collection rates by 60%.",
-    images: ["/images/kuhlekt-dashboard-interface.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  verification: {
-    google: "your-google-verification-code",
-  },
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -70,13 +34,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.gif" type="image/gif" />
+        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
+        <link rel="apple-touch-icon" href="/favicon.gif" />
+      </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <VisitorTracker />
         </ThemeProvider>
       </body>
     </html>
