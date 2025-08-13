@@ -1,7 +1,12 @@
 "use server"
 
 export async function getRecaptchaSiteKey(): Promise<string> {
-  return process.env.RECAPTCHA_SITE_KEY || ""
+  const siteKey = process.env.RECAPTCHA_SITE_KEY
+  if (!siteKey) {
+    console.warn("RECAPTCHA_SITE_KEY not configured")
+    return ""
+  }
+  return siteKey
 }
 
 export async function verifyRecaptcha(token: string): Promise<{
@@ -15,9 +20,21 @@ export async function verifyRecaptcha(token: string): Promise<{
 
     if (!secretKey) {
       console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification in development")
-      return { success: true, score: 0.9, action: "submit" }
+      return {
+        success: true,
+        score: 0.9,
+        action: "submit",
+      }
     }
 
+    if (!token) {
+      return {
+        success: false,
+        error: "No reCAPTCHA token provided",
+      }
+    }
+
+    // Verify the token with Google's reCAPTCHA API
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
       headers: {
@@ -29,20 +46,35 @@ export async function verifyRecaptcha(token: string): Promise<{
       }),
     })
 
+    if (!response.ok) {
+      throw new Error(`reCAPTCHA API request failed: ${response.status}`)
+    }
+
     const data = await response.json()
 
-    if (!response.ok) {
+    if (!data.success) {
+      console.error("reCAPTCHA verification failed:", data["error-codes"])
       return {
         success: false,
-        error: "Failed to verify reCAPTCHA",
+        error: "reCAPTCHA verification failed",
+      }
+    }
+
+    // For reCAPTCHA v3, check the score
+    if (data.score !== undefined) {
+      const score = Number.parseFloat(data.score)
+      if (score < 0.5) {
+        return {
+          success: false,
+          error: "Low reCAPTCHA score - possible bot activity",
+        }
       }
     }
 
     return {
-      success: data.success,
+      success: true,
       score: data.score,
       action: data.action,
-      error: data.success ? undefined : "reCAPTCHA verification failed",
     }
   } catch (error) {
     console.error("reCAPTCHA verification error:", error)

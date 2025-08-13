@@ -1,14 +1,54 @@
 User-agent: *
+Allow: /
 Disallow: /admin/
 Disallow: /api/admin/
 
+# Block all bots from admin areas
+User-agent: Googlebot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Bingbot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Slurp
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: DuckDuckBot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Baiduspider
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: YandexBot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: facebookexternalhit
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: Twitterbot
+Disallow: /admin/
+Disallow: /api/admin/
+
+User-agent: LinkedInBot
+Disallow: /admin/
+Disallow: /api/admin/
+
+# Allow public pages
 Allow: /
 Allow: /about
 Allow: /contact
 Allow: /demo
-Allow: /help
 Allow: /product
 Allow: /solutions
 Allow: /pricing-table
+Allow: /help
 
+# Sitemap
 Sitemap: https://kuhlekt.com/sitemap.xml

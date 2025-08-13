@@ -9,11 +9,6 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
-  // Ensure we're on the server
-  if (typeof window !== "undefined") {
-    throw new Error("Email service can only be used on the server")
-  }
-
   // Check if AWS SES is configured
   const region = process.env.AWS_SES_REGION
   const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
@@ -21,7 +16,13 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   const fromEmail = process.env.AWS_SES_FROM_EMAIL
 
   if (!region || !accessKeyId || !secretAccessKey || !fromEmail) {
-    console.log("AWS SES not configured, skipping email send")
+    console.log("AWS SES not configured, logging email for manual follow-up")
+    console.log("Email details:", {
+      to: options.to,
+      subject: options.subject,
+      body: options.text,
+      timestamp: new Date().toISOString(),
+    })
     return
   }
 
@@ -44,7 +45,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       emailParams[`Destination.ToAddresses.member.${index + 1}`] = email
     })
 
-    // Add reply-to if provided
+    // Add HTML body if provided
     if (options.html) {
       emailParams["Message.Body.Html.Data"] = options.html
     }
@@ -107,6 +108,14 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     console.log("Email sent successfully via AWS SES API:", messageId)
   } catch (error) {
     console.error("AWS SES Error:", error)
+    // Log the email for manual follow-up even if sending fails
+    console.log("Email failed, logging for manual follow-up:", {
+      to: options.to,
+      subject: options.subject,
+      body: options.text,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    })
   }
 }
 

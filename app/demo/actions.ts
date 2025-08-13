@@ -1,6 +1,6 @@
 "use server"
 
-import { sendEmail } from "@/lib/email-service"
+import { sendEmailWithSES } from "@/lib/aws-ses"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 interface DemoFormData {
@@ -78,32 +78,63 @@ export async function submitDemoRequest(formData: FormData) {
       }
     }
 
-    // Send email notification
+    // Get admin email from environment variable
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+
+    // Send email notification using AWS SES
     const emailSubject = "New Demo Request - Kuhlekt"
-    const emailBody = `
-      New demo request received:
-      
-      Name: ${data.firstName} ${data.lastName}
-      Email: ${data.email}
-      Company: ${data.company}
-      Role: ${data.role || "Not specified"}
-      Affiliate Code: ${data.affiliateCode || "None"}
-      
-      AR Challenges:
-      ${data.challenges}
-      
-      Please follow up within 24 hours.
+    const emailText = `
+New demo request received:
+
+Name: ${data.firstName} ${data.lastName}
+Email: ${data.email}
+Company: ${data.company}
+Role: ${data.role || "Not specified"}
+Affiliate Code: ${data.affiliateCode || "None"}
+
+AR Challenges:
+${data.challenges}
+
+Please follow up within 24 hours.
+    `.trim()
+
+    const emailHtml = `
+<h2>New Demo Request - Kuhlekt</h2>
+<p><strong>New demo request received:</strong></p>
+<ul>
+  <li><strong>Name:</strong> ${data.firstName} ${data.lastName}</li>
+  <li><strong>Email:</strong> ${data.email}</li>
+  <li><strong>Company:</strong> ${data.company}</li>
+  <li><strong>Role:</strong> ${data.role || "Not specified"}</li>
+  <li><strong>Affiliate Code:</strong> ${data.affiliateCode || "None"}</li>
+</ul>
+<p><strong>AR Challenges:</strong></p>
+<p>${data.challenges}</p>
+<p><em>Please follow up within 24 hours.</em></p>
     `
 
-    await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+    console.log("Sending demo request email to:", adminEmail)
+
+    const emailResult = await sendEmailWithSES({
+      to: adminEmail,
       subject: emailSubject,
-      body: emailBody,
+      text: emailText,
+      html: emailHtml,
     })
 
-    return {
-      success: true,
-      message: "Demo request submitted successfully! We'll contact you within 24 hours.",
+    if (emailResult.success) {
+      console.log("Demo request email sent successfully:", emailResult.messageId)
+      return {
+        success: true,
+        message: "Demo request submitted successfully! We'll contact you within 24 hours.",
+      }
+    } else {
+      console.error("Failed to send demo request email:", emailResult.message)
+      // Still return success since the submission was logged
+      return {
+        success: true,
+        message: "Demo request submitted successfully! We'll contact you within 24 hours.",
+      }
     }
   } catch (error) {
     console.error("Error submitting demo request:", error)

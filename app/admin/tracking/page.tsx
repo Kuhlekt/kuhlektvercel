@@ -1,32 +1,56 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, Users, Eye, MousePointer, TrendingUp, Globe, Clock, RefreshCw, ExternalLink } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts"
+import {
+  Users,
+  Eye,
+  MousePointer,
+  TrendingUp,
+  Smartphone,
+  Monitor,
+  Tablet,
+  Clock,
+  Target,
+  RefreshCw,
+} from "lucide-react"
+import Link from "next/link"
 
-interface Visitor {
+interface VisitorData {
   id: string
   timestamp: number
-  ip: string
-  userAgent: string
   page: string
   referrer: string
-  location?: {
-    country: string
-    city: string
-    region: string
-  }
+  userAgent: string
+  ip: string
+  country?: string
+  city?: string
+  device: string
+  browser: string
   sessionId: string
-  isActive: boolean
-  pageViews: number
-  timeOnSite: number
   utmSource?: string
   utmMedium?: string
   utmCampaign?: string
+  isActive: boolean
+  pageViews: number
+  sessionDuration: number
 }
 
 interface PageHistory {
@@ -36,342 +60,396 @@ interface PageHistory {
 }
 
 export default function TrackingPage() {
-  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [visitors, setVisitors] = useState<VisitorData[]>([])
   const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
 
-  // Get all visitors from localStorage
-  const getAllVisitors = (): Visitor[] => {
-    try {
-      const stored = localStorage.getItem("kuhlekt_visitors")
-      return stored ? JSON.parse(stored) : []
-    } catch (error) {
-      console.error("Error loading visitors:", error)
-      return []
-    }
-  }
-
-  // Get page history from localStorage
-  const getPageHistory = (): PageHistory[] => {
-    try {
-      const stored = localStorage.getItem("kuhlekt_page_history")
-      return stored ? JSON.parse(stored) : []
-    } catch (error) {
-      console.error("Error loading page history:", error)
-      return []
-    }
-  }
-
-  // Load data
+  // Load data from localStorage
   const loadData = () => {
-    setIsLoading(true)
-    const allVisitors = getAllVisitors()
-    const allPageHistory = getPageHistory()
-    setVisitors(allVisitors)
-    setPageHistory(allPageHistory)
-    setIsLoading(false)
+    try {
+      const storedVisitors = localStorage.getItem("kuhlekt_visitors")
+      const storedPageHistory = localStorage.getItem("kuhlekt_page_history")
+
+      if (storedVisitors) {
+        setVisitors(JSON.parse(storedVisitors))
+      } else {
+        setVisitors([])
+      }
+
+      if (storedPageHistory) {
+        setPageHistory(JSON.parse(storedPageHistory))
+      } else {
+        setPageHistory([])
+      }
+    } catch (error) {
+      console.error("Error loading tracking data:", error)
+      setVisitors([])
+      setPageHistory([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     loadData()
   }, [])
 
-  // Calculate analytics
-  const totalVisitors = visitors.length
-  const activeVisitors = visitors.filter((v) => v.isActive).length
-  const totalPageViews = visitors.reduce((sum, v) => sum + v.pageViews, 0)
-  const avgTimeOnSite =
-    visitors.length > 0 ? Math.round(visitors.reduce((sum, v) => sum + v.timeOnSite, 0) / visitors.length / 1000) : 0
+  // Calculate analytics data
+  const analytics = {
+    totalVisitors: visitors.length,
+    activeVisitors: visitors.filter((v) => v.isActive).length,
+    totalPageViews: visitors.reduce((sum, v) => sum + v.pageViews, 0) + pageHistory.length,
+    avgSessionDuration:
+      visitors.length > 0
+        ? Math.round(visitors.reduce((sum, v) => sum + v.sessionDuration, 0) / visitors.length / 1000)
+        : 0,
+    bounceRate:
+      visitors.length > 0 ? Math.round((visitors.filter((v) => v.pageViews === 1).length / visitors.length) * 100) : 0,
+    conversionRate:
+      visitors.length > 0
+        ? Math.round(
+            (visitors.filter((v) => v.page.includes("/demo") || v.page.includes("/contact")).length / visitors.length) *
+              100,
+          )
+        : 0,
+  }
 
-  // Calculate top pages
-  const topPages = pageHistory.reduce(
-    (acc, page) => {
-      acc[page.page] = (acc[page.page] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  // Top pages data
+  const topPages =
+    pageHistory.length > 0
+      ? (() => {
+          const pageCounts = pageHistory.reduce(
+            (acc, visit) => {
+              acc[visit.page] = (acc[visit.page] || 0) + 1
+              return acc
+            },
+            {} as Record<string, number>,
+          )
 
-  const topPagesArray = Object.entries(topPages)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([page, views]) => ({ page, views }))
+          return Object.entries(pageCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10)
+            .map(([page, views]) => ({ page, views }))
+        })()
+      : [{ page: "No data available", views: 0 }]
 
-  // Calculate traffic sources
-  const trafficSources = visitors.reduce(
-    (acc, visitor) => {
-      let source = "Direct"
-      if (visitor.utmSource) {
-        source = visitor.utmSource
-      } else if (visitor.referrer && visitor.referrer !== "(direct)") {
-        try {
-          const domain = new URL(visitor.referrer).hostname
-          source = domain.replace("www.", "")
-        } catch {
-          source = "Referral"
-        }
+  // Device breakdown
+  const deviceData =
+    visitors.length > 0
+      ? (() => {
+          const deviceCounts = visitors.reduce(
+            (acc, visitor) => {
+              acc[visitor.device] = (acc[visitor.device] || 0) + 1
+              return acc
+            },
+            {} as Record<string, number>,
+          )
+
+          return Object.entries(deviceCounts).map(([device, count]) => ({
+            name: device,
+            value: count,
+            percentage: Math.round((count / visitors.length) * 100),
+          }))
+        })()
+      : [{ name: "No data", value: 0, percentage: 0 }]
+
+  // Traffic sources
+  const trafficSources =
+    visitors.length > 0
+      ? (() => {
+          const sourceCounts = visitors.reduce(
+            (acc, visitor) => {
+              const source = visitor.utmSource || (visitor.referrer ? "Referral" : "Direct")
+              acc[source] = (acc[source] || 0) + 1
+              return acc
+            },
+            {} as Record<string, number>,
+          )
+
+          return Object.entries(sourceCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 8)
+            .map(([source, visitors]) => ({ source, visitors }))
+        })()
+      : [{ source: "No data available", visitors: 0 }]
+
+  // Hourly traffic (last 24 hours)
+  const hourlyTraffic = (() => {
+    const now = new Date()
+    const last24Hours = Array.from({ length: 24 }, (_, i) => {
+      const hour = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000)
+      return {
+        hour: hour.getHours(),
+        label: hour.toLocaleTimeString("en-US", { hour: "numeric", hour12: true }),
+        visitors: 0,
       }
-      acc[source] = (acc[source] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+    })
 
-  const trafficSourcesArray = Object.entries(trafficSources)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([source, visitors]) => ({ source, visitors }))
+    if (visitors.length > 0) {
+      const cutoff = now.getTime() - 24 * 60 * 60 * 1000
+      visitors
+        .filter((v) => v.timestamp > cutoff)
+        .forEach((visitor) => {
+          const visitorHour = new Date(visitor.timestamp).getHours()
+          const hourData = last24Hours.find((h) => h.hour === visitorHour)
+          if (hourData) {
+            hourData.visitors++
+          }
+        })
+    }
 
-  // Calculate conversion rate (demo page visits / total visitors)
-  const demoPageVisits = pageHistory.filter((p) => p.page.includes("/demo")).length
-  const conversionRate = totalVisitors > 0 ? ((demoPageVisits / totalVisitors) * 100).toFixed(1) : "0.0"
+    return last24Hours
+  })()
 
-  // Calculate bounce rate (visitors with only 1 page view)
-  const bounceRate =
-    totalVisitors > 0 ? ((visitors.filter((v) => v.pageViews === 1).length / totalVisitors) * 100).toFixed(1) : "0.0"
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D", "#FFC658", "#FF7C7C"]
 
-  // Get recent activity
-  const recentActivity = visitors.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10)
+  const getDeviceIcon = (device: string) => {
+    switch (device.toLowerCase()) {
+      case "mobile":
+        return <Smartphone className="h-4 w-4" />
+      case "tablet":
+        return <Tablet className="h-4 w-4" />
+      default:
+        return <Monitor className="h-4 w-4" />
+    }
+  }
 
-  const formatTimeAgo = (timestamp: number) => {
-    const now = Date.now()
-    const diff = now - timestamp
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-
-    if (days > 0) return `${days}d ago`
-    if (hours > 0) return `${hours}h ago`
-    if (minutes > 0) return `${minutes}m ago`
-    return "Just now"
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-            <p className="text-gray-600">Comprehensive visitor analytics and insights</p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={loadData} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+          <p className="text-gray-600">Comprehensive website analytics and visitor insights</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button onClick={loadData} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+          <Link href="/admin/visitors">
+            <Button variant="outline">
+              <Users className="h-4 w-4 mr-2" />
+              Visitor Details
             </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.totalVisitors}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+            <Eye className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{analytics.activeVisitors}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+            <MousePointer className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.totalPageViews}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.avgSessionDuration}s</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.bounceRate}%</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversion</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.conversionRate}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts and Data */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="pages">Top Pages</TabsTrigger>
+          <TabsTrigger value="sources">Traffic Sources</TabsTrigger>
+          <TabsTrigger value="devices">Devices</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Hourly Traffic */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Traffic by Hour (Last 24h)</CardTitle>
+                <CardDescription>Visitor activity throughout the day</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={hourlyTraffic}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="visitors" stroke="#0088FE" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Device Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Types</CardTitle>
+                <CardDescription>Visitor device distribution</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={deviceData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name} ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {deviceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pages" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Pages</CardTitle>
+              <CardDescription>Most visited pages on your website</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={topPages} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="page" type="category" width={150} />
+                  <Tooltip />
+                  <Bar dataKey="views" fill="#0088FE" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sources" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic Sources</CardTitle>
+              <CardDescription>Where your visitors are coming from</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={trafficSources}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="source" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="visitors" fill="#00C49F" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="devices" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deviceData.map((device, index) => (
+              <Card key={device.name}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    {getDeviceIcon(device.name)}
+                    {device.name}
+                  </CardTitle>
+                  <Badge variant="secondary">{device.percentage}%</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{device.value}</div>
+                  <p className="text-xs text-muted-foreground">visitors</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Empty State Message */}
+      {visitors.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Data Yet</h3>
+            <p className="text-gray-600 mb-4">
+              Start collecting visitor data by having people visit your website. Analytics will appear here as traffic
+              grows.
+            </p>
             <Link href="/admin/visitors">
-              <Button variant="outline">
+              <Button>
                 <Users className="h-4 w-4 mr-2" />
-                View All Visitors
-                <ExternalLink className="h-4 w-4 ml-2" />
+                View Visitor Details
               </Button>
             </Link>
-          </div>
-        </div>
-
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Visitors</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalVisitors}</p>
-                  <p className="text-sm text-gray-500 mt-1">All time</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Now</p>
-                  <p className="text-3xl font-bold text-green-600">{activeVisitors}</p>
-                  <p className="text-sm text-gray-500 mt-1">Currently browsing</p>
-                </div>
-                <Eye className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Page Views</p>
-                  <p className="text-3xl font-bold text-purple-600">{totalPageViews}</p>
-                  <p className="text-sm text-gray-500 mt-1">Total interactions</p>
-                </div>
-                <MousePointer className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Avg. Session</p>
-                  <p className="text-3xl font-bold text-orange-600">{avgTimeOnSite}s</p>
-                  <p className="text-sm text-gray-500 mt-1">Time on site</p>
-                </div>
-                <Clock className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Conversion Rate</h3>
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="text-3xl font-bold text-green-600 mb-2">{conversionRate}%</div>
-              <p className="text-sm text-gray-500">Demo page visits / Total visitors</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Bounce Rate</h3>
-                <BarChart3 className="h-5 w-5 text-orange-500" />
-              </div>
-              <div className="text-3xl font-bold text-orange-600 mb-2">{bounceRate}%</div>
-              <p className="text-sm text-gray-500">Single page visits</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="pages" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="pages">Top Pages</TabsTrigger>
-            <TabsTrigger value="sources">Traffic Sources</TabsTrigger>
-            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="pages">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Top Pages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topPagesArray.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No page data available</h3>
-                    <p className="text-gray-500">Page view data will appear here once visitors browse your site.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {topPagesArray.map((page, index) => (
-                      <div key={page.page} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-semibold text-blue-600">{index + 1}</span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{page.page}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary">{page.views} views</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sources">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Traffic Sources
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {trafficSourcesArray.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Globe className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No traffic source data</h3>
-                    <p className="text-gray-500">Traffic source information will appear here as visitors arrive.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {trafficSourcesArray.map((source, index) => (
-                      <div key={source.source} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-semibold text-green-600">{index + 1}</span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{source.source}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary">{source.visitors} visitors</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentActivity.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No recent activity</h3>
-                    <p className="text-gray-500">Recent visitor activity will be displayed here.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {recentActivity.map((visitor) => (
-                      <div key={visitor.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <div>
-                            <p className="font-medium text-gray-900">{visitor.ip}</p>
-                            <p className="text-sm text-gray-500">
-                              Visited {visitor.page} • {visitor.location?.city || "Unknown location"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-500">{formatTimeAgo(visitor.timestamp)}</p>
-                          <Badge variant={visitor.isActive ? "default" : "secondary"} className="mt-1">
-                            {visitor.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

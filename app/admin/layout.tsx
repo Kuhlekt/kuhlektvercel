@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Admin Dashboard - Kuhlekt",
-  description: "Admin dashboard for Kuhlekt",
+  description: "Admin dashboard for Kuhlekt website management",
   robots: {
     index: false,
     follow: false,
@@ -11,14 +11,22 @@ export const metadata: Metadata = {
     noarchive: true,
     nosnippet: true,
     noimageindex: true,
-    notranslate: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      noarchive: true,
+      nosnippet: true,
+    },
   },
   other: {
-    googlebot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
-    bingbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
-    duckduckbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
-    baiduspider: "noindex,nofollow,noarchive,nosnippet,noimageindex",
-    yandexbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    robots: "noindex, nofollow, noarchive, nosnippet, noimageindex, nocache",
+    googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    bingbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    slurp: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    duckduckbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    baiduspider: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    yandexbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
   },
 }
 
@@ -29,13 +37,14 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate" />
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, nocache" />
       <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="slurp" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="baiduspider" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="yandexbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      {children}
+      <div className="min-h-screen bg-gray-50">{children}</div>
     </>
   )
 }
