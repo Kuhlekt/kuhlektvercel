@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
+import Image from "next/image"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -13,16 +13,22 @@ const navigation = [
   { name: "About", href: "/about" },
 ]
 
-export default function Header() {
+export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm sticky top-0 z-50">
       <nav className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
         <div className="flex lg:flex-1">
           <Link href="/" className="-m-1.5 p-1.5">
             <span className="sr-only">Kuhlekt</span>
-            <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
+            <Image
+              className="h-8 w-auto"
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
+              alt="Kuhlekt Logo"
+              width={120}
+              height={32}
+            />
           </Link>
         </div>
         <div className="flex lg:hidden">
@@ -48,10 +54,12 @@ export default function Header() {
         </div>
         <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
           <Link href="/contact">
-            <Button variant="outline">Contact</Button>
+            <Button variant="outline" size="sm">
+              Contact Us
+            </Button>
           </Link>
           <Link href="/demo">
-            <Button>Get Demo</Button>
+            <Button size="sm">Get Demo</Button>
           </Link>
         </div>
       </nav>
@@ -63,7 +71,13 @@ export default function Header() {
             <div className="flex items-center justify-between">
               <Link href="/" className="-m-1.5 p-1.5">
                 <span className="sr-only">Kuhlekt</span>
-                <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
+                <Image
+                  className="h-8 w-auto"
+                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
+                  alt="Kuhlekt Logo"
+                  width={120}
+                  height={32}
+                />
               </Link>
               <button
                 type="button"
@@ -91,7 +105,7 @@ export default function Header() {
                 <div className="py-6 space-y-2">
                   <Link href="/contact" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full bg-transparent">
-                      Contact
+                      Contact Us
                     </Button>
                   </Link>
                   <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>
@@ -106,3 +120,6 @@ export default function Header() {
     </header>
   )
 }
+
+// Export as default as well to support both import styles
+export default Header
