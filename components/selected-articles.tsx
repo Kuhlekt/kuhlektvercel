@@ -190,7 +190,7 @@ export function SelectedArticles({
 
           return (
             <Card
-              key={article.id}
+              key={`${article.id}-${article.updatedAt.getTime()}`} // Add this line to force re-render on updates
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onArticleSelect(article)}
             >

@@ -127,7 +127,7 @@ export function SearchResults({ results, categories, query, onArticleSelect }: S
 
           return (
             <Card
-              key={article.id}
+              key={`${article.id}-${article.updatedAt.getTime()}`} // Updated line
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => onArticleSelect(article)}
             >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,14 +24,19 @@ interface ArticleViewerProps {
 }
 
 export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }: ArticleViewerProps) {
+  const [currentArticle, setCurrentArticle] = useState(article)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const category = categories.find((cat) => cat.id === article.categoryId)
-  const subcategory = category?.subcategories.find((sub) => sub.id === article.subcategoryId)
+  useEffect(() => {
+    setCurrentArticle(article)
+  }, [article])
+
+  const category = categories.find((cat) => cat.id === currentArticle.categoryId)
+  const subcategory = category?.subcategories.find((sub) => sub.id === currentArticle.subcategoryId)
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(article.id)
+      onDelete(currentArticle.id)
       setShowDeleteDialog(false)
     }
   }
@@ -48,7 +53,7 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
         {(onEdit || onDelete) && (
           <div className="flex space-x-2">
             {onEdit && (
-              <Button variant="outline" onClick={() => onEdit(article)}>
+              <Button variant="outline" onClick={() => onEdit(currentArticle)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -67,24 +72,24 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
       <Card>
         <CardHeader>
           <div className="space-y-4">
-            <CardTitle className="text-2xl">{article.title}</CardTitle>
+            <CardTitle className="text-2xl">{currentArticle.title}</CardTitle>
 
             {/* Metadata */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {article.createdBy && (
+              {currentArticle.createdBy && (
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
-                  <span>By {article.createdBy}</span>
+                  <span>By {currentArticle.createdBy}</span>
                 </div>
               )}
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
-                <span>Created {article.createdAt.toLocaleDateString()}</span>
+                <span>Created {currentArticle.createdAt.toLocaleDateString()}</span>
               </div>
-              {article.updatedAt.getTime() !== article.createdAt.getTime() && (
+              {currentArticle.updatedAt.getTime() !== currentArticle.createdAt.getTime() && (
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
-                  <span>Updated {article.updatedAt.toLocaleDateString()}</span>
+                  <span>Updated {currentArticle.updatedAt.toLocaleDateString()}</span>
                 </div>
               )}
             </div>
@@ -93,7 +98,7 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
             <div className="flex flex-wrap gap-2">
               {category && <Badge variant="secondary">{category.name}</Badge>}
               {subcategory && <Badge variant="outline">{subcategory.name}</Badge>}
-              {article.tags.map((tag, index) => (
+              {currentArticle.tags.map((tag, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
                   <Tag className="h-3 w-3 mr-1" />
                   {tag}
@@ -104,7 +109,7 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
         </CardHeader>
 
         <CardContent>
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
+          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: currentArticle.content }} />
         </CardContent>
       </Card>
 
@@ -114,7 +119,7 @@ export function ArticleViewer({ article, categories, onEdit, onDelete, onBack }:
           <DialogHeader>
             <DialogTitle>Delete Article</DialogTitle>
             <DialogDescription id="delete-article-description">
-              Are you sure you want to delete "{article.title}"? This action cannot be undone.
+              Are you sure you want to delete "{currentArticle.title}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

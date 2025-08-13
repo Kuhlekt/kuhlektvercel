@@ -250,7 +250,11 @@ export default function KnowledgeBase() {
 
   const handleArticleSelect = (article: Article) => {
     console.log("Article selected:", article.title)
-    setSelectedArticle(article)
+
+    // Get the most current version of the article from categories state
+    const currentArticle = getCurrentArticleData(article.id) || article
+
+    setSelectedArticle(currentArticle)
     setSearchQuery("")
     setSearchResults([])
   }
@@ -360,7 +364,9 @@ export default function KnowledgeBase() {
     storage.saveCategories(updatedCategories)
 
     // Add audit log entry
-    storage.addAuditEntry({
+    const updatedAuditLog = [...auditLog]
+    const newAuditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
       action: "article_updated",
       articleId: articleData.id,
       articleTitle: articleData.title,
@@ -372,9 +378,13 @@ export default function KnowledgeBase() {
         : undefined,
       performedBy: currentUser?.username || "anonymous",
       timestamp: new Date(),
-    })
+    }
 
-    // Update the selected article to show the changes
+    updatedAuditLog.unshift(newAuditEntry)
+    setAuditLog(updatedAuditLog)
+    storage.saveAuditLog(updatedAuditLog)
+
+    // Update the selected article to show the changes immediately
     const finalUpdatedArticle = { ...articleData, createdAt: editingArticle!.createdAt }
     setSelectedArticle(finalUpdatedArticle)
 
@@ -408,6 +418,22 @@ export default function KnowledgeBase() {
     })
 
     setSelectedArticle(null)
+  }
+
+  // Add this function after the handleDeleteArticle function
+  const getCurrentArticleData = (articleId: string): Article | null => {
+    for (const category of categories) {
+      // Check category articles
+      const categoryArticle = category.articles.find((a) => a.id === articleId)
+      if (categoryArticle) return categoryArticle
+
+      // Check subcategory articles
+      for (const subcategory of category.subcategories) {
+        const subcategoryArticle = subcategory.articles.find((a) => a.id === articleId)
+        if (subcategoryArticle) return subcategoryArticle
+      }
+    }
+    return null
   }
 
   const handleLogin = (user: User) => {
