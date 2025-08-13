@@ -1,20 +1,16 @@
 "use client"
 
 import { useEffect } from "react"
-import { trackVisitorToDatabase } from "@/lib/actions/visitor-tracking"
-
-// Predefined affiliate table for validation
-const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
+import { usePathname, useSearchParams } from "next/navigation"
 
 interface VisitorData {
   visitorId: string
   sessionId: string
-  firstVisit: string
-  lastVisit: string
   pageViews: number
+  currentPage: string
   referrer: string
   userAgent: string
-  currentPage: string
+  timestamp: string
   utmSource?: string
   utmMedium?: string
   utmCampaign?: string
@@ -24,157 +20,139 @@ interface VisitorData {
 }
 
 export function VisitorTracker() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   useEffect(() => {
-    // Only run on client side
     if (typeof window === "undefined") return
 
     try {
-      // Generate unique IDs
-      const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-      // Get or create visitor ID (persistent across sessions)
+      // Generate or get visitor ID
       let visitorId = localStorage.getItem("kuhlekt_visitor_id")
       if (!visitorId) {
-        visitorId = generateId()
+        visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         localStorage.setItem("kuhlekt_visitor_id", visitorId)
-        console.log("New visitor ID created:", visitorId)
       }
 
-      // Generate session ID (new for each session)
+      // Generate session ID
       let sessionId = sessionStorage.getItem("kuhlekt_session_id")
       if (!sessionId) {
-        sessionId = generateId()
+        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         sessionStorage.setItem("kuhlekt_session_id", sessionId)
-        console.log("New session ID created:", sessionId)
       }
 
-      // Get URL parameters
-      const urlParams = new URLSearchParams(window.location.search)
-      const affiliate = urlParams.get("affiliate") || urlParams.get("aff") || urlParams.get("ref")
-
-      // Validate affiliate against predefined table
-      const validAffiliate =
-        affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : undefined
-
-      // Get existing visitor data or create new
+      // Get existing visitor data
       const existingDataStr = localStorage.getItem("kuhlekt_visitor_data")
-      let visitorData: VisitorData
-
-      const currentTime = new Date().toISOString()
-      const currentPage = window.location.pathname + window.location.search
-
-      if (existingDataStr) {
-        try {
-          visitorData = JSON.parse(existingDataStr)
-          visitorData.lastVisit = currentTime
-          visitorData.pageViews += 1
-          visitorData.sessionId = sessionId
-          visitorData.currentPage = currentPage
-          console.log("Updated existing visitor data")
-        } catch (parseError) {
-          console.error("Error parsing existing visitor data:", parseError)
-          // Create new data if parsing fails
-          visitorData = createNewVisitorData()
-        }
-      } else {
-        visitorData = createNewVisitorData()
-        console.log("Created new visitor data")
+      let existingData: VisitorData | null = null
+      try {
+        existingData = existingDataStr ? JSON.parse(existingDataStr) : null
+      } catch (e) {
+        console.error("Error parsing visitor data:", e)
       }
 
-      function createNewVisitorData(): VisitorData {
-        return {
-          visitorId: visitorId!,
-          sessionId: sessionId!,
-          firstVisit: currentTime,
-          lastVisit: currentTime,
-          pageViews: 1,
-          referrer: document.referrer || "direct",
-          userAgent: navigator.userAgent,
-          currentPage: currentPage,
-          utmSource: urlParams.get("utm_source") || undefined,
-          utmMedium: urlParams.get("utm_medium") || undefined,
-          utmCampaign: urlParams.get("utm_campaign") || undefined,
-          utmTerm: urlParams.get("utm_term") || undefined,
-          utmContent: urlParams.get("utm_content") || undefined,
-          affiliate: validAffiliate,
-        }
+      // Extract UTM parameters
+      const utmSource = searchParams.get("utm_source") || undefined
+      const utmMedium = searchParams.get("utm_medium") || undefined
+      const utmCampaign = searchParams.get("utm_campaign") || undefined
+      const utmTerm = searchParams.get("utm_term") || undefined
+      const utmContent = searchParams.get("utm_content") || undefined
+
+      // Extract affiliate code
+      const affiliate = searchParams.get("affiliate") || searchParams.get("ref") || undefined
+
+      // Create visitor data
+      const visitorData: VisitorData = {
+        visitorId,
+        sessionId,
+        pageViews: (existingData?.pageViews || 0) + 1,
+        currentPage: pathname,
+        referrer: document.referrer || "direct",
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        ...(utmSource && { utmSource }),
+        ...(utmMedium && { utmMedium }),
+        ...(utmCampaign && { utmCampaign }),
+        ...(utmTerm && { utmTerm }),
+        ...(utmContent && { utmContent }),
+        ...(affiliate && { affiliate }),
       }
 
-      // Update affiliate if new valid one is provided
-      if (validAffiliate && (!visitorData.affiliate || visitorData.affiliate !== validAffiliate)) {
-        visitorData.affiliate = validAffiliate
-        console.log("Updated affiliate code:", validAffiliate)
-      }
-
-      // Send visitor data to database (async, don't block UI)
-      const sendToDatabase = async () => {
-        try {
-          await trackVisitorToDatabase({
-            sessionId: visitorData.sessionId,
-            visitorId: visitorData.visitorId,
-            currentPage: visitorData.currentPage,
-            referrer: visitorData.referrer,
-            userAgent: visitorData.userAgent,
-            pageViews: visitorData.pageViews,
-            utmSource: visitorData.utmSource,
-            utmMedium: visitorData.utmMedium,
-            utmCampaign: visitorData.utmCampaign,
-            affiliate: visitorData.affiliate,
-          })
-        } catch (error) {
-          console.error("Failed to send visitor data to database:", error)
-        }
-      }
-
-      // Send to database without blocking the UI
-      sendToDatabase()
-
-      // Store updated visitor data
+      // Store visitor data
       localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
 
-      // Store in all visitors array for admin tracking
+      // Track page history
+      const pageHistoryStr = localStorage.getItem("kuhlekt_page_history")
+      let pageHistory: any[] = []
       try {
-        const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
-        let allVisitors: VisitorData[] = allVisitorsStr ? JSON.parse(allVisitorsStr) : []
-
-        // Find existing visitor or add new one
-        const existingIndex = allVisitors.findIndex((v) => v.visitorId === visitorData.visitorId)
-        if (existingIndex >= 0) {
-          allVisitors[existingIndex] = visitorData
-        } else {
-          allVisitors.push(visitorData)
-        }
-
-        // Keep only last 100 visitors to prevent storage bloat
-        if (allVisitors.length > 100) {
-          allVisitors = allVisitors.slice(-100)
-        }
-
-        localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
-      } catch (error) {
-        console.error("Error updating all visitors data:", error)
+        pageHistory = pageHistoryStr ? JSON.parse(pageHistoryStr) : []
+      } catch (e) {
+        console.error("Error parsing page history:", e)
       }
 
-      // Store page visit history
-      const pageHistory = JSON.parse(localStorage.getItem("kuhlekt_page_history") || "[]")
-      pageHistory.push({
-        page: currentPage,
-        timestamp: currentTime,
-        sessionId: sessionId,
-      })
+      const pageEntry = {
+        page: pathname,
+        timestamp: new Date().toISOString(),
+        sessionId,
+        visitorId,
+        referrer: document.referrer || "direct",
+        ...(utmSource && { utmSource }),
+        ...(affiliate && { affiliate }),
+      }
 
-      // Keep only last 50 page visits
-      if (pageHistory.length > 50) {
-        pageHistory.splice(0, pageHistory.length - 50)
+      pageHistory.push(pageEntry)
+
+      // Keep only last 1000 entries
+      if (pageHistory.length > 1000) {
+        pageHistory = pageHistory.slice(-1000)
       }
 
       localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
-    } catch (error) {
-      console.error("Error in visitor tracking:", error)
-    }
-  }, []) // Empty dependency array - only run once on mount
 
-  // This component doesn't render anything
+      // Track all visitors for admin
+      const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
+      let allVisitors: any[] = []
+      try {
+        allVisitors = allVisitorsStr ? JSON.parse(allVisitorsStr) : []
+      } catch (e) {
+        console.error("Error parsing all visitors:", e)
+      }
+
+      // Check if visitor already exists
+      const existingVisitorIndex = allVisitors.findIndex((v) => v.visitorId === visitorId)
+      if (existingVisitorIndex >= 0) {
+        // Update existing visitor
+        allVisitors[existingVisitorIndex] = {
+          ...allVisitors[existingVisitorIndex],
+          ...visitorData,
+          lastSeen: new Date().toISOString(),
+        }
+      } else {
+        // Add new visitor
+        allVisitors.push({
+          ...visitorData,
+          firstSeen: new Date().toISOString(),
+          lastSeen: new Date().toISOString(),
+        })
+      }
+
+      localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
+
+      // Dispatch custom event for real-time updates
+      window.dispatchEvent(new CustomEvent("kuhlektDataUpdate", { detail: visitorData }))
+
+      console.log("🔍 Visitor tracked:", {
+        visitorId,
+        sessionId,
+        page: pathname,
+        pageViews: visitorData.pageViews,
+        utmSource,
+        affiliate,
+      })
+    } catch (error) {
+      console.error("Error tracking visitor:", error)
+    }
+  }, [pathname, searchParams])
+
   return null
 }
 

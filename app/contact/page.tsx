@@ -1,171 +1,219 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
-import { useFormState } from "react-dom"
-import { submitContactForm } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Recaptcha } from "@/components/recaptcha"
-import { VisitorTracker } from "@/components/visitor-tracker"
-
-const initialState = {
-  success: false,
-  message: "",
-  errors: {},
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { submitContactForm } from "./actions"
+import ReCAPTCHA from "react-google-recaptcha"
+import { getVisitorData } from "@/components/visitor-tracker"
 
 export default function ContactPage() {
-  const [state, formAction] = useFormState(submitContactForm, initialState)
-  const [recaptchaToken, setRecaptchaToken] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const [siteKey, setSiteKey] = useState<string>("")
+  const [affiliateCode, setAffiliateCode] = useState("")
 
-  // Reset form on successful submission
   useEffect(() => {
-    if (state?.success) {
-      const form = document.getElementById("contact-form") as HTMLFormElement
-      if (form) {
-        form.reset()
-        setRecaptchaToken("")
-        // Reset recaptcha
-        if (typeof window !== "undefined" && window.grecaptcha) {
-          window.grecaptcha.reset()
-        }
+    // Fetch reCAPTCHA site key
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then((data) => {
+        setSiteKey(data.siteKey || "")
+      })
+      .catch((error) => {
+        console.error("Error loading reCAPTCHA config:", error)
+      })
+
+    // Auto-populate affiliate code from visitor data
+    const visitorData = getVisitorData()
+    if (visitorData?.affiliate) {
+      setAffiliateCode(visitorData.affiliate)
+    }
+  }, [])
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setMessage(null)
+
+    try {
+      const formData = new FormData(event.currentTarget)
+
+      // Add reCAPTCHA token to form data
+      if (recaptchaToken) {
+        formData.append("recaptchaToken", recaptchaToken)
       }
-    }
-  }, [state?.success])
 
-  const enhancedFormAction = async (formData: FormData) => {
-    // Add recaptcha token
-    if (recaptchaToken) {
-      formData.append("recaptchaToken", recaptchaToken)
-    }
+      const result = await submitContactForm(formData)
 
-    // Add visitor tracking data if available
-    if (typeof window !== "undefined") {
-      try {
-        const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
-        if (visitorDataStr) {
-          const visitorData = JSON.parse(visitorDataStr)
-          formData.append("referrer", visitorData.referrer || "")
-          formData.append("utmSource", visitorData.utmSource || "")
-          formData.append("utmCampaign", visitorData.utmCampaign || "")
-          formData.append("pageViews", visitorData.pageViews?.toString() || "")
-        }
-      } catch (error) {
-        console.error("Error adding visitor data to form:", error)
+      if (result.success) {
+        setMessage({ type: "success", text: result.message })
+        // Reset form
+        event.currentTarget.reset()
+        setAffiliateCode("")
+        setRecaptchaToken(null)
+      } else {
+        setMessage({ type: "error", text: result.message })
       }
+    } catch (error) {
+      console.error("Form submission error:", error)
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred. Please try again.",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    return formAction(formData)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <VisitorTracker />
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full mb-4">Get in Touch</Badge>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Have questions about Kuhlekt? We're here to help. Send us a message and we'll get back to you within 24
-            hours.
-          </p>
+          <p className="text-xl text-gray-600">Get in touch with our team for any questions or support</p>
         </div>
 
-        <Card className="shadow-xl max-w-2xl mx-auto">
+        <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Send us a Message</CardTitle>
+            <CardDescription className="text-center">
+              Fill out the form below and we'll get back to you as soon as possible
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form id="contact-form" action={enhancedFormAction} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            {message && (
+              <Alert
+                className={`mb-6 ${message.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+              >
+                {message.type === "success" ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                )}
+                <AlertDescription className={message.type === "success" ? "text-green-800" : "text-red-800"}>
+                  {message.text}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" name="firstName" type="text" required className="mt-1" />
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    required
+                    placeholder="Enter your first name"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" name="lastName" type="text" required className="mt-1" />
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    required
+                    placeholder="Enter your last name"
+                    className="mt-1"
+                  />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="email">Email Address *</Label>
-                <Input id="email" name="email" type="email" required className="mt-1" />
-              </div>
-
-              <div>
-                <Label htmlFor="company">Company</Label>
-                <Input id="company" name="company" type="text" className="mt-1" />
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" type="tel" className="mt-1" />
-              </div>
-
-              <div>
-                <Label htmlFor="affiliate">Affiliate Code</Label>
                 <Input
-                  id="affiliate"
-                  name="affiliate"
-                  type="text"
-                  placeholder="Enter your affiliate code (optional)"
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="Enter your email address"
                   className="mt-1"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  If you have an affiliate or partner code, enter it here for tracking purposes.
-                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="company">Company Name *</Label>
+                <Input
+                  id="company"
+                  name="company"
+                  type="text"
+                  required
+                  placeholder="Enter your company name"
+                  className="mt-1"
+                />
               </div>
 
               <div>
                 <Label htmlFor="subject">Subject *</Label>
-                <Select name="subject" required>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="What can we help you with?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general-inquiry">General Inquiry</SelectItem>
-                    <SelectItem value="product-demo">Product Demo</SelectItem>
-                    <SelectItem value="pricing">Pricing Information</SelectItem>
-                    <SelectItem value="technical-support">Technical Support</SelectItem>
-                    <SelectItem value="partnership">Partnership Opportunities</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="message">Message *</Label>
-                <Textarea
-                  id="message"
-                  name="message"
-                  rows={5}
+                <Input
+                  id="subject"
+                  name="subject"
+                  type="text"
                   required
-                  placeholder="Tell us more about how we can help you..."
+                  placeholder="Enter the subject of your message"
                   className="mt-1"
                 />
               </div>
 
-              <Recaptcha
-                onVerify={setRecaptchaToken}
-                onExpire={() => setRecaptchaToken("")}
-                onError={() => setRecaptchaToken("")}
-              />
+              <div>
+                <Label htmlFor="message">Message (Optional)</Label>
+                <Textarea
+                  id="message"
+                  name="message"
+                  placeholder="Enter your message or question..."
+                  className="mt-1 min-h-[120px]"
+                />
+              </div>
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3">
-                Send Message
+              <div>
+                <Label htmlFor="affiliate">Affiliate/Referral Code (Optional)</Label>
+                <Input
+                  id="affiliate"
+                  name="affiliate"
+                  type="text"
+                  value={affiliateCode}
+                  onChange={(e) => setAffiliateCode(e.target.value)}
+                  placeholder="Enter referral code if you have one"
+                  className="mt-1"
+                />
+              </div>
+
+              {siteKey && (
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    sitekey={siteKey}
+                    onChange={(token) => setRecaptchaToken(token)}
+                    onExpired={() => setRecaptchaToken(null)}
+                  />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isSubmitting || !recaptchaToken}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending Message...
+                  </>
+                ) : (
+                  "Send Message"
+                )}
               </Button>
-
-              {state?.success && <div className="text-green-600 text-center font-medium">{state.message}</div>}
-
-              {state?.error && <div className="text-red-600 text-center">{state.message}</div>}
             </form>
           </CardContent>
         </Card>

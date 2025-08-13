@@ -1,95 +1,55 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, Lock, User } from "lucide-react"
-import { loginWithCredentials } from "./actions"
+import { adminLogin } from "./actions"
 
 export default function AdminLoginPage() {
   const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleLoginSubmit = async (formData: FormData) => {
-    setLoading(true)
+  async function handleSubmit(formData: FormData) {
+    setIsSubmitting(true)
     setError("")
 
-    console.log("Form submission started")
-
     try {
-      const result = await loginWithCredentials(formData)
-      console.log("Login result:", result)
-
-      if (result.success) {
-        console.log("Login successful, redirecting to:", result.redirectTo)
-        window.location.href = result.redirectTo || "/admin/dashboard"
-        return
-      } else {
-        setError(result.error || "Login failed")
+      const result = await adminLogin(formData)
+      if (result && !result.success) {
+        setError(result.error)
       }
-    } catch (err) {
-      console.error("Client-side login error:", err)
+    } catch (error) {
       setError("An unexpected error occurred")
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-4">
-            <Shield className="w-6 h-6 text-cyan-600" />
-          </div>
-          <CardTitle className="text-2xl">Admin Access</CardTitle>
-          <p className="text-gray-600">Enter your admin credentials</p>
-          <p className="text-sm text-gray-500 mt-2">Username: "admin" | Check console for expected password</p>
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
+          <CardDescription className="text-center">Enter your credentials to access the admin panel</CardDescription>
         </CardHeader>
-
-        <CardContent className="space-y-4">
+        <CardContent>
           {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+            <Alert className="mb-4 border-red-500 bg-red-50">
+              <AlertDescription className="text-red-700">{error}</AlertDescription>
             </Alert>
           )}
 
-          <form action={handleLoginSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Enter username"
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
-
+          <form action={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter password"
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <Input id="password" name="password" type="password" required disabled={isSubmitting} className="mt-1" />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Verifying..." : "Login"}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </CardContent>

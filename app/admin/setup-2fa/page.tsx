@@ -1,290 +1,153 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Copy, Eye, EyeOff, CheckCircle } from "lucide-react"
-import Image from "next/image"
-
-interface TwoFactorData {
-  secret: string
-  qrCode: string
-}
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Shield, Copy, Check } from "lucide-react"
+import QRCode from "qrcode"
 
 export default function Setup2FAPage() {
-  const [step, setStep] = useState<"password" | "setup" | "verify">("password")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [twoFactorData, setTwoFactorData] = useState<TwoFactorData | null>(null)
+  const [qrCodeUrl, setQrCodeUrl] = useState("")
+  const [secret, setSecret] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
   const [error, setError] = useState("")
-  const [verificationSuccess, setVerificationSuccess] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+  useEffect(() => {
+    // Generate a random secret for demo purposes
+    const generateSecret = () => {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+      let result = ""
+      for (let i = 0; i < 32; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
+    }
 
+    const newSecret = generateSecret()
+    setSecret(newSecret)
+
+    // Generate QR code
+    const otpAuthUrl = `otpauth://totp/Kuhlekt%20Admin?secret=${newSecret}&issuer=Kuhlekt`
+    QRCode.toDataURL(otpAuthUrl)
+      .then((url) => setQrCodeUrl(url))
+      .catch((err) => console.error("Error generating QR code:", err))
+  }, [])
+
+  const copySecret = async () => {
     try {
-      // Verify password
-      const passwordResponse = await fetch("/api/admin/verify-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      })
-
-      if (!passwordResponse.ok) {
-        throw new Error("Invalid password")
-      }
-
-      // Generate new 2FA secret
-      const secretResponse = await fetch("/api/admin/generate-2fa-secret")
-      if (!secretResponse.ok) {
-        throw new Error("Failed to generate 2FA secret")
-      }
-
-      const data = await secretResponse.json()
-      setTwoFactorData(data)
-      setStep("setup")
+      await navigator.clipboard.writeText(secret)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
-    } finally {
-      setLoading(false)
+      console.error("Failed to copy secret:", err)
     }
   }
 
-  const handleVerificationSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
+  const verifyCode = async () => {
     try {
-      const response = await fetch("/api/admin/verify-2fa", {
+      const response = await fetch("/api/admin/verify-totp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
+          secret: secret,
           token: verificationCode,
-          secret: twoFactorData?.secret,
         }),
       })
 
-      if (!response.ok) {
-        throw new Error("Invalid verification code. Please check your authenticator app and try again.")
+      const result = await response.json()
+
+      if (result.valid) {
+        setIsVerified(true)
+        setError("")
+      } else {
+        setError("Invalid verification code. Please try again.")
       }
-
-      setVerificationSuccess(true)
-      setTimeout(() => {
-        window.location.href = "/admin/login"
-      }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed")
-    } finally {
-      setLoading(false)
+      setError("Error verifying code. Please try again.")
     }
   }
 
-  const copySecret = () => {
-    if (twoFactorData?.secret) {
-      navigator.clipboard.writeText(twoFactorData.secret)
-    }
-  }
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <Shield className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Set Up 2FA</CardTitle>
+          <CardDescription>Secure your admin account with two-factor authentication</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!isVerified ? (
+            <>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">
+                  Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                </p>
+                {qrCodeUrl && <img src={qrCodeUrl || "/placeholder.svg"} alt="2FA QR Code" className="mx-auto" />}
+              </div>
 
-  if (step === "password") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Admin Verification</CardTitle>
-            <CardDescription>Enter admin password to generate new 2FA secret</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Admin Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <div>
+                <Label htmlFor="secret">Or enter this secret manually:</Label>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Input id="secret" value={secret} readOnly className="font-mono text-xs" />
+                  <Button type="button" size="sm" onClick={copySecret} className="flex-shrink-0">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="verificationCode">Enter verification code:</Label>
+                <Input
+                  id="verificationCode"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  className="mt-1"
+                />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
+                <Alert className="border-red-500 bg-red-50">
+                  <AlertDescription className="text-red-700">{error}</AlertDescription>
+                </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Verifying..." : "Generate New 2FA Secret"}
+              <Button onClick={verifyCode} className="w-full" disabled={verificationCode.length !== 6}>
+                Verify Code
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+            </>
+          ) : (
+            <div className="text-center">
+              <Alert className="border-green-500 bg-green-50 mb-4">
+                <AlertDescription className="text-green-700">
+                  2FA has been set up successfully! You can now use this authenticator app to log in.
+                </AlertDescription>
+              </Alert>
 
-  if (step === "setup") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Setup New 2FA Secret</CardTitle>
-            <CardDescription>Scan the QR code with your authenticator app</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {twoFactorData && (
-              <>
-                <div className="text-center">
-                  <div className="bg-white p-4 rounded-lg border inline-block">
-                    <Image
-                      src={twoFactorData.qrCode || "/placeholder.svg"}
-                      alt="2FA QR Code"
-                      width={200}
-                      height={200}
-                      className="mx-auto"
-                    />
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">Scan this QR code with your authenticator app</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Manual Entry Code:</Label>
-                  <div className="flex items-center space-x-2">
-                    <code className="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all">
-                      {twoFactorData.secret}
-                    </code>
-                    <Button size="sm" variant="outline" onClick={copySecret}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Setup Instructions:</h4>
-                  <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                    <li>Open your authenticator app (Google Authenticator, Authy, etc.)</li>
-                    <li>Scan the QR code above or manually enter the code</li>
-                    <li>Your app should now show 6-digit codes for "Kuhlekt Admin"</li>
-                    <li>Click "Continue" below to verify your setup</li>
-                  </ol>
-                </div>
-
-                <Button onClick={() => setStep("verify")} className="w-full">
-                  Continue to Verification
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (step === "verify") {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">
-              {verificationSuccess ? "Setup Complete!" : "Verify Your Setup"}
-            </CardTitle>
-            <CardDescription>
-              {verificationSuccess
-                ? "Your 2FA has been successfully configured"
-                : "Enter the 6-digit code from your authenticator app"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {verificationSuccess ? (
-              <div className="text-center space-y-4">
-                <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-yellow-800 mb-2">⚠️ CRITICAL: Update Environment Variable</p>
-                  <p className="text-sm text-yellow-700 mb-2">
-                    Before you can log in, you MUST update your environment variable:
-                  </p>
-                  <div className="bg-yellow-100 border rounded p-3 my-2">
-                    <p className="text-xs font-semibold text-yellow-800 mb-1">ADMIN_2FA_SECRET=</p>
-                    <code className="text-xs font-mono break-all text-yellow-900">{twoFactorData?.secret}</code>
-                  </div>
-                  <div className="text-xs text-yellow-600 text-left">
-                    <p className="font-semibold mb-1">Steps to update:</p>
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Go to Vercel Project Settings</li>
-                      <li>Navigate to Environment Variables</li>
-                      <li>Update ADMIN_2FA_SECRET with the code above</li>
-                      <li>Redeploy your application</li>
-                      <li>Then return to login with your authenticator</li>
-                    </ol>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">Redirecting to login page...</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Important:</strong> Save this secret key in a secure location:
+                </p>
+                <code className="block mt-2 p-2 bg-white rounded text-xs font-mono break-all">{secret}</code>
               </div>
-            ) : (
-              <form onSubmit={handleVerificationSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="code">6-Digit Verification Code</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="text-center text-lg font-mono tracking-widest"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 text-center">
-                    Enter the current code from your authenticator app
-                  </p>
-                </div>
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Button type="submit" className="w-full" disabled={loading || verificationCode.length !== 6}>
-                    {loading ? "Verifying..." : "Verify & Complete Setup"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-transparent"
-                    onClick={() => setStep("setup")}
-                  >
-                    Back to QR Code
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  return null
+              <Button asChild className="w-full">
+                <a href="/admin/login">Go to Login</a>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

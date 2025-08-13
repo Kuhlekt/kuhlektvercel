@@ -7,22 +7,19 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ['images.unsplash.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
     unoptimized: true,
   },
   experimental: {
-    esmExternals: false,
+    serverComponentsExternalPackages: ['crypto'],
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-    }
-    return config
-  },
-  output: 'standalone',
 }
 
 export default nextConfig

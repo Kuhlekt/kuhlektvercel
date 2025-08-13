@@ -1,16 +1,32 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Users, MousePointer, Clock, Search, Download, RefreshCw, Calendar, Globe, Smartphone } from "lucide-react"
-import Link from "next/link"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import {
+  Users,
+  TrendingUp,
+  Eye,
+  MousePointer,
+  Globe,
+  RefreshCw,
+  Download,
+  Trash2,
+  Search,
+  Filter,
+  Calendar,
+  Clock,
+  ExternalLink,
+  Play,
+  Pause,
+  AlertCircle,
+} from "lucide-react"
 
-interface VisitorData {
+interface Visitor {
   visitorId: string
   sessionId: string
   firstVisit: string
@@ -27,479 +43,679 @@ interface VisitorData {
   affiliate?: string
 }
 
-interface PageVisit {
+interface PageHistory {
   page: string
   timestamp: string
   sessionId: string
 }
 
-export default function TrackingAdminPage() {
-  const [visitorData, setVisitorData] = useState<VisitorData | null>(null)
-  const [pageHistory, setPageHistory] = useState<PageVisit[]>([])
-  const [allVisitors, setAllVisitors] = useState<VisitorData[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
+export default function VisitorsPage() {
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
+  const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterBy, setFilterBy] = useState("all")
+  const [sortBy, setSortBy] = useState("lastVisit")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval, setRefreshInterval] = useState(5) // seconds
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [dataChanged, setDataChanged] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const previousDataRef = useRef<string>("")
 
-  useEffect(() => {
-    loadTrackingData()
-  }, [])
-
-  const loadTrackingData = () => {
-    setIsLoading(true)
+  // Get all visitors from localStorage
+  const getAllVisitors = useCallback((): Visitor[] => {
+    if (typeof window === "undefined") return []
 
     try {
-      // Load current visitor data
-      const currentVisitorStr = localStorage.getItem("kuhlekt_visitor_data")
-      if (currentVisitorStr) {
-        setVisitorData(JSON.parse(currentVisitorStr))
-      }
-
-      // Load page history
-      const historyStr = localStorage.getItem("kuhlekt_page_history")
-      if (historyStr) {
-        setPageHistory(JSON.parse(historyStr))
-      }
-
-      // Load all visitors (simulate from localStorage - in real app this would be from API)
-      const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
-      if (allVisitorsStr) {
-        setAllVisitors(JSON.parse(allVisitorsStr))
-      } else {
-        // If no stored visitors, create array with current visitor
-        if (currentVisitorStr) {
-          const currentVisitor = JSON.parse(currentVisitorStr)
-          setAllVisitors([currentVisitor])
-          localStorage.setItem("kuhlekt_all_visitors", JSON.stringify([currentVisitor]))
-        }
+      const stored = localStorage.getItem("kuhlekt_all_visitors")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return Array.isArray(parsed) ? parsed : []
       }
     } catch (error) {
-      console.error("Error loading tracking data:", error)
+      console.error("Error loading visitors:", error)
+    }
+    return []
+  }, [])
+
+  // Get page history from localStorage
+  const getPageHistory = useCallback((): PageHistory[] => {
+    if (typeof window === "undefined") return []
+
+    try {
+      const stored = localStorage.getItem("kuhlekt_page_history")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return Array.isArray(parsed) ? parsed : []
+      }
+    } catch (error) {
+      console.error("Error loading page history:", error)
+    }
+    return []
+  }, [])
+
+  // Load data and detect changes
+  const loadData = useCallback(() => {
+    setIsLoading(true)
+    const allVisitors = getAllVisitors()
+    const allPageHistory = getPageHistory()
+
+    // Create a hash of the current data to detect changes
+    const currentDataHash = JSON.stringify({
+      visitorsCount: allVisitors.length,
+      pagesCount: allPageHistory.length,
+      lastVisitorTime: allVisitors[allVisitors.length - 1]?.lastVisit,
+      lastPageTime: allPageHistory[allPageHistory.length - 1]?.timestamp,
+    })
+
+    // Check if data has changed
+    if (previousDataRef.current && previousDataRef.current !== currentDataHash) {
+      setDataChanged(true)
+      console.log("🔄 Data changed detected:", {
+        previous: previousDataRef.current.slice(0, 100),
+        current: currentDataHash.slice(0, 100),
+      })
+      setTimeout(() => setDataChanged(false), 3000) // Clear indicator after 3 seconds
     }
 
+    previousDataRef.current = currentDataHash
+
+    setVisitors(allVisitors)
+    setPageHistory(allPageHistory)
+    setLastUpdated(new Date())
     setIsLoading(false)
+
+    console.log("📊 Admin data loaded:", {
+      visitors: allVisitors.length,
+      pageHistory: allPageHistory.length,
+      timestamp: new Date().toISOString(),
+    })
+  }, [getAllVisitors, getPageHistory])
+
+  // Listen for storage events (real-time updates)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "kuhlekt_all_visitors" || e.key === "kuhlekt_page_history") {
+        console.log("🔄 Storage event detected, reloading data...")
+        loadData()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [loadData])
+
+  // Setup auto-refresh
+  const setupAutoRefresh = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    if (autoRefresh) {
+      intervalRef.current = setInterval(() => {
+        loadData()
+      }, refreshInterval * 1000)
+      console.log(`🔄 Auto-refresh enabled: ${refreshInterval}s interval`)
+    } else {
+      console.log("⏸️ Auto-refresh disabled")
+    }
+  }, [autoRefresh, refreshInterval, loadData])
+
+  // Toggle auto-refresh
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh)
   }
 
-  const refreshData = () => {
-    loadTrackingData()
-  }
-
+  // Clear all data
   const clearAllData = () => {
-    if (confirm("Are you sure you want to clear all tracking data? This cannot be undone.")) {
-      localStorage.removeItem("kuhlekt_visitor_data")
-      localStorage.removeItem("kuhlekt_page_history")
+    if (typeof window === "undefined") return
+
+    if (confirm("Are you sure you want to clear all visitor data? This action cannot be undone.")) {
       localStorage.removeItem("kuhlekt_all_visitors")
+      localStorage.removeItem("kuhlekt_page_history")
+      localStorage.removeItem("kuhlekt_visitor_data")
       localStorage.removeItem("kuhlekt_visitor_id")
+      localStorage.removeItem("kuhlekt_visitors_meta")
       sessionStorage.removeItem("kuhlekt_session_id")
 
-      setVisitorData(null)
+      setVisitors([])
       setPageHistory([])
-      setAllVisitors([])
+      setFilteredVisitors([])
+      previousDataRef.current = ""
+
+      alert("All visitor data has been cleared.")
     }
   }
 
+  // Export data as CSV
   const exportData = () => {
-    const exportData = {
-      currentVisitor: visitorData,
-      pageHistory: pageHistory,
-      allVisitors: allVisitors,
-      exportedAt: new Date().toISOString(),
+    if (filteredVisitors.length === 0) {
+      alert("No data to export")
+      return
     }
 
-    const dataStr = JSON.stringify(exportData, null, 2)
-    const dataBlob = new Blob([dataStr], { type: "application/json" })
-    const url = URL.createObjectURL(dataBlob)
+    const csvHeaders = [
+      "Visitor ID",
+      "Session ID",
+      "First Visit",
+      "Last Visit",
+      "Page Views",
+      "Referrer",
+      "Current Page",
+      "UTM Source",
+      "UTM Medium",
+      "UTM Campaign",
+      "UTM Term",
+      "UTM Content",
+      "Affiliate",
+      "User Agent",
+    ]
 
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `kuhlekt-tracking-data-${new Date().toISOString().split("T")[0]}.json`
-    link.click()
+    const csvData = filteredVisitors.map((visitor) => [
+      visitor.visitorId,
+      visitor.sessionId,
+      visitor.firstVisit,
+      visitor.lastVisit,
+      visitor.pageViews,
+      visitor.referrer,
+      visitor.currentPage,
+      visitor.utmSource || "",
+      visitor.utmMedium || "",
+      visitor.utmCampaign || "",
+      visitor.utmTerm || "",
+      visitor.utmContent || "",
+      visitor.affiliate || "",
+      visitor.userAgent,
+    ])
 
-    URL.revokeObjectURL(url)
+    const csvContent = [csvHeaders, ...csvData].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-visitors-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
   }
 
-  const filteredVisitors = allVisitors.filter(
-    (visitor) =>
-      visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visitor.utmSource && visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  // Export page history as CSV
+  const exportPageHistory = () => {
+    if (pageHistory.length === 0) {
+      alert("No page history to export")
+      return
+    }
 
-  const getDeviceType = (userAgent: string) => {
-    if (/Mobile|Android|iPhone|iPad/.test(userAgent)) return "Mobile"
-    if (/Tablet/.test(userAgent)) return "Tablet"
-    return "Desktop"
+    const csvHeaders = ["Page", "Timestamp", "Session ID"]
+    const csvData = pageHistory.map((page) => [page.page, page.timestamp, page.sessionId])
+
+    const csvContent = [csvHeaders, ...csvData].map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-page-history-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
   }
 
-  const getBrowser = (userAgent: string) => {
-    if (userAgent.includes("Chrome")) return "Chrome"
-    if (userAgent.includes("Firefox")) return "Firefox"
-    if (userAgent.includes("Safari")) return "Safari"
-    if (userAgent.includes("Edge")) return "Edge"
-    return "Other"
+  // Filter and sort visitors
+  useEffect(() => {
+    let filtered = [...visitors]
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (visitor) =>
+          visitor.visitorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.currentPage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          visitor.referrer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (visitor.utmSource && visitor.utmSource.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (visitor.utmCampaign && visitor.utmCampaign.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (visitor.affiliate && visitor.affiliate.toLowerCase().includes(searchTerm.toLowerCase())),
+      )
+    }
+
+    // Apply category filter
+    if (filterBy !== "all") {
+      switch (filterBy) {
+        case "utm":
+          filtered = filtered.filter((visitor) => visitor.utmSource || visitor.utmCampaign)
+          break
+        case "affiliate":
+          filtered = filtered.filter((visitor) => visitor.affiliate)
+          break
+        case "direct":
+          filtered = filtered.filter((visitor) => visitor.referrer === "direct" || !visitor.referrer)
+          break
+        case "referral":
+          filtered = filtered.filter(
+            (visitor) => visitor.referrer && visitor.referrer !== "direct" && !visitor.utmSource,
+          )
+          break
+      }
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case "firstVisit":
+          aValue = new Date(a.firstVisit).getTime()
+          bValue = new Date(b.firstVisit).getTime()
+          break
+        case "lastVisit":
+          aValue = new Date(a.lastVisit).getTime()
+          bValue = new Date(b.lastVisit).getTime()
+          break
+        case "pageViews":
+          aValue = a.pageViews
+          bValue = b.pageViews
+          break
+        case "visitorId":
+          aValue = a.visitorId
+          bValue = b.visitorId
+          break
+        default:
+          aValue = new Date(a.lastVisit).getTime()
+          bValue = new Date(b.lastVisit).getTime()
+      }
+
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+
+    setFilteredVisitors(filtered)
+  }, [visitors, searchTerm, filterBy, sortBy, sortOrder])
+
+  // Setup auto-refresh when settings change
+  useEffect(() => {
+    setupAutoRefresh()
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [setupAutoRefresh])
+
+  // Initial load
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString()
+    } catch {
+      return dateString
+    }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-cyan-500" />
-          <p className="text-gray-600">Loading tracking data...</p>
-        </div>
-      </div>
-    )
+  // Get visitor session pages
+  const getVisitorPages = (sessionId: string) => {
+    return pageHistory.filter((page) => page.sessionId === sessionId)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking Admin</h1>
-              <p className="text-gray-600">Monitor and analyze visitor behavior and tracking data</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
+              {dataChanged && (
+                <div className="flex items-center gap-1 text-green-600 animate-pulse">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">New Data Detected!</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
-              <Link href="/admin/dashboard">
-                <Button variant="outline">← Back to Dashboard</Button>
-              </Link>
-              <Button onClick={refreshData} variant="outline">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button onClick={exportData} variant="outline">
+              <Button variant="outline" size="sm" onClick={exportPageHistory} disabled={pageHistory.length === 0}>
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                Export Pages
               </Button>
-              <Button onClick={clearAllData} variant="destructive">
-                Clear All Data
+              <Button variant="outline" size="sm" onClick={exportData} disabled={filteredVisitors.length === 0}>
+                <Download className="w-4 h-4 mr-2" />
+                Export Visitors
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearAllData}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Data
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                Refresh
               </Button>
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Navigation */}
+          <div className="flex gap-4 mb-6">
+            <Button variant="default" size="sm">
+              <Users className="w-4 h-4 mr-2" />
+              Visitor Tracking
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => (window.location.href = "/admin/tracking")}>
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Analytics Dashboard
+            </Button>
+          </div>
+
+          {/* Auto-refresh Controls */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={autoRefresh} onCheckedChange={toggleAutoRefresh} />
+                    <span className="text-sm font-medium">Auto Refresh</span>
+                    {autoRefresh ? (
+                      <div className="flex items-center gap-1">
+                        <Play className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-600">Active</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Pause className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs text-gray-500">Paused</span>
+                      </div>
+                    )}
+                  </div>
+                  <Select
+                    value={refreshInterval.toString()}
+                    onValueChange={(value) => setRefreshInterval(Number.parseInt(value))}
+                    disabled={!autoRefresh}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 seconds</SelectItem>
+                      <SelectItem value="5">5 seconds</SelectItem>
+                      <SelectItem value="10">10 seconds</SelectItem>
+                      <SelectItem value="30">30 seconds</SelectItem>
+                      <SelectItem value="60">1 minute</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-gray-500">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                  {dataChanged && <span className="ml-2 text-green-600 font-medium">• Updated</span>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Users className="w-8 h-8 text-cyan-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{allVisitors.length}</p>
-                    <p className="text-sm text-gray-600">Total Visitors</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Eye className="w-8 h-8 text-green-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{pageHistory.length}</p>
-                    <p className="text-sm text-gray-600">Page Views</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <MousePointer className="w-8 h-8 text-blue-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{allVisitors.filter((v) => v.affiliate).length}</p>
-                    <p className="text-sm text-gray-600">Affiliate Visitors</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <Clock className="w-8 h-8 text-purple-500 mr-3" />
-                  <div>
-                    <p className="text-2xl font-bold">{visitorData ? visitorData.pageViews : 0}</p>
-                    <p className="text-sm text-gray-600">Current Session</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search visitors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filterBy} onValueChange={setFilterBy}>
+              <SelectTrigger>
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Visitors</SelectItem>
+                <SelectItem value="utm">UTM Campaigns</SelectItem>
+                <SelectItem value="affiliate">Affiliates</SelectItem>
+                <SelectItem value="direct">Direct Traffic</SelectItem>
+                <SelectItem value="referral">Referrals</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lastVisit">Last Visit</SelectItem>
+                <SelectItem value="firstVisit">First Visit</SelectItem>
+                <SelectItem value="pageViews">Page Views</SelectItem>
+                <SelectItem value="visitorId">Visitor ID</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Descending</SelectItem>
+                <SelectItem value="asc">Ascending</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <Tabs defaultValue="current" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="current">Current Visitor</TabsTrigger>
-            <TabsTrigger value="history">Page History</TabsTrigger>
-            <TabsTrigger value="all">All Visitors</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
-
-          {/* Current Visitor Tab */}
-          <TabsContent value="current">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Visitor Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {visitorData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Visitor ID</Label>
-                        <p className="font-mono text-sm bg-gray-100 p-2 rounded">{visitorData.visitorId}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Session ID</Label>
-                        <p className="font-mono text-sm bg-gray-100 p-2 rounded">{visitorData.sessionId}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">First Visit</Label>
-                        <p className="text-sm">{new Date(visitorData.firstVisit).toLocaleString()}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Last Visit</Label>
-                        <p className="text-sm">{new Date(visitorData.lastVisit).toLocaleString()}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Page Views</Label>
-                        <p className="text-sm font-semibold">{visitorData.pageViews}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Current Page</Label>
-                        <p className="text-sm">{visitorData.currentPage}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Referrer</Label>
-                        <p className="text-sm break-all">{visitorData.referrer || "Direct"}</p>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">Device</Label>
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-4 h-4" />
-                          <span className="text-sm">{getDeviceType(visitorData.userAgent)}</span>
-                          <Badge variant="outline">{getBrowser(visitorData.userAgent)}</Badge>
-                        </div>
-                      </div>
-
-                      {visitorData.utmSource && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">UTM Source</Label>
-                          <Badge className="ml-2">{visitorData.utmSource}</Badge>
-                        </div>
-                      )}
-
-                      {visitorData.utmCampaign && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">UTM Campaign</Label>
-                          <Badge className="ml-2">{visitorData.utmCampaign}</Badge>
-                        </div>
-                      )}
-
-                      {visitorData.affiliate && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-500">Affiliate</Label>
-                          <Badge variant="secondary" className="ml-2">
-                            {visitorData.affiliate}
-                          </Badge>
-                        </div>
-                      )}
-
-                      <div>
-                        <Label className="text-sm font-medium text-gray-500">User Agent</Label>
-                        <p className="text-xs text-gray-600 bg-gray-100 p-2 rounded break-all">
-                          {visitorData.userAgent}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No visitor data available</p>
-                    <p className="text-sm text-gray-500">Visit some pages to generate tracking data</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Page History Tab */}
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Page Visit History</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pageHistory.length > 0 ? (
-                  <div className="space-y-2">
-                    {pageHistory
-                      .slice()
-                      .reverse()
-                      .map((visit, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Globe className="w-4 h-4 text-gray-500" />
-                            <span className="font-medium">{visit.page}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(visit.timestamp).toLocaleString()}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {visit.sessionId.split("-")[0]}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No page history available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* All Visitors Tab */}
-          <TabsContent value="all">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>All Visitors</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Search className="w-4 h-4 text-gray-500" />
-                    <Input
-                      placeholder="Search visitors..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-64"
-                    />
-                  </div>
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Visitors</p>
+                  <p className="text-2xl font-bold text-gray-900">{visitors.length}</p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {filteredVisitors.length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredVisitors.map((visitor, index) => (
-                      <div key={index} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-mono text-sm text-gray-600">{visitor.visitorId}</p>
-                            <p className="text-sm text-gray-500">{new Date(visitor.firstVisit).toLocaleDateString()}</p>
+                <Users className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Filtered Results</p>
+                  <p className="text-2xl font-bold text-green-600">{filteredVisitors.length}</p>
+                </div>
+                <Filter className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Page Views</p>
+                  <p className="text-2xl font-bold text-purple-600">{pageHistory.length}</p>
+                </div>
+                <Eye className="w-8 h-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Unique Sessions</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {visitors.length > 0 ? new Set(visitors.map((v) => v.sessionId)).size : 0}
+                  </p>
+                </div>
+                <MousePointer className="w-8 h-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Visitors Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Visitor Details ({filteredVisitors.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredVisitors.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Visitors Found</h3>
+                <p className="text-gray-500 mb-4">
+                  {visitors.length === 0
+                    ? "No visitor data has been collected yet. Visit the main site to generate tracking data."
+                    : "No visitors match your current filters."}
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <Button variant="outline" onClick={loadData}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Data
+                  </Button>
+                  <Button variant="outline" onClick={() => window.open("/", "_blank")}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Visit Main Site
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredVisitors.map((visitor) => {
+                  const visitorPages = getVisitorPages(visitor.sessionId)
+                  return (
+                    <div key={visitor.visitorId} className="border rounded-lg p-6 bg-white">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Visitor Info */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="font-semibold text-gray-900">Visitor ID:</h3>
+                            <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                              {visitor.visitorId.slice(0, 16)}...
+                            </code>
                           </div>
-                          <div className="flex gap-2">
-                            <Badge>{visitor.pageViews} views</Badge>
-                            {visitor.affiliate && <Badge variant="secondary">{visitor.affiliate}</Badge>}
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">First Visit:</span>
+                              <span>{formatDate(visitor.firstVisit)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">Last Visit:</span>
+                              <span>{formatDate(visitor.lastVisit)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Eye className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">Page Views:</span>
+                              <Badge variant="secondary">{visitor.pageViews}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">Referrer:</span>
+                              <span className="truncate">{visitor.referrer}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <ExternalLink className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium">Current Page:</span>
+                              <span className="truncate">{visitor.currentPage}</span>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Referrer:</span>
-                            <p className="truncate">{visitor.referrer || "Direct"}</p>
+                        {/* UTM & Affiliate Info */}
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3">Campaign Data</h4>
+                          <div className="space-y-2 text-sm">
+                            {visitor.utmSource && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">UTM Source:</span>
+                                <Badge variant="outline">{visitor.utmSource}</Badge>
+                              </div>
+                            )}
+                            {visitor.utmMedium && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">UTM Medium:</span>
+                                <Badge variant="outline">{visitor.utmMedium}</Badge>
+                              </div>
+                            )}
+                            {visitor.utmCampaign && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">UTM Campaign:</span>
+                                <Badge variant="outline">{visitor.utmCampaign}</Badge>
+                              </div>
+                            )}
+                            {visitor.utmTerm && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">UTM Term:</span>
+                                <Badge variant="outline">{visitor.utmTerm}</Badge>
+                              </div>
+                            )}
+                            {visitor.utmContent && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">UTM Content:</span>
+                                <Badge variant="outline">{visitor.utmContent}</Badge>
+                              </div>
+                            )}
+                            {visitor.affiliate && (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Affiliate:</span>
+                                <Badge variant="default">{visitor.affiliate}</Badge>
+                              </div>
+                            )}
+                            {!visitor.utmSource && !visitor.utmCampaign && !visitor.affiliate && (
+                              <p className="text-gray-500 italic">No campaign data</p>
+                            )}
                           </div>
-                          <div>
-                            <span className="text-gray-500">Device:</span>
-                            <p>
-                              {getDeviceType(visitor.userAgent)} - {getBrowser(visitor.userAgent)}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">UTM Source:</span>
-                            <p>{visitor.utmSource || "None"}</p>
-                          </div>
+
+                          {/* Page History */}
+                          {visitorPages.length > 0 && (
+                            <div className="mt-4">
+                              <h5 className="font-medium text-gray-900 mb-2">Page History ({visitorPages.length})</h5>
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {visitorPages.slice(0, 5).map((page, index) => (
+                                  <div key={index} className="text-xs text-gray-600 flex justify-between">
+                                    <span className="truncate">{page.page}</span>
+                                    <span className="ml-2 flex-shrink-0">
+                                      {new Date(page.timestamp).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                ))}
+                                {visitorPages.length > 5 && (
+                                  <p className="text-xs text-gray-500 italic">+{visitorPages.length - 5} more pages</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No visitors found</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Traffic Sources</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(
-                      allVisitors.reduce(
-                        (acc, visitor) => {
-                          const source =
-                            visitor.referrer === ""
-                              ? "Direct"
-                              : visitor.referrer.includes("google")
-                                ? "Google"
-                                : visitor.referrer.includes("facebook")
-                                  ? "Facebook"
-                                  : visitor.referrer.includes("linkedin")
-                                    ? "LinkedIn"
-                                    : "Other"
-                          acc[source] = (acc[source] || 0) + 1
-                          return acc
-                        },
-                        {} as Record<string, number>,
-                      ),
-                    ).map(([source, count]) => (
-                      <div key={source} className="flex justify-between items-center">
-                        <span>{source}</span>
-                        <Badge>{count}</Badge>
+                      {/* User Agent */}
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-sm text-gray-600">User Agent:</span>
+                          <span className="text-xs text-gray-500 break-all">{visitor.userAgent}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Device Types</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(
-                      allVisitors.reduce(
-                        (acc, visitor) => {
-                          const device = getDeviceType(visitor.userAgent)
-                          acc[device] = (acc[device] || 0) + 1
-                          return acc
-                        },
-                        {} as Record<string, number>,
-                      ),
-                    ).map(([device, count]) => (
-                      <div key={device} className="flex justify-between items-center">
-                        <span>{device}</span>
-                        <Badge>{count}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

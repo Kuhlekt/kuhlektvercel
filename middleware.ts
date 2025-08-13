@@ -1,39 +1,31 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/request"
+import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // Check if accessing admin routes
-  if (request.nextUrl.pathname.startsWith("/admin")) {
-    if (request.nextUrl.pathname === "/admin/login") {
-      return NextResponse.next()
-    }
+  const { pathname } = request.nextUrl
 
-    const adminSession = request.cookies.get("admin-session")
-    const sessionExpires = request.cookies.get("admin-session-expires")
-    const fallbackSession = request.cookies.get("admin-session-fallback")
+  // Add security headers for admin routes
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    const response = NextResponse.next()
 
-    // Allow access if either session type exists
-    if (fallbackSession) {
-      return NextResponse.next()
-    }
+    // Prevent indexing and caching
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, noimageindex")
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, private")
+    response.headers.set("Pragma", "no-cache")
+    response.headers.set("Expires", "0")
 
-    if (!adminSession || !sessionExpires) {
-      return NextResponse.redirect(new URL("/admin/login", request.url))
-    }
+    // Security headers
+    response.headers.set("X-Frame-Options", "DENY")
+    response.headers.set("X-Content-Type-Options", "nosniff")
+    response.headers.set("Referrer-Policy", "no-referrer")
+    response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
-    // Check if session is expired
-    const expiryDate = new Date(sessionExpires.value)
-    if (expiryDate < new Date()) {
-      const response = NextResponse.redirect(new URL("/admin/login", request.url))
-      response.cookies.delete("admin-session")
-      response.cookies.delete("admin-session-expires")
-      return response
-    }
+    return response
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 }

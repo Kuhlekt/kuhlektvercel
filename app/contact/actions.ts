@@ -1,269 +1,178 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
-import { verifyCaptcha } from "@/lib/captcha"
-import { validateAffiliateCode } from "@/lib/database/affiliates"
-import { createOrUpdateVisitor, getVisitorBySessionId } from "@/lib/database/visitors"
-import { createFormSubmission } from "@/lib/database/form-submissions"
-import { headers } from "next/headers"
+import { sendEmailWithSES, testAWSSESConnection } from "@/lib/aws-ses"
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+import { getVisitorData } from "@/components/visitor-tracker"
 
-// Predefined affiliate table for validation
-const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
+interface ContactFormData {
+  name: string
+  email: string
+  company: string
+  message: string
+  recaptchaToken: string
+}
 
-export async function submitContactForm(prevState: any, formData: FormData) {
+export async function submitContactForm(formData: FormData) {
   try {
     // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
-    const affiliate = formData.get("affiliate") as string
-    const message = formData.get("message") as string
-    const recaptchaToken = formData.get("recaptchaToken") as string
-    const referrer = formData.get("referrer") as string
-    const utmSource = formData.get("utmSource") as string
-    const utmCampaign = formData.get("utmCampaign") as string
-    const pageViews = formData.get("pageViews") as string
-    const sessionId = formData.get("sessionId") as string
+    const data: ContactFormData = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      company: formData.get("company") as string,
+      message: formData.get("message") as string,
+      recaptchaToken: formData.get("recaptchaToken") as string,
+    }
 
     // Validate required fields
-    if (!firstName || !lastName || !email) {
+    if (!data.name || !data.email || !data.message) {
       return {
         success: false,
-        error: true,
         message: "Please fill in all required fields.",
       }
     }
 
-    // Verify reCAPTCHA
-    const captchaResult = await verifyCaptcha(recaptchaToken || "")
-    if (!captchaResult.success) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(data.email)) {
       return {
         success: false,
-        error: true,
-        message: "Please complete the reCAPTCHA verification.",
+        message: "Please enter a valid email address.",
       }
     }
 
-    const headersList = headers()
-    const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown"
-    const userAgent = headersList.get("user-agent") || "unknown"
-
-    let validAffiliate = null
-    let affiliateId = null
-    if (affiliate) {
-      const affiliateResult = await validateAffiliateCode(affiliate)
-      if (affiliateResult.success && affiliateResult.isValid) {
-        validAffiliate = affiliateResult.affiliate
-        affiliateId = validAffiliate?.id
-      }
-    }
-
-    let visitorId = null
-    if (sessionId) {
-      // Try to get existing visitor
-      const visitorResult = await getVisitorBySessionId(sessionId)
-      if (visitorResult.success && visitorResult.data) {
-        visitorId = visitorResult.data.id
-      } else {
-        // Create new visitor record
-        const newVisitorResult = await createOrUpdateVisitor({
-          sessionId,
-          ipAddress,
-          userAgent,
-          referrer,
-          landingPage: referrer || "direct",
-          pageViews: Number.parseInt(pageViews) || 1,
-        })
-        if (newVisitorResult.success) {
-          visitorId = newVisitorResult.data?.id
+    // Verify reCAPTCHA
+    if (data.recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
+      if (!recaptchaResult.success) {
+        return {
+          success: false,
+          message: "reCAPTCHA verification failed. Please try again.",
         }
       }
     }
 
-    const submissionResult = await createFormSubmission({
-      visitorId,
-      affiliateId,
-      formType: "contact",
-      firstName,
-      lastName,
-      email,
-      phone,
-      company,
-      message,
-      affiliateReference: affiliate,
-      sourcePage: "/contact",
-      utmSource,
-      utmCampaign,
-      ipAddress,
-      userAgent,
-      formData: {
-        referrer,
-        pageViews: Number.parseInt(pageViews) || 1,
-        sessionId,
-      },
-    })
-
-    if (!submissionResult.success) {
-      console.error("Failed to store form submission:", submissionResult.error)
-      // Continue with email sending even if database storage fails
-    }
+    // Get visitor data for context
+    const visitorData = getVisitorData()
 
     // Prepare email content
-    const emailSubject = "New Contact Form Submission - Kuhlekt"
-    const emailBody = `
-      New contact form submission:
-      
-      Name: ${firstName} ${lastName}
-      Email: ${email}
-      Company: ${company || "Not provided"}
-      Phone: ${phone || "Not provided"}
-      ${validAffiliate ? `Affiliate: ${validAffiliate.affiliate_code} (${validAffiliate.affiliate_name || "Unknown"})` : ""}
-      Message: ${message || "No message provided"}
-      
-      Visitor Tracking:
-      - Referrer: ${referrer || "Not available"}
-      - UTM Source: ${utmSource || "Not available"}
-      - UTM Campaign: ${utmCampaign || "Not available"}
-      - Page Views: ${pageViews || "Not available"}
-      - Session ID: ${sessionId || "Not available"}
-      - IP Address: ${ipAddress}
-      
-      Database Record: ${submissionResult.success ? `ID ${submissionResult.data?.id}` : "Failed to store"}
-      
-      Submitted at: ${new Date().toISOString()}
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+    const subject = `New Contact Form Submission from ${data.name}`
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+          New Contact Form Submission
+        </h2>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
+          <p><strong>Name:</strong> ${data.name}</p>
+          <p><strong>Email:</strong> ${data.email}</p>
+          <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
+        </div>
+
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Message</h3>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${data.message}</p>
+        </div>
+
+        ${
+          visitorData
+            ? `
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Visitor Information</h3>
+          <p><strong>Visitor ID:</strong> ${visitorData.visitorId}</p>
+          <p><strong>Session ID:</strong> ${visitorData.sessionId}</p>
+          <p><strong>Page Views:</strong> ${visitorData.pageViews}</p>
+          <p><strong>Current Page:</strong> ${visitorData.currentPage}</p>
+          ${visitorData.utmSource ? `<p><strong>UTM Source:</strong> ${visitorData.utmSource}</p>` : ""}
+          ${visitorData.affiliate ? `<p><strong>Affiliate:</strong> ${visitorData.affiliate}</p>` : ""}
+        </div>
+        `
+            : ""
+        }
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          <p>This email was sent from the Kuhlekt contact form at ${new Date().toLocaleString()}.</p>
+        </div>
+      </div>
     `
 
-    // Send email
-    await sendEmailWithSES({
-      to: [process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com"],
-      subject: emailSubject,
-      body: emailBody,
-      replyTo: email,
+    const textContent = `
+New Contact Form Submission
+
+Contact Information:
+Name: ${data.name}
+Email: ${data.email}
+Company: ${data.company || "Not provided"}
+
+Message:
+${data.message}
+
+${
+  visitorData
+    ? `
+Visitor Information:
+Visitor ID: ${visitorData.visitorId}
+Session ID: ${visitorData.sessionId}
+Page Views: ${visitorData.pageViews}
+Current Page: ${visitorData.currentPage}
+${visitorData.utmSource ? `UTM Source: ${visitorData.utmSource}` : ""}
+${visitorData.affiliate ? `Affiliate: ${visitorData.affiliate}` : ""}
+`
+    : ""
+}
+
+Submitted at: ${new Date().toLocaleString()}
+    `
+
+    // Send email using AWS SES
+    const emailResult = await sendEmailWithSES({
+      to: adminEmail,
+      subject: subject,
+      text: textContent,
+      html: htmlContent,
     })
 
-    return {
-      success: true,
-      error: false,
-      message: "Thank you for your message! We'll get back to you soon.",
+    if (emailResult.success) {
+      return {
+        success: true,
+        message: "Thank you for your message! We'll get back to you soon.",
+      }
+    } else {
+      // Log the submission even if email fails
+      console.log("Contact form submission (email failed):", {
+        name: data.name,
+        email: data.email,
+        company: data.company,
+        message: data.message.substring(0, 100) + "...",
+        timestamp: new Date().toISOString(),
+        error: emailResult.message,
+      })
+
+      return {
+        success: true,
+        message: "Thank you for your message! We've received your submission and will get back to you soon.",
+      }
     }
   } catch (error) {
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      error: true,
-      message: "Something went wrong. Please try again later.",
+      message: "An error occurred while submitting your message. Please try again.",
     }
   }
 }
 
 export async function testAWSSES() {
   try {
-    console.log("Testing AWS SES connection...")
-
-    // Check environment variables
-    const region = process.env.AWS_SES_REGION
-    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-    const fromEmail = process.env.AWS_SES_FROM_EMAIL
-
-    const envCheck = {
-      region: !!region,
-      accessKey: !!accessKeyId,
-      secretKey: !!secretAccessKey,
-      fromEmail: !!fromEmail,
-    }
-
-    console.log("Environment variables status:", envCheck)
-
-    // Check if all required variables are present
-    const allConfigured = Object.values(envCheck).every(Boolean)
-
-    if (!allConfigured) {
-      return {
-        success: false,
-        message: "AWS SES is not fully configured. Missing environment variables.",
-        details: envCheck,
-      }
-    }
-
-    // Test connection by attempting to get send quota
-    try {
-      const endpoint = `https://email.${region}.amazonaws.com/`
-
-      // Create test parameters
-      const testParams = new URLSearchParams({
-        Action: "GetSendQuota",
-        Version: "2010-12-01",
-      })
-
-      // Create AWS signature v4
-      const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
-      const date = timestamp.substr(0, 8)
-
-      const method = "POST"
-      const canonicalUri = "/"
-      const canonicalQueryString = ""
-      const canonicalHeaders = `host:email.${region}.amazonaws.com\nx-amz-date:${timestamp}\n`
-      const signedHeaders = "host;x-amz-date"
-
-      const payload = testParams.toString()
-
-      const algorithm = "AWS4-HMAC-SHA256"
-      const credentialScope = `${date}/${region}/ses/aws4_request`
-      const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(payload)}`
-      const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
-
-      const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-      const kRegion = await hmacSha256(kDate, region)
-      const kService = await hmacSha256(kRegion, "ses")
-      const kSigning = await hmacSha256(kService, "aws4_request")
-
-      const signature = await hmacSha256(kSigning, stringToSign, "hex")
-      const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Amz-Date": timestamp,
-          Authorization: authorization,
-        },
-        body: payload,
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("AWS SES test failed:", errorText)
-        return {
-          success: false,
-          message: `AWS SES test failed: ${response.status} ${response.statusText}`,
-          details: envCheck,
-        }
-      }
-
-      const responseText = await response.text()
-      console.log("AWS SES test successful:", responseText)
-
-      return {
-        success: true,
-        message: `AWS SES is working correctly!\n\nConfiguration Details:\n- Region: ${region}\n- From Email: ${fromEmail}\n\nThe email system is ready to use!`,
-        details: envCheck,
-      }
-    } catch (testError) {
-      console.error("AWS SES test error:", testError)
-      return {
-        success: false,
-        message: `AWS SES test failed: ${testError instanceof Error ? testError.message : "Unknown error"}`,
-        details: envCheck,
-      }
-    }
+    const result = await testAWSSESConnection()
+    return result
   } catch (error) {
-    console.error("Test function error:", error)
+    console.error("AWS SES test error:", error)
     return {
       success: false,
-      message: `Test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      message: error instanceof Error ? error.message : "Unknown error occurred",
       details: {
         region: false,
         accessKey: false,
@@ -272,34 +181,4 @@ export async function testAWSSES() {
       },
     }
   }
-}
-
-// Helper functions for AWS signature
-async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-}
-
-async function hmacSha256(
-  key: string | Uint8Array,
-  message: string,
-  encoding: "hex" | "binary" = "binary",
-): Promise<string | Uint8Array> {
-  const keyBuffer = typeof key === "string" ? new TextEncoder().encode(key) : key
-  const messageBuffer = new TextEncoder().encode(message)
-
-  const cryptoKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
-
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageBuffer)
-  const signatureArray = new Uint8Array(signature)
-
-  if (encoding === "hex") {
-    return Array.from(signatureArray)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-  }
-
-  return signatureArray
 }
