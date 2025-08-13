@@ -3,6 +3,9 @@
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 
+// Predefined affiliate table for validation
+const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
+
 interface VisitorData {
   visitorId: string
   sessionId: string
@@ -73,6 +76,10 @@ export function VisitorTracker() {
         const utmContent = urlParams.get("utm_content") || undefined
         const affiliate = urlParams.get("affiliate") || urlParams.get("ref") || undefined
 
+        // Validate affiliate against predefined table
+        const validAffiliate =
+          affiliate && affiliateTable.includes(affiliate.toUpperCase()) ? affiliate.toUpperCase() : undefined
+
         // Get existing visitors data
         const existingVisitors = JSON.parse(localStorage.getItem("kuhlekt_all_visitors") || "[]")
 
@@ -95,7 +102,7 @@ export function VisitorTracker() {
             utmCampaign,
             utmTerm,
             utmContent,
-            affiliate,
+            affiliate: validAffiliate,
           }
           existingVisitors.push(newVisitor)
         } else {
@@ -112,7 +119,7 @@ export function VisitorTracker() {
           if (utmCampaign) visitor.utmCampaign = utmCampaign
           if (utmTerm) visitor.utmTerm = utmTerm
           if (utmContent) visitor.utmContent = utmContent
-          if (affiliate) visitor.affiliate = affiliate
+          if (validAffiliate) visitor.affiliate = validAffiliate
         }
 
         // Save updated visitors data
@@ -134,20 +141,22 @@ export function VisitorTracker() {
 
         localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
 
-        // Legacy visitor data for backward compatibility
+        // Legacy visitor data for backward compatibility (used by forms)
         const legacyVisitorData = {
           visitorId,
           sessionId,
-          timestamp: now,
-          page: currentPage,
+          firstVisit: now,
+          lastVisit: now,
+          pageViews: existingVisitors[visitorIndex]?.pageViews || 1,
           referrer,
           userAgent,
+          currentPage,
           utmSource,
           utmMedium,
           utmCampaign,
           utmTerm,
           utmContent,
-          affiliate,
+          affiliate: validAffiliate,
         }
         localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(legacyVisitorData))
 
@@ -157,6 +166,12 @@ export function VisitorTracker() {
           page: currentPage,
           totalVisitors: existingVisitors.length,
           totalPageViews: pageHistory.length,
+          affiliate: validAffiliate,
+          utm: {
+            source: utmSource,
+            medium: utmMedium,
+            campaign: utmCampaign,
+          },
         })
       } catch (error) {
         console.error("Error tracking visitor:", error)
@@ -186,4 +201,43 @@ export function VisitorTracker() {
   }, [pathname])
 
   return null
+}
+
+// Helper function to get visitor data (can be used by forms)
+export function getVisitorData() {
+  if (typeof window === "undefined") return null
+
+  try {
+    const visitorDataStr = localStorage.getItem("kuhlekt_visitor_data")
+    return visitorDataStr ? JSON.parse(visitorDataStr) : null
+  } catch (error) {
+    console.error("Error getting visitor data:", error)
+    return null
+  }
+}
+
+// Helper function to get page history
+export function getPageHistory() {
+  if (typeof window === "undefined") return []
+
+  try {
+    const historyStr = localStorage.getItem("kuhlekt_page_history")
+    return historyStr ? JSON.parse(historyStr) : []
+  } catch (error) {
+    console.error("Error getting page history:", error)
+    return []
+  }
+}
+
+// Helper function to get all visitors (for admin)
+export function getAllVisitors() {
+  if (typeof window === "undefined") return []
+
+  try {
+    const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
+    return allVisitorsStr ? JSON.parse(allVisitorsStr) : []
+  } catch (error) {
+    console.error("Error getting all visitors:", error)
+    return []
+  }
 }
