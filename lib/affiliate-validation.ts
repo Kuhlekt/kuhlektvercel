@@ -8,19 +8,8 @@ interface AffiliateInfo {
   isActive: boolean
 }
 
-// Predefined list of valid affiliate codes
-const VALID_AFFILIATE_CODES = [
-  "PARTNER001",
-  "PARTNER002",
-  "PARTNER003",
-  "REFERRAL001",
-  "REFERRAL002",
-  "AGENCY001",
-  "AGENCY002",
-  "CONSULTANT001",
-  "CONSULTANT002",
-  "RESELLER001",
-]
+// List of valid affiliate codes
+const VALID_AFFILIATE_CODES = ["PARTNER001", "PARTNER002", "RESELLER001", "AGENCY001", "REFERRAL001"]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
@@ -256,6 +245,41 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
   },
 }
 
+/**
+ * Validates if an affiliate code is in the approved list
+ * @param code - The affiliate code to validate
+ * @returns true if valid, false otherwise
+ */
+export function validateAffiliate(code: string): boolean {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
+  return VALID_AFFILIATE_CODES.includes(code.toUpperCase())
+}
+
+/**
+ * Gets the list of all valid affiliate codes (for admin use)
+ * @returns Array of valid affiliate codes
+ */
+export function getValidAffiliateCodes(): string[] {
+  return [...VALID_AFFILIATE_CODES]
+}
+
+/**
+ * Normalizes an affiliate code to uppercase
+ * @param code - The affiliate code to normalize
+ * @returns Normalized code or null if invalid
+ */
+export function normalizeAffiliateCode(code: string): string | null {
+  if (!code || typeof code !== "string") {
+    return null
+  }
+
+  const normalized = code.toUpperCase()
+  return VALID_AFFILIATE_CODES.includes(normalized) ? normalized : null
+}
+
 export async function validateAffiliateCode(code: string): Promise<string | null> {
   if (!code || typeof code !== "string") {
     return null
@@ -279,35 +303,6 @@ export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
 }
 
 /**
- * Validates if an affiliate code is in the approved list
- * @param affiliate - The affiliate code to validate
- * @returns The validated affiliate code in uppercase, or undefined if invalid
- */
-export function validateAffiliate(affiliate: string | undefined): string | undefined {
-  if (!affiliate) return undefined
-
-  const upperAffiliate = affiliate.toUpperCase().trim()
-  return VALID_AFFILIATE_CODES.includes(upperAffiliate) ? upperAffiliate : undefined
-}
-
-/**
- * Gets the list of all valid affiliate codes
- * @returns Array of valid affiliate codes
- */
-export function getValidAffiliates(): string[] {
-  return [...VALID_AFFILIATE_CODES]
-}
-
-/**
- * Checks if a given code is a valid affiliate code
- * @param code - The code to check
- * @returns True if the code is valid, false otherwise
- */
-export function isValidAffiliateCode(code: string): boolean {
-  return VALID_AFFILIATE_CODES.includes(code.toUpperCase().trim())
-}
-
-/**
  * Formats an affiliate code for display
  * @param affiliate - The affiliate code to format
  * @returns Formatted affiliate code or 'Direct' if invalid
@@ -315,6 +310,6 @@ export function isValidAffiliateCode(code: string): boolean {
 export function formatAffiliateCode(affiliate: string | undefined): string {
   if (!affiliate) return "Direct"
 
-  const validated = validateAffiliate(affiliate)
+  const validated = normalizeAffiliateCode(affiliate)
   return validated || "Unknown"
 }
