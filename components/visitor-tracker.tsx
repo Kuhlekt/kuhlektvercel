@@ -1,59 +1,95 @@
 "use client"
 
-import { useEffect } from "react"
-import { useSearchParams, usePathname } from "next/navigation"
-import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
+
+interface VisitorData {
+  sessionId: string
+  visitorId: string
+  timestamp: string
+  page: string
+  userAgent: string
+  referrer: string
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmTerm?: string
+  utmContent?: string
+  affiliate?: string
+  ipAddress?: string
+}
 
 function VisitorTrackerComponent() {
   const searchParams = useSearchParams()
-  const pathname = usePathname()
+  const hasTracked = useRef(false)
 
   useEffect(() => {
+    if (hasTracked.current) return
+    hasTracked.current = true
+
     const trackVisitor = async () => {
       try {
-        // Extract UTM parameters
-        const utmSource = searchParams.get("utm_source") || ""
-        const utmMedium = searchParams.get("utm_medium") || ""
-        const utmCampaign = searchParams.get("utm_campaign") || ""
-        const utmTerm = searchParams.get("utm_term") || ""
-        const utmContent = searchParams.get("utm_content") || ""
-
-        // Extract and validate affiliate code
-        const affiliateCode = searchParams.get("affiliate") || searchParams.get("ref") || ""
-        const isValidAffiliate = affiliateCode ? validateAffiliateCode(affiliateCode) : false
-
-        // Get referrer
-        const referrer = document.referrer || ""
-
-        // Get user agent
-        const userAgent = navigator.userAgent || ""
-
-        // Get screen resolution
-        const screenResolution = `${screen.width}x${screen.height}`
-
-        // Get timestamp
-        const timestamp = new Date().toISOString()
-
-        // Create visitor data
-        const visitorData = {
-          page: pathname,
-          timestamp,
-          referrer,
-          userAgent,
-          screenResolution,
-          utmSource,
-          utmMedium,
-          utmCampaign,
-          utmTerm,
-          utmContent,
-          affiliateCode,
-          isValidAffiliate,
-          sessionId: getOrCreateSessionId(),
-          visitorId: getOrCreateVisitorId(),
+        // Generate or get existing visitor ID
+        let visitorId = localStorage.getItem("kuhlekt_visitor_id")
+        if (!visitorId) {
+          visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          localStorage.setItem("kuhlekt_visitor_id", visitorId)
         }
 
-        // Send to tracking endpoint
-        await fetch("/api/track-visitor", {
+        // Generate session ID
+        let sessionId = sessionStorage.getItem("kuhlekt_session_id")
+        if (!sessionId) {
+          sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          sessionStorage.setItem("kuhlekt_session_id", sessionId)
+        }
+
+        // Extract UTM parameters
+        const utmSource = searchParams.get("utm_source")
+        const utmMedium = searchParams.get("utm_medium")
+        const utmCampaign = searchParams.get("utm_campaign")
+        const utmTerm = searchParams.get("utm_term")
+        const utmContent = searchParams.get("utm_content")
+        const affiliate = searchParams.get("affiliate") || searchParams.get("ref")
+
+        // Validate affiliate code if present
+        let validatedAffiliate: string | undefined
+        if (affiliate) {
+          try {
+            const { validateAffiliate } = await import("@/lib/affiliate-validation")
+            const isValid = validateAffiliate(affiliate)
+            if (isValid) {
+              validatedAffiliate = affiliate.toUpperCase()
+              // Store validated affiliate in localStorage for future reference
+              localStorage.setItem("kuhlekt_affiliate", validatedAffiliate)
+            }
+          } catch (error) {
+            console.warn("Failed to validate affiliate code:", error)
+          }
+        } else {
+          // Check if we have a stored affiliate
+          const storedAffiliate = localStorage.getItem("kuhlekt_affiliate")
+          if (storedAffiliate) {
+            validatedAffiliate = storedAffiliate
+          }
+        }
+
+        const visitorData: VisitorData = {
+          sessionId,
+          visitorId,
+          timestamp: new Date().toISOString(),
+          page: window.location.pathname,
+          userAgent: navigator.userAgent,
+          referrer: document.referrer || "direct",
+          ...(utmSource && { utmSource }),
+          ...(utmMedium && { utmMedium }),
+          ...(utmCampaign && { utmCampaign }),
+          ...(utmTerm && { utmTerm }),
+          ...(utmContent && { utmContent }),
+          ...(validatedAffiliate && { affiliate: validatedAffiliate }),
+        }
+
+        // Store visitor data in Supabase
+        const response = await fetch("/api/track-visitor", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -61,53 +97,29 @@ function VisitorTrackerComponent() {
           body: JSON.stringify(visitorData),
         })
 
-        // Store in localStorage for admin dashboard
-        const existingData = JSON.parse(localStorage.getItem("visitorHistory") || "[]")
-        existingData.push(visitorData)
-
-        // Keep only last 100 entries
-        if (existingData.length > 100) {
-          existingData.splice(0, existingData.length - 100)
+        if (!response.ok) {
+          console.warn("Failed to track visitor:", response.statusText)
         }
-
-        localStorage.setItem("visitorHistory", JSON.stringify(existingData))
       } catch (error) {
-        console.error("Error tracking visitor:", error)
+        console.warn("Error tracking visitor:", error)
       }
     }
 
-    trackVisitor()
-  }, [searchParams, pathname])
+    // Track after a short delay to ensure page is loaded
+    const timeoutId = setTimeout(trackVisitor, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchParams])
 
   return null
 }
 
-function getOrCreateSessionId(): string {
-  let sessionId = sessionStorage.getItem("kuhlekt_session_id")
-  if (!sessionId) {
-    sessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
-    sessionStorage.setItem("kuhlekt_session_id", sessionId)
-  }
-  return sessionId
-}
-
-function getOrCreateVisitorId(): string {
-  let visitorId = localStorage.getItem("kuhlekt_visitor_id")
-  if (!visitorId) {
-    visitorId = "visitor_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
-    localStorage.setItem("kuhlekt_visitor_id", visitorId)
-  }
-  return visitorId
-}
-
-// Error boundary wrapper
-function VisitorTracker() {
+export function VisitorTracker() {
   return (
-    <div suppressHydrationWarning>
+    <div className="visitor-tracker">
       <VisitorTrackerComponent />
     </div>
   )
 }
 
-export { VisitorTracker }
 export default VisitorTracker

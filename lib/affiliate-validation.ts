@@ -275,6 +275,20 @@ export function validateAffiliate(code: string): boolean {
 }
 
 /**
+ * Validates an affiliate code and returns it in uppercase if valid
+ * @param code - The affiliate code to validate
+ * @returns The validated code in uppercase or null if invalid
+ */
+export function validateAffiliateCode(code: string): string | null {
+  if (!code || typeof code !== "string") {
+    return null
+  }
+
+  const upperCode = code.toUpperCase().trim()
+  return VALID_AFFILIATE_CODES.includes(upperCode) ? upperCode : null
+}
+
+/**
  * Gets the list of all valid affiliate codes (for admin use)
  * @returns Array of valid affiliate codes
  */
