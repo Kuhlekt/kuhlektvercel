@@ -1,6 +1,6 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
+import { sendEmailWithSES } from "./aws-ses"
 
 interface EmailOptions {
   to: string
@@ -83,7 +83,7 @@ Submitted at: ${new Date().toLocaleString()}
     </div>
   `
 
-  return await sendEmail({
+  return await sendEmailWithSES({
     to: adminEmail,
     subject,
     text,
@@ -161,10 +161,15 @@ Submitted at: ${new Date().toLocaleString()}
     </div>
   `
 
-  return await sendEmail({
+  return await sendEmailWithSES({
     to: adminEmail,
     subject,
     text,
     html,
   })
 }
+
+export { sendEmailWithSES }
+
+// Legacy export for backward compatibility
+export const sendEmailLegacy = sendEmailWithSES

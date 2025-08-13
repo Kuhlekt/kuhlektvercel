@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { submitDemoRequest } from "./actions"
 import ReCAPTCHA from "react-google-recaptcha"
-import { getVisitorData } from "@/components/visitor-tracker"
+import { getVisitorData, VisitorTracker } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -76,6 +76,10 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <Suspense fallback={null}>
+        <VisitorTracker />
+      </Suspense>
+
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Request a Demo</h1>

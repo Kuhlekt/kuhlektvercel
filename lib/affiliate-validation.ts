@@ -8,6 +8,18 @@ interface AffiliateInfo {
   isActive: boolean
 }
 
+// Predefined list of valid affiliate codes
+const VALID_AFFILIATES = [
+  "PARTNER001",
+  "PARTNER002",
+  "REFERRAL123",
+  "AGENT456",
+  "CONSULTANT789",
+  "RESELLER001",
+  "CHANNEL002",
+  "AFFILIATE003",
+]
+
 const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
   ACCT2024: {
@@ -259,4 +271,19 @@ export function getAllAffiliatePartners(): AffiliateInfo[] {
 
 export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
   return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
+}
+
+export function validateAffiliate(code: string): boolean {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
+  // Convert to uppercase for case-insensitive comparison
+  const upperCode = code.toUpperCase().trim()
+
+  return VALID_AFFILIATES.includes(upperCode)
+}
+
+export function getValidAffiliates(): string[] {
+  return [...VALID_AFFILIATES]
 }
