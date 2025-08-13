@@ -127,19 +127,6 @@ export default function ContactFormComponent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject *</Label>
-                  <Input
-                    id="subject"
-                    name="subject"
-                    type="text"
-                    required
-                    className={state.errors?.subject ? "border-red-500" : ""}
-                    disabled={isPending}
-                  />
-                  {state.errors?.subject && <p className="text-sm text-red-600">{state.errors.subject}</p>}
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="message">Message</Label>
                   <Textarea
                     id="message"

@@ -11,7 +11,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const email = formData.get("email") as string
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
-    const subject = formData.get("subject") as string
     const message = formData.get("message") as string
     const captchaToken = formData.get("captchaToken") as string
 
@@ -40,10 +39,6 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       errors.phone = "Phone number is required"
     }
 
-    if (!subject?.trim()) {
-      errors.subject = "Subject is required"
-    }
-
     if (Object.keys(errors).length > 0) {
       return {
         success: false,
@@ -64,14 +59,13 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     }
 
     // Prepare email content
-    const emailSubject = `Contact Form: ${subject} - ${firstName} ${lastName}`
+    const emailSubject = `Contact Form Submission - ${firstName} ${lastName}`
     const emailBody = `
       <h2>New Contact Form Submission</h2>
       <p><strong>Name:</strong> ${firstName} ${lastName}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Company:</strong> ${company}</p>
       <p><strong>Phone:</strong> ${phone}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
       ${message ? `<p><strong>Message:</strong></p><p>${message}</p>` : ""}
       <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
       <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
