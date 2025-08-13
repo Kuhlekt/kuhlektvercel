@@ -107,10 +107,55 @@ export default function TrackingPage() {
     }
   }
 
-  // Export data as CSV
-  const exportData = () => {
+  // Export analytics data as CSV
+  const exportAnalyticsData = () => {
+    const analytics = calculateAnalytics()
+
+    if (analytics.totalVisitors === 0) {
+      alert("No analytics data to export")
+      return
+    }
+
+    // Create comprehensive analytics report
+    const reportData = [
+      ["Kuhlekt Analytics Report", ""],
+      ["Generated", new Date().toISOString()],
+      ["Time Range", timeRange === "all" ? "All Time" : `Last ${timeRange}`],
+      ["", ""],
+      ["OVERVIEW METRICS", ""],
+      ["Total Visitors", analytics.totalVisitors],
+      ["Unique Visitors", analytics.uniqueVisitors],
+      ["Total Page Views", analytics.totalPageViews],
+      ["Bounce Rate", `${analytics.bounceRate}%`],
+      ["Avg Pages/Session", analytics.avgPagesPerSession],
+      ["", ""],
+      ["TOP PAGES", "Views"],
+      ...analytics.topPages.map((page) => [page.page, page.views]),
+      ["", ""],
+      ["TRAFFIC SOURCES", "Visits"],
+      ...analytics.topSources.map((source) => [source.source, source.visits]),
+      ["", ""],
+      ["UTM CAMPAIGNS", "Visits"],
+      ...analytics.topCampaigns.map((campaign) => [campaign.campaign, campaign.visits]),
+    ]
+
+    const csvContent = reportData.map((row) => row.map((field) => `"${field}"`).join(",")).join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-analytics-report-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  // Export raw visitor data as CSV
+  const exportVisitorData = () => {
     if (visitors.length === 0) {
-      alert("No data to export")
+      alert("No visitor data to export")
       return
     }
 
@@ -125,6 +170,8 @@ export default function TrackingPage() {
       "UTM Source",
       "UTM Medium",
       "UTM Campaign",
+      "UTM Term",
+      "UTM Content",
       "Affiliate",
       "User Agent",
     ]
@@ -140,6 +187,8 @@ export default function TrackingPage() {
       visitor.utmSource || "",
       visitor.utmMedium || "",
       visitor.utmCampaign || "",
+      visitor.utmTerm || "",
+      visitor.utmContent || "",
       visitor.affiliate || "",
       visitor.userAgent,
     ])
@@ -293,9 +342,18 @@ export default function TrackingPage() {
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportData} disabled={visitors.length === 0}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportAnalyticsData}
+                disabled={analytics.totalVisitors === 0}
+              >
                 <Download className="w-4 h-4 mr-2" />
-                Export CSV
+                Export Report
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportVisitorData} disabled={visitors.length === 0}>
+                <Download className="w-4 h-4 mr-2" />
+                Export Data
               </Button>
               <Button variant="outline" size="sm" onClick={clearAllData}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -484,7 +542,9 @@ export default function TrackingPage() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Total Sessions</span>
-                  <Badge variant="default">{new Set(visitors.map((v) => v.sessionId)).size}</Badge>
+                  <Badge variant="default">
+                    {visitors.length > 0 ? new Set(visitors.map((v) => v.sessionId)).size : 0}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Avg. Pages/Session</span>
