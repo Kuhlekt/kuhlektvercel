@@ -343,6 +343,20 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
 }
 
 /**
+ * Synchronous client-side validation for affiliate codes
+ * @param code - The affiliate code to validate
+ * @returns true if valid, false otherwise
+ */
+export function validateAffiliateSync(code: string): boolean {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
+  const upperCode = code.toUpperCase().trim()
+  return upperCode in AFFILIATE_CODES || VALID_AFFILIATE_CODES.includes(upperCode)
+}
+
+/**
  * Validates if an affiliate code is in the approved list
  * @param code - The affiliate code to validate
  * @returns true if valid, false otherwise
