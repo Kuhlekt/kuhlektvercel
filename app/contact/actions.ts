@@ -14,7 +14,7 @@ interface ContactFormState {
 }
 
 export async function submitContactForm(
-  prevState: ContactFormState | null,
+  prevState: ContactFormState,
   formData: FormData,
 ): Promise<ContactFormState> {
   try {

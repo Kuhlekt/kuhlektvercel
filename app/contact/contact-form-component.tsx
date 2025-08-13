@@ -10,20 +10,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { submitContactForm } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
 
+const initialState = {
+  success: false,
+  message: "",
+}
+
 export default function ContactFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitContactForm, null)
+  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
   const [captchaToken, setCaptchaToken] = useState("")
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    
+    const formData = new FormData(event.currentTarget)
+    formData.append("captchaToken", captchaToken)
+    
     // Execute invisible reCAPTCHA before form submission
     const recaptchaElement = document.querySelector(".invisible-recaptcha") as any
     if (recaptchaElement && recaptchaElement.execute) {
       recaptchaElement.execute()
-      // Wait a moment for the token to be generated
-      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
-
-    formData.append("captchaToken", captchaToken)
+    
+    // Submit the form
     formAction(formData)
   }
 
@@ -44,7 +52,7 @@ export default function ContactFormComponent() {
             <CardDescription>Fill out the form below and we'll get back to you within 24 hours.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name *</Label>
