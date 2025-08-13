@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, Clock, Users, Shield, ArrowRight } from "lucide-react"
 import { submitDemoRequest } from "./actions"
-import { ReCaptcha } from "@/components/recaptcha"
+import ReCAPTCHA from "@/components/recaptcha"
 
 const initialState = {
   success: false,
@@ -19,6 +20,7 @@ const initialState = {
 
 export function DemoFormComponent() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
+  const [captchaToken, setCaptchaToken] = useState<string>("")
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -135,7 +137,7 @@ export function DemoFormComponent() {
                     />
                   </div>
 
-                  <ReCaptcha />
+                  <ReCAPTCHA onVerify={setCaptchaToken} />
 
                   {state?.message && (
                     <Alert className={state.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
@@ -147,7 +149,7 @@ export function DemoFormComponent() {
 
                   <Button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || !captchaToken}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
                   >
                     {isPending ? (
@@ -162,6 +164,8 @@ export function DemoFormComponent() {
                       </>
                     )}
                   </Button>
+
+                  <input type="hidden" name="captchaToken" value={captchaToken} />
 
                   <p className="text-sm text-gray-500 text-center">
                     By submitting this form, you agree to our Terms of Service and Privacy Policy
