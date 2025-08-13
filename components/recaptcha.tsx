@@ -20,7 +20,7 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
         const response = await fetch("/api/recaptcha-config")
         const config = await response.json()
         setSiteKey(config.siteKey || "")
-        setIsEnabled(config.enabled || false)
+        setIsEnabled(config.isEnabled || false)
       } catch (error) {
         console.error("Failed to fetch reCAPTCHA config:", error)
         // Provide fallback token for development
