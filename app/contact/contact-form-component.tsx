@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Mail, Phone, MapPin } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import { submitContactForm } from "./actions"
 import { ReCaptcha } from "@/components/recaptcha"
 
@@ -28,8 +28,7 @@ export default function ContactFormComponent() {
           <p className="text-xl text-gray-600">Have questions about Kuhlekt? We're here to help.</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Contact Form */}
+        <div className="max-w-2xl mx-auto">
           <Card className="shadow-xl">
             <CardHeader>
               <CardTitle>Send us a Message</CardTitle>
@@ -113,49 +112,6 @@ export default function ContactFormComponent() {
               )}
             </CardContent>
           </Card>
-
-          {/* Contact Information */}
-          <div className="space-y-8">
-            <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-                <CardDescription>Multiple ways to reach our team</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <Mail className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Email Us</h3>
-                    <p className="text-gray-600">info@kuhlekt.com</p>
-                    <p className="text-sm text-gray-500">We typically respond within 24 hours</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <Phone className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Call Us</h3>
-                    <p className="text-gray-600">+1 (555) 123-4567</p>
-                    <p className="text-sm text-gray-500">Monday - Friday, 9 AM - 6 PM EST</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <MapPin className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Visit Us</h3>
-                    <p className="text-gray-600">
-                      123 Business Ave
-                      <br />
-                      Suite 100
-                      <br />
-                      New York, NY 10001
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     </div>
