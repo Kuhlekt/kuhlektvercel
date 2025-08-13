@@ -50,7 +50,7 @@ export default function AboutPage() {
             {/* Right Column - Image */}
             <div className="flex justify-center">
               <Image
-                src="/images/manual-vs-automated-comparison.png"
+                src="/images/manual-vs-automated-ar.png"
                 alt="Manual AR Chaos vs Automated with Kuhlekt"
                 width={500}
                 height={300}

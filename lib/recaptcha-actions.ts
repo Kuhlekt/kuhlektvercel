@@ -1,5 +1,7 @@
+"use server"
+
 export async function getRecaptchaSiteKey(): Promise<string> {
-  return process.env.RECAPTCHA_SITE_KEY || "development-key"
+  return process.env.RECAPTCHA_SITE_KEY || ""
 }
 
 export async function verifyRecaptcha(token: string): Promise<{
@@ -12,7 +14,7 @@ export async function verifyRecaptcha(token: string): Promise<{
     const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
     if (!secretKey) {
-      console.warn("RECAPTCHA_SECRET_KEY not found, skipping verification in development")
+      console.warn("RECAPTCHA_SECRET_KEY not configured, skipping verification in development")
       return { success: true, score: 0.9, action: "submit" }
     }
 
@@ -30,20 +32,23 @@ export async function verifyRecaptcha(token: string): Promise<{
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      return {
+        success: false,
+        error: "Failed to verify reCAPTCHA",
+      }
     }
 
     return {
       success: data.success,
       score: data.score,
       action: data.action,
-      error: data["error-codes"]?.join(", "),
+      error: data.success ? undefined : "reCAPTCHA verification failed",
     }
   } catch (error) {
     console.error("reCAPTCHA verification error:", error)
     return {
       success: false,
-      error: "Verification failed",
+      error: "reCAPTCHA verification failed",
     }
   }
 }

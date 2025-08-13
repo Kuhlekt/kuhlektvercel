@@ -6,9 +6,9 @@ Allow: /
 Allow: /about
 Allow: /contact
 Allow: /demo
+Allow: /help
 Allow: /product
 Allow: /solutions
 Allow: /pricing-table
-Allow: /help
 
 Sitemap: https://kuhlekt.com/sitemap.xml

@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Admin Dashboard - Kuhlekt",
+  description: "Admin dashboard for Kuhlekt",
   robots: {
     index: false,
     follow: false,
@@ -10,22 +11,14 @@ export const metadata: Metadata = {
     noarchive: true,
     nosnippet: true,
     noimageindex: true,
-    googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
-      "max-video-preview": -1,
-      "max-image-preview": "none",
-      "max-snippet": -1,
-    },
+    notranslate: true,
   },
   other: {
-    robots: "noindex, nofollow, noarchive, nosnippet, noimageindex, nocache",
-    googlebot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    bingbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    duckduckbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    baiduspider: "noindex, nofollow, noarchive, nosnippet, noimageindex",
-    yandexbot: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    googlebot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    bingbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    duckduckbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    baiduspider: "noindex,nofollow,noarchive,nosnippet,noimageindex",
+    yandexbot: "noindex,nofollow,noarchive,nosnippet,noimageindex",
   },
 }
 
@@ -36,7 +29,7 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, nocache" />
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate" />
       <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
       <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />

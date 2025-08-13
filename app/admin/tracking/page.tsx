@@ -1,23 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts"
-import { TrendingUp, Users, MousePointer, Clock, Globe, RefreshCw, Download, Eye } from "lucide-react"
-import Link from "next/link"
+import { BarChart3, Users, Eye, MousePointer, TrendingUp, Globe, Clock, RefreshCw, ExternalLink } from "lucide-react"
 
 interface Visitor {
   id: string
@@ -27,193 +16,134 @@ interface Visitor {
   page: string
   referrer: string
   location?: {
-    country?: string
-    city?: string
+    country: string
+    city: string
+    region: string
   }
-  sessionDuration?: number
-  pageViews?: number
-  isActive?: boolean
+  sessionId: string
+  isActive: boolean
+  pageViews: number
+  timeOnSite: number
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
 }
 
 interface PageHistory {
   page: string
   timestamp: number
-  visitorId: string
+  sessionId: string
 }
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
 export default function TrackingPage() {
   const [visitors, setVisitors] = useState<Visitor[]>([])
   const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Load data
-  useEffect(() => {
-    const loadData = () => {
-      try {
-        const storedVisitors = localStorage.getItem("kuhlekt_visitors")
-        const storedPageHistory = localStorage.getItem("kuhlekt_page_history")
-
-        if (storedVisitors) {
-          setVisitors(JSON.parse(storedVisitors))
-        }
-
-        if (storedPageHistory) {
-          setPageHistory(JSON.parse(storedPageHistory))
-        }
-      } catch (error) {
-        console.error("Error loading data:", error)
-      } finally {
-        setLoading(false)
-      }
+  // Get all visitors from localStorage
+  const getAllVisitors = (): Visitor[] => {
+    try {
+      const stored = localStorage.getItem("kuhlekt_visitors")
+      return stored ? JSON.parse(stored) : []
+    } catch (error) {
+      console.error("Error loading visitors:", error)
+      return []
     }
-
-    loadData()
-
-    // Set up real-time updates
-    let interval: NodeJS.Timeout
-    if (isRealTimeEnabled) {
-      interval = setInterval(loadData, 5000)
-    }
-
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [isRealTimeEnabled])
-
-  // Calculate analytics data
-  const analytics = {
-    totalVisitors: visitors.length,
-    activeVisitors: visitors.filter((v) => v.isActive).length,
-    totalPageViews: pageHistory.length || visitors.reduce((sum, v) => sum + (v.pageViews || 1), 0),
-    avgSessionDuration:
-      visitors.length > 0
-        ? Math.round(visitors.reduce((sum, v) => sum + (v.sessionDuration || 0), 0) / visitors.length)
-        : 0,
-    bounceRate:
-      visitors.length > 0
-        ? Math.round((visitors.filter((v) => (v.pageViews || 1) === 1).length / visitors.length) * 100)
-        : 0,
-    conversionRate:
-      visitors.length > 0
-        ? Math.round(
-            (visitors.filter((v) => v.page.includes("/demo") || v.page.includes("/contact")).length / visitors.length) *
-              100,
-          )
-        : 0,
   }
 
-  // Top pages data
-  const topPages =
-    pageHistory.length > 0
-      ? Object.entries(
-          pageHistory.reduce(
-            (acc, entry) => {
-              acc[entry.page] = (acc[entry.page] || 0) + 1
-              return acc
-            },
-            {} as Record<string, number>,
-          ),
-        )
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 10)
-          .map(([page, views]) => ({ page, views }))
-      : visitors
-          .reduce(
-            (acc, visitor) => {
-              const existing = acc.find((item) => item.page === visitor.page)
-              if (existing) {
-                existing.views += visitor.pageViews || 1
-              } else {
-                acc.push({ page: visitor.page, views: visitor.pageViews || 1 })
-              }
-              return acc
-            },
-            [] as { page: string; views: number }[],
-          )
-          .sort((a, b) => b.views - a.views)
-          .slice(0, 10)
+  // Get page history from localStorage
+  const getPageHistory = (): PageHistory[] => {
+    try {
+      const stored = localStorage.getItem("kuhlekt_page_history")
+      return stored ? JSON.parse(stored) : []
+    } catch (error) {
+      console.error("Error loading page history:", error)
+      return []
+    }
+  }
 
-  // Traffic sources data
+  // Load data
+  const loadData = () => {
+    setIsLoading(true)
+    const allVisitors = getAllVisitors()
+    const allPageHistory = getPageHistory()
+    setVisitors(allVisitors)
+    setPageHistory(allPageHistory)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  // Calculate analytics
+  const totalVisitors = visitors.length
+  const activeVisitors = visitors.filter((v) => v.isActive).length
+  const totalPageViews = visitors.reduce((sum, v) => sum + v.pageViews, 0)
+  const avgTimeOnSite =
+    visitors.length > 0 ? Math.round(visitors.reduce((sum, v) => sum + v.timeOnSite, 0) / visitors.length / 1000) : 0
+
+  // Calculate top pages
+  const topPages = pageHistory.reduce(
+    (acc, page) => {
+      acc[page.page] = (acc[page.page] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
+
+  const topPagesArray = Object.entries(topPages)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([page, views]) => ({ page, views }))
+
+  // Calculate traffic sources
   const trafficSources = visitors.reduce(
     (acc, visitor) => {
       let source = "Direct"
-      if (visitor.referrer) {
-        if (visitor.referrer.includes("google")) source = "Google"
-        else if (visitor.referrer.includes("facebook")) source = "Facebook"
-        else if (visitor.referrer.includes("twitter")) source = "Twitter"
-        else if (visitor.referrer.includes("linkedin")) source = "LinkedIn"
-        else source = "Referral"
+      if (visitor.utmSource) {
+        source = visitor.utmSource
+      } else if (visitor.referrer && visitor.referrer !== "(direct)") {
+        try {
+          const domain = new URL(visitor.referrer).hostname
+          source = domain.replace("www.", "")
+        } catch {
+          source = "Referral"
+        }
       }
-
-      const existing = acc.find((item) => item.name === source)
-      if (existing) {
-        existing.value += 1
-      } else {
-        acc.push({ name: source, value: 1 })
-      }
+      acc[source] = (acc[source] || 0) + 1
       return acc
     },
-    [] as { name: string; value: number }[],
+    {} as Record<string, number>,
   )
 
-  // Hourly traffic data (last 24 hours)
-  const hourlyTraffic = Array.from({ length: 24 }, (_, i) => {
-    const hour = new Date()
-    hour.setHours(hour.getHours() - (23 - i), 0, 0, 0)
-    const hourStart = hour.getTime()
-    const hourEnd = hourStart + 60 * 60 * 1000
+  const trafficSourcesArray = Object.entries(trafficSources)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([source, visitors]) => ({ source, visitors }))
 
-    const visitsInHour = visitors.filter((v) => v.timestamp >= hourStart && v.timestamp < hourEnd).length
+  // Calculate conversion rate (demo page visits / total visitors)
+  const demoPageVisits = pageHistory.filter((p) => p.page.includes("/demo")).length
+  const conversionRate = totalVisitors > 0 ? ((demoPageVisits / totalVisitors) * 100).toFixed(1) : "0.0"
 
-    return {
-      hour: hour.getHours(),
-      visits: visitsInHour,
-      label: `${hour.getHours()}:00`,
-    }
-  })
+  // Calculate bounce rate (visitors with only 1 page view)
+  const bounceRate =
+    totalVisitors > 0 ? ((visitors.filter((v) => v.pageViews === 1).length / totalVisitors) * 100).toFixed(1) : "0.0"
 
-  const exportAnalytics = () => {
-    const analyticsData = {
-      summary: analytics,
-      topPages,
-      trafficSources,
-      hourlyTraffic,
-      exportDate: new Date().toISOString(),
-    }
+  // Get recent activity
+  const recentActivity = visitors.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10)
 
-    const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: "application/json" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `kuhlekt-analytics-${new Date().toISOString().split("T")[0]}.json`
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
+  const formatTimeAgo = (timestamp: number) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
 
-  const formatDuration = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
-    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return "Just now"
   }
 
   return (
@@ -222,67 +152,35 @@ export default function TrackingPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-            <p className="text-gray-600 mt-2">Comprehensive website analytics and visitor insights</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+            <p className="text-gray-600">Comprehensive visitor analytics and insights</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
+            <Button onClick={loadData} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
             <Link href="/admin/visitors">
               <Button variant="outline">
-                <Eye className="w-4 h-4 mr-2" />
-                Visitor Details
+                <Users className="h-4 w-4 mr-2" />
+                View All Visitors
+                <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </Link>
-            <Button
-              variant={isRealTimeEnabled ? "default" : "outline"}
-              onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRealTimeEnabled ? "animate-spin" : ""}`} />
-              {isRealTimeEnabled ? "Real-time On" : "Real-time Off"}
-            </Button>
-            <Button onClick={exportAnalytics}>
-              <Download className="w-4 h-4 mr-2" />
-              Export Data
-            </Button>
           </div>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Visitors</p>
-                  <p className="text-3xl font-bold text-gray-900">{analytics.totalVisitors}</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalVisitors}</p>
                   <p className="text-sm text-gray-500 mt-1">All time</p>
                 </div>
-                <Users className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Page Views</p>
-                  <p className="text-3xl font-bold text-gray-900">{analytics.totalPageViews}</p>
-                  <p className="text-sm text-gray-500 mt-1">Total interactions</p>
-                </div>
-                <MousePointer className="w-8 h-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Avg. Session</p>
-                  <p className="text-3xl font-bold text-gray-900">{formatDuration(analytics.avgSessionDuration)}</p>
-                  <p className="text-sm text-gray-500 mt-1">Time on site</p>
-                </div>
-                <Clock className="w-8 h-8 text-purple-500" />
+                <Users className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
@@ -292,15 +190,10 @@ export default function TrackingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Now</p>
-                  <p className="text-3xl font-bold text-green-600">{analytics.activeVisitors}</p>
-                  <div className="flex items-center mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                    <p className="text-sm text-gray-500">Live visitors</p>
-                  </div>
+                  <p className="text-3xl font-bold text-green-600">{activeVisitors}</p>
+                  <p className="text-sm text-gray-500 mt-1">Currently browsing</p>
                 </div>
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-                </div>
+                <Eye className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -309,11 +202,11 @@ export default function TrackingPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Bounce Rate</p>
-                  <p className="text-3xl font-bold text-gray-900">{analytics.bounceRate}%</p>
-                  <p className="text-sm text-gray-500 mt-1">Single page visits</p>
+                  <p className="text-sm font-medium text-gray-600">Page Views</p>
+                  <p className="text-3xl font-bold text-purple-600">{totalPageViews}</p>
+                  <p className="text-sm text-gray-500 mt-1">Total interactions</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-orange-500" />
+                <MousePointer className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
@@ -322,118 +215,162 @@ export default function TrackingPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                  <p className="text-3xl font-bold text-gray-900">{analytics.conversionRate}%</p>
-                  <p className="text-sm text-gray-500 mt-1">Demo/Contact visits</p>
+                  <p className="text-sm font-medium text-gray-600">Avg. Session</p>
+                  <p className="text-3xl font-bold text-orange-600">{avgTimeOnSite}s</p>
+                  <p className="text-sm text-gray-500 mt-1">Time on site</p>
                 </div>
-                <Globe className="w-8 h-8 text-cyan-500" />
+                <Clock className="h-8 w-8 text-orange-500" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Hourly Traffic */}
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
-            <CardHeader>
-              <CardTitle>Traffic by Hour (Last 24h)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {hourlyTraffic.some((h) => h.visits > 0) ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={hourlyTraffic}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="visits" stroke="#8884d8" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-300 flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No traffic data available for the last 24 hours</p>
-                  </div>
-                </div>
-              )}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Conversion Rate</h3>
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{conversionRate}%</div>
+              <p className="text-sm text-gray-500">Demo page visits / Total visitors</p>
             </CardContent>
           </Card>
 
-          {/* Traffic Sources */}
           <Card>
-            <CardHeader>
-              <CardTitle>Traffic Sources</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {trafficSources.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={trafficSources}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {trafficSources.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-300 flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <Globe className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No traffic source data available</p>
-                  </div>
-                </div>
-              )}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Bounce Rate</h3>
+                <BarChart3 className="h-5 w-5 text-orange-500" />
+              </div>
+              <div className="text-3xl font-bold text-orange-600 mb-2">{bounceRate}%</div>
+              <p className="text-sm text-gray-500">Single page visits</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Top Pages */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Pages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topPages.length > 0 ? (
-              <div className="space-y-4">
-                {topPages.map((page, index) => (
-                  <div key={page.page} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <div>
-                        <p className="font-medium text-gray-900">{page.page}</p>
-                        <p className="text-sm text-gray-500">{page.views} views</p>
+        <Tabs defaultValue="pages" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pages">Top Pages</TabsTrigger>
+            <TabsTrigger value="sources">Traffic Sources</TabsTrigger>
+            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pages">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Top Pages
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topPagesArray.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No page data available</h3>
+                    <p className="text-gray-500">Page view data will appear here once visitors browse your site.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topPagesArray.map((page, index) => (
+                      <div key={page.page} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-semibold text-blue-600">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{page.page}</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary">{page.views} views</Badge>
                       </div>
-                    </div>
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${(page.views / Math.max(...topPages.map((p) => p.views))) * 100}%` }}
-                      ></div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <MousePointer className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No page data available</h3>
-                <p className="text-gray-500">Page view data will appear here once visitors start browsing your site.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sources">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Traffic Sources
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {trafficSourcesArray.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Globe className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No traffic source data</h3>
+                    <p className="text-gray-500">Traffic source information will appear here as visitors arrive.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {trafficSourcesArray.map((source, index) => (
+                      <div key={source.source} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-semibold text-green-600">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{source.source}</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary">{source.visitors} visitors</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No recent activity</h3>
+                    <p className="text-gray-500">Recent visitor activity will be displayed here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.map((visitor) => (
+                      <div key={visitor.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div>
+                            <p className="font-medium text-gray-900">{visitor.ip}</p>
+                            <p className="text-sm text-gray-500">
+                              Visited {visitor.page} • {visitor.location?.city || "Unknown location"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">{formatTimeAgo(visitor.timestamp)}</p>
+                          <Badge variant={visitor.isActive ? "default" : "secondary"} className="mt-1">
+                            {visitor.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
