@@ -27,6 +27,14 @@ interface ArticleViewerProps {
 function processArticleContent(content: string): string {
   let processedContent = content
 
+  console.log("Processing article content:", content)
+
+  // If content is already HTML with img tags, return it as-is
+  if (content.includes("<img") && !content.includes("[IMAGE:")) {
+    console.log("Content already contains HTML img tags, returning as-is")
+    return processedContent
+  }
+
   // Replace image placeholders with actual images
   processedContent = processedContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
     // Check if we have stored images in global reference
@@ -53,30 +61,21 @@ function processArticleContent(content: string): string {
     '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
   )
 
-  // Convert data URLs to images
+  // Convert standalone data URLs to images
   processedContent = processedContent.replace(
-    /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
+    /(?<!src=["'])(data:image\/[^;]+;base64,[^\s"'<>]+)(?!["'])/gi,
     '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
   )
 
-  // Also check for any remaining img tags that might have been stored directly
-  processedContent = processedContent.replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, (match, src) => {
-    // If it's already a properly formatted img tag, just ensure proper styling
-    if (match.includes("style=")) {
-      return match
+  // Convert line breaks to proper HTML if content doesn't already have HTML structure
+  if (!processedContent.includes("<p>") && !processedContent.includes("<div>") && !processedContent.includes("<br>")) {
+    processedContent = processedContent.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")
+    if (processedContent && !processedContent.startsWith("<p>")) {
+      processedContent = "<p>" + processedContent + "</p>"
     }
-    return `<img src="${src}" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-  })
+  }
 
-  // Remove HTML tags except for images and basic formatting
-  processedContent = processedContent
-    .replace(/<(?!img|br|p|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[^>]*>/gi, "")
-    .replace(/<\/(?!img|br|p|div|span|strong|em|b|i|u|ul|ol|li|h[1-6])[^>]*>/gi, "")
-
-  // Convert line breaks to proper spacing
-  processedContent = processedContent.replace(/\n\n/g, "<br><br>")
-  processedContent = processedContent.replace(/\n/g, "<br>")
-
+  console.log("Final processed content:", processedContent)
   return processedContent
 }
 
