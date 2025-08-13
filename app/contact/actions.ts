@@ -92,3 +92,27 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     }
   }
 }
+
+// Test function for AWS SES
+export async function testAWSSES() {
+  try {
+    const result = await sendEmail({
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: "AWS SES Test Email",
+      html: "<h1>Test Email</h1><p>This is a test email from AWS SES.</p>",
+    })
+
+    return {
+      success: result.success,
+      message: result.success ? "Test email sent successfully!" : "Failed to send test email",
+      error: result.error || null,
+    }
+  } catch (error) {
+    console.error("AWS SES test error:", error)
+    return {
+      success: false,
+      message: "Error testing AWS SES",
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
