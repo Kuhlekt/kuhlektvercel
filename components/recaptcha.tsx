@@ -17,8 +17,10 @@ declare global {
           callback: (token: string) => void
           "expired-callback": () => void
           "error-callback": () => void
+          size?: string
         },
       ) => number
+      execute: (widgetId?: number) => void
       reset: (widgetId?: number) => void
     }
   }
@@ -57,6 +59,7 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
           callback: onVerify,
           "expired-callback": () => onVerify(""),
           "error-callback": () => onVerify(""),
+          size: "invisible",
         })
       }
     }
@@ -88,11 +91,25 @@ export default function ReCAPTCHA({ onVerify }: ReCAPTCHAProps) {
     }
   }, [isEnabled, onVerify])
 
+  // Function to execute invisible reCAPTCHA
+  const executeRecaptcha = () => {
+    if (widgetIdRef.current !== null && window.grecaptcha) {
+      window.grecaptcha.execute(widgetIdRef.current)
+    }
+  }
+
+  // Expose execute function to parent components
+  useEffect(() => {
+    if (recaptchaRef.current) {
+      ;(recaptchaRef.current as any).execute = executeRecaptcha
+    }
+  }, [widgetIdRef.current])
+
   if (!isEnabled) {
     return null
   }
 
-  return <div ref={recaptchaRef} className="flex justify-center" />
+  return <div ref={recaptchaRef} className="invisible-recaptcha" />
 }
 
 export { ReCAPTCHA }
