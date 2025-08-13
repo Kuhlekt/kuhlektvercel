@@ -15,79 +15,77 @@ declare global {
 }
 
 export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
-  const [siteKey, setSiteKey] = useState<string>("")
-  const [isEnabled, setIsEnabled] = useState<boolean>(false)
-  const [isLoaded, setIsLoaded] = useState<boolean>(false)
-  const [error, setError] = useState<string>("")
   const recaptchaRef = useRef<HTMLDivElement>(null)
-  const widgetId = useRef<number | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [siteKey, setSiteKey] = useState<string>("")
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
     // Fetch reCAPTCHA configuration
     fetch("/api/recaptcha-config")
       .then((res) => res.json())
       .then((data) => {
-        setSiteKey(data.siteKey || "")
-        setIsEnabled(data.isEnabled || false)
+        setSiteKey(data.siteKey)
+        setIsEnabled(data.enabled)
 
-        if (!data.siteKey && data.isEnabled) {
-          setError("reCAPTCHA site key not configured")
-          // Provide fallback token
-          const fallbackToken = "recaptcha-error-fallback-token"
+        if (!data.enabled) {
+          // If reCAPTCHA is disabled, provide a fallback token
+          const fallbackToken = "recaptcha-disabled-fallback-token"
           onVerify(fallbackToken)
           onChange?.(fallbackToken)
+          return
         }
+
+        if (!data.siteKey) {
+          setError("reCAPTCHA site key not configured")
+          const errorToken = "recaptcha-error-fallback-token"
+          onVerify(errorToken)
+          onChange?.(errorToken)
+          return
+        }
+
+        // Load reCAPTCHA script
+        loadRecaptchaScript()
       })
       .catch((err) => {
         console.error("Failed to fetch reCAPTCHA config:", err)
         setError("Failed to load reCAPTCHA configuration")
-        // Provide fallback token
-        const fallbackToken = "recaptcha-error-fallback-token"
-        onVerify(fallbackToken)
-        onChange?.(fallbackToken)
+        const errorToken = "recaptcha-load-error-fallback-token"
+        onVerify(errorToken)
+        onChange?.(errorToken)
       })
   }, [onVerify, onChange])
 
-  useEffect(() => {
-    if (!isEnabled || !siteKey || isLoaded) return
-
-    // Set up global callback
-    window.onRecaptchaLoad = () => {
-      setIsLoaded(true)
+  const loadRecaptchaScript = () => {
+    if (window.grecaptcha) {
+      initializeRecaptcha()
+      return
     }
 
-    // Load reCAPTCHA script
+    window.onRecaptchaLoad = () => {
+      setIsLoaded(true)
+      initializeRecaptcha()
+    }
+
     const script = document.createElement("script")
     script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit`
     script.async = true
     script.defer = true
-
     script.onerror = () => {
-      console.error("Failed to load reCAPTCHA script")
-      setError("Failed to load reCAPTCHA")
-      // Provide fallback token
-      const fallbackToken = "recaptcha-not-loaded-token"
-      onVerify(fallbackToken)
-      onChange?.(fallbackToken)
+      setError("Failed to load reCAPTCHA script")
+      const errorToken = "recaptcha-load-error-fallback-token"
+      onVerify(errorToken)
+      onChange?.(errorToken)
     }
-
     document.head.appendChild(script)
+  }
 
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script)
-      }
-      if (window.onRecaptchaLoad) {
-        delete window.onRecaptchaLoad
-      }
-    }
-  }, [isEnabled, siteKey, isLoaded, onVerify, onChange])
-
-  useEffect(() => {
-    if (!isLoaded || !window.grecaptcha || !recaptchaRef.current || widgetId.current !== null) return
+  const initializeRecaptcha = () => {
+    if (!window.grecaptcha || !recaptchaRef.current || !siteKey) return
 
     try {
-      widgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+      window.grecaptcha.render(recaptchaRef.current, {
         sitekey: siteKey,
         size: "invisible",
         callback: (token: string) => {
@@ -95,71 +93,41 @@ export function ReCaptcha({ onVerify, onChange }: ReCaptchaProps) {
           onChange?.(token)
         },
         "error-callback": () => {
-          console.error("reCAPTCHA error occurred")
           setError("reCAPTCHA verification failed")
-          // Provide fallback token
-          const fallbackToken = "recaptcha-error-fallback-token"
-          onVerify(fallbackToken)
-          onChange?.(fallbackToken)
-        },
-        "expired-callback": () => {
-          console.log("reCAPTCHA expired")
-          // Reset and provide fallback
-          const fallbackToken = "recaptcha-timeout-token"
-          onVerify(fallbackToken)
-          onChange?.(fallbackToken)
+          const errorToken = "recaptcha-error-fallback-token"
+          onVerify(errorToken)
+          onChange?.(errorToken)
         },
       })
-    } catch (err) {
-      console.error("Error rendering reCAPTCHA:", err)
-      setError("Error initializing reCAPTCHA")
-      // Provide fallback token
-      const fallbackToken = "recaptcha-error-fallback-token"
-      onVerify(fallbackToken)
-      onChange?.(fallbackToken)
-    }
-  }, [isLoaded, siteKey, onVerify, onChange])
 
-  // Auto-execute invisible reCAPTCHA
-  useEffect(() => {
-    if (widgetId.current !== null && window.grecaptcha) {
-      const timer = setTimeout(() => {
-        try {
-          window.grecaptcha.execute(widgetId.current)
-        } catch (err) {
-          console.error("Error executing reCAPTCHA:", err)
-          // Provide fallback token
-          const fallbackToken = "recaptcha-error-fallback-token"
-          onVerify(fallbackToken)
-          onChange?.(fallbackToken)
+      // Auto-execute the invisible reCAPTCHA
+      setTimeout(() => {
+        if (window.grecaptcha) {
+          window.grecaptcha.execute()
         }
       }, 1000)
-
-      return () => clearTimeout(timer)
+    } catch (err) {
+      console.error("Error initializing reCAPTCHA:", err)
+      setError("Error initializing reCAPTCHA")
+      const errorToken = "recaptcha-error-fallback-token"
+      onVerify(errorToken)
+      onChange?.(errorToken)
     }
-  }, [widgetId.current, onVerify, onChange])
+  }
 
-  // Provide development token if reCAPTCHA is disabled
-  useEffect(() => {
-    if (!isEnabled) {
-      const devToken = "development-mode-token"
-      onVerify(devToken)
-      onChange?.(devToken)
-    }
-  }, [isEnabled, onVerify, onChange])
-
+  // Don't render anything if reCAPTCHA is disabled
   if (!isEnabled) {
-    return <div className="text-sm text-gray-500">reCAPTCHA is disabled in development mode</div>
+    return null
   }
 
   if (error) {
-    return <div className="text-sm text-red-600">{error}</div>
+    return <div className="text-sm text-gray-500">reCAPTCHA temporarily unavailable</div>
   }
 
   return (
     <div>
       <div ref={recaptchaRef}></div>
-      {!isLoaded && <div className="text-sm text-gray-500">Loading reCAPTCHA...</div>}
+      {!isLoaded && <div className="text-sm text-gray-500">Loading security verification...</div>}
     </div>
   )
 }

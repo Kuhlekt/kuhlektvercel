@@ -3,92 +3,46 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 const ADMIN_SESSION_COOKIE = "admin-session"
-const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
-
-export interface AdminSession {
-  isAuthenticated: boolean
-  email: string
-  loginTime: number
-}
 
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12
-  return await bcrypt.hash(password, saltRounds)
+  return bcrypt.hash(password, 12)
 }
 
 export async function verifyAdminPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return await bcrypt.compare(password, hashedPassword)
+  return bcrypt.compare(password, hashedPassword)
 }
 
-export async function createAdminSession(email: string): Promise<void> {
-  const session: AdminSession = {
-    isAuthenticated: true,
-    email,
-    loginTime: Date.now(),
+export async function verifyAdminSession(): Promise<boolean> {
+  const cookieStore = cookies()
+  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)
+
+  if (!sessionCookie) {
+    return false
   }
 
+  // In a real app, you'd verify the session token against a database
+  // For now, we'll just check if the cookie exists and has the right value
+  return sessionCookie.value === "authenticated"
+}
+
+export async function createAdminSession() {
   const cookieStore = cookies()
-  cookieStore.set(ADMIN_SESSION_COOKIE, JSON.stringify(session), {
+  cookieStore.set(ADMIN_SESSION_COOKIE, "authenticated", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: SESSION_DURATION,
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   })
 }
 
-export async function getAdminSession(): Promise<AdminSession | null> {
-  try {
-    const cookieStore = cookies()
-    const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)
-
-    if (!sessionCookie) {
-      return null
-    }
-
-    const session: AdminSession = JSON.parse(sessionCookie.value)
-
-    // Check if session is expired
-    if (Date.now() - session.loginTime > SESSION_DURATION) {
-      await destroyAdminSession()
-      return null
-    }
-
-    return session
-  } catch (error) {
-    console.error("Error getting admin session:", error)
-    return null
-  }
-}
-
-export async function destroyAdminSession(): Promise<void> {
+export async function destroyAdminSession() {
   const cookieStore = cookies()
   cookieStore.delete(ADMIN_SESSION_COOKIE)
 }
 
-export async function requireAdminAuth(): Promise<AdminSession> {
-  const session = await getAdminSession()
-
-  if (!session || !session.isAuthenticated) {
+export async function requireAdminAuth() {
+  const isAuthenticated = await verifyAdminSession()
+  if (!isAuthenticated) {
     redirect("/admin/login")
   }
-
-  return session
-}
-
-export async function verifyAdminCredentials(email: string, password: string): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL
-  const adminPassword = process.env.ADMIN_PASSWORD
-
-  if (!adminEmail || !adminPassword) {
-    console.error("Admin credentials not configured")
-    return false
-  }
-
-  // For development, allow plain text comparison
-  // In production, you should hash the admin password
-  if (email === adminEmail && password === adminPassword) {
-    return true
-  }
-
-  return false
 }
