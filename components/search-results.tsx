@@ -12,9 +12,8 @@ interface SearchResultsProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Enhanced function to extract clean text content from HTML and process images
+// Function to extract clean text content and show actual images
 function extractCleanText(html: string): string {
-  // Create a temporary div to parse HTML properly
   const tempDiv = document.createElement("div")
   tempDiv.innerHTML = html
 
@@ -22,43 +21,18 @@ function extractCleanText(html: string): string {
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
-  // Process image placeholders
-  let processedHtml = html
-  processedHtml = processedHtml.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, "[Image: $2]")
-
-  // Replace data URLs with [Image] placeholder for preview
-  processedHtml = processedHtml.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "[Image]")
-  processedHtml = processedHtml.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "[Image]")
-
-  // Update temp div with processed HTML
-  tempDiv.innerHTML = processedHtml
-
-  // Get text content
+  // Get text content but preserve image information
   let text = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Clean up CSS-related text
-  text = text.replace(/style\s*=\s*["'][^"']*["']/gi, "")
-  text = text.replace(/class\s*=\s*["'][^"']*["']/gi, "")
-  text = text.replace(/(width|height|margin|padding|color|font|background):\s*[^;]+;?/gi, "")
-  text = text.replace(/\d+px/gi, "")
-  text = text.replace(/(rgb|rgba|hex|#)[^;\s]*/gi, "")
-
-  // Normalize whitespace
+  // Clean up and normalize
   text = text.replace(/\s+/g, " ").trim()
 
   // Split into sentences and filter meaningful ones
   const sentences = text.split(/[.!?]+/).filter((sentence) => {
     const cleaned = sentence.trim()
-    return (
-      cleaned.length > 15 &&
-      !cleaned.match(/^(max-width|height|auto|margin|padding|border|display)/i) &&
-      !cleaned.match(/^\d+$/) &&
-      cleaned.split(" ").length > 2 &&
-      cleaned !== "[Image]"
-    )
+    return cleaned.length > 15 && cleaned.split(" ").length > 2
   })
 
-  // Return first meaningful sentences
   const preview = sentences.slice(0, 3).join(". ").trim()
   return preview.length > 200 ? preview.substring(0, 200) + "..." : preview
 }
@@ -71,6 +45,29 @@ function hasImages(content: string): boolean {
     content.includes("[IMAGE:") ||
     content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/i) !== null
   )
+}
+
+// Function to extract and display first image as thumbnail
+function getFirstImageThumbnail(content: string): string | null {
+  // Look for img tags first
+  const imgMatch = content.match(/<img[^>]+src="([^"]+)"[^>]*>/i)
+  if (imgMatch) {
+    return imgMatch[1]
+  }
+
+  // Look for data URLs
+  const dataUrlMatch = content.match(/(data:image\/[^;]+;base64,[^\s"'<>]+)/i)
+  if (dataUrlMatch) {
+    return dataUrlMatch[1]
+  }
+
+  // Look for regular image URLs
+  const urlMatch = content.match(/(https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg))/i)
+  if (urlMatch) {
+    return urlMatch[1]
+  }
+
+  return null
 }
 
 export function SearchResults({ results, categories, query, onArticleSelect }: SearchResultsProps) {
@@ -131,6 +128,7 @@ export function SearchResults({ results, categories, query, onArticleSelect }: S
           const { categoryName, subcategoryName } = getCategoryInfo(article.categoryId, article.subcategoryId)
           const cleanPreview = extractCleanText(article.content)
           const containsImages = hasImages(article.content)
+          const thumbnailSrc = getFirstImageThumbnail(article.content)
 
           return (
             <Card
@@ -166,6 +164,21 @@ export function SearchResults({ results, categories, query, onArticleSelect }: S
                       )}
                     </div>
                   </div>
+
+                  {/* Thumbnail */}
+                  {thumbnailSrc && (
+                    <div className="ml-4 flex-shrink-0">
+                      <img
+                        src={thumbnailSrc || "/placeholder.svg"}
+                        alt="Article thumbnail"
+                        className="w-16 h-16 object-cover rounded-lg border"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          e.currentTarget.style.display = "none"
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">

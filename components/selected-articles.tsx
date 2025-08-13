@@ -20,19 +20,12 @@ function extractCleanText(html: string): string {
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
-  let processedHtml = html
-  processedHtml = processedHtml.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, "[Image: $2]")
-  processedHtml = processedHtml.replace(/data:image\/[^;]+;base64,[^\s"')]+/gi, "[Image]")
-  processedHtml = processedHtml.replace(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/gi, "[Image]")
-
-  tempDiv.innerHTML = processedHtml
-
   let text = tempDiv.textContent || tempDiv.innerText || ""
   text = text.replace(/\s+/g, " ").trim()
 
   const sentences = text.split(/[.!?]+/).filter((sentence) => {
     const cleaned = sentence.trim()
-    return cleaned.length > 15 && cleaned.split(" ").length > 2 && cleaned !== "[Image]"
+    return cleaned.length > 15 && cleaned.split(" ").length > 2
   })
 
   const preview = sentences.slice(0, 2).join(". ").trim()
@@ -47,6 +40,29 @@ function hasImages(content: string): boolean {
     content.includes("[IMAGE:") ||
     content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/i) !== null
   )
+}
+
+// Function to extract and display first image as thumbnail
+function getFirstImageThumbnail(content: string): string | null {
+  // Look for img tags first
+  const imgMatch = content.match(/<img[^>]+src="([^"]+)"[^>]*>/i)
+  if (imgMatch) {
+    return imgMatch[1]
+  }
+
+  // Look for data URLs
+  const dataUrlMatch = content.match(/(data:image\/[^;]+;base64,[^\s"'<>]+)/i)
+  if (dataUrlMatch) {
+    return dataUrlMatch[1]
+  }
+
+  // Look for regular image URLs
+  const urlMatch = content.match(/(https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg))/i)
+  if (urlMatch) {
+    return urlMatch[1]
+  }
+
+  return null
 }
 
 export function SelectedArticles({
@@ -147,6 +163,7 @@ export function SelectedArticles({
           const { categoryName, subcategoryName } = getCategoryInfo(article.categoryId, article.subcategoryId)
           const cleanPreview = extractCleanText(article.content)
           const containsImages = hasImages(article.content)
+          const thumbnailSrc = getFirstImageThumbnail(article.content)
 
           return (
             <Card
@@ -182,6 +199,21 @@ export function SelectedArticles({
                       )}
                     </div>
                   </div>
+
+                  {/* Thumbnail */}
+                  {thumbnailSrc && (
+                    <div className="ml-4 flex-shrink-0">
+                      <img
+                        src={thumbnailSrc || "/placeholder.svg"}
+                        alt="Article thumbnail"
+                        className="w-16 h-16 object-cover rounded-lg border"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          e.currentTarget.style.display = "none"
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">

@@ -8,13 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Save, Eye, EyeOff, ArrowLeft, Clock, Edit, User, Hash } from "lucide-react"
+import { Save, ArrowLeft, Clock, Edit, User, Hash } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
-import { EnhancedTextarea } from "./enhanced-textarea"
-import type { ImageData } from "./enhanced-textarea"
+import { WysiwygEditor } from "./wysiwyg-editor"
+import type { ImageData } from "./wysiwyg-editor"
 
 interface EditArticleFormProps {
   article: Article
@@ -24,174 +22,53 @@ interface EditArticleFormProps {
   onCancel: () => void
 }
 
-// Function to convert content back to editable format
-function convertToEditableContent(content: string): string {
-  let editableContent = content
-
-  // Convert <img> tags back to placeholders for editing
-  editableContent = editableContent.replace(
-    /<img[^>]+src="(data:image[^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi,
-    (match, src, alt) => {
-      const filename = alt || "image"
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
-
-      if (!(window as any).editingImages) {
-        ;(window as any).editingImages = []
-      }
-
-      const placeholder = `[IMAGE:${id}:${filename}]`
-      ;(window as any).editingImages.push({
-        id,
-        dataUrl: src,
-        name: filename,
-        placeholder,
-      })
-
-      if (!(window as any).textareaImages) {
-        ;(window as any).textareaImages = []
-      }
-      ;(window as any).textareaImages.push({
-        id,
-        dataUrl: src,
-        name: filename,
-        placeholder,
-      })
-
-      return placeholder
-    },
-  )
-
-  // Convert regular image URLs to placeholders
-  editableContent = editableContent.replace(/<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi, (match, src, alt) => {
-    const filename = alt || src.split("/").pop() || "image"
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
-
-    if (!(window as any).editingImages) {
-      ;(window as any).editingImages = []
-    }
-    if (!(window as any).textareaImages) {
-      ;(window as any).textareaImages = []
-    }
-
-    const placeholder = `[IMAGE:${id}:${filename}]`
-    const imageData = {
-      id,
-      dataUrl: src,
-      name: filename,
-      placeholder,
-    }
-    ;(window as any).editingImages.push(imageData)
-    ;(window as any).textareaImages.push(imageData)
-
-    return placeholder
-  })
-
-  // Remove other HTML tags but preserve line breaks
-  editableContent = editableContent
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<p[^>]*>/gi, "")
-    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
-    .replace(/<em>(.*?)<\/em>/gi, "*$1*")
-    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
-    .replace(/<i>(.*?)<\/i>/gi, "*$1*")
-    .replace(/<[^>]*>/g, "")
-
-  // Clean up extra whitespace
-  editableContent = editableContent.replace(/\n\s*\n\s*\n/g, "\n\n").trim()
-
-  return editableContent
-}
-
-// Function to convert editable content back to display format with proper image handling
-function convertToDisplayContent(content: string, availableImages: ImageData[] = []): string {
-  let displayContent = content
-
-  console.log("=== CONVERTING TO DISPLAY ===")
-  console.log("Input content:", content)
-  console.log("Available images:", availableImages)
-
-  // Create a map of all available images for faster lookup
-  const imageMap = new Map<string, ImageData>()
-
-  // Add images from parameter
-  availableImages.forEach((img) => {
-    imageMap.set(img.id, img)
-    imageMap.set(img.placeholder, img)
-  })
-
-  // Add images from global storage
-  const globalImages = (window as any).textareaImages || []
-  globalImages.forEach((img: ImageData) => {
-    imageMap.set(img.id, img)
-    imageMap.set(img.placeholder, img)
-  })
-
-  console.log("Image map created:", imageMap)
-
-  // Process image placeholders FIRST before any other processing
-  displayContent = displayContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
-    console.log("Processing placeholder:", { match, id, filename })
-
-    // Try to find image by ID first, then by full placeholder
-    const imageData = imageMap.get(id) || imageMap.get(match)
-
-    console.log("Found image data:", imageData)
-
-    if (imageData && imageData.dataUrl) {
-      const imgTag = `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-      console.log("Generated img tag for:", filename)
-      return imgTag
-    }
-
-    console.log("No image data found, returning placeholder div")
-    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
-      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
-    </div>`
-  })
-
-  // Convert markdown-like formatting to HTML
-  displayContent = displayContent
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/\n/g, "<br>")
-
-  // Wrap in paragraphs if needed
-  if (displayContent && !displayContent.startsWith("<p>") && !displayContent.includes("<img")) {
-    displayContent = "<p>" + displayContent + "</p>"
-  } else if (displayContent && !displayContent.startsWith("<p>")) {
-    displayContent = displayContent.replace(/^([^<]+)/, "<p>$1</p>")
-  }
-
-  console.log("Final display content:", displayContent)
-  return displayContent
-}
-
 export function EditArticleForm({ article, categories, currentUser, onSubmit, onCancel }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title)
-  const [content, setContent] = useState("")
+  const [content, setContent] = useState(article.content)
   const [selectedCategoryId, setSelectedCategoryId] = useState(article.categoryId)
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(article.subcategoryId || "none")
   const [tags, setTags] = useState(article.tags.join(", "))
-  const [showPreview, setShowPreview] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [images, setImages] = useState<ImageData[]>([])
 
   const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
 
-  // Initialize content for editing
+  // Initialize content and extract existing images
   useEffect(() => {
     console.log("Initializing edit form with article:", article.title)
-    const editableContent = convertToEditableContent(article.content)
-    setContent(editableContent)
 
-    const existingImages = (window as any).editingImages || []
-    console.log("Setting initial images:", existingImages)
+    // Extract existing images from content
+    const existingImages: ImageData[] = []
+    let processedContent = article.content
+
+    // Look for existing img tags and convert them to our format
+    processedContent = processedContent.replace(
+      /<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi,
+      (match, src, alt) => {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
+        const filename = alt || "image"
+
+        existingImages.push({
+          id,
+          dataUrl: src,
+          name: filename,
+          placeholder: `[IMAGE:${id}:${filename}]`,
+        })
+
+        return match // Keep the original img tag for WYSIWYG editor
+      },
+    )
+
+    setContent(processedContent)
     setImages(existingImages)
+
+    // Set global images for other components to access
     ;(window as any).textareaImages = existingImages
-  }, [article.content])
+    ;(window as any).editingImages = existingImages
+
+    console.log("Initialized with images:", existingImages)
+  }, [article])
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -210,13 +87,10 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
     setIsSubmitting(true)
 
     try {
-      const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
-      const displayContent = convertToDisplayContent(content, currentImages)
-
       const updatedArticle = {
         id: article.id,
         title: title.trim(),
-        content: displayContent,
+        content: content, // Content is already in HTML format from WYSIWYG editor
         categoryId: selectedCategoryId,
         subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
         tags: tags
@@ -229,6 +103,7 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
         lastEditedBy: currentUser?.username || "anonymous",
       }
 
+      console.log("Submitting updated article:", updatedArticle)
       onSubmit(updatedArticle)
     } catch (error) {
       console.error("Error updating article:", error)
@@ -238,47 +113,10 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
   }
 
   const handleImagesChange = (newImages: ImageData[]) => {
-    console.log("=== IMAGES CHANGED IN EDIT FORM ===")
-    console.log("New images:", newImages)
+    console.log("Images changed in edit form:", newImages)
     setImages(newImages)
     ;(window as any).textareaImages = newImages
-    console.log("Updated global textareaImages:", (window as any).textareaImages)
-  }
-
-  const renderPreview = () => {
-    console.log("=== RENDERING PREVIEW ===")
-    const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
-    console.log("Current images for preview:", currentImages)
-    console.log("Content for preview:", content)
-
-    const previewContent = convertToDisplayContent(content, currentImages)
-
-    return (
-      <div className="prose max-w-none">
-        <h1 className="text-2xl font-bold mb-4">{title || "Untitled Article"}</h1>
-
-        <div className="flex flex-wrap gap-2 mb-4">
-          {selectedCategory && <Badge variant="secondary">{selectedCategory.name}</Badge>}
-          {selectedSubcategoryId !== "none" &&
-            availableSubcategories.find((sub) => sub.id === selectedSubcategoryId) && (
-              <Badge variant="outline">
-                {availableSubcategories.find((sub) => sub.id === selectedSubcategoryId)?.name}
-              </Badge>
-            )}
-          {tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag.length > 0)
-            .map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-        </div>
-
-        <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: previewContent }} />
-      </div>
-    )
+    ;(window as any).editingImages = newImages
   }
 
   return (
@@ -289,12 +127,6 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <CardTitle>Edit Article</CardTitle>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}>
-            {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showPreview ? "Hide Preview" : "Show Preview"}
-          </Button>
         </div>
       </CardHeader>
 
@@ -392,34 +224,13 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
 
           <div>
             <Label htmlFor="content">Content *</Label>
-            {showPreview ? (
-              <Tabs defaultValue="edit" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="edit">Edit</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                </TabsList>
-                <TabsContent value="edit" className="mt-4">
-                  <EnhancedTextarea
-                    value={content}
-                    onChange={setContent}
-                    onImagesChange={handleImagesChange}
-                    placeholder="Write your article content here..."
-                    rows={15}
-                  />
-                </TabsContent>
-                <TabsContent value="preview" className="mt-4">
-                  <div className="border rounded-md p-4 min-h-[300px] bg-gray-50">{renderPreview()}</div>
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <EnhancedTextarea
-                value={content}
-                onChange={setContent}
-                onImagesChange={handleImagesChange}
-                placeholder="Write your article content here..."
-                rows={15}
-              />
-            )}
+            <WysiwygEditor
+              value={content}
+              onChange={setContent}
+              onImagesChange={handleImagesChange}
+              placeholder="Write your article content here..."
+              className="mt-2"
+            />
           </div>
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
