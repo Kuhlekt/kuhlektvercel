@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import bcrypt from "bcryptjs"
 
 export async function isAdminAuthenticated(): Promise<boolean> {
   try {
@@ -38,4 +39,18 @@ export async function verifyAdminSession(): Promise<boolean> {
 
 export async function clearAdminSession(): Promise<void> {
   cookies().delete("admin_session")
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 12
+  return await bcrypt.hash(password, saltRounds)
+}
+
+export async function verifyAdminPassword(password: string, hashedPassword: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(password, hashedPassword)
+  } catch (error) {
+    console.error("Password verification error:", error)
+    return false
+  }
 }

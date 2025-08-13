@@ -4,8 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu } from "lucide-react"
+import { Menu, X } from "lucide-react"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -14,97 +13,96 @@ const navigation = [
   { name: "About", href: "/about" },
 ]
 
-export function Header() {
-  const [isOpen, setIsOpen] = useState(false)
+export default function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <Image
-                src="/images/kuhlekt-logo.jpg"
-                alt="Kuhlekt Logo"
-                width={32}
-                height={32}
-                className="rounded"
-                priority
-              />
-              <span className="text-xl font-bold text-gray-900">Kuhlekt</span>
+    <header className="bg-white shadow-sm">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
+        <div className="flex lg:flex-1">
+          <Link href="/" className="-m-1.5 p-1.5">
+            <span className="sr-only">Kuhlekt</span>
+            <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
+          </Link>
+        </div>
+        <div className="flex lg:hidden">
+          <button
+            type="button"
+            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <span className="sr-only">Open main menu</span>
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="hidden lg:flex lg:gap-x-12">
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600"
+            >
+              {item.name}
             </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                {item.name}
+          ))}
+        </div>
+        <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
+          <Link href="/contact">
+            <Button variant="outline">Contact</Button>
+          </Link>
+          <Link href="/demo">
+            <Button>Get Demo</Button>
+          </Link>
+        </div>
+      </nav>
+      {/* Mobile menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden" role="dialog" aria-modal="true">
+          <div className="fixed inset-0 z-50"></div>
+          <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="-m-1.5 p-1.5">
+                <span className="sr-only">Kuhlekt</span>
+                <Image className="h-8 w-auto" src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" width={120} height={32} />
               </Link>
-            ))}
-          </nav>
-
-          {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link href="/contact">Contact</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/demo">Get Demo</Link>
-            </Button>
-          </div>
-
-          {/* Mobile menu button */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle className="flex items-center space-x-2">
-                  <Image src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" width={24} height={24} className="rounded" />
-                  <span>Kuhlekt</span>
-                </SheetTitle>
-                <SheetDescription>Transform your accounts receivable with intelligent automation</SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-4 py-6">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-center py-2 text-lg font-medium"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.name}
+              <button
+                type="button"
+                className="-m-2.5 rounded-md p-2.5 text-gray-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="sr-only">Close menu</span>
+                <X className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="mt-6 flow-root">
+              <div className="-my-6 divide-y divide-gray-500/10">
+                <div className="space-y-2 py-6">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+                <div className="py-6 space-y-2">
+                  <Link href="/contact" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full bg-transparent">
+                      Contact
+                    </Button>
                   </Link>
-                ))}
-                <div className="border-t pt-4 mt-4">
-                  <div className="grid gap-2">
-                    <Button variant="ghost" className="justify-start" asChild>
-                      <Link href="/contact" onClick={() => setIsOpen(false)}>
-                        Contact
-                      </Link>
-                    </Button>
-                    <Button className="justify-start" asChild>
-                      <Link href="/demo" onClick={() => setIsOpen(false)}>
-                        Get Demo
-                      </Link>
-                    </Button>
-                  </div>
+                  <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full">Get Demo</Button>
+                  </Link>
                 </div>
               </div>
-            </SheetContent>
-          </Sheet>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </header>
   )
 }
