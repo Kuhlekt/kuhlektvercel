@@ -15,96 +15,48 @@ import { getVisitorData } from "@/components/visitor-tracker"
 import ReCAPTCHA from "react-google-recaptcha"
 
 export default function DemoPage() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    company: "",
-    phone: "",
-    challenges: "",
-    affiliate: "",
-  })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<{
-    type: "success" | "error" | null
-    message: string
-  }>({ type: null, message: "" })
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const [siteKey, setSiteKey] = useState<string>("")
+  const [affiliateCode, setAffiliateCode] = useState("")
 
+  // Auto-populate affiliate code from visitor data
   useEffect(() => {
-    // Load reCAPTCHA site key
-    fetch("/api/recaptcha-config")
-      .then((res) => res.json())
-      .then((data) => setSiteKey(data.siteKey))
-      .catch((error) => console.error("Error loading reCAPTCHA config:", error))
-
-    // Auto-populate affiliate code from visitor data
     const visitorData = getVisitorData()
     if (visitorData?.affiliate) {
-      setFormData((prev) => ({ ...prev, affiliate: visitorData.affiliate }))
+      setAffiliateCode(visitorData.affiliate)
     }
   }, [])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!recaptchaToken) {
-      setSubmitStatus({
-        type: "error",
-        message: "Please complete the reCAPTCHA verification.",
-      })
-      return
-    }
-
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setIsSubmitting(true)
-    setSubmitStatus({ type: null, message: "" })
+    setMessage(null)
 
     try {
-      const formDataToSubmit = new FormData()
-      formDataToSubmit.append("firstName", formData.firstName)
-      formDataToSubmit.append("lastName", formData.lastName)
-      formDataToSubmit.append("email", formData.email)
-      formDataToSubmit.append("company", formData.company)
-      formDataToSubmit.append("phone", formData.phone)
-      formDataToSubmit.append("challenges", formData.challenges)
-      formDataToSubmit.append("affiliate", formData.affiliate)
-      formDataToSubmit.append("recaptchaToken", recaptchaToken)
+      const formData = new FormData(event.currentTarget)
 
-      const result = await submitDemoRequest(formDataToSubmit)
+      // Add reCAPTCHA token to form data
+      if (recaptchaToken) {
+        formData.append("recaptchaToken", recaptchaToken)
+      }
+
+      const result = await submitDemoRequest(formData)
 
       if (result.success) {
-        setSubmitStatus({
-          type: "success",
-          message: result.message || "Demo request submitted successfully! We'll contact you soon.",
-        })
+        setMessage({ type: "success", text: result.message })
         // Reset form
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          company: "",
-          phone: "",
-          challenges: "",
-          affiliate: "",
-        })
+        event.currentTarget.reset()
+        setAffiliateCode("")
         setRecaptchaToken(null)
       } else {
-        setSubmitStatus({
-          type: "error",
-          message: result.message || "Failed to submit demo request. Please try again.",
-        })
+        setMessage({ type: "error", text: result.message })
       }
     } catch (error) {
-      console.error("Demo form submission error:", error)
-      setSubmitStatus({
+      console.error("Form submission error:", error)
+      setMessage({
         type: "error",
-        message: "An unexpected error occurred. Please try again.",
+        text: "An unexpected error occurred. Please try again.",
       })
     } finally {
       setIsSubmitting(false)
@@ -119,25 +71,25 @@ export default function DemoPage() {
           <p className="text-xl text-gray-600">See how Kuhlekt can transform your accounts receivable process</p>
         </div>
 
-        <Card>
+        <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle>Schedule Your Personalized Demo</CardTitle>
-            <CardDescription>
-              Fill out the form below and our team will contact you to schedule a demo tailored to your business needs.
+            <CardTitle className="text-2xl text-center">Schedule Your Personalized Demo</CardTitle>
+            <CardDescription className="text-center">
+              Fill out the form below and we'll contact you within 24 hours to schedule your demo
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {submitStatus.type && (
+            {message && (
               <Alert
-                className={`mb-6 ${submitStatus.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                className={`mb-6 ${message.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
               >
-                {submitStatus.type === "success" ? (
+                {message.type === "success" ? (
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
-                <AlertDescription className={submitStatus.type === "success" ? "text-green-800" : "text-red-800"}>
-                  {submitStatus.message}
+                <AlertDescription className={message.type === "success" ? "text-green-800" : "text-red-800"}>
+                  {message.text}
                 </AlertDescription>
               </Alert>
             )}
@@ -153,9 +105,8 @@ export default function DemoPage() {
                     name="firstName"
                     type="text"
                     required
-                    value={formData.firstName}
-                    onChange={handleInputChange}
                     placeholder="Enter your first name"
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -167,9 +118,8 @@ export default function DemoPage() {
                     name="lastName"
                     type="text"
                     required
-                    value={formData.lastName}
-                    onChange={handleInputChange}
                     placeholder="Enter your last name"
+                    className="mt-1"
                   />
                 </div>
               </div>
@@ -183,9 +133,8 @@ export default function DemoPage() {
                   name="email"
                   type="email"
                   required
-                  value={formData.email}
-                  onChange={handleInputChange}
                   placeholder="Enter your business email"
+                  className="mt-1"
                 />
               </div>
 
@@ -198,9 +147,8 @@ export default function DemoPage() {
                   name="company"
                   type="text"
                   required
-                  value={formData.company}
-                  onChange={handleInputChange}
                   placeholder="Enter your company name"
+                  className="mt-1"
                 />
               </div>
 
@@ -213,9 +161,8 @@ export default function DemoPage() {
                   name="phone"
                   type="tel"
                   required
-                  value={formData.phone}
-                  onChange={handleInputChange}
                   placeholder="Enter your phone number"
+                  className="mt-1"
                 />
               </div>
 
@@ -224,10 +171,8 @@ export default function DemoPage() {
                 <Textarea
                   id="challenges"
                   name="challenges"
-                  value={formData.challenges}
-                  onChange={handleInputChange}
                   placeholder="Tell us about your current accounts receivable challenges..."
-                  rows={4}
+                  className="mt-1 min-h-[100px]"
                 />
               </div>
 
@@ -237,23 +182,25 @@ export default function DemoPage() {
                   id="affiliate"
                   name="affiliate"
                   type="text"
-                  value={formData.affiliate}
-                  onChange={handleInputChange}
+                  value={affiliateCode}
+                  onChange={(e) => setAffiliateCode(e.target.value)}
                   placeholder="Enter referral code if you have one"
+                  className="mt-1"
                 />
               </div>
 
-              {siteKey && (
-                <div className="flex justify-center">
-                  <ReCAPTCHA
-                    sitekey={siteKey}
-                    onChange={(token) => setRecaptchaToken(token)}
-                    onExpired={() => setRecaptchaToken(null)}
-                  />
-                </div>
-              )}
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
+                  onChange={(token) => setRecaptchaToken(token)}
+                />
+              </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || !recaptchaToken}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !recaptchaToken}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -264,16 +211,28 @@ export default function DemoPage() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-8 text-center text-sm text-gray-600">
+              <p>
+                By submitting this form, you agree to our{" "}
+                <a href="/privacy" className="text-blue-600 hover:underline">
+                  Privacy Policy
+                </a>{" "}
+                and{" "}
+                <a href="/terms" className="text-blue-600 hover:underline">
+                  Terms of Service
+                </a>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
         <div className="mt-8 text-center">
-          <p className="text-gray-600">
-            Need immediate assistance?{" "}
-            <a href="/contact" className="text-blue-600 hover:text-blue-800 font-medium">
-              Contact us directly
-            </a>
-          </p>
+          <p className="text-gray-600 mb-4">Need immediate assistance? Contact us directly:</p>
+          <div className="space-y-2">
+            <p className="text-lg font-semibold text-gray-900">📧 sales@kuhlekt.com</p>
+            <p className="text-lg font-semibold text-gray-900">📞 1-800-KUHLEKT</p>
+          </div>
         </div>
       </div>
     </div>
