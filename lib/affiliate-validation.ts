@@ -343,20 +343,6 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
 }
 
 /**
- * Synchronous client-side validation for affiliate codes
- * @param code - The affiliate code to validate
- * @returns true if valid, false otherwise
- */
-export function validateAffiliate(code: string): boolean {
-  if (!code || typeof code !== "string") {
-    return false
-  }
-
-  const upperCode = code.toUpperCase().trim()
-  return upperCode in AFFILIATE_CODES || VALID_AFFILIATE_CODES.includes(upperCode)
-}
-
-/**
  * Validates if an affiliate code is in the approved list (async version)
  * @param code - The affiliate code to validate
  * @returns true if valid, false otherwise
@@ -486,4 +472,18 @@ export async function getAffiliateDiscount(code: string): Promise<number> {
 
 export async function getAllAffiliateCodes(): Promise<string[]> {
   return Object.keys(AFFILIATE_CODES)
+}
+
+/**
+ * Synchronous client-side validation for affiliate codes (converted to async for server actions)
+ * @param code - The affiliate code to validate
+ * @returns true if valid, false otherwise
+ */
+export async function validateAffiliate(code: string): Promise<boolean> {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
+  const upperCode = code.toUpperCase().trim()
+  return upperCode in AFFILIATE_CODES || VALID_AFFILIATE_CODES.includes(upperCode)
 }

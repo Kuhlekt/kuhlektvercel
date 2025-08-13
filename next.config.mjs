@@ -6,6 +6,50 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  webpack: (config, { isServer }) => {
+    // Handle potential module resolution issues
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+      stream: false,
+      url: false,
+      zlib: false,
+      http: false,
+      https: false,
+      assert: false,
+      os: false,
+      path: false,
+    };
+    
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'bcryptjs'];
+    }
+    
+    // Optimize bundle splitting
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@': require('path').resolve(__dirname, './'),
+      };
+    }
+    
+    config.module.rules.push({
+      test: /\.(js|ts|tsx)$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['next/babel'],
+          plugins: []
+        }
+      }
+    });
+    
+    return config;
+  },
   images: {
     remotePatterns: [
       {
