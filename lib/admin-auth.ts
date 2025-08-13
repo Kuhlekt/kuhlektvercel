@@ -1,11 +1,14 @@
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
 const ADMIN_SESSION_COOKIE = "admin-session"
+const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export interface AdminSession {
   isAuthenticated: boolean
-  timestamp: number
+  email: string
+  loginTime: number
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -17,18 +20,19 @@ export async function verifyAdminPassword(password: string, hashedPassword: stri
   return await bcrypt.compare(password, hashedPassword)
 }
 
-export async function createAdminSession(): Promise<void> {
-  const cookieStore = cookies()
+export async function createAdminSession(email: string): Promise<void> {
   const session: AdminSession = {
     isAuthenticated: true,
-    timestamp: Date.now(),
+    email,
+    loginTime: Date.now(),
   }
 
+  const cookieStore = cookies()
   cookieStore.set(ADMIN_SESSION_COOKIE, JSON.stringify(session), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: SESSION_DURATION,
   })
 }
 
@@ -43,10 +47,8 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
     const session: AdminSession = JSON.parse(sessionCookie.value)
 
-    // Check if session is expired (24 hours)
-    const isExpired = Date.now() - session.timestamp > 24 * 60 * 60 * 1000
-
-    if (isExpired) {
+    // Check if session is expired
+    if (Date.now() - session.loginTime > SESSION_DURATION) {
       await destroyAdminSession()
       return null
     }
@@ -63,14 +65,30 @@ export async function destroyAdminSession(): Promise<void> {
   cookieStore.delete(ADMIN_SESSION_COOKIE)
 }
 
-export async function isAdminAuthenticated(): Promise<boolean> {
+export async function requireAdminAuth(): Promise<AdminSession> {
   const session = await getAdminSession()
-  return session?.isAuthenticated ?? false
+
+  if (!session || !session.isAuthenticated) {
+    redirect("/admin/login")
+  }
+
+  return session
 }
 
-export async function requireAdminAuth(): Promise<void> {
-  const isAuthenticated = await isAdminAuthenticated()
-  if (!isAuthenticated) {
-    throw new Error("Admin authentication required")
+export async function verifyAdminCredentials(email: string, password: string): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
+
+  if (!adminEmail || !adminPassword) {
+    console.error("Admin credentials not configured")
+    return false
   }
+
+  // For development, allow plain text comparison
+  // In production, you should hash the admin password
+  if (email === adminEmail && password === adminPassword) {
+    return true
+  }
+
+  return false
 }
