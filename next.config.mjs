@@ -38,7 +38,7 @@ const nextConfig = {
     };
     
     if (isServer) {
-      config.externals = [...(config.externals || []), 'bcryptjs', '@supabase/auth-helpers-nextjs', '@supabase/supabase-js'];
+      config.externals = [...(config.externals || []), 'bcryptjs'];
     }
     
     if (!isServer) {
@@ -56,7 +56,6 @@ const nextConfig = {
       type: 'javascript/auto',
     });
     
-    // Optimize chunk splitting for better performance
     if (!dev && !isServer) {
       config.optimization = {
         ...config.optimization,
@@ -64,9 +63,9 @@ const nextConfig = {
           ...config.optimization.splitChunks,
           cacheGroups: {
             ...config.optimization.splitChunks.cacheGroups,
-            supabase: {
-              name: 'supabase',
-              test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+            vendor: {
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
               chunks: 'all',
               priority: 10,
             },
