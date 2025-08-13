@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, TrendingUp, Users, Award, Target, ArrowRight } from "lucide-react"
+import { CheckCircle, ArrowRight } from "lucide-react"
 import VisitorTracker from "@/components/visitor-tracker"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -72,60 +72,6 @@ export default function AboutPage() {
                   className="rounded-lg shadow-xl"
                 />
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Company Stats */}
-        <section className="py-20 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Our Impact</h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Since our founding, we've helped hundreds of companies transform their AR processes
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">500+</h3>
-                  <p className="text-gray-600">Companies Served</p>
-                </CardContent>
-              </Card>
-
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">$2.5B+</h3>
-                  <p className="text-gray-600">AR Processed</p>
-                </CardContent>
-              </Card>
-
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Target className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">40%</h3>
-                  <p className="text-gray-600">Average DSO Reduction</p>
-                </CardContent>
-              </Card>
-
-              <Card className="p-6 text-center">
-                <CardContent className="p-0">
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Award className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">98%</h3>
-                  <p className="text-gray-600">Customer Satisfaction</p>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </section>
