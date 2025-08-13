@@ -1,35 +1,61 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
+import { sendDemoRequestEmail } from "@/lib/email-service"
 import { validateAffiliate } from "@/lib/affiliate-validation"
 import { verifyCaptcha } from "@/lib/captcha"
 
-export async function submitDemoRequest(prevState: any, formData: FormData) {
+interface DemoFormState {
+  success: boolean
+  message: string
+  errors?: Record<string, string>
+}
+
+export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
-    // Extract form data
+    // Extract form data with consistent field names
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
-    const businessEmail = formData.get("businessEmail") as string
-    const companyName = formData.get("companyName") as string
-    const phoneNumber = formData.get("phoneNumber") as string
-    const arChallenges = formData.get("arChallenges") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const phone = formData.get("phone") as string
+    const jobTitle = formData.get("jobTitle") as string
+    const companySize = formData.get("companySize") as string
+    const currentSolution = formData.get("currentSolution") as string
+    const timeline = formData.get("timeline") as string
+    const challenges = formData.get("challenges") as string
     const affiliateCode = formData.get("affiliateCode") as string
     const captchaToken = formData.get("captchaToken") as string
 
     // Validate required fields
-    if (!firstName || !lastName || !businessEmail || !companyName || !phoneNumber) {
-      return {
-        success: false,
-        message: "Please fill in all required fields.",
-      }
+    const errors: Record<string, string> = {}
+
+    if (!firstName || firstName.trim().length === 0) {
+      errors.firstName = "First name is required"
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(businessEmail)) {
+    if (!lastName || lastName.trim().length === 0) {
+      errors.lastName = "Last name is required"
+    }
+
+    if (!email || email.trim().length === 0) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    if (!company || company.trim().length === 0) {
+      errors.company = "Company name is required"
+    }
+
+    if (!phone || phone.trim().length === 0) {
+      errors.phone = "Phone number is required"
+    }
+
+    if (Object.keys(errors).length > 0) {
       return {
         success: false,
-        message: "Please enter a valid business email address.",
+        message: "Please fix the errors below",
+        errors,
       }
     }
 
@@ -46,29 +72,22 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
 
     // Validate affiliate code if provided
     let validAffiliate = null
-    if (affiliateCode) {
-      validAffiliate = validateAffiliate(affiliateCode)
+    if (affiliateCode && affiliateCode.trim().length > 0) {
+      validAffiliate = validateAffiliate(affiliateCode.trim())
     }
 
-    // Prepare email content
-    const emailSubject = `New Demo Request from ${firstName} ${lastName} at ${companyName}`
-    const emailBody = `
-      <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${businessEmail}</p>
-      <p><strong>Company:</strong> ${companyName}</p>
-      <p><strong>Phone:</strong> ${phoneNumber}</p>
-      ${arChallenges ? `<p><strong>AR Challenges:</strong></p><p>${arChallenges}</p>` : ""}
-      ${validAffiliate ? `<p><strong>Affiliate Code:</strong> ${affiliateCode} (Valid)</p>` : ""}
-      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-    `
-
-    // Send email
-    const emailResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      html: emailBody,
+    // Send email using the email service
+    const emailResult = await sendDemoRequestEmail({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      company: company.trim(),
+      jobTitle: jobTitle?.trim() || "",
+      phone: phone?.trim() || "",
+      companySize: companySize?.trim() || "",
+      currentSolution: currentSolution?.trim() || "",
+      challenges: challenges?.trim() || "",
+      timeline: timeline?.trim() || "",
     })
 
     if (!emailResult.success) {

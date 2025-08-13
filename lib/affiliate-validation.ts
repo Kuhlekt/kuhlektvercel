@@ -12,15 +12,12 @@ interface AffiliateInfo {
 const VALID_AFFILIATE_CODES = [
   "PARTNER001",
   "PARTNER002",
-  "PARTNER003",
   "RESELLER001",
-  "RESELLER002",
-  "CONSULTANT001",
-  "CONSULTANT002",
-  "REFERRAL001",
-  "REFERRAL002",
   "CHANNEL001",
-  "CHANNEL002",
+  "REFERRAL001",
+  "PROMO2024",
+  "EARLY2024",
+  "BETA001",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -267,10 +264,7 @@ export function validateAffiliate(code: string): boolean {
     return false
   }
 
-  // Convert to uppercase for case-insensitive comparison
-  const normalizedCode = code.trim().toUpperCase()
-
-  return VALID_AFFILIATE_CODES.includes(normalizedCode)
+  return VALID_AFFILIATE_CODES.includes(code.toUpperCase().trim())
 }
 
 /**
