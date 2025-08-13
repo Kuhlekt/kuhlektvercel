@@ -107,9 +107,39 @@ function convertToEditableContent(content: string): string {
   return editableContent
 }
 
-// Function to convert editable content back to display format
-function convertToDisplayContent(content: string): string {
+// Function to convert editable content back to display format with proper image handling
+function convertToDisplayContent(content: string, availableImages: ImageData[] = []): string {
   let displayContent = content
+
+  console.log("Converting content to display:", content)
+  console.log("Available images for conversion:", availableImages)
+
+  // Process image placeholders FIRST before any other processing
+  displayContent = displayContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
+    console.log("Processing image placeholder:", { match, id, filename })
+
+    // Check available images first (from current editing session)
+    let imageData = availableImages.find((img) => img.id === id || img.placeholder === match)
+
+    // If not found, check global storage
+    if (!imageData) {
+      const storedImages = (window as any).textareaImages || (window as any).editingImages || []
+      imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
+    }
+
+    console.log("Found image data:", imageData)
+
+    if (imageData && imageData.dataUrl) {
+      const imgTag = `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
+      console.log("Generated img tag:", imgTag)
+      return imgTag
+    }
+
+    console.log("No image data found, returning placeholder")
+    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
+      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
+    </div>`
+  })
 
   // Convert markdown-like formatting to HTML
   displayContent = displayContent
@@ -118,38 +148,27 @@ function convertToDisplayContent(content: string): string {
     .replace(/\n\n/g, "</p><p>")
     .replace(/\n/g, "<br>")
 
-  // Wrap in paragraphs
-  if (displayContent && !displayContent.startsWith("<p>")) {
+  // Wrap in paragraphs if needed
+  if (displayContent && !displayContent.startsWith("<p>") && !displayContent.includes("<img")) {
     displayContent = "<p>" + displayContent + "</p>"
+  } else if (displayContent && !displayContent.startsWith("<p>")) {
+    // Handle mixed content with images
+    displayContent = displayContent.replace(/^([^<]+)/, "<p>$1</p>")
   }
 
-  // Process image placeholders
-  displayContent = displayContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
-    // Check if we have stored images
-    const storedImages = (window as any).textareaImages || (window as any).editingImages || []
-    const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
-
-    if (imageData && imageData.dataUrl) {
-      return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-    }
-
-    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
-    <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
-  </div>`
-  })
-
-  // Convert URLs to actual images
+  // Convert standalone URLs to actual images
   displayContent = displayContent.replace(
     /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
     '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
   )
 
-  // Convert data URLs to images
+  // Convert standalone data URLs to images
   displayContent = displayContent.replace(
     /(data:image\/[^;]+;base64,[^\s"'<>]+)/gi,
     '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
   )
 
+  console.log("Final display content:", displayContent)
   return displayContent
 }
 
@@ -193,6 +212,10 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
     console.log("Title state changed:", title)
   }, [title])
 
+  useEffect(() => {
+    console.log("Images state changed:", images)
+  }, [images])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -218,11 +241,11 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
 
     try {
       // Ensure images are properly stored before conversion
-      const currentImages = (window as any).textareaImages || []
+      const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
       console.log("Current images before submit:", currentImages)
 
       // Convert content back to display format
-      const displayContent = convertToDisplayContent(content)
+      const displayContent = convertToDisplayContent(content, currentImages)
       console.log("Display content after conversion:", displayContent)
 
       const updatedArticle = {
@@ -251,11 +274,18 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
   }
 
   const handleImagesChange = (newImages: ImageData[]) => {
+    console.log("Images changed:", newImages)
     setImages(newImages)
   }
 
   const renderPreview = () => {
-    const previewContent = convertToDisplayContent(content)
+    // Use current images for preview
+    const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
+    const previewContent = convertToDisplayContent(content, currentImages)
+
+    console.log("Rendering preview with content:", content)
+    console.log("Using images:", currentImages)
+    console.log("Preview HTML:", previewContent)
 
     return (
       <div className="prose max-w-none">
