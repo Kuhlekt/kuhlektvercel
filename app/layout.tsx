@@ -14,6 +14,16 @@ export const metadata: Metadata = {
   description:
     "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO, improve cash flow, and streamline collections.",
   keywords: "accounts receivable, AR automation, digital collections, cash flow management, invoice processing",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.gif",
+        type: "image/gif",
+      },
+    ],
+    shortcut: "/favicon.gif",
+    apple: "/favicon.gif",
+  },
     generator: 'v0.app'
 }
 
@@ -24,6 +34,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.gif" type="image/gif" />
+        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
+        <link rel="apple-touch-icon" href="/favicon.gif" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex flex-col min-h-screen">
