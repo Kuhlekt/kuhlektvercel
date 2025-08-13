@@ -11,15 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { submitContactForm } from "./actions"
-import { getVisitorData } from "@/components/visitor-tracker"
 import ReCAPTCHA from "react-google-recaptcha"
+import { getVisitorData } from "@/components/visitor-tracker"
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const [affiliateCode, setAffiliateCode] = useState("")
   const [siteKey, setSiteKey] = useState<string>("")
+  const [affiliateCode, setAffiliateCode] = useState("")
 
   useEffect(() => {
     // Fetch reCAPTCHA site key
@@ -77,16 +77,17 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600">Get in touch with our team - we're here to help</p>
+          <p className="text-xl text-gray-600">Get in touch with our team</p>
         </div>
 
-        {/* Contact Form */}
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="text-2xl">Send us a Message</CardTitle>
-            <CardDescription>Fill out the form below and we'll get back to you as soon as possible</CardDescription>
+            <CardTitle className="text-2xl text-center">Send us a Message</CardTitle>
+            <CardDescription className="text-center">
+              Fill out the form below and we'll get back to you as soon as possible
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {message && (
@@ -155,11 +156,35 @@ export default function ContactPage() {
               </div>
 
               <div>
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  placeholder="Enter your phone number"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="subject">Subject *</Label>
+                <Input
+                  id="subject"
+                  name="subject"
+                  type="text"
+                  required
+                  placeholder="What is this regarding?"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="message">Message (Optional)</Label>
                 <Textarea
                   id="message"
                   name="message"
-                  placeholder="Tell us how we can help you..."
+                  placeholder="Tell us more about your inquiry..."
                   className="mt-1 min-h-[120px]"
                 />
               </div>

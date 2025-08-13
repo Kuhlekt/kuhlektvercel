@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Calendar, Users, TrendingUp, DollarSign } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { submitDemoRequest } from "./actions"
 import ReCAPTCHA from "react-google-recaptcha"
 import { getVisitorData } from "@/components/visitor-tracker"
@@ -256,48 +256,8 @@ export default function DemoPage() {
             </CardContent>
           </Card>
 
-          {/* Demo Information */}
+          {/* Why Choose Kuhlekt */}
           <div className="space-y-6">
-            <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-2xl">What to Expect</CardTitle>
-                <CardDescription>Your personalized demo will include</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Calendar className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">30-Minute Session</h3>
-                    <p className="text-gray-600">Comprehensive walkthrough of Kuhlekt's features</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <Users className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Tailored to Your Business</h3>
-                    <p className="text-gray-600">Demo customized to your industry and company size</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <TrendingUp className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">ROI Analysis</h3>
-                    <p className="text-gray-600">See potential savings and efficiency gains</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <DollarSign className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Custom Pricing</h3>
-                    <p className="text-gray-600">Receive a personalized quote for your needs</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card className="shadow-xl">
               <CardHeader>
                 <CardTitle className="text-xl">Why Choose Kuhlekt?</CardTitle>
@@ -329,21 +289,6 @@ export default function DemoPage() {
                     Industry-leading security standards
                   </li>
                 </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-xl">Ready to Get Started?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Join hundreds of companies that have transformed their AR process with Kuhlekt.
-                </p>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">Average ROI: 300%</p>
-                  <p className="text-sm text-gray-500">Within first 6 months</p>
-                </div>
               </CardContent>
             </Card>
           </div>
