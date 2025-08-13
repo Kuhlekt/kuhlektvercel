@@ -1,47 +1,47 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
+import { sendDemoRequestEmail } from "@/lib/email-service"
 import { validateAffiliate } from "@/lib/affiliate-validation"
 import { verifyCaptcha } from "@/lib/captcha"
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
   try {
-    // Extract form data
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
-    const jobTitle = formData.get("jobTitle") as string
-    const companySize = formData.get("companySize") as string
-    const currentSolution = formData.get("currentSolution") as string
-    const timeline = formData.get("timeline") as string
-    const challenges = formData.get("challenges") as string
-    const affiliateCode = formData.get("affiliateCode") as string
-    const captchaToken = formData.get("captchaToken") as string
+    // Extract form data with proper null checks
+    const firstName = formData.get("firstName")?.toString()?.trim() || ""
+    const lastName = formData.get("lastName")?.toString()?.trim() || ""
+    const email = formData.get("email")?.toString()?.trim() || ""
+    const company = formData.get("company")?.toString()?.trim() || ""
+    const phone = formData.get("phone")?.toString()?.trim() || ""
+    const jobTitle = formData.get("jobTitle")?.toString()?.trim() || ""
+    const companySize = formData.get("companySize")?.toString()?.trim() || ""
+    const currentSolution = formData.get("currentSolution")?.toString()?.trim() || ""
+    const timeline = formData.get("timeline")?.toString()?.trim() || ""
+    const challenges = formData.get("challenges")?.toString()?.trim() || ""
+    const affiliateCode = formData.get("affiliateCode")?.toString()?.trim() || ""
+    const captchaToken = formData.get("captchaToken")?.toString()?.trim() || ""
 
     // Validate required fields
     const errors: Record<string, string> = {}
 
-    if (!firstName?.trim()) {
+    if (!firstName) {
       errors.firstName = "First name is required"
     }
 
-    if (!lastName?.trim()) {
+    if (!lastName) {
       errors.lastName = "Last name is required"
     }
 
-    if (!email?.trim()) {
+    if (!email) {
       errors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
-    if (!company?.trim()) {
+    if (!company) {
       errors.company = "Company name is required"
     }
 
-    if (!phone?.trim()) {
+    if (!phone) {
       errors.phone = "Phone number is required"
     }
 
@@ -65,38 +65,35 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     }
 
     // Validate affiliate code if provided
-    let validAffiliate = null
-    if (affiliateCode?.trim()) {
-      validAffiliate = validateAffiliate(affiliateCode.trim())
+    let validAffiliate = false
+    if (affiliateCode) {
+      try {
+        validAffiliate = validateAffiliate(affiliateCode)
+      } catch (error) {
+        console.error("Affiliate validation error:", error)
+        // Continue with form submission even if affiliate validation fails
+      }
     }
 
-    // Prepare email content
-    const emailSubject = `New Demo Request from ${firstName} ${lastName} at ${company}`
-    const emailBody = `
-      <h2>New Demo Request</h2>
-      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Company:</strong> ${company}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
-      ${jobTitle ? `<p><strong>Job Title:</strong> ${jobTitle}</p>` : ""}
-      ${companySize ? `<p><strong>Company Size:</strong> ${companySize}</p>` : ""}
-      ${currentSolution ? `<p><strong>Current Solution:</strong> ${currentSolution}</p>` : ""}
-      ${timeline ? `<p><strong>Timeline:</strong> ${timeline}</p>` : ""}
-      ${challenges ? `<p><strong>Challenges:</strong></p><p>${challenges}</p>` : ""}
-      ${validAffiliate ? `<p><strong>Affiliate Code:</strong> ${affiliateCode} (Valid)</p>` : ""}
-      <p><strong>reCAPTCHA Verified:</strong> ${captchaVerified ? "Yes" : "No"}</p>
-      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-    `
+    // Prepare email data
+    const emailData = {
+      firstName,
+      lastName,
+      email,
+      company,
+      phone,
+      jobTitle: jobTitle || undefined,
+      companySize: companySize || undefined,
+      currentSolution: currentSolution || undefined,
+      timeline: timeline || undefined,
+      challenges: challenges || undefined,
+    }
 
     // Send email
-    const emailResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      html: emailBody,
-    })
+    const emailResult = await sendDemoRequestEmail(emailData)
 
     if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
+      console.error("Failed to send demo request email:", emailResult.message)
       return {
         success: false,
         message: "There was an error submitting your demo request. Please try again or contact us directly.",

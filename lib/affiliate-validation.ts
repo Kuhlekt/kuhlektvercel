@@ -1,3 +1,5 @@
+"use server"
+
 interface AffiliateInfo {
   code: string
   name: string
@@ -10,16 +12,14 @@ interface AffiliateInfo {
 
 // Predefined list of valid affiliate codes
 const VALID_AFFILIATE_CODES = [
-  "PARTNER001",
-  "PARTNER002",
-  "RESELLER001",
-  "RESELLER002",
-  "CHANNEL001",
-  "CHANNEL002",
-  "REFERRAL001",
-  "REFERRAL002",
+  "PARTNER2024",
+  "REFERRAL123",
+  "CONSULTANT",
+  "ADVISOR",
+  "INTEGRATION",
+  "RESELLER",
+  "CHANNEL",
   "DEMO2024",
-  "SPECIAL2024",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -266,7 +266,8 @@ export function validateAffiliate(code: string): boolean {
     return false
   }
 
-  return VALID_AFFILIATE_CODES.includes(code.toUpperCase().trim())
+  const normalizedCode = code.trim().toUpperCase()
+  return VALID_AFFILIATE_CODES.includes(normalizedCode)
 }
 
 /**
@@ -274,16 +275,7 @@ export function validateAffiliate(code: string): boolean {
  * @param code - The affiliate code to validate
  * @returns The validated code in uppercase or null if invalid
  */
-export function validateAffiliateCode(code: string): boolean {
-  if (!code || typeof code !== "string") {
-    return false
-  }
-
-  // Convert to uppercase for case-insensitive comparison
-  const normalizedCode = code.trim().toUpperCase()
-
-  return VALID_AFFILIATE_CODES.includes(normalizedCode)
-}
+export const validateAffiliateCode = validateAffiliate
 
 /**
  * Gets the list of all valid affiliate codes (for admin use)
@@ -317,27 +309,17 @@ export function formatAffiliateCode(code: string): string {
  * @returns Object with isValid boolean and partner string if valid, null otherwise
  */
 export function getAffiliateInfo(code: string) {
-  const normalizedCode = normalizeAffiliateCode(code)
-
-  if (!VALID_AFFILIATE_CODES.includes(normalizedCode)) {
+  if (!validateAffiliate(code)) {
     return null
   }
 
-  // Return basic info for valid codes
+  const normalizedCode = code.trim().toUpperCase()
+
+  // Return basic info about the affiliate code
   return {
     code: normalizedCode,
     isValid: true,
-    type: normalizedCode.startsWith("PARTNER")
-      ? "partner"
-      : normalizedCode.startsWith("RESELLER")
-        ? "reseller"
-        : normalizedCode.startsWith("CHANNEL")
-          ? "channel"
-          : normalizedCode.startsWith("REFERRAL")
-            ? "referral"
-            : normalizedCode.startsWith("CONSULTANT")
-              ? "consultant"
-              : "other",
+    type: "partner",
   }
 }
 
