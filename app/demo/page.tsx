@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,9 +20,9 @@ export default function DemoPage() {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const [siteKey, setSiteKey] = useState<string>("")
   const [affiliateCode, setAffiliateCode] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
-    // Fetch reCAPTCHA site key
     fetch("/api/recaptcha-config")
       .then((res) => res.json())
       .then((data) => {
@@ -32,7 +32,6 @@ export default function DemoPage() {
         console.error("Error loading reCAPTCHA config:", error)
       })
 
-    // Auto-populate affiliate code from visitor data
     const visitorData = getVisitorData()
     if (visitorData?.affiliate) {
       setAffiliateCode(visitorData.affiliate)
@@ -47,7 +46,6 @@ export default function DemoPage() {
     try {
       const formData = new FormData(event.currentTarget)
 
-      // Add reCAPTCHA token to form data
       if (recaptchaToken) {
         formData.append("recaptchaToken", recaptchaToken)
       }
@@ -56,8 +54,9 @@ export default function DemoPage() {
 
       if (result.success) {
         setMessage({ type: "success", text: result.message })
-        // Reset form
-        event.currentTarget.reset()
+        if (formRef.current) {
+          formRef.current.reset()
+        }
         setAffiliateCode("")
         setRecaptchaToken(null)
       } else {
@@ -83,7 +82,6 @@ export default function DemoPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Demo Request Form */}
           <Card className="shadow-xl">
             <CardHeader>
               <CardTitle className="text-2xl">Schedule Your Demo</CardTitle>
@@ -105,7 +103,7 @@ export default function DemoPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">First Name *</Label>
@@ -218,7 +216,6 @@ export default function DemoPage() {
             </CardContent>
           </Card>
 
-          {/* Why Choose Kuhlekt */}
           <div className="space-y-6">
             <Card className="shadow-xl">
               <CardHeader>
