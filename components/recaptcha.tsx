@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 
 interface ReCaptchaProps {
-  onVerify: (token: string | null) => void
+  onVerify: (token: string) => void
 }
 
 export function ReCaptcha({ onVerify }: ReCaptchaProps) {
@@ -11,6 +11,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
   const [isEnabled, setIsEnabled] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -38,6 +39,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
     if (!isEnabled || !siteKey || error) {
       // If reCAPTCHA is disabled or there's an error, automatically verify
       onVerify("disabled")
+      setIsLoaded(true)
       return
     }
 
@@ -55,10 +57,12 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
             .execute(siteKey, { action: "submit" })
             .then((token: string) => {
               onVerify(token)
+              setIsLoaded(true)
             })
             .catch((err: any) => {
               console.error("reCAPTCHA execution error:", err)
               onVerify("error")
+              setIsLoaded(true)
             })
         })
       }
@@ -67,6 +71,7 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
     script.onerror = () => {
       console.error("Failed to load reCAPTCHA script")
       onVerify("error")
+      setIsLoaded(true)
     }
 
     return () => {
@@ -84,23 +89,11 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
     )
   }
 
-  if (error || !isEnabled) {
+  if (error || !isEnabled || !isLoaded) {
     return null
   }
 
-  return (
-    <div className="text-xs text-gray-500 text-center">
-      This site is protected by reCAPTCHA and the Google{" "}
-      <a href="https://policies.google.com/privacy" className="underline">
-        Privacy Policy
-      </a>{" "}
-      and{" "}
-      <a href="https://policies.google.com/terms" className="underline">
-        Terms of Service
-      </a>{" "}
-      apply.
-    </div>
-  )
+  return <div className="text-xs text-gray-500 text-center py-2">Security verification enabled</div>
 }
 
 // Extend Window interface for TypeScript
@@ -109,3 +102,5 @@ declare global {
     grecaptcha: any
   }
 }
+
+export default ReCaptcha

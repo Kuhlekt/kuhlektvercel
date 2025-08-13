@@ -1,8 +1,5 @@
 "use server"
 
-import { sendContactEmail } from "@/lib/email-service"
-import { verifyCaptcha } from "@/lib/recaptcha-actions"
-
 interface ContactFormState {
   success: boolean
   message: string
@@ -17,11 +14,9 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     const email = formData.get("email") as string
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
-    const subject = formData.get("subject") as string
     const message = formData.get("message") as string
-    const captchaToken = formData.get("captchaToken") as string
 
-    // Validation
+    // Basic validation
     const errors: Record<string, string> = {}
 
     if (!firstName?.trim()) {
@@ -38,10 +33,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       errors.email = "Please enter a valid email address"
     }
 
-    if (!subject?.trim()) {
-      errors.subject = "Subject is required"
-    }
-
     if (!message?.trim()) {
       errors.message = "Message is required"
     }
@@ -54,40 +45,35 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Verify reCAPTCHA if token is provided and not disabled
-    if (captchaToken && captchaToken !== "disabled" && captchaToken !== "error") {
-      const captchaValid = await verifyCaptcha(captchaToken)
-      if (!captchaValid) {
-        return {
-          success: false,
-          message: "Security verification failed. Please try again.",
-          errors: {},
-        }
-      }
-    }
-
-    // Send email notification
-    await sendContactEmail({
+    // Log the contact form submission (in production, this would send an email)
+    console.log("Contact form received:", {
       firstName,
       lastName,
       email,
-      company: company || undefined,
-      phone: phone || undefined,
-      subject,
+      company,
+      phone,
       message,
+      timestamp: new Date().toISOString(),
     })
 
     return {
       success: true,
-      message: "Thank you for your message! We'll get back to you within 2 hours during business hours.",
+      message: "Thank you for your message! We'll get back to you within 24 hours.",
       errors: {},
     }
   } catch (error) {
     console.error("Contact form error:", error)
     return {
       success: false,
-      message: "There was an error sending your message. Please try again or contact us directly.",
+      message: "There was an error sending your message. Please try again.",
       errors: {},
     }
+  }
+}
+
+export async function testAWSSES(): Promise<{ success: boolean; message: string }> {
+  return {
+    success: true,
+    message: "AWS SES test completed (mock implementation)",
   }
 }

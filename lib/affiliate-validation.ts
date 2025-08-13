@@ -8,6 +8,7 @@ export interface AffiliateInfo {
   isActive?: boolean
   category?: string
   discountPercentage?: number
+  type?: string
 }
 
 export interface AffiliateData {
@@ -76,32 +77,76 @@ const AFFILIATE_CODES: Record<string, AffiliateInfo> = {
     category: "startup",
     discountPercentage: 50,
   },
+  RESELLER01: {
+    name: "Reseller Partner One",
+    isValid: true,
+    isActive: true,
+    category: "reseller",
+    discountPercentage: 7,
+  },
+  RESELLER02: {
+    name: "Reseller Partner Two",
+    isValid: true,
+    isActive: true,
+    category: "reseller",
+    discountPercentage: 6,
+  },
+  CHANNEL001: {
+    name: "Channel Partner One",
+    isValid: true,
+    isActive: true,
+    category: "channel",
+    discountPercentage: 9,
+  },
+  CHANNEL002: {
+    name: "Channel Partner Two",
+    isValid: true,
+    isActive: true,
+    category: "channel",
+    discountPercentage: 8,
+  },
+  DEMO001: {
+    name: "Demo Special One",
+    isValid: true,
+    isActive: true,
+    category: "promotion",
+    discountPercentage: 18,
+  },
+  TRIAL001: {
+    name: "Trial Special One",
+    isValid: true,
+    isActive: true,
+    category: "promotion",
+    discountPercentage: 15,
+  },
 }
 
 // Valid affiliate codes array for quick lookup
 const VALID_AFFILIATE_CODES = Object.keys(AFFILIATE_CODES)
 
+const VALID_AFFILIATES = [
+  "PARTNER001",
+  "PARTNER002",
+  "RESELLER01",
+  "RESELLER02",
+  "CHANNEL001",
+  "CHANNEL002",
+  "DEMO001",
+  "TRIAL001",
+]
+
 /**
- * Validates an affiliate code and returns affiliate information
+ * Validates an affiliate code and returns boolean
  * @param code - The affiliate code to validate
- * @returns AffiliateInfo object with validation result
+ * @returns true if valid, false otherwise
  */
-export function validateAffiliate(code: string): AffiliateInfo {
-  const upperCode = code.toUpperCase().trim()
-  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
-
-  if (!affiliate) {
-    return { isValid: false }
+export function validateAffiliate(code: string): boolean {
+  if (!code || typeof code !== "string") {
+    return false
   }
 
-  return {
-    code: upperCode,
-    name: affiliate.name,
-    isValid: true,
-    isActive: affiliate.isActive,
-    category: affiliate.category,
-    discountPercentage: affiliate.discountPercentage,
-  }
+  const normalizedCode = code.toUpperCase().trim()
+  return VALID_AFFILIATES.includes(normalizedCode)
 }
 
 /**
@@ -110,11 +155,7 @@ export function validateAffiliate(code: string): AffiliateInfo {
  * @returns true if valid, false otherwise
  */
 export function validateAffiliateCode(code: string): boolean {
-  if (!code || typeof code !== "string") {
-    return false
-  }
-
-  return VALID_AFFILIATE_CODES.includes(code.toUpperCase().trim())
+  return validateAffiliate(code)
 }
 
 /**
@@ -149,20 +190,27 @@ export function formatAffiliateCode(code: string): string {
  * @returns Object with isValid boolean and partner string if valid, null otherwise
  */
 export function getAffiliateInfo(code: string): AffiliateInfo {
-  if (!validateAffiliateCode(code)) {
+  if (!validateAffiliate(code)) {
     return { isValid: false }
   }
 
-  const upperCode = normalizeAffiliateCode(code)
-  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+  const normalizedCode = normalizeAffiliateCode(code)
+  const affiliate = AFFILIATE_CODES[normalizedCode as keyof typeof AFFILIATE_CODES]
 
   return {
-    code: upperCode,
+    code: normalizedCode,
     name: affiliate.name,
     isValid: true,
     isActive: affiliate.isActive,
     category: affiliate.category,
     discountPercentage: affiliate.discountPercentage,
+    type: normalizedCode.startsWith("PARTNER")
+      ? "partner"
+      : normalizedCode.startsWith("RESELLER")
+        ? "reseller"
+        : normalizedCode.startsWith("CHANNEL")
+          ? "channel"
+          : "other",
   }
 }
 
@@ -182,6 +230,13 @@ export function getAllAffiliates(): AffiliateInfo[] {
     isActive: info.isActive || false,
     category: info.category || "",
     discountPercentage: info.discountPercentage || 0,
+    type: code.startsWith("PARTNER")
+      ? "partner"
+      : code.startsWith("RESELLER")
+        ? "reseller"
+        : code.startsWith("CHANNEL")
+          ? "channel"
+          : "other",
   }))
 }
 
@@ -206,6 +261,12 @@ export function getAffiliateDiscount(code: string): number {
     DEMO2024: 20,
     EARLY2024: 25,
     STARTUP50: 50,
+    RESELLER01: 7,
+    RESELLER02: 6,
+    CHANNEL001: 9,
+    CHANNEL002: 8,
+    DEMO001: 18,
+    TRIAL001: 15,
   }
 
   return discounts[normalizedCode] || 0
