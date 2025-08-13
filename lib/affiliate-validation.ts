@@ -9,6 +9,9 @@ export interface AffiliateInfo {
   category?: string
   discount?: number
   description?: string
+  partnerName?: string
+  discountPercent?: number
+  commissionRate?: number
 }
 
 // Predefined list of valid affiliate codes
@@ -23,10 +26,37 @@ export const VALID_AFFILIATE_CODES = [
   "PREMIUM2024",
   "BUSINESS2024",
   "FINANCE2024",
+  "REFERRAL10",
+  "CONSULTANT",
+  "BETA2024",
 ]
 
-// Predefined affiliate codes and their information
+// Predefined affiliate codes with their details
 const AFFILIATE_CODES = {
+  PARTNER2024: {
+    isValid: true,
+    partnerName: "Strategic Partner",
+    discountPercent: 15,
+    commissionRate: 10,
+  },
+  REFERRAL10: {
+    isValid: true,
+    partnerName: "Referral Program",
+    discountPercent: 10,
+    commissionRate: 5,
+  },
+  CONSULTANT: {
+    isValid: true,
+    partnerName: "Consultant Network",
+    discountPercent: 20,
+    commissionRate: 15,
+  },
+  BETA2024: {
+    isValid: true,
+    partnerName: "Beta Program",
+    discountPercent: 25,
+    commissionRate: 0,
+  },
   PARTNER001: {
     name: "TechPartner Solutions",
     commission: 15,
@@ -52,7 +82,7 @@ const AFFILIATE_CODES = {
     commission: 25,
     isActive: true,
   },
-}
+} as const
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
@@ -333,10 +363,13 @@ export function validateAffiliate(code: string): AffiliateInfo {
 
   return {
     code: upperCode,
-    name: affiliate.name,
-    commission: affiliate.commission,
-    isActive: affiliate.isActive,
-    isValid: affiliate.isActive, // Only valid if active
+    name: affiliate.name || "",
+    commission: affiliate.commission || 0,
+    isActive: affiliate.isActive || false,
+    isValid: affiliate.isValid,
+    partnerName: affiliate.partnerName,
+    discountPercent: affiliate.discountPercent,
+    commissionRate: affiliate.commissionRate,
   }
 }
 
@@ -345,29 +378,13 @@ export function validateAffiliate(code: string): AffiliateInfo {
  * @param code - The affiliate code to validate
  * @returns The validated code in uppercase or null if invalid
  */
-export async function validateAffiliateCode(code: string): Promise<boolean> {
-  try {
-    if (!code || typeof code !== "string") {
-      return false
-    }
-
-    const normalizedCode = code.trim().toUpperCase()
-
-    // Check against predefined valid codes
-    const isValid = VALID_AFFILIATE_CODES.includes(normalizedCode)
-
-    // Log for tracking purposes
-    if (isValid) {
-      console.log(`Valid affiliate code used: ${normalizedCode}`)
-    } else {
-      console.log(`Invalid affiliate code attempted: ${normalizedCode}`)
-    }
-
-    return isValid
-  } catch (error) {
-    console.error("Error validating affiliate code:", error)
+export function validateAffiliateCode(code: string): boolean {
+  if (!code || typeof code !== "string") {
     return false
   }
+
+  const upperCode = code.toUpperCase().trim()
+  return upperCode in AFFILIATE_CODES
 }
 
 /**
@@ -401,23 +418,19 @@ export function formatAffiliateCode(code: string): string {
  * @param code - The affiliate code to validate
  * @returns Object with isValid boolean and partner string if valid, null otherwise
  */
-export function getAffiliateInfo(code: string): AffiliateInfo | null {
-  const upperCode = code.trim().toUpperCase()
-  const affiliate = affiliatePartners[upperCode as keyof typeof affiliatePartners]
-
-  if (!affiliate) {
-    return null
+export function getAffiliateInfo(code: string): AffiliateInfo {
+  if (!validateAffiliateCode(code)) {
+    return { isValid: false }
   }
 
+  const upperCode = code.toUpperCase().trim()
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+
   return {
-    code: upperCode,
-    name: affiliate.name,
-    commission: affiliate.commission,
-    isActive: affiliate.isActive,
-    isValid: affiliate.isValid,
-    category: affiliate.category,
-    discount: affiliate.discount,
-    description: affiliate.description,
+    isValid: true,
+    partnerName: affiliate.partnerName,
+    discountPercent: affiliate.discountPercent,
+    commissionRate: affiliate.commissionRate,
   }
 }
 
@@ -432,10 +445,13 @@ export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
 export function getAllAffiliates(): AffiliateInfo[] {
   return Object.entries(AFFILIATE_CODES).map(([code, info]) => ({
     code,
-    name: info.name,
-    commission: info.commission,
-    isActive: info.isActive,
-    isValid: info.isActive,
+    name: info.name || "",
+    commission: info.commission || 0,
+    isActive: info.isActive || false,
+    isValid: info.isValid,
+    partnerName: info.partnerName,
+    discountPercent: info.discountPercent,
+    commissionRate: info.commissionRate,
   }))
 }
 
@@ -462,7 +478,14 @@ export function getAffiliateDiscount(code: string): number {
     PREMIUM2024: 20,
     BUSINESS2024: 15,
     FINANCE2024: 25,
+    REFERRAL10: 10,
+    CONSULTANT: 20,
+    BETA2024: 25,
   }
 
   return discounts[normalizedCode] || 0
+}
+
+export function getAllAffiliateCodes(): string[] {
+  return Object.keys(AFFILIATE_CODES)
 }

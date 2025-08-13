@@ -1,110 +1,113 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 
 interface RecaptchaProps {
-  onVerify: (token: string) => void
-  onError?: () => void
+  onVerify?: (token: string) => void
 }
 
-export default function Recaptcha({ onVerify, onError }: RecaptchaProps) {
+export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [siteKey, setSiteKey] = useState<string | null>(null)
   const [isEnabled, setIsEnabled] = useState(false)
 
   useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const response = await fetch("/api/recaptcha-config")
-        if (response.ok) {
-          const config = await response.json()
-          setSiteKey(config.siteKey)
-          setIsEnabled(config.enabled)
+    // Fetch reCAPTCHA configuration
+    fetch("/api/recaptcha-config")
+      .then((res) => res.json())
+      .then((data) => {
+        setSiteKey(data.siteKey)
+        setIsEnabled(data.enabled)
+
+        if (data.enabled && data.siteKey) {
+          loadReCAPTCHA(data.siteKey)
         } else {
-          console.warn("Failed to fetch reCAPTCHA config")
-          setIsEnabled(false)
+          // Provide bypass token for development
+          if (onVerify) {
+            onVerify("development-bypass-token")
+          }
         }
-      } catch (error) {
-        console.error("Error fetching reCAPTCHA config:", error)
-        setIsEnabled(false)
+      })
+      .catch((error) => {
+        console.error("Failed to fetch reCAPTCHA config:", error)
+        // Provide bypass token on error
+        if (onVerify) {
+          onVerify("development-bypass-token")
+        }
+      })
+  }, [onVerify])
+
+  const loadReCAPTCHA = (key: string) => {
+    if (isLoaded || !key) return
+
+    const script = document.createElement("script")
+    script.src = `https://www.google.com/recaptcha/api.js?render=${key}`
+    script.async = true
+    script.defer = true
+
+    script.onload = () => {
+      setIsLoaded(true)
+
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => {
+          executeReCAPTCHA(key)
+        })
       }
     }
 
-    fetchConfig()
-  }, [])
-
-  const loadRecaptchaScript = useCallback(() => {
-    if (typeof window !== "undefined" && !window.grecaptcha && siteKey && isEnabled) {
-      const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js?render=explicit"
-      script.async = true
-      script.defer = true
-      script.onload = () => {
-        setIsLoaded(true)
-      }
-      script.onerror = () => {
-        console.error("Failed to load reCAPTCHA script")
+    script.onerror = () => {
+      console.error("Failed to load reCAPTCHA script")
+      // Provide bypass token on script load error
+      if (onVerify) {
         onVerify("development-bypass-token")
-        if (onError) onError()
       }
-      document.head.appendChild(script)
-    } else if (!isEnabled) {
-      // If reCAPTCHA is disabled, provide bypass token
-      onVerify("development-bypass-token")
     }
-  }, [siteKey, isEnabled, onVerify, onError])
 
-  useEffect(() => {
-    if (siteKey !== null) {
-      loadRecaptchaScript()
-    }
-  }, [siteKey, loadRecaptchaScript])
+    document.head.appendChild(script)
+  }
 
-  const executeRecaptcha = useCallback(() => {
-    if (!isEnabled) {
-      onVerify("development-bypass-token")
+  const executeReCAPTCHA = (key: string) => {
+    if (!window.grecaptcha || !key) {
+      if (onVerify) {
+        onVerify("development-bypass-token")
+      }
       return
     }
 
-    if (typeof window !== "undefined" && window.grecaptcha && isLoaded && siteKey) {
-      try {
-        window.grecaptcha.ready(() => {
-          window.grecaptcha
-            .execute(siteKey, { action: "submit" })
-            .then((token: string) => {
-              if (token) {
-                onVerify(token)
-              } else {
-                console.warn("reCAPTCHA returned empty token")
-                onVerify("development-bypass-token")
-              }
-            })
-            .catch((error: any) => {
-              console.error("reCAPTCHA execution error:", error)
-              onVerify("development-bypass-token")
-              if (onError) onError()
-            })
+    try {
+      window.grecaptcha
+        .execute(key, { action: "submit" })
+        .then((token: string) => {
+          if (onVerify) {
+            onVerify(token)
+          }
         })
-      } catch (error) {
-        console.error("reCAPTCHA error:", error)
+        .catch((error: any) => {
+          console.error("reCAPTCHA execution error:", error)
+          // Provide bypass token on execution error
+          if (onVerify) {
+            onVerify("development-bypass-token")
+          }
+        })
+    } catch (error) {
+      console.error("reCAPTCHA error:", error)
+      // Provide bypass token on any error
+      if (onVerify) {
         onVerify("development-bypass-token")
-        if (onError) onError()
       }
-    } else {
-      // Fallback if reCAPTCHA is not available
-      onVerify("development-bypass-token")
     }
-  }, [isLoaded, siteKey, isEnabled, onVerify, onError])
+  }
 
-  useEffect(() => {
-    if (isLoaded || !isEnabled) {
-      executeRecaptcha()
-    }
-  }, [isLoaded, isEnabled, executeRecaptcha])
-
-  return null
+  // Add hidden input for form submission
+  return (
+    <div>
+      <input type="hidden" name="recaptcha-token" value="" />
+      {!isEnabled && <p className="text-xs text-gray-500 mt-2">reCAPTCHA is disabled in development mode</p>}
+    </div>
+  )
 }
 
+// Extend Window interface for TypeScript
 declare global {
   interface Window {
     grecaptcha: any

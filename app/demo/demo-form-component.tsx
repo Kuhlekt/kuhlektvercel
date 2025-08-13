@@ -1,8 +1,5 @@
 "use client"
-
-import type React from "react"
-
-import { useActionState, useState } from "react"
+import { useActionState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,23 +18,6 @@ const initialState = {
 
 export default function DemoFormComponent() {
   const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
-  const [captchaToken, setCaptchaToken] = useState("")
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const formData = new FormData(event.currentTarget)
-    formData.append("captchaToken", captchaToken)
-
-    // Execute invisible reCAPTCHA before form submission
-    const recaptchaElement = document.querySelector(".invisible-recaptcha") as any
-    if (recaptchaElement && recaptchaElement.execute) {
-      recaptchaElement.execute()
-    }
-
-    // Submit the form
-    formAction(formData)
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -60,7 +40,7 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form action={formAction} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
@@ -187,7 +167,7 @@ export default function DemoFormComponent() {
                     />
                   </div>
 
-                  <ReCAPTCHA onVerify={setCaptchaToken} />
+                  <ReCAPTCHA />
 
                   <Button type="submit" className="w-full" disabled={isPending}>
                     {isPending ? (
