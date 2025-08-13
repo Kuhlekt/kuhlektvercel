@@ -43,6 +43,7 @@ export function EnhancedTextarea({
 
   // Notify parent when images change and update global reference
   useEffect(() => {
+    console.log("Enhanced textarea images changed:", images)
     if (onImagesChange) {
       onImagesChange(images)
     }
@@ -54,7 +55,7 @@ export function EnhancedTextarea({
   // Generate unique placeholder for image
   const generateImagePlaceholder = (imageName: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-    return `[IMAGE:${id}:${imageName}]`
+    return { id, placeholder: `[IMAGE:${id}:${imageName}]` }
   }
 
   // Simple function to insert text at cursor
@@ -102,19 +103,19 @@ export function EnhancedTextarea({
             const dataUrl = event.target?.result as string
             if (dataUrl) {
               const imageName = file.name || "pasted-image"
-              const placeholder = generateImagePlaceholder(imageName)
+              const { id, placeholder } = generateImagePlaceholder(imageName)
 
               const imageData: ImageData = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                id,
                 dataUrl,
                 name: imageName,
                 placeholder,
               }
 
-              console.log("Adding image to textarea:", imageData.placeholder)
+              console.log("Adding pasted image to textarea:", imageData)
               setImages((prev) => {
                 const newImages = [...prev, imageData]
-                console.log("Updated images array:", newImages)
+                console.log("Updated images array after paste:", newImages)
                 return newImages
               })
               insertAtCursor(`\n\n${placeholder}\n\n`)
@@ -155,19 +156,19 @@ export function EnhancedTextarea({
               const dataUrl = event.target?.result as string
               if (dataUrl) {
                 const imageName = file.name || "clipboard-image"
-                const placeholder = generateImagePlaceholder(imageName)
+                const { id, placeholder } = generateImagePlaceholder(imageName)
 
                 const imageData: ImageData = {
-                  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                  id,
                   dataUrl,
                   name: imageName,
                   placeholder,
                 }
 
-                console.log("Adding clipboard image:", imageData.placeholder)
+                console.log("Adding clipboard image:", imageData)
                 setImages((prev) => {
                   const newImages = [...prev, imageData]
-                  console.log("Updated images array:", newImages)
+                  console.log("Updated images array after clipboard:", newImages)
                   return newImages
                 })
                 insertAtCursor(`\n\n${placeholder}\n\n`)
@@ -210,16 +211,21 @@ export function EnhancedTextarea({
           const dataUrl = event.target?.result as string
           if (dataUrl) {
             const imageName = file.name
-            const placeholder = generateImagePlaceholder(imageName)
+            const { id, placeholder } = generateImagePlaceholder(imageName)
 
             const imageData: ImageData = {
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id,
               dataUrl,
               name: imageName,
               placeholder,
             }
 
-            setImages((prev) => [...prev, imageData])
+            console.log("Adding uploaded image:", imageData)
+            setImages((prev) => {
+              const newImages = [...prev, imageData]
+              console.log("Updated images array after upload:", newImages)
+              return newImages
+            })
             insertAtCursor(`\n\n${placeholder}\n\n`)
             setLastAction(`File uploaded: ${imageName}`)
           }
@@ -254,7 +260,9 @@ export function EnhancedTextarea({
           const newValue = value.replace(imageToRemove.placeholder, "")
           onChange(newValue)
         }
-        return prev.filter((img) => img.id !== imageId)
+        const newImages = prev.filter((img) => img.id !== imageId)
+        console.log("Images after removal:", newImages)
+        return newImages
       })
     },
     [value, onChange],

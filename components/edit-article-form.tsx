@@ -213,7 +213,7 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
   }, [title])
 
   useEffect(() => {
-    console.log("Images state changed:", images)
+    console.log("Images state changed in edit form:", images)
   }, [images])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -274,17 +274,19 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
   }
 
   const handleImagesChange = (newImages: ImageData[]) => {
-    console.log("Images changed:", newImages)
+    console.log("Images changed in edit form:", newImages)
     setImages(newImages)
+    // Ensure global storage is updated immediately
+    ;(window as any).textareaImages = newImages
   }
 
   const renderPreview = () => {
-    // Use current images for preview
+    // Use current images for preview - prioritize local state over global
     const currentImages = images.length > 0 ? images : (window as any).textareaImages || []
-    const previewContent = convertToDisplayContent(content, currentImages)
+    console.log("Rendering preview with images:", currentImages)
+    console.log("Preview content:", content)
 
-    console.log("Rendering preview with content:", content)
-    console.log("Using images:", currentImages)
+    const previewContent = convertToDisplayContent(content, currentImages)
     console.log("Preview HTML:", previewContent)
 
     return (
