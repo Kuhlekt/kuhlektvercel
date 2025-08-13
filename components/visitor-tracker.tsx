@@ -9,7 +9,7 @@ interface VisitorData {
   firstVisit: string
   lastVisit: string
   pageViews: number
-  pages: string[]
+  currentPage: string
   referrer: string
   userAgent: string
   utm_source?: string
@@ -21,13 +21,11 @@ interface VisitorData {
 }
 
 interface PageVisit {
-  id: string
   visitorId: string
   sessionId: string
   page: string
   timestamp: string
   referrer: string
-  userAgent: string
   utm_source?: string
   utm_medium?: string
   utm_campaign?: string
@@ -104,9 +102,7 @@ export function VisitorTracker() {
           // Update existing visitor
           visitorData.lastVisit = now
           visitorData.pageViews += 1
-          if (!visitorData.pages.includes(currentPage)) {
-            visitorData.pages.push(currentPage)
-          }
+          visitorData.currentPage = currentPage
           // Update UTM and affiliate if new ones are provided
           if (utmParams.utm_source) visitorData.utm_source = utmParams.utm_source
           if (utmParams.utm_medium) visitorData.utm_medium = utmParams.utm_medium
@@ -122,7 +118,7 @@ export function VisitorTracker() {
             firstVisit: now,
             lastVisit: now,
             pageViews: 1,
-            pages: [currentPage],
+            currentPage: currentPage,
             referrer,
             userAgent,
             ...utmParams,
@@ -136,13 +132,11 @@ export function VisitorTracker() {
 
         // Track page visit
         const pageVisit: PageVisit = {
-          id: `visit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           visitorId,
           sessionId,
           page: currentPage,
           timestamp: now,
           referrer,
-          userAgent,
           ...utmParams,
           affiliate,
         }
@@ -161,7 +155,7 @@ export function VisitorTracker() {
 
         // Update all visitors list
         const existingAllVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
-        const allVisitors: VisitorData[] = existingAllVisitorsStr ? JSON.parse(existingAllVisitorsStr) : []
+        let allVisitors: VisitorData[] = existingAllVisitorsStr ? JSON.parse(existingAllVisitorsStr) : []
 
         // Find and update existing visitor or add new one
         const existingVisitorIndex = allVisitors.findIndex((v) => v.id === visitorId)
@@ -171,10 +165,24 @@ export function VisitorTracker() {
           allVisitors.push(visitorData)
         }
 
+        // Keep only last 1000 visitors
+        if (allVisitors.length > 1000) {
+          allVisitors = allVisitors.slice(-1000)
+        }
+
         localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
 
-        // Dispatch custom event for admin dashboard updates
-        window.dispatchEvent(new CustomEvent("visitorDataUpdated", { detail: visitorData }))
+        // Store metadata for change detection
+        const metadata = {
+          lastUpdate: now,
+          totalVisitors: allVisitors.length,
+          totalPageViews: pageHistory.length,
+          hash: btoa(JSON.stringify({ visitors: allVisitors.length, pages: pageHistory.length, time: now })),
+        }
+        localStorage.setItem("kuhlekt_tracking_metadata", JSON.stringify(metadata))
+
+        // Dispatch custom event for real-time updates
+        window.dispatchEvent(new CustomEvent("kuhlektDataUpdate", { detail: metadata }))
 
         console.log("📊 Visitor tracking updated:", {
           visitorId,

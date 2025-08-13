@@ -10,15 +10,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Calendar, Users, TrendingUp } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Calendar, Users, TrendingUp, DollarSign } from "lucide-react"
 import { submitDemoRequest } from "./actions"
 import ReCAPTCHA from "react-google-recaptcha"
+import { getVisitorData } from "@/components/visitor-tracker"
 
 export default function DemoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const [siteKey, setSiteKey] = useState<string>("")
+  const [affiliateCode, setAffiliateCode] = useState("")
   const [companySize, setCompanySize] = useState("")
 
   useEffect(() => {
@@ -31,6 +33,12 @@ export default function DemoPage() {
       .catch((error) => {
         console.error("Error loading reCAPTCHA config:", error)
       })
+
+    // Auto-populate affiliate code from visitor data
+    const visitorData = getVisitorData()
+    if (visitorData?.affiliate) {
+      setAffiliateCode(visitorData.affiliate)
+    }
   }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -40,6 +48,11 @@ export default function DemoPage() {
 
     try {
       const formData = new FormData(event.currentTarget)
+
+      // Add company size to form data
+      if (companySize) {
+        formData.append("companySize", companySize)
+      }
 
       // Add reCAPTCHA token to form data
       if (recaptchaToken) {
@@ -52,6 +65,7 @@ export default function DemoPage() {
         setMessage({ type: "success", text: result.message })
         // Reset form
         event.currentTarget.reset()
+        setAffiliateCode("")
         setCompanySize("")
         setRecaptchaToken(null)
       } else {
@@ -201,6 +215,19 @@ export default function DemoPage() {
                   />
                 </div>
 
+                <div>
+                  <Label htmlFor="affiliate">Affiliate/Referral Code (Optional)</Label>
+                  <Input
+                    id="affiliate"
+                    name="affiliate"
+                    type="text"
+                    value={affiliateCode}
+                    onChange={(e) => setAffiliateCode(e.target.value)}
+                    placeholder="Enter referral code if you have one"
+                    className="mt-1"
+                  />
+                </div>
+
                 {siteKey && (
                   <div className="flex justify-center">
                     <ReCAPTCHA
@@ -234,21 +261,22 @@ export default function DemoPage() {
             <Card className="shadow-xl">
               <CardHeader>
                 <CardTitle className="text-2xl">What to Expect</CardTitle>
+                <CardDescription>Your personalized demo will include</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <Calendar className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
-                    <h3 className="font-semibold text-gray-900">30-Minute Demo</h3>
-                    <p className="text-gray-600">Personalized walkthrough of Kuhlekt's features</p>
+                    <h3 className="font-semibold text-gray-900">30-Minute Session</h3>
+                    <p className="text-gray-600">Comprehensive walkthrough of Kuhlekt's features</p>
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3">
                   <Users className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
-                    <h3 className="font-semibold text-gray-900">Expert Consultation</h3>
-                    <p className="text-gray-600">Discuss your specific AR challenges and needs</p>
+                    <h3 className="font-semibold text-gray-900">Tailored to Your Business</h3>
+                    <p className="text-gray-600">Demo customized to your industry and company size</p>
                   </div>
                 </div>
 
@@ -257,6 +285,14 @@ export default function DemoPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900">ROI Analysis</h3>
                     <p className="text-gray-600">See potential savings and efficiency gains</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <DollarSign className="h-6 w-6 text-blue-600 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Custom Pricing</h3>
+                    <p className="text-gray-600">Receive a personalized quote for your needs</p>
                   </div>
                 </div>
               </CardContent>
@@ -282,24 +318,31 @@ export default function DemoPage() {
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    Easy integration with existing systems
+                    Seamless integration with existing systems
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                     24/7 customer support
                   </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    Industry-leading security standards
+                  </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl bg-blue-50">
-              <CardContent className="pt-6">
+            <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-xl">Ready to Get Started?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">
+                  Join hundreds of companies that have transformed their AR process with Kuhlekt.
+                </p>
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Need Help?</h3>
-                  <p className="text-gray-600 mb-4">Have questions about our demo or need immediate assistance?</p>
-                  <Button variant="outline" className="w-full bg-transparent">
-                    Contact Sales: 1-800-KUHLEKT
-                  </Button>
+                  <p className="text-2xl font-bold text-blue-600">Average ROI: 300%</p>
+                  <p className="text-sm text-gray-500">Within first 6 months</p>
                 </div>
               </CardContent>
             </Card>
