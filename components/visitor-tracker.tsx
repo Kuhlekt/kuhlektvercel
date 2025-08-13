@@ -1,218 +1,26 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
+import { validateAffiliate } from "@/lib/affiliate-validation"
 
 interface VisitorData {
-  visitorId: string
   sessionId: string
-  pageViews: number
-  currentPage: string
-  referrer: string
-  userAgent: string
+  visitorId: string
   timestamp: string
+  page: string
+  userAgent: string
+  referrer: string
   utmSource?: string
   utmMedium?: string
   utmCampaign?: string
   utmTerm?: string
   utmContent?: string
   affiliate?: string
-}
-
-export function VisitorTracker() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted || typeof window === "undefined") return
-
-    try {
-      // Generate or get visitor ID
-      let visitorId = localStorage.getItem("kuhlekt_visitor_id")
-      let isNewVisitor = false
-      if (!visitorId) {
-        visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        localStorage.setItem("kuhlekt_visitor_id", visitorId)
-        isNewVisitor = true
-        console.log("🆕 New visitor created:", visitorId)
-      }
-
-      // Generate session ID
-      let sessionId = sessionStorage.getItem("kuhlekt_session_id")
-      let isNewSession = false
-      if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        sessionStorage.setItem("kuhlekt_session_id", sessionId)
-        isNewSession = true
-        console.log("🔄 New session created:", sessionId)
-      }
-
-      // Get existing visitor data
-      const existingDataStr = localStorage.getItem("kuhlekt_visitor_data")
-      let existingData: VisitorData | null = null
-      try {
-        existingData = existingDataStr ? JSON.parse(existingDataStr) : null
-      } catch (e) {
-        console.error("Error parsing visitor data:", e)
-        existingData = null
-      }
-
-      const utmSource = searchParams?.get("utm_source") || undefined
-      const utmMedium = searchParams?.get("utm_medium") || undefined
-      const utmCampaign = searchParams?.get("utm_campaign") || undefined
-      const utmTerm = searchParams?.get("utm_term") || undefined
-      const utmContent = searchParams?.get("utm_content") || undefined
-
-      const affiliate = searchParams?.get("affiliate") || searchParams?.get("ref") || undefined
-
-      const currentTimestamp = new Date().toISOString()
-
-      // Create visitor data
-      const visitorData: VisitorData = {
-        visitorId,
-        sessionId,
-        pageViews: (existingData?.pageViews || 0) + 1,
-        currentPage: pathname,
-        referrer: document.referrer || "direct",
-        userAgent: navigator.userAgent,
-        timestamp: currentTimestamp,
-        ...(utmSource && { utmSource }),
-        ...(utmMedium && { utmMedium }),
-        ...(utmCampaign && { utmCampaign }),
-        ...(utmTerm && { utmTerm }),
-        ...(utmContent && { utmContent }),
-        ...(affiliate && { affiliate }),
-      }
-
-      // Store visitor data
-      localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
-
-      // Track page history
-      const pageHistoryStr = localStorage.getItem("kuhlekt_page_history")
-      let pageHistory: any[] = []
-      try {
-        pageHistory = pageHistoryStr ? JSON.parse(pageHistoryStr) : []
-      } catch (e) {
-        console.error("Error parsing page history:", e)
-        pageHistory = []
-      }
-
-      const pageEntry = {
-        page: pathname,
-        timestamp: currentTimestamp,
-        sessionId,
-        visitorId,
-        referrer: document.referrer || "direct",
-        ...(utmSource && { utmSource }),
-        ...(affiliate && { affiliate }),
-      }
-
-      pageHistory.push(pageEntry)
-
-      // Keep only last 1000 entries
-      if (pageHistory.length > 1000) {
-        pageHistory = pageHistory.slice(-1000)
-      }
-
-      localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
-
-      // Track all visitors for admin - Fixed data structure consistency and new visitor detection
-      const allVisitorsStr = localStorage.getItem("kuhlekt_all_visitors")
-      let allVisitors: any[] = []
-      try {
-        allVisitors = allVisitorsStr ? JSON.parse(allVisitorsStr) : []
-      } catch (e) {
-        console.error("Error parsing all visitors:", e)
-        allVisitors = []
-      }
-
-      // Check if visitor already exists
-      const existingVisitorIndex = allVisitors.findIndex((v) => v.visitorId === visitorId)
-
-      if (existingVisitorIndex >= 0) {
-        // Update existing visitor - maintain consistent field names
-        const existingVisitor = allVisitors[existingVisitorIndex]
-        allVisitors[existingVisitorIndex] = {
-          ...existingVisitor,
-          sessionId,
-          pageViews: visitorData.pageViews,
-          currentPage: pathname,
-          referrer: visitorData.referrer,
-          userAgent: visitorData.userAgent,
-          lastVisit: currentTimestamp, // Use lastVisit to match admin interface
-          ...(utmSource && { utmSource }),
-          ...(utmMedium && { utmMedium }),
-          ...(utmCampaign && { utmCampaign }),
-          ...(utmTerm && { utmTerm }),
-          ...(utmContent && { utmContent }),
-          ...(affiliate && { affiliate }),
-        }
-        console.log("📝 Updated existing visitor:", visitorId)
-      } else {
-        // Add new visitor - use consistent field names that match admin interface
-        const newVisitor = {
-          visitorId,
-          sessionId,
-          pageViews: visitorData.pageViews,
-          currentPage: pathname,
-          referrer: visitorData.referrer,
-          userAgent: visitorData.userAgent,
-          firstVisit: currentTimestamp, // Use firstVisit to match admin interface
-          lastVisit: currentTimestamp, // Use lastVisit to match admin interface
-          ...(utmSource && { utmSource }),
-          ...(utmMedium && { utmMedium }),
-          ...(utmCampaign && { utmCampaign }),
-          ...(utmTerm && { utmTerm }),
-          ...(utmContent && { utmContent }),
-          ...(affiliate && { affiliate }),
-        }
-
-        allVisitors.push(newVisitor)
-        console.log("🆕 Added new visitor to tracking:", {
-          visitorId,
-          sessionId,
-          isNewVisitor,
-          isNewSession,
-          totalVisitors: allVisitors.length,
-        })
-      }
-
-      localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
-
-      // Dispatch custom event for real-time updates
-      window.dispatchEvent(
-        new CustomEvent("kuhlektDataUpdate", {
-          detail: {
-            ...visitorData,
-            isNewVisitor,
-            isNewSession,
-            totalVisitors: allVisitors.length,
-          },
-        }),
-      )
-
-      console.log("🔍 Visitor tracked:", {
-        visitorId: visitorId.substring(0, 20) + "...",
-        sessionId: sessionId.substring(0, 20) + "...",
-        page: pathname,
-        pageViews: visitorData.pageViews,
-        isNewVisitor,
-        isNewSession,
-        totalVisitors: allVisitors.length,
-        utmSource,
-        affiliate,
-      })
-    } catch (error) {
-      console.error("Error tracking visitor:", error)
-    }
-  }, [pathname, searchParams, mounted])
-
-  return null
+  ipAddress?: string
+  pageViews?: number
+  firstVisit?: string
+  lastVisit?: string
 }
 
 // Helper function to get visitor data (can be used by forms)
@@ -253,3 +61,167 @@ export function getAllVisitors() {
     return []
   }
 }
+
+function VisitorTrackerComponent() {
+  const searchParams = useSearchParams()
+  const hasTracked = useRef(false)
+
+  useEffect(() => {
+    if (hasTracked.current) return
+    hasTracked.current = true
+
+    const trackVisitor = async () => {
+      try {
+        // Generate or get existing visitor ID
+        let visitorId = localStorage.getItem("kuhlekt_visitor_id")
+        if (!visitorId) {
+          visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          localStorage.setItem("kuhlekt_visitor_id", visitorId)
+        }
+
+        // Generate session ID
+        let sessionId = sessionStorage.getItem("kuhlekt_session_id")
+        if (!sessionId) {
+          sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          sessionStorage.setItem("kuhlekt_session_id", sessionId)
+        }
+
+        // Extract UTM parameters
+        const utmSource = searchParams.get("utm_source")
+        const utmMedium = searchParams.get("utm_medium")
+        const utmCampaign = searchParams.get("utm_campaign")
+        const utmTerm = searchParams.get("utm_term")
+        const utmContent = searchParams.get("utm_content")
+        const affiliate = searchParams.get("affiliate") || searchParams.get("ref")
+
+        // Validate affiliate code if present
+        let validatedAffiliate: string | undefined
+        if (affiliate) {
+          const isValid = validateAffiliate(affiliate)
+          if (isValid) {
+            validatedAffiliate = affiliate.toUpperCase()
+            // Store validated affiliate in localStorage for future reference
+            localStorage.setItem("kuhlekt_affiliate", validatedAffiliate)
+          }
+        } else {
+          // Check if we have a stored affiliate
+          const storedAffiliate = localStorage.getItem("kuhlekt_affiliate")
+          if (storedAffiliate) {
+            validatedAffiliate = storedAffiliate
+          }
+        }
+
+        // Get existing visitor data
+        const existingVisitorData = getVisitorData()
+        const isFirstVisit = !existingVisitorData
+
+        const visitorData: VisitorData = {
+          sessionId,
+          visitorId,
+          timestamp: new Date().toISOString(),
+          page: window.location.pathname,
+          userAgent: navigator.userAgent,
+          referrer: document.referrer || "direct",
+          pageViews: (existingVisitorData?.pageViews || 0) + 1,
+          firstVisit: existingVisitorData?.firstVisit || new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          ...(utmSource && { utmSource }),
+          ...(utmMedium && { utmMedium }),
+          ...(utmCampaign && { utmCampaign }),
+          ...(utmTerm && { utmTerm }),
+          ...(utmContent && { utmContent }),
+          ...(validatedAffiliate && { affiliate: validatedAffiliate }),
+        }
+
+        // Save visitor data to localStorage
+        localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(visitorData))
+
+        // Track page visit
+        const pageKey = `${sessionId}_${window.location.pathname}`
+        const lastPageKey = sessionStorage.getItem("kuhlekt_last_page_key")
+
+        if (lastPageKey !== pageKey) {
+          sessionStorage.setItem("kuhlekt_last_page_key", pageKey)
+
+          // Add to page history
+          const pageHistory = getPageHistory()
+          pageHistory.push({
+            page: window.location.pathname,
+            timestamp: new Date().toISOString(),
+            sessionId,
+          })
+
+          // Keep only last 1000 page views to prevent storage bloat
+          if (pageHistory.length > 1000) {
+            pageHistory.splice(0, pageHistory.length - 1000)
+          }
+
+          localStorage.setItem("kuhlekt_page_history", JSON.stringify(pageHistory))
+        }
+
+        // Update all visitors list (for admin tracking)
+        const allVisitors = getAllVisitors()
+        const existingVisitorIndex = allVisitors.findIndex((v) => v.visitorId === visitorId)
+
+        if (existingVisitorIndex >= 0) {
+          allVisitors[existingVisitorIndex] = visitorData
+        } else {
+          allVisitors.push(visitorData)
+        }
+
+        localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
+
+        // Dispatch storage event for real-time admin updates
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: "kuhlekt_all_visitors",
+            newValue: JSON.stringify(allVisitors),
+          }),
+        )
+
+        // Store visitor data in Supabase
+        const response = await fetch("/api/track-visitor", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(visitorData),
+        })
+
+        if (!response.ok) {
+          console.warn("Failed to track visitor:", response.statusText)
+        }
+
+        console.log("🔍 Visitor tracked:", {
+          visitorId: visitorId.slice(0, 16) + "...",
+          sessionId: sessionId.slice(0, 16) + "...",
+          page: window.location.pathname,
+          isFirstVisit,
+          pageViews: visitorData.pageViews,
+          utmSource,
+          utmCampaign,
+          affiliate: validatedAffiliate,
+        })
+      } catch (error) {
+        console.warn("Error tracking visitor:", error)
+      }
+    }
+
+    // Track after a short delay to ensure page is loaded
+    const timeoutId = setTimeout(trackVisitor, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchParams])
+
+  return null
+}
+
+export function VisitorTracker() {
+  return (
+    <div className="visitor-tracker">
+      <VisitorTrackerComponent />
+    </div>
+  )
+}
+
+export default VisitorTracker

@@ -8,6 +8,13 @@ interface EmailParams {
   html?: string
 }
 
+interface EmailOptions {
+  to: string
+  subject: string
+  text: string
+  html?: string
+}
+
 export async function sendEmailWithSES(params: EmailParams) {
   // Check if AWS SES is configured
   const region = process.env.AWS_SES_REGION
@@ -392,3 +399,6 @@ export async function sendEmailViaSES(params: EmailParams): Promise<boolean> {
     return false
   }
 }
+
+// Legacy export for backward compatibility
+export const sendEmail = sendEmailWithSES

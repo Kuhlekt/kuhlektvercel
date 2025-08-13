@@ -1,104 +1,126 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
+import { sendEmail } from "@/lib/aws-ses"
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
-interface DemoRequestResult {
-  success: boolean
-  message: string
+export interface DemoFormState {
+  success?: boolean
+  message?: string
+  errors?: Record<string, string>
 }
 
-export async function submitDemoRequest(formData: FormData): Promise<DemoRequestResult> {
+export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
-    const firstName = formData.get("firstName")?.toString().trim() || ""
-    const lastName = formData.get("lastName")?.toString().trim() || ""
-    const email = formData.get("email")?.toString().trim() || ""
-    const company = formData.get("company")?.toString().trim() || ""
-    const phone = formData.get("phone")?.toString().trim() || ""
-    const message = formData.get("message")?.toString().trim() || ""
+    // Extract form data with null safety
+    const firstName = formData.get("firstName")?.toString()?.trim()
+    const lastName = formData.get("lastName")?.toString()?.trim()
+    const email = formData.get("email")?.toString()?.trim()
+    const company = formData.get("company")?.toString()?.trim()
+    const phone = formData.get("phone")?.toString()?.trim()
+    const jobTitle = formData.get("jobTitle")?.toString()?.trim()
+    const companySize = formData.get("companySize")?.toString()?.trim()
+    const currentSolution = formData.get("currentSolution")?.toString()?.trim()
+    const timeline = formData.get("timeline")?.toString()?.trim()
+    const challenges = formData.get("challenges")?.toString()?.trim()
+    const affiliateCode = formData.get("affiliateCode")?.toString()?.trim()
+    const recaptchaToken = formData.get("recaptcha-token")?.toString()?.trim()
 
-    console.log("Demo form data:", { firstName, lastName, email, company, phone, message })
-
-    // Basic validation
-    if (!firstName || !lastName || !email || !company) {
+    if (!recaptchaToken) {
       return {
         success: false,
-        message: "Please fill in all required fields.",
+        message: "reCAPTCHA verification is required",
+        errors: { recaptcha: "Please complete the reCAPTCHA verification" },
       }
     }
 
-    const fullName = `${firstName} ${lastName}`
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
-    const subject = `Demo Request from ${fullName}`
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken)
+    if (!recaptchaResult.success) {
+      console.error("reCAPTCHA verification failed:", recaptchaResult.error)
+      return {
+        success: false,
+        message: "reCAPTCHA verification failed. Please try again.",
+        errors: { recaptcha: "Verification failed" },
+      }
+    }
 
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
-          Demo Request Submission
-        </h2>
-        
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
-          <p><strong>Name:</strong> ${fullName}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Company:</strong> ${company}</p>
-          ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
-        </div>
+    // Validation
+    const errors: Record<string, string> = {}
 
-        ${
-          message
-            ? `
-        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="color: #374151; margin-top: 0;">Requirements</h3>
-          <p style="white-space: pre-wrap; line-height: 1.6;">${message}</p>
-        </div>
-        `
-            : ""
-        }
+    if (!firstName) {
+      errors.firstName = "First name is required"
+    }
 
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
-          <p>This demo request was submitted at ${new Date().toLocaleString()}.</p>
-        </div>
-      </div>
+    if (!lastName) {
+      errors.lastName = "Last name is required"
+    }
+
+    if (!email) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Please enter a valid email address"
+    }
+
+    if (!company) {
+      errors.company = "Company name is required"
+    }
+
+    if (!phone) {
+      errors.phone = "Phone number is required"
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return {
+        success: false,
+        message: "Please correct the errors below",
+        errors,
+      }
+    }
+
+    // Prepare email content
+    const emailSubject = `Demo Request from ${firstName} ${lastName} at ${company}`
+    const emailBody = `
+      <h2>New Demo Request</h2>
+      <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Phone:</strong> ${phone}</p>
+      ${jobTitle ? `<p><strong>Job Title:</strong> ${jobTitle}</p>` : ""}
+      ${companySize ? `<p><strong>Company Size:</strong> ${companySize}</p>` : ""}
+      ${currentSolution ? `<p><strong>Current Solution:</strong> ${currentSolution}</p>` : ""}
+      ${timeline ? `<p><strong>Timeline:</strong> ${timeline}</p>` : ""}
+      ${challenges ? `<p><strong>Challenges:</strong></p><p>${challenges}</p>` : ""}
+      ${affiliateCode ? `<p><strong>Affiliate Code:</strong> ${affiliateCode}</p>` : ""}
+      <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+      <p><strong>reCAPTCHA:</strong> Verified ✓</p>
     `
 
-    const textContent = `
-Demo Request Submission
-
-Contact Information:
-Name: ${fullName}
-Email: ${email}
-Company: ${company}
-${phone ? `Phone: ${phone}` : ""}
-
-${message ? `Requirements:\n${message}\n` : ""}
-
-Submitted: ${new Date().toLocaleString()}
-    `
-
-    const emailResult = await sendEmailWithSES({
-      to: adminEmail,
-      subject: subject,
-      text: textContent,
-      html: htmlContent,
+    // Send email
+    const emailResult = await sendEmail({
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      html: emailBody,
     })
 
-    if (emailResult.success) {
+    if (!emailResult.success) {
+      console.error("Failed to send demo request email:", emailResult.error)
       return {
-        success: true,
-        message: "Demo request submitted successfully! We'll contact you within 24 hours.",
-      }
-    } else {
-      console.error("Email send failed:", emailResult.message)
-      return {
-        success: true,
-        message: "Demo request received! We'll contact you within 24 hours.",
+        success: false,
+        message: "There was an error submitting your demo request. Please try again or contact us directly.",
+        errors: {},
       }
     }
+
+    return {
+      success: true,
+      message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
+      errors: {},
+    }
   } catch (error) {
-    console.error("Demo form error:", error)
+    console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "An error occurred while submitting your request. Please try again.",
+      message: "An unexpected error occurred. Please try again.",
+      errors: {},
     }
   }
 }

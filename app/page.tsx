@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Star, Play } from "lucide-react"
-import { ClientVisitorTracker } from "@/components/client-visitor-tracker"
+import { VisitorTracker } from "@/components/visitor-tracker"
+import { Suspense } from "react"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <ClientVisitorTracker />
+      <Suspense fallback={null}>
+        <VisitorTracker />
+      </Suspense>
 
       {/* Hero Section */}
       <section className="bg-gray-50 py-20">

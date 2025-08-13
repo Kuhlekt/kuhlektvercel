@@ -1,128 +1,99 @@
-import Image from "next/image"
+import { Suspense } from "react"
 import { CheckCircle } from "lucide-react"
+import VisitorTracker from "@/components/visitor-tracker"
+import Image from "next/image"
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-teal-50 to-blue-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+    <>
+      <Suspense fallback={null}>
+        <VisitorTracker />
+      </Suspense>
+
+      <div className="min-h-screen bg-white">
+        {/* Hero Section */}
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-8 leading-tight">
               We Help Finance Teams Get Paid Faster, With Less Stress
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Kuhlekt transforms accounts receivable management with intelligent automation, helping businesses reduce
-              DSO and improve cash flow while maintaining strong customer relationships.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              At Kuhlekt, we believe managing receivables should be smart, simple, and fully automated. Our platform
+              helps finance teams of all sizes eliminate manual tasks, improve cash flow, and build stronger customer
+              relationships through transparent credit management.
             </p>
           </div>
-        </div>
-      </section>
 
-      {/* Mission Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
-              <p className="text-lg text-gray-600 mb-8">
-                We believe that managing accounts receivable shouldn't be a constant source of stress for finance teams.
-                Our mission is to eliminate the manual, time-consuming processes that keep CFOs awake at night and
-                replace them with intelligent, automated solutions that work seamlessly in the background.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-700">Reduce Days Sales Outstanding (DSO) by up to 40%</p>
+          {/* Mission and Beliefs Section */}
+          <div className="max-w-6xl mx-auto mb-20">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Column - Text Content */}
+              <div className="space-y-12">
+                {/* Our Mission */}
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Mission</h2>
+                  <p className="text-lg text-gray-600 leading-relaxed">
+                    To transform accounts receivable from a manual, reactive process into a strategic, automated
+                    function that improves cash flow and customer relationships.
+                  </p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-700">Automate 80% of routine collection activities</p>
+
+                {/* What We Believe */}
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">What We Believe</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <p className="text-lg text-gray-600">Finance teams shouldn't waste time on manual collections</p>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <p className="text-lg text-gray-600">Credit management should be data-driven and proactive</p>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <p className="text-lg text-gray-600">Customers deserve a transparent, self-service experience</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-700">Improve customer satisfaction through personalized communication</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-teal-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-700">Provide real-time visibility into cash flow forecasting</p>
+              </div>
+
+              {/* Right Column - Comparison Image */}
+              <div className="lg:pl-8">
+                <div className="relative">
+                  <Image
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-9foiJDmmXjFUffToslbq8LYXs6SzjQ.png"
+                    alt="Manual AR Chaos vs Automated with Kuhlekt - From Manual Mayhem to Streamlined Collections"
+                    width={600}
+                    height={400}
+                    className="w-full h-auto rounded-lg shadow-lg"
+                    priority
+                  />
                 </div>
               </div>
             </div>
-            <div className="relative">
-              <Image
-                src="/images/manual-vs-automated-ar.png"
-                alt="Manual vs Automated AR Management Comparison"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-lg"
-              />
-            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Beliefs Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What We Believe</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Our core beliefs drive everything we do, from product development to customer support.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Automation Should Be Intelligent</h3>
-              <p className="text-gray-600">
-                We don't believe in one-size-fits-all automation. Our AI learns your business patterns and adapts to
-                provide personalized, context-aware solutions.
+          {/* Our Story Section */}
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-12">Our Story</h2>
+            <div className="space-y-8 text-lg text-gray-600 leading-relaxed">
+              <p>
+                Kuhlekt was founded by finance professionals who experienced firsthand the challenges of managing
+                accounts receivable with outdated tools and manual processes.
               </p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Relationships Matter</h3>
-              <p className="text-gray-600">
-                Getting paid faster shouldn't come at the expense of customer relationships. Our platform helps maintain
-                positive interactions while improving collection rates.
+              <p>
+                After years of struggling with spreadsheets, email chains, and disconnected systems, our founders set
+                out to build the comprehensive AR automation platform they wished they had.
               </p>
-            </div>
-            <div className="bg-white p-8 rounded-lg shadow-sm">
-              <CheckCircle className="w-8 h-8 text-teal-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Data Drives Decisions</h3>
-              <p className="text-gray-600">
-                Every action should be backed by data. We provide comprehensive analytics and insights to help you make
-                informed decisions about your AR strategy.
+              <p>
+                Today, Kuhlekt helps finance teams of all sizes streamline their collections, improve cash flow, and
+                build better customer relationships through transparent credit management.
               </p>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Our Story Section */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Our Story</h2>
-          <div className="space-y-6 text-lg text-gray-600">
-            <p>
-              Kuhlekt was born from the frustration of watching talented finance professionals spend countless hours on
-              manual, repetitive tasks that technology should handle. Our founders, having worked in both finance and
-              technology roles, witnessed firsthand how outdated AR processes were holding businesses back.
-            </p>
-            <p>
-              We started with a simple question: "What if accounts receivable could run itself?" This led us to develop
-              an AI-powered platform that not only automates routine tasks but actually gets smarter over time, learning
-              from each interaction to improve outcomes.
-            </p>
-            <p>
-              Today, we're proud to help hundreds of businesses transform their AR operations, reduce stress for finance
-              teams, and improve cash flow predictability. But we're just getting started – our vision is to make
-              intelligent AR automation accessible to businesses of all sizes.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </>
   )
 }

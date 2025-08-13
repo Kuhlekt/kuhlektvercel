@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { updateSession } from "@/lib/supabase/middleware"
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  const supabaseResponse = await updateSession(request)
+
+  // If Supabase middleware returned a redirect, use it
+  if (supabaseResponse.status === 302) {
+    return supabaseResponse
+  }
 
   // Add security headers for admin routes
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
@@ -27,5 +35,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/auth/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }

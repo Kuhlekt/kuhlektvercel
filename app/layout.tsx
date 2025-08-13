@@ -2,8 +2,10 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.gif",
     apple: "/favicon.gif",
   },
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -38,11 +40,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.gif" />
       </head>
       <body className={inter.className}>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <VisitorTracker />
+        </ThemeProvider>
       </body>
     </html>
   )

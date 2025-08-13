@@ -1,12 +1,88 @@
-interface AffiliateInfo {
+"use server"
+
+export interface AffiliateInfo {
   code: string
   name: string
-  category: string
-  discount: number
   commission: number
-  description: string
   isActive: boolean
+  isValid: boolean
+  category?: string
+  discount?: number
+  description?: string
+  partnerName?: string
+  discountPercent?: number
+  commissionRate?: number
 }
+
+// Predefined list of valid affiliate codes
+export const VALID_AFFILIATE_CODES = [
+  "PARTNER2024",
+  "GROWTH2024",
+  "STARTUP2024",
+  "ENTERPRISE2024",
+  "REFERRAL2024",
+  "DEMO2024",
+  "TRIAL2024",
+  "PREMIUM2024",
+  "BUSINESS2024",
+  "FINANCE2024",
+  "REFERRAL10",
+  "CONSULTANT",
+  "BETA2024",
+]
+
+// Predefined affiliate codes with their details
+const AFFILIATE_CODES = {
+  PARTNER2024: {
+    isValid: true,
+    partnerName: "Strategic Partner",
+    discountPercent: 15,
+    commissionRate: 10,
+  },
+  REFERRAL10: {
+    isValid: true,
+    partnerName: "Referral Program",
+    discountPercent: 10,
+    commissionRate: 5,
+  },
+  CONSULTANT: {
+    isValid: true,
+    partnerName: "Consultant Network",
+    discountPercent: 20,
+    commissionRate: 15,
+  },
+  BETA2024: {
+    isValid: true,
+    partnerName: "Beta Program",
+    discountPercent: 25,
+    commissionRate: 0,
+  },
+  PARTNER001: {
+    name: "TechPartner Solutions",
+    commission: 15,
+    isActive: true,
+  },
+  PARTNER002: {
+    name: "FinanceExperts Inc",
+    commission: 20,
+    isActive: true,
+  },
+  PARTNER003: {
+    name: "BusinessGrowth LLC",
+    commission: 12,
+    isActive: false,
+  },
+  DEMO2024: {
+    name: "Demo Campaign 2024",
+    commission: 10,
+    isActive: true,
+  },
+  EARLY2024: {
+    name: "Early Adopter Program",
+    commission: 25,
+    isActive: true,
+  },
+} as const
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
   // Accounting Firms
@@ -17,6 +93,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 15,
     commission: 10,
     description: "Accounting firm partnership program",
+    isValid: true,
     isActive: true,
   },
   "CPA-GOLD": {
@@ -26,6 +103,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 20,
     commission: 12,
     description: "Premium CPA firm partnership",
+    isValid: true,
     isActive: true,
   },
   BOOKKEEP: {
@@ -35,6 +113,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 12,
     commission: 8,
     description: "Bookkeeping services partnership",
+    isValid: true,
     isActive: true,
   },
 
@@ -46,6 +125,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 18,
     commission: 15,
     description: "Technology integration partnership",
+    isValid: true,
     isActive: true,
   },
   "SAAS-ALLY": {
@@ -55,6 +135,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 25,
     commission: 20,
     description: "SaaS ecosystem partnership",
+    isValid: true,
     isActive: true,
   },
   "CLOUD-PRO": {
@@ -64,6 +145,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 16,
     commission: 12,
     description: "Cloud consulting partnership",
+    isValid: true,
     isActive: true,
   },
 
@@ -75,6 +157,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 22,
     commission: 18,
     description: "Business process consulting partnership",
+    isValid: true,
     isActive: true,
   },
   "FINANCE-EXP": {
@@ -84,6 +167,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 20,
     commission: 15,
     description: "Financial consulting partnership",
+    isValid: true,
     isActive: true,
   },
   "AR-SPECIALIST": {
@@ -93,6 +177,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 24,
     commission: 20,
     description: "AR specialization partnership",
+    isValid: true,
     isActive: true,
   },
 
@@ -104,6 +189,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 30,
     commission: 25,
     description: "Authorized reseller program",
+    isValid: true,
     isActive: true,
   },
   "CHANNEL-1": {
@@ -113,6 +199,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 28,
     commission: 22,
     description: "Channel partner program",
+    isValid: true,
     isActive: true,
   },
   "DIST-NETWORK": {
@@ -122,6 +209,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 26,
     commission: 20,
     description: "Distribution partnership",
+    isValid: true,
     isActive: true,
   },
 
@@ -133,6 +221,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 18,
     commission: 14,
     description: "Manufacturing industry specialization",
+    isValid: true,
     isActive: true,
   },
   "HEALTHCARE-AR": {
@@ -142,6 +231,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 20,
     commission: 16,
     description: "Healthcare industry partnership",
+    isValid: true,
     isActive: true,
   },
   "RETAIL-PLUS": {
@@ -151,6 +241,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 15,
     commission: 12,
     description: "Retail industry specialization",
+    isValid: true,
     isActive: true,
   },
 
@@ -162,6 +253,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 50,
     commission: 5,
     description: "Special startup program",
+    isValid: true,
     isActive: true,
   },
   NONPROFIT: {
@@ -171,6 +263,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 35,
     commission: 0,
     description: "Nonprofit discount program",
+    isValid: true,
     isActive: true,
   },
   EDUCATION: {
@@ -180,6 +273,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 40,
     commission: 0,
     description: "Educational discount program",
+    isValid: true,
     isActive: true,
   },
 
@@ -191,6 +285,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 17,
     commission: 13,
     description: "West Coast regional partnership",
+    isValid: true,
     isActive: true,
   },
   "MIDWEST-PRO": {
@@ -200,6 +295,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 16,
     commission: 12,
     description: "Midwest regional partnership",
+    isValid: true,
     isActive: true,
   },
   SOUTHEAST: {
@@ -209,6 +305,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 18,
     commission: 14,
     description: "Southeast regional partnership",
+    isValid: true,
     isActive: true,
   },
 
@@ -220,6 +317,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 35,
     commission: 30,
     description: "Platinum tier VIP partnership",
+    isValid: true,
     isActive: true,
   },
   "VIP-GOLD": {
@@ -229,6 +327,7 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 30,
     commission: 25,
     description: "Gold tier VIP partnership",
+    isValid: true,
     isActive: true,
   },
   ENTERPRISE: {
@@ -238,25 +337,156 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
     discount: 25,
     commission: 20,
     description: "Enterprise partnership program",
+    isValid: true,
     isActive: true,
   },
 }
 
-export function validateAffiliateCode(code: string): AffiliateInfo | null {
+/**
+ * Validates if an affiliate code is in the approved list
+ * @param code - The affiliate code to validate
+ * @returns true if valid, false otherwise
+ */
+export async function validateAffiliate(code: string): Promise<AffiliateInfo> {
   const upperCode = code.toUpperCase().trim()
-  const affiliate = affiliatePartners[upperCode]
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
-  if (!affiliate || !affiliate.isActive) {
-    return null
+  if (!affiliate) {
+    return {
+      code: upperCode,
+      name: "",
+      commission: 0,
+      isActive: false,
+      isValid: false,
+    }
   }
 
-  return affiliate
+  return {
+    code: upperCode,
+    name: affiliate.name || "",
+    commission: affiliate.commission || 0,
+    isActive: affiliate.isActive || false,
+    isValid: affiliate.isValid,
+    partnerName: affiliate.partnerName,
+    discountPercent: affiliate.discountPercent,
+    commissionRate: affiliate.commissionRate,
+  }
 }
 
-export function getAllAffiliatePartners(): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isActive)
+/**
+ * Validates an affiliate code and returns it in uppercase if valid
+ * @param code - The affiliate code to validate
+ * @returns The validated code in uppercase or null if invalid
+ */
+export async function validateAffiliateCode(code: string): Promise<boolean> {
+  if (!code || typeof code !== "string") {
+    return false
+  }
+
+  const upperCode = code.toUpperCase().trim()
+  return upperCode in AFFILIATE_CODES
 }
 
-export function getAffiliatesByCategory(category: string): AffiliateInfo[] {
-  return Object.values(affiliatePartners).filter((partner) => partner.isActive && partner.category === category)
+/**
+ * Gets the list of all valid affiliate codes (for admin use)
+ * @returns Array of valid affiliate codes
+ */
+export async function getValidAffiliateCodes(): Promise<string[]> {
+  return [...VALID_AFFILIATE_CODES]
+}
+
+/**
+ * Normalizes an affiliate code to uppercase
+ * @param code - The affiliate code to normalize
+ * @returns Normalized code
+ */
+export async function normalizeAffiliateCode(code: string): Promise<string> {
+  return code.trim().toUpperCase()
+}
+
+/**
+ * Formats an affiliate code for display
+ * @param code - The affiliate code to format
+ * @returns Formatted affiliate code
+ */
+export async function formatAffiliateCode(code: string): Promise<string> {
+  return await normalizeAffiliateCode(code)
+}
+
+/**
+ * Validates if an affiliate code is in the approved list and returns partner type
+ * @param code - The affiliate code to validate
+ * @returns Object with isValid boolean and partner string if valid, null otherwise
+ */
+export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
+  if (!(await validateAffiliateCode(code))) {
+    return { isValid: false }
+  }
+
+  const upperCode = code.toUpperCase().trim()
+  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+
+  return {
+    isValid: true,
+    partnerName: affiliate.partnerName,
+    discountPercent: affiliate.discountPercent,
+    commissionRate: affiliate.commissionRate,
+  }
+}
+
+export async function getAllAffiliatePartners(): Promise<AffiliateInfo[]> {
+  return Object.values(affiliatePartners).filter((partner) => partner.isValid)
+}
+
+export async function getAffiliatesByCategory(category: string): Promise<AffiliateInfo[]> {
+  return Object.values(affiliatePartners).filter((partner) => partner.isValid && partner.category === category)
+}
+
+export async function getAllAffiliates(): Promise<AffiliateInfo[]> {
+  return Object.entries(AFFILIATE_CODES).map(([code, info]) => ({
+    code,
+    name: info.name || "",
+    commission: info.commission || 0,
+    isActive: info.isActive || false,
+    isValid: info.isValid,
+    partnerName: info.partnerName,
+    discountPercent: info.discountPercent,
+    commissionRate: info.commissionRate,
+  }))
+}
+
+export async function getActiveAffiliates(): Promise<AffiliateInfo[]> {
+  const allAffiliates = await getAllAffiliates()
+  return allAffiliates.filter((affiliate) => affiliate.isActive)
+}
+
+export async function isAffiliateCodeRequired(): Promise<boolean> {
+  return false // Affiliate codes are optional
+}
+
+export async function getAffiliateDiscount(code: string): Promise<number> {
+  const normalizedCode = code.trim().toUpperCase()
+
+  // Define discount percentages for different codes
+  const discounts: Record<string, number> = {
+    PARTNER2024: 25,
+    GROWTH2024: 20,
+    STARTUP2024: 30,
+    ENTERPRISE2024: 15,
+    REFERRAL2024: 20,
+    DEMO2024: 10,
+    TRIAL2024: 15,
+    PREMIUM2024: 20,
+    BUSINESS2024: 15,
+    FINANCE2024: 25,
+    REFERRAL10: 10,
+    CONSULTANT: 20,
+    BETA2024: 25,
+  }
+
+  return discounts[normalizedCode] || 0
+}
+
+export async function getAllAffiliateCodes(): Promise<string[]> {
+  return Object.keys(AFFILIATE_CODES)
 }

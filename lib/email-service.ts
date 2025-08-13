@@ -1,12 +1,49 @@
 "use server"
 
-import { sendEmailWithSES } from "@/lib/aws-ses"
+import { sendEmailWithSES } from "./aws-ses"
 
 interface EmailOptions {
-  to: string
+  to: string | string[]
   subject: string
-  text: string
+  text?: string
   html?: string
+}
+
+function validateEmailInput(options: EmailOptions): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  // Validate recipients
+  const recipients = Array.isArray(options.to) ? options.to : [options.to]
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  for (const email of recipients) {
+    if (!email || typeof email !== "string" || !emailRegex.test(email)) {
+      errors.push(`Invalid email address: ${email}`)
+    }
+  }
+
+  // Validate subject
+  if (!options.subject || typeof options.subject !== "string" || options.subject.length > 998) {
+    errors.push("Invalid subject line")
+  }
+
+  // Validate content
+  if (!options.text && !options.html) {
+    errors.push("Email must have text or HTML content")
+  }
+
+  // Check for potential injection attempts
+  const suspiciousPatterns = [/bcc:/i, /cc:/i, /to:/i, /from:/i, /content-type:/i, /mime-version:/i, /\r\n/g, /\n\r/g]
+
+  const checkContent = `${options.subject} ${options.text || ""} ${options.html || ""}`
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(checkContent)) {
+      errors.push("Suspicious content detected")
+      break
+    }
+  }
+
+  return { valid: errors.length === 0, errors }
 }
 
 export async function sendEmail(options: EmailOptions) {
@@ -15,9 +52,25 @@ export async function sendEmail(options: EmailOptions) {
     throw new Error("Email service can only be used on the server")
   }
 
+  const validation = validateEmailInput(options)
+  if (!validation.valid) {
+    console.error("Email validation failed:", validation.errors)
+    return {
+      success: false,
+      error: "Invalid email parameters: " + validation.errors.join(", "),
+    }
+  }
+
   try {
+    const recipient = Array.isArray(options.to) ? options.to[0] : options.to
+
     // Use AWS SES to send the email
-    const result = await sendEmailWithSES(options)
+    const result = await sendEmailWithSES({
+      to: recipient,
+      subject: options.subject,
+      text: options.text || "",
+      html: options.html,
+    })
 
     if (result.success) {
       console.log("Email sent successfully:", result.messageId)
@@ -83,7 +136,7 @@ Submitted at: ${new Date().toLocaleString()}
     </div>
   `
 
-  return await sendEmail({
+  return await sendEmailWithSES({
     to: adminEmail,
     subject,
     text,
@@ -161,10 +214,15 @@ Submitted at: ${new Date().toLocaleString()}
     </div>
   `
 
-  return await sendEmail({
+  return await sendEmailWithSES({
     to: adminEmail,
     subject,
     text,
     html,
   })
 }
+
+export { sendEmailWithSES }
+
+// Legacy export for backward compatibility
+export const sendEmailLegacy = sendEmailWithSES
