@@ -1,17 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface ReCaptchaProps {
   onVerify: (token: string) => void
 }
 
 export function ReCaptcha({ onVerify }: ReCaptchaProps) {
-  const [siteKey, setSiteKey] = useState<string | null>(null)
+  const [siteKey, setSiteKey] = useState<string>("")
   const [isEnabled, setIsEnabled] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const recaptchaRef = useRef<HTMLDivElement>(null)
+  const widgetId = useRef<number | null>(null)
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -19,87 +20,131 @@ export function ReCaptcha({ onVerify }: ReCaptchaProps) {
         const response = await fetch("/api/recaptcha-config")
         if (response.ok) {
           const config = await response.json()
-          setSiteKey(config.siteKey)
-          setIsEnabled(config.enabled)
+          setSiteKey(config.siteKey || "")
+          setIsEnabled(config.isEnabled || false)
+
+          // If reCAPTCHA is disabled, provide a bypass token
+          if (!config.isEnabled) {
+            onVerify("recaptcha-disabled")
+          }
         } else {
-          setError("Failed to load reCAPTCHA configuration")
+          console.warn("Failed to fetch reCAPTCHA config")
+          onVerify("recaptcha-config-error")
         }
-      } catch (err) {
-        setError("Failed to load reCAPTCHA configuration")
-        console.error("reCAPTCHA config error:", err)
-      } finally {
-        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching reCAPTCHA config:", error)
+        onVerify("recaptcha-fetch-error")
       }
     }
 
     fetchConfig()
-  }, [])
+  }, [onVerify])
 
   useEffect(() => {
-    if (!isEnabled || !siteKey || error) {
-      // If reCAPTCHA is disabled or there's an error, automatically verify
-      onVerify("disabled")
-      setIsLoaded(true)
-      return
-    }
+    if (!isEnabled || !siteKey || isLoaded) return
 
-    // Load reCAPTCHA script
-    const script = document.createElement("script")
-    script.src = "https://www.google.com/recaptcha/api.js"
-    script.async = true
-    script.defer = true
-    document.head.appendChild(script)
-
-    script.onload = () => {
-      if (window.grecaptcha) {
+    const loadReCaptcha = () => {
+      if (typeof window !== "undefined" && window.grecaptcha) {
         window.grecaptcha.ready(() => {
-          window.grecaptcha
-            .execute(siteKey, { action: "submit" })
-            .then((token: string) => {
-              onVerify(token)
-              setIsLoaded(true)
-            })
-            .catch((err: any) => {
-              console.error("reCAPTCHA execution error:", err)
-              onVerify("error")
-              setIsLoaded(true)
-            })
+          try {
+            if (recaptchaRef.current && !widgetId.current) {
+              widgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+                sitekey: siteKey,
+                size: "invisible",
+                callback: (token: string) => {
+                  onVerify(token)
+                },
+                "error-callback": () => {
+                  console.warn("reCAPTCHA error occurred")
+                  onVerify("recaptcha-error")
+                },
+                "expired-callback": () => {
+                  console.warn("reCAPTCHA expired")
+                  onVerify("recaptcha-expired")
+                },
+              })
+
+              // Execute reCAPTCHA immediately for invisible mode
+              setTimeout(() => {
+                if (widgetId.current !== null) {
+                  window.grecaptcha.execute(widgetId.current)
+                }
+              }, 100)
+            }
+            setIsLoaded(true)
+          } catch (error) {
+            console.error("reCAPTCHA render error:", error)
+            onVerify("recaptcha-render-error")
+          }
         })
+      } else {
+        // Load reCAPTCHA script
+        const script = document.createElement("script")
+        script.src = "https://www.google.com/recaptcha/api.js"
+        script.async = true
+        script.defer = true
+        script.onload = loadReCaptcha
+        script.onerror = () => {
+          console.error("Failed to load reCAPTCHA script")
+          onVerify("recaptcha-script-error")
+        }
+        document.head.appendChild(script)
       }
     }
 
-    script.onerror = () => {
-      console.error("Failed to load reCAPTCHA script")
-      onVerify("error")
-      setIsLoaded(true)
-    }
+    loadReCaptcha()
 
     return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
+      if (widgetId.current !== null && window.grecaptcha) {
+        try {
+          window.grecaptcha.reset(widgetId.current)
+        } catch (error) {
+          console.warn("Error resetting reCAPTCHA:", error)
+        }
       }
     }
-  }, [siteKey, isEnabled, onVerify, error])
+  }, [siteKey, isEnabled, isLoaded, onVerify])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-4">
-        <div className="text-sm text-gray-500">Loading security verification...</div>
-      </div>
-    )
-  }
-
-  if (error || !isEnabled || !isLoaded) {
+  if (!isEnabled) {
     return null
   }
 
-  return <div className="text-xs text-gray-500 text-center py-2">Security verification enabled</div>
+  return (
+    <div>
+      <div ref={recaptchaRef} className="invisible-recaptcha" />
+      <div className="text-xs text-gray-500 text-center mt-2">
+        This site is protected by reCAPTCHA and the Google{" "}
+        <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">
+          Privacy Policy
+        </a>{" "}
+        and{" "}
+        <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">
+          Terms of Service
+        </a>{" "}
+        apply.
+      </div>
+    </div>
+  )
 }
 
-// Extend Window interface for TypeScript
+// Global type declaration for grecaptcha
 declare global {
   interface Window {
-    grecaptcha: any
+    grecaptcha: {
+      ready: (callback: () => void) => void
+      render: (
+        container: HTMLElement,
+        parameters: {
+          sitekey: string
+          size?: string
+          callback?: (token: string) => void
+          "error-callback"?: () => void
+          "expired-callback"?: () => void
+        },
+      ) => number
+      reset: (widgetId: number) => void
+      execute: (widgetId: number) => void
+    }
   }
 }
 

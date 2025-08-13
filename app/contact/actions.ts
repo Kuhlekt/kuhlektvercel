@@ -1,5 +1,7 @@
 "use server"
 
+import { verifyCaptcha } from "@/lib/captcha"
+
 interface ContactFormState {
   success: boolean
   message: string
@@ -15,6 +17,7 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
     const message = formData.get("message") as string
+    const captchaToken = formData.get("captchaToken") as string
 
     // Basic validation
     const errors: Record<string, string> = {}
@@ -42,6 +45,16 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
         success: false,
         message: "Please correct the errors below",
         errors,
+      }
+    }
+
+    // Verify reCAPTCHA
+    const captchaResult = await verifyCaptcha(captchaToken || "")
+    if (!captchaResult.success) {
+      return {
+        success: false,
+        message: captchaResult.error || "Security verification failed",
+        errors: {},
       }
     }
 

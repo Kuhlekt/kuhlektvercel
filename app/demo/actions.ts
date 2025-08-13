@@ -1,5 +1,7 @@
 "use server"
 
+import { verifyCaptcha } from "@/lib/captcha"
+
 interface DemoFormState {
   success: boolean
   message: string
@@ -15,6 +17,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     const company = formData.get("company") as string
     const jobTitle = formData.get("jobTitle") as string
     const phone = formData.get("phone") as string
+    const challenges = formData.get("challenges") as string
+    const captchaToken = formData.get("captchaToken") as string
 
     // Basic validation
     const errors: Record<string, string> = {}
@@ -45,6 +49,16 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       }
     }
 
+    // Verify reCAPTCHA
+    const captchaResult = await verifyCaptcha(captchaToken || "")
+    if (!captchaResult.success) {
+      return {
+        success: false,
+        message: captchaResult.error || "Security verification failed",
+        errors: {},
+      }
+    }
+
     // Log the demo request (in production, this would send an email)
     console.log("Demo request received:", {
       firstName,
@@ -53,6 +67,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       company,
       jobTitle,
       phone,
+      challenges,
       timestamp: new Date().toISOString(),
     })
 
