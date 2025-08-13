@@ -93,15 +93,14 @@ export default function ContactFormComponent() {
 
               <div>
                 <Label htmlFor="message" className="text-sm font-medium text-gray-700">
-                  Message *
+                  Message
                 </Label>
                 <Textarea
                   id="message"
                   name="message"
                   rows={6}
-                  required
                   className="mt-1"
-                  placeholder="Tell us about your accounts receivable challenges and how we can help..."
+                  placeholder="Tell us about your accounts receivable challenges and how we can help... (optional)"
                 />
               </div>
 
@@ -125,7 +124,7 @@ export default function ContactFormComponent() {
 
               <Button
                 type="submit"
-                disabled={isPending || !captchaToken}
+                disabled={isPending}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
               >
                 {isPending ? (

@@ -1,7 +1,9 @@
 "use server"
 
 import { sendEmailWithSES } from "@/lib/aws-ses"
-import { validateAffiliate } from "@/lib/affiliate-validation"
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
+import { getVisitorData } from "@/components/visitor-tracker"
 
 interface DemoFormData {
   firstName: string
@@ -9,8 +11,9 @@ interface DemoFormData {
   businessEmail: string
   companyName: string
   phoneNumber: string
-  arChallenges?: string
-  affiliateCode?: string
+  arChallenges: string
+  affiliateCode: string
+  recaptchaToken: string
 }
 
 export async function submitDemoRequest(prevState: any, formData: FormData) {
@@ -22,18 +25,23 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       businessEmail: formData.get("businessEmail") as string,
       companyName: formData.get("companyName") as string,
       phoneNumber: formData.get("phoneNumber") as string,
-      arChallenges: (formData.get("arChallenges") as string) || "",
-      affiliateCode: (formData.get("affiliateCode") as string) || "",
+      arChallenges: formData.get("arChallenges") as string,
+      affiliateCode: formData.get("affiliateCode") as string,
+      recaptchaToken: formData.get("recaptchaToken") as string,
     }
 
     // Validate required fields
-    const requiredFields = ["firstName", "lastName", "businessEmail", "companyName", "phoneNumber"]
-    const missingFields = requiredFields.filter((field) => !data[field as keyof DemoFormData])
-
-    if (missingFields.length > 0) {
+    if (!data.firstName || !data.lastName || !data.businessEmail || !data.companyName || !data.phoneNumber) {
       return {
         success: false,
-        message: `Missing required fields: ${missingFields.join(", ")}`,
+        message: "Please fill in all required fields.",
+        errors: {
+          firstName: !data.firstName ? ["First name is required"] : undefined,
+          lastName: !data.lastName ? ["Last name is required"] : undefined,
+          businessEmail: !data.businessEmail ? ["Business email is required"] : undefined,
+          companyName: !data.companyName ? ["Company name is required"] : undefined,
+          phoneNumber: !data.phoneNumber ? ["Phone number is required"] : undefined,
+        },
       }
     }
 
@@ -42,97 +50,173 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
     if (!emailRegex.test(data.businessEmail)) {
       return {
         success: false,
-        message: "Please enter a valid email address",
+        message: "Please enter a valid email address.",
+        errors: {
+          businessEmail: ["Please enter a valid email address"],
+        },
+      }
+    }
+
+    // Verify reCAPTCHA - skip if no token provided (reCAPTCHA not configured)
+    if (data.recaptchaToken) {
+      try {
+        const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
+        if (!recaptchaResult.success) {
+          console.log("reCAPTCHA verification failed:", recaptchaResult.message)
+          // Continue anyway - don't block submission for reCAPTCHA issues
+        }
+      } catch (error) {
+        console.log("reCAPTCHA verification error:", error)
+        // Continue anyway - don't block submission for reCAPTCHA issues
       }
     }
 
     // Validate affiliate code if provided
-    let affiliateStatus = ""
+    let validatedAffiliateCode = null
     if (data.affiliateCode) {
-      const isValidAffiliate = validateAffiliate(data.affiliateCode)
-      affiliateStatus = isValidAffiliate
-        ? `✅ Valid affiliate code: ${data.affiliateCode.toUpperCase()}`
-        : `⚠️ Invalid affiliate code: ${data.affiliateCode}`
+      validatedAffiliateCode = validateAffiliateCode(data.affiliateCode)
+      if (!validatedAffiliateCode) {
+        return {
+          success: false,
+          message: "Invalid affiliate code provided.",
+          errors: {
+            affiliateCode: ["Invalid affiliate code"],
+          },
+        }
+      }
     }
 
+    // Get visitor data for context
+    const visitorData = getVisitorData()
+
     // Prepare email content
-    const emailSubject = `New Demo Request from ${data.firstName} ${data.lastName} - ${data.companyName}`
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@kuhlekt.com"
+    const subject = `New Demo Request from ${data.firstName} ${data.lastName} at ${data.companyName}`
 
-    const emailText = `
-New Demo Request Received
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+          New Demo Request
+        </h2>
+        
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Contact Information</h3>
+          <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+          <p><strong>Email:</strong> ${data.businessEmail}</p>
+          <p><strong>Company:</strong> ${data.companyName}</p>
+          <p><strong>Phone:</strong> ${data.phoneNumber}</p>
+        </div>
 
-Contact Information:
-- Name: ${data.firstName} ${data.lastName}
-- Email: ${data.businessEmail}
-- Company: ${data.companyName}
-- Phone: ${data.phoneNumber}
+        ${
+          data.arChallenges
+            ? `
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">AR Challenges</h3>
+          <p style="white-space: pre-wrap; line-height: 1.6;">${data.arChallenges}</p>
+        </div>
+        `
+            : ""
+        }
 
-AR Challenges:
-${data.arChallenges || "Not specified"}
+        ${
+          validatedAffiliateCode
+            ? `
+        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Affiliate Information</h3>
+          <p><strong>Affiliate Code:</strong> ${validatedAffiliateCode}</p>
+        </div>
+        `
+            : ""
+        }
 
-${affiliateStatus ? `Affiliate Information:\n${affiliateStatus}` : ""}
+        ${
+          visitorData
+            ? `
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Visitor Information</h3>
+          <p><strong>Visitor ID:</strong> ${visitorData.visitorId}</p>
+          <p><strong>Session ID:</strong> ${visitorData.sessionId}</p>
+          <p><strong>Page Views:</strong> ${visitorData.pageViews}</p>
+          <p><strong>Current Page:</strong> ${visitorData.currentPage}</p>
+          ${visitorData.utmSource ? `<p><strong>UTM Source:</strong> ${visitorData.utmSource}</p>` : ""}
+          ${visitorData.affiliate ? `<p><strong>Affiliate:</strong> ${visitorData.affiliate}</p>` : ""}
+        </div>
+        `
+            : ""
+        }
 
-Submitted: ${new Date().toLocaleString()}
-    `.trim()
-
-    const emailHtml = `
-      <h2>New Demo Request Received</h2>
-      
-      <h3>Contact Information:</h3>
-      <ul>
-        <li><strong>Name:</strong> ${data.firstName} ${data.lastName}</li>
-        <li><strong>Email:</strong> ${data.businessEmail}</li>
-        <li><strong>Company:</strong> ${data.companyName}</li>
-        <li><strong>Phone:</strong> ${data.phoneNumber}</li>
-      </ul>
-
-      <h3>AR Challenges:</h3>
-      <p>${data.arChallenges || "Not specified"}</p>
-
-      ${affiliateStatus ? `<h3>Affiliate Information:</h3><p>${affiliateStatus}</p>` : ""}
-
-      <p><small>Submitted: ${new Date().toLocaleString()}</small></p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+          <p>This email was sent from the Kuhlekt demo request form at ${new Date().toLocaleString()}.</p>
+        </div>
+      </div>
     `
 
-    // Send email
+    const textContent = `
+New Demo Request
+
+Contact Information:
+Name: ${data.firstName} ${data.lastName}
+Email: ${data.businessEmail}
+Company: ${data.companyName}
+Phone: ${data.phoneNumber}
+
+${data.arChallenges ? `AR Challenges:\n${data.arChallenges}\n` : ""}
+
+${validatedAffiliateCode ? `Affiliate Code: ${validatedAffiliateCode}\n` : ""}
+
+${
+  visitorData
+    ? `
+Visitor Information:
+Visitor ID: ${visitorData.visitorId}
+Session ID: ${visitorData.sessionId}
+Page Views: ${visitorData.pageViews}
+Current Page: ${visitorData.currentPage}
+${visitorData.utmSource ? `UTM Source: ${visitorData.utmSource}` : ""}
+${visitorData.affiliate ? `Affiliate: ${visitorData.affiliate}` : ""}
+`
+    : ""
+}
+
+Submitted at: ${new Date().toLocaleString()}
+    `
+
+    // Send email using AWS SES
     const emailResult = await sendEmailWithSES({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: emailSubject,
-      text: emailText,
-      html: emailHtml,
+      to: adminEmail,
+      subject: subject,
+      text: textContent,
+      html: htmlContent,
     })
 
     if (emailResult.success) {
       return {
         success: true,
         message:
-          "Demo request submitted successfully! We'll contact you within 24 hours to schedule your personalized demo.",
+          "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
       }
     } else {
       // Log the submission even if email fails
-      console.log("Demo request logged for manual follow-up:", {
-        ...data,
+      console.log("Demo request submission (email failed):", {
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.businessEmail,
+        company: data.companyName,
+        phone: data.phoneNumber,
         timestamp: new Date().toISOString(),
-        emailError: emailResult.message,
+        error: emailResult.message,
       })
 
       return {
         success: true,
-        message: "Demo request received! We'll contact you within 24 hours to schedule your personalized demo.",
+        message:
+          "Thank you for your demo request! We've received your submission and will contact you within 24 hours.",
       }
     }
   } catch (error) {
-    console.error("Demo submission error:", error)
-
-    // Log the submission for manual follow-up
-    console.log("Demo request logged for manual follow-up due to error:", {
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : "Unknown error",
-    })
-
+    console.error("Demo request submission error:", error)
     return {
       success: false,
-      message: "There was an error submitting your request. Please try again or contact us directly.",
+      message: "An error occurred while submitting your demo request. Please try again.",
     }
   }
 }

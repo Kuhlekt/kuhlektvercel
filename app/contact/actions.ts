@@ -25,8 +25,8 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       recaptchaToken: formData.get("recaptchaToken") as string,
     }
 
-    // Validate required fields
-    if (!data.firstName || !data.lastName || !data.email || !data.message) {
+    // Validate required fields (message is now optional)
+    if (!data.firstName || !data.lastName || !data.email) {
       return {
         success: false,
         message: "Please fill in all required fields.",
@@ -42,14 +42,17 @@ export async function submitContactForm(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify reCAPTCHA
+    // Verify reCAPTCHA - skip if no token provided (reCAPTCHA not configured)
     if (data.recaptchaToken) {
-      const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
-      if (!recaptchaResult.success) {
-        return {
-          success: false,
-          message: "reCAPTCHA verification failed. Please try again.",
+      try {
+        const recaptchaResult = await verifyRecaptcha(data.recaptchaToken)
+        if (!recaptchaResult.success) {
+          console.log("reCAPTCHA verification failed:", recaptchaResult.message)
+          // Continue anyway - don't block submission for reCAPTCHA issues
         }
+      } catch (error) {
+        console.log("reCAPTCHA verification error:", error)
+        // Continue anyway - don't block submission for reCAPTCHA issues
       }
     }
 
@@ -73,10 +76,16 @@ export async function submitContactForm(prevState: any, formData: FormData) {
           <p><strong>Company:</strong> ${data.companyName || "Not provided"}</p>
         </div>
 
+        ${
+          data.message
+            ? `
         <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="color: #374151; margin-top: 0;">Message</h3>
           <p style="white-space: pre-wrap; line-height: 1.6;">${data.message}</p>
         </div>
+        `
+            : ""
+        }
 
         ${
           visitorData
@@ -108,8 +117,7 @@ Name: ${data.firstName} ${data.lastName}
 Email: ${data.email}
 Company: ${data.companyName || "Not provided"}
 
-Message:
-${data.message}
+${data.message ? `Message:\n${data.message}\n` : ""}
 
 ${
   visitorData
@@ -147,7 +155,7 @@ Submitted at: ${new Date().toLocaleString()}
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
         company: data.companyName,
-        message: data.message.substring(0, 100) + "...",
+        message: data.message ? data.message.substring(0, 100) + "..." : "No message",
         timestamp: new Date().toISOString(),
         error: emailResult.message,
       })
