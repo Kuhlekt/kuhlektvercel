@@ -12,22 +12,17 @@ export interface AffiliateInfo {
 }
 
 // Predefined list of valid affiliate codes
-const VALID_AFFILIATE_CODES = [
+export const VALID_AFFILIATE_CODES = [
   "PARTNER2024",
   "GROWTH2024",
   "STARTUP2024",
   "ENTERPRISE2024",
   "REFERRAL2024",
-  "BETA2024",
-  "EARLY2024",
-  "PREMIUM2024",
-  "REFERRAL123",
-  "CONSULTANT",
-  "ADVISOR",
-  "INTEGRATION",
-  "RESELLER",
-  "CHANNEL",
   "DEMO2024",
+  "TRIAL2024",
+  "PREMIUM2024",
+  "BUSINESS2024",
+  "FINANCE2024",
 ]
 
 // Predefined affiliate codes and their information
@@ -357,7 +352,18 @@ export async function validateAffiliateCode(code: string): Promise<boolean> {
     }
 
     const normalizedCode = code.trim().toUpperCase()
-    return VALID_AFFILIATE_CODES.includes(normalizedCode)
+
+    // Check against predefined valid codes
+    const isValid = VALID_AFFILIATE_CODES.includes(normalizedCode)
+
+    // Log for tracking purposes
+    if (isValid) {
+      console.log(`Valid affiliate code used: ${normalizedCode}`)
+    } else {
+      console.log(`Invalid affiliate code attempted: ${normalizedCode}`)
+    }
+
+    return isValid
   } catch (error) {
     console.error("Error validating affiliate code:", error)
     return false
@@ -439,4 +445,24 @@ export function getActiveAffiliates(): AffiliateInfo[] {
 
 export function isAffiliateCodeRequired(): boolean {
   return false // Affiliate codes are optional
+}
+
+export function getAffiliateDiscount(code: string): number {
+  const normalizedCode = code.trim().toUpperCase()
+
+  // Define discount percentages for different codes
+  const discounts: Record<string, number> = {
+    PARTNER2024: 25,
+    GROWTH2024: 20,
+    STARTUP2024: 30,
+    ENTERPRISE2024: 15,
+    REFERRAL2024: 20,
+    DEMO2024: 10,
+    TRIAL2024: 15,
+    PREMIUM2024: 20,
+    BUSINESS2024: 15,
+    FINANCE2024: 25,
+  }
+
+  return discounts[normalizedCode] || 0
 }

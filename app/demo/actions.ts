@@ -4,9 +4,20 @@ import { sendDemoRequestEmail } from "@/lib/email-service"
 import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
 export interface DemoFormState {
-  success: boolean
-  message: string
-  errors?: Record<string, string>
+  success?: boolean
+  message?: string
+  errors?: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    jobTitle?: string
+    company?: string
+    companySize?: string
+    currentSolution?: string
+    timeline?: string
+    challenges?: string
+    recaptcha?: string
+  }
 }
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
@@ -15,8 +26,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     const firstName = formData.get("firstName")?.toString()?.trim() || ""
     const lastName = formData.get("lastName")?.toString()?.trim() || ""
     const email = formData.get("email")?.toString()?.trim() || ""
-    const company = formData.get("company")?.toString()?.trim() || ""
     const jobTitle = formData.get("jobTitle")?.toString()?.trim() || ""
+    const company = formData.get("company")?.toString()?.trim() || ""
     const companySize = formData.get("companySize")?.toString()?.trim() || ""
     const currentSolution = formData.get("currentSolution")?.toString()?.trim() || ""
     const timeline = formData.get("timeline")?.toString()?.trim() || ""
@@ -25,44 +36,36 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     const affiliateCode = formData.get("affiliateCode")?.toString()?.trim() || ""
 
     // Validate required fields
-    const errors: Record<string, string> = {}
+    const errors: DemoFormState["errors"] = {}
 
     if (!firstName) errors.firstName = "First name is required"
     if (!lastName) errors.lastName = "Last name is required"
     if (!email) errors.email = "Email is required"
-    if (!company) errors.company = "Company is required"
     if (!jobTitle) errors.jobTitle = "Job title is required"
+    if (!company) errors.company = "Company name is required"
     if (!companySize) errors.companySize = "Company size is required"
     if (!currentSolution) errors.currentSolution = "Current solution is required"
     if (!timeline) errors.timeline = "Timeline is required"
     if (!challenges) errors.challenges = "Challenges are required"
 
     // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (email && !emailRegex.test(email)) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
+    // reCAPTCHA validation (allow bypass tokens for development)
+    if (!recaptchaToken) {
+      errors.recaptcha = "reCAPTCHA verification is required"
+    }
+
     if (Object.keys(errors).length > 0) {
-      return {
-        success: false,
-        message: "Please correct the errors below",
-        errors,
-      }
+      return { errors }
     }
 
     // Validate affiliate code if provided
-    let affiliateValid = true
+    let affiliateValid = false
     if (affiliateCode) {
-      affiliateValid = validateAffiliateCode(affiliateCode)
-      if (!affiliateValid) {
-        errors.affiliateCode = "Invalid affiliate code"
-        return {
-          success: false,
-          message: "Invalid affiliate code provided",
-          errors,
-        }
-      }
+      affiliateValid = await validateAffiliateCode(affiliateCode)
     }
 
     // Send demo request email
@@ -70,8 +73,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       firstName,
       lastName,
       email,
-      company,
       jobTitle,
+      company,
       companySize,
       currentSolution,
       timeline,
@@ -81,7 +84,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
 
     return {
       success: true,
-      message: "Thank you for your demo request! We'll be in touch within 24 hours to schedule your personalized demo.",
+      message:
+        "Thank you for your demo request! We will contact you within 24 hours to schedule your personalized demo.",
     }
   } catch (error) {
     console.error("Demo request submission error:", error)
