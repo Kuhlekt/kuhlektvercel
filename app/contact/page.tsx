@@ -126,12 +126,12 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <Label htmlFor="affiliate">Affiliate Code (Optional)</Label>
+                <Label htmlFor="affiliate">Affiliate Code</Label>
                 <Input
                   id="affiliate"
                   name="affiliate"
                   type="text"
-                  placeholder="Enter your affiliate code"
+                  placeholder="Enter your affiliate code (optional)"
                   className="mt-1"
                   value={affiliateCode}
                   onChange={(e) => setAffiliateCode(e.target.value)}

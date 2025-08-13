@@ -59,7 +59,7 @@ export default function VisitorsPage() {
   const [sortBy, setSortBy] = useState("lastVisit")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [refreshInterval, setRefreshInterval] = useState(10) // seconds
+  const [refreshInterval, setRefreshInterval] = useState(5) // seconds
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [dataChanged, setDataChanged] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -105,15 +105,20 @@ export default function VisitorsPage() {
 
     // Create a hash of the current data to detect changes
     const currentDataHash = JSON.stringify({
-      visitors: allVisitors.length,
-      pages: allPageHistory.length,
-      lastVisitor: allVisitors[allVisitors.length - 1]?.lastVisit,
+      visitorsCount: allVisitors.length,
+      pagesCount: allPageHistory.length,
+      lastVisitorTime: allVisitors[allVisitors.length - 1]?.lastVisit,
+      lastPageTime: allPageHistory[allPageHistory.length - 1]?.timestamp,
     })
 
     // Check if data has changed
     if (previousDataRef.current && previousDataRef.current !== currentDataHash) {
       setDataChanged(true)
-      setTimeout(() => setDataChanged(false), 2000) // Clear indicator after 2 seconds
+      console.log("🔄 Data changed detected:", {
+        previous: previousDataRef.current.slice(0, 100),
+        current: currentDataHash.slice(0, 100),
+      })
+      setTimeout(() => setDataChanged(false), 3000) // Clear indicator after 3 seconds
     }
 
     previousDataRef.current = currentDataHash
@@ -123,12 +128,25 @@ export default function VisitorsPage() {
     setLastUpdated(new Date())
     setIsLoading(false)
 
-    console.log("Data loaded:", {
+    console.log("📊 Admin data loaded:", {
       visitors: allVisitors.length,
       pageHistory: allPageHistory.length,
       timestamp: new Date().toISOString(),
     })
   }, [getAllVisitors, getPageHistory])
+
+  // Listen for storage events (real-time updates)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "kuhlekt_all_visitors" || e.key === "kuhlekt_page_history") {
+        console.log("🔄 Storage event detected, reloading data...")
+        loadData()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [loadData])
 
   // Setup auto-refresh
   const setupAutoRefresh = useCallback(() => {
@@ -140,6 +158,9 @@ export default function VisitorsPage() {
       intervalRef.current = setInterval(() => {
         loadData()
       }, refreshInterval * 1000)
+      console.log(`🔄 Auto-refresh enabled: ${refreshInterval}s interval`)
+    } else {
+      console.log("⏸️ Auto-refresh disabled")
     }
   }, [autoRefresh, refreshInterval, loadData])
 
@@ -157,6 +178,7 @@ export default function VisitorsPage() {
       localStorage.removeItem("kuhlekt_page_history")
       localStorage.removeItem("kuhlekt_visitor_data")
       localStorage.removeItem("kuhlekt_visitor_id")
+      localStorage.removeItem("kuhlekt_visitors_meta")
       sessionStorage.removeItem("kuhlekt_session_id")
 
       setVisitors([])
@@ -357,9 +379,9 @@ export default function VisitorsPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
               {dataChanged && (
-                <div className="flex items-center gap-1 text-green-600">
+                <div className="flex items-center gap-1 text-green-600 animate-pulse">
                   <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">New Data</span>
+                  <span className="text-sm font-medium">New Data Detected!</span>
                 </div>
               )}
             </div>
@@ -424,6 +446,7 @@ export default function VisitorsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="2">2 seconds</SelectItem>
                       <SelectItem value="5">5 seconds</SelectItem>
                       <SelectItem value="10">10 seconds</SelectItem>
                       <SelectItem value="30">30 seconds</SelectItem>
@@ -557,10 +580,16 @@ export default function VisitorsPage() {
                     ? "No visitor data has been collected yet. Visit the main site to generate tracking data."
                     : "No visitors match your current filters."}
                 </p>
-                <Button variant="outline" onClick={loadData}>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh Data
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  <Button variant="outline" onClick={loadData}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Data
+                  </Button>
+                  <Button variant="outline" onClick={() => window.open("/", "_blank")}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Visit Main Site
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">

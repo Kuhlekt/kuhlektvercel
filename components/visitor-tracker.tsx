@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 // Predefined affiliate table for validation
 const affiliateTable = ["PARTNER001", "PARTNER002", "RESELLER01", "CHANNEL01", "AFFILIATE01", "PROMO2024", "SPECIAL01"]
@@ -31,7 +31,8 @@ interface PageVisit {
 
 export function VisitorTracker() {
   const pathname = usePathname()
-  const hasTrackedRef = useRef(false)
+  const searchParams = useSearchParams()
+  const hasTrackedRef = useRef<string>("")
 
   useEffect(() => {
     // Skip tracking on admin pages
@@ -39,42 +40,46 @@ export function VisitorTracker() {
       return
     }
 
-    // Only track once per page load
-    if (hasTrackedRef.current) {
+    // Create a unique key for this page visit
+    const currentPageKey = `${pathname}${searchParams.toString()}`
+
+    // Only track if this is a new page or parameters changed
+    if (hasTrackedRef.current === currentPageKey) {
       return
     }
 
-    hasTrackedRef.current = true
+    hasTrackedRef.current = currentPageKey
 
     const trackVisitor = () => {
       try {
-        // Generate or get visitor ID
+        // Generate or get visitor ID (persistent across browser sessions)
         let visitorId = localStorage.getItem("kuhlekt_visitor_id")
         if (!visitorId) {
           visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           localStorage.setItem("kuhlekt_visitor_id", visitorId)
+          console.log("🆕 New visitor ID created:", visitorId)
         }
 
-        // Generate or get session ID
+        // Generate or get session ID (new for each browser session)
         let sessionId = sessionStorage.getItem("kuhlekt_session_id")
         if (!sessionId) {
           sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
           sessionStorage.setItem("kuhlekt_session_id", sessionId)
+          console.log("🔄 New session ID created:", sessionId)
         }
 
         const now = new Date().toISOString()
-        const currentPage = pathname
+        const currentPage = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "")
         const referrer = document.referrer || "direct"
         const userAgent = navigator.userAgent
 
-        // Extract UTM parameters
-        const urlParams = new URLSearchParams(window.location.search)
-        const utmSource = urlParams.get("utm_source") || undefined
-        const utmMedium = urlParams.get("utm_medium") || undefined
-        const utmCampaign = urlParams.get("utm_campaign") || undefined
-        const utmTerm = urlParams.get("utm_term") || undefined
-        const utmContent = urlParams.get("utm_content") || undefined
-        const affiliate = urlParams.get("affiliate") || urlParams.get("ref") || undefined
+        // Extract UTM parameters from current URL
+        const utmSource = searchParams.get("utm_source") || undefined
+        const utmMedium = searchParams.get("utm_medium") || undefined
+        const utmCampaign = searchParams.get("utm_campaign") || undefined
+        const utmTerm = searchParams.get("utm_term") || undefined
+        const utmContent = searchParams.get("utm_content") || undefined
+        const affiliate = searchParams.get("affiliate") || searchParams.get("ref") || undefined
 
         // Validate affiliate against predefined table
         const validAffiliate =
@@ -86,9 +91,11 @@ export function VisitorTracker() {
         // Find existing visitor or create new one
         const visitorIndex = existingVisitors.findIndex((v: VisitorData) => v.visitorId === visitorId)
 
+        let currentVisitor: VisitorData
+
         if (visitorIndex === -1) {
           // New visitor
-          const newVisitor: VisitorData = {
+          currentVisitor = {
             visitorId,
             sessionId,
             firstVisit: now,
@@ -104,26 +111,43 @@ export function VisitorTracker() {
             utmContent,
             affiliate: validAffiliate,
           }
-          existingVisitors.push(newVisitor)
+          existingVisitors.push(currentVisitor)
+          console.log("👤 New visitor added to tracking:", {
+            visitorId: visitorId.slice(0, 16) + "...",
+            page: currentPage,
+            totalVisitors: existingVisitors.length,
+          })
         } else {
           // Update existing visitor
-          const visitor = existingVisitors[visitorIndex]
-          visitor.lastVisit = now
-          visitor.pageViews += 1
-          visitor.currentPage = currentPage
-          visitor.sessionId = sessionId // Update session if new session
+          currentVisitor = existingVisitors[visitorIndex]
+          currentVisitor.lastVisit = now
+          currentVisitor.pageViews += 1
+          currentVisitor.currentPage = currentPage
+          currentVisitor.sessionId = sessionId // Update session if new session
 
           // Update UTM parameters if present
-          if (utmSource) visitor.utmSource = utmSource
-          if (utmMedium) visitor.utmMedium = utmMedium
-          if (utmCampaign) visitor.utmCampaign = utmCampaign
-          if (utmTerm) visitor.utmTerm = utmTerm
-          if (utmContent) visitor.utmContent = utmContent
-          if (validAffiliate) visitor.affiliate = validAffiliate
+          if (utmSource) currentVisitor.utmSource = utmSource
+          if (utmMedium) currentVisitor.utmMedium = utmMedium
+          if (utmCampaign) currentVisitor.utmCampaign = utmCampaign
+          if (utmTerm) currentVisitor.utmTerm = utmTerm
+          if (utmContent) currentVisitor.utmContent = utmContent
+          if (validAffiliate) currentVisitor.affiliate = validAffiliate
+
+          console.log("🔄 Visitor updated:", {
+            visitorId: visitorId.slice(0, 16) + "...",
+            pageViews: currentVisitor.pageViews,
+            page: currentPage,
+          })
         }
 
-        // Save updated visitors data
+        // Save updated visitors data with timestamp for change detection
+        const visitorsData = {
+          visitors: existingVisitors,
+          lastUpdated: now,
+          totalCount: existingVisitors.length,
+        }
         localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(existingVisitors))
+        localStorage.setItem("kuhlekt_visitors_meta", JSON.stringify(visitorsData))
 
         // Track page history
         const pageHistory = JSON.parse(localStorage.getItem("kuhlekt_page_history") || "[]")
@@ -145,9 +169,9 @@ export function VisitorTracker() {
         const legacyVisitorData = {
           visitorId,
           sessionId,
-          firstVisit: now,
+          firstVisit: currentVisitor.firstVisit,
           lastVisit: now,
-          pageViews: existingVisitors[visitorIndex]?.pageViews || 1,
+          pageViews: currentVisitor.pageViews,
           referrer,
           userAgent,
           currentPage,
@@ -160,7 +184,16 @@ export function VisitorTracker() {
         }
         localStorage.setItem("kuhlekt_visitor_data", JSON.stringify(legacyVisitorData))
 
-        console.log("Visitor tracked:", {
+        // Trigger storage event for real-time updates across tabs/components
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: "kuhlekt_all_visitors",
+            newValue: JSON.stringify(existingVisitors),
+            storageArea: localStorage,
+          }),
+        )
+
+        console.log("📊 Visitor tracking complete:", {
           visitorId: visitorId.slice(0, 16) + "...",
           sessionId: sessionId.slice(0, 16) + "...",
           page: currentPage,
@@ -174,31 +207,17 @@ export function VisitorTracker() {
           },
         })
       } catch (error) {
-        console.error("Error tracking visitor:", error)
+        console.error("❌ Error tracking visitor:", error)
       }
     }
 
-    // Track immediately
-    trackVisitor()
-
-    // Track page visibility changes
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        trackVisitor()
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(trackVisitor, 100)
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      clearTimeout(timeoutId)
     }
-  }, [pathname])
-
-  // Reset tracking flag when pathname changes
-  useEffect(() => {
-    hasTrackedRef.current = false
-  }, [pathname])
+  }, [pathname, searchParams])
 
   return null
 }
