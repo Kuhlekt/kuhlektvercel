@@ -1,148 +1,219 @@
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, ArrowRight } from "lucide-react"
-import Image from "next/image"
+import {
+  CheckCircle,
+  ArrowRight,
+  Users,
+  TrendingUp,
+  Clock,
+  Shield,
+  CreditCard,
+  FileText,
+  BarChart3,
+  Zap,
+  Mail,
+} from "lucide-react"
 import Link from "next/link"
+import { VisitorTracker } from "@/components/visitor-tracker"
 
 export default function ProductPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+      <Suspense fallback={<div>Loading...</div>}>
+        <VisitorTracker />
+      </Suspense>
+
       {/* Hero Section */}
-      <section id="ar-automation" className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl lg:text-6xl font-bold mb-6 text-gray-900">
-            The Complete AR Automation Platform for Modern Finance Teams
-          </h1>
-          <p className="text-xl text-gray-600 max-w-4xl mx-auto mb-8">
-            Automate the full AR lifecycle—credit application, invoicing, follow-up, dispute resolution, and payment.
-          </p>
-          <Link href="/demo">
-            <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white px-8">
-              Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <Badge variant="secondary" className="mb-4">
+              Product Overview
+            </Badge>
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              The Complete AR Automation Platform for <span className="text-red-600">Modern Finance Teams</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Streamline your entire accounts receivable process with our comprehensive suite of AI-powered tools
+              designed to reduce DSO and maximize cash flow.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="bg-red-600 hover:bg-red-700" asChild>
+                <Link href="/demo">
+                  Get Free Demo <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/contact">Contact Sales</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* AR Software Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
-                Accounts Receivable Software That Works for You
+              <Badge variant="secondary" className="mb-4">
+                AR Software
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                Automated Invoice Delivery & Follow-up
               </h2>
               <p className="text-lg text-gray-600 mb-8">
-                Automate the full AR lifecycle—credit application, invoicing, follow-up, dispute resolution, and
-                payment.
+                Our intelligent AR software automatically sends invoices, tracks payments, and follows up with customers
+                using personalized communication sequences.
               </p>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Automated invoice delivery and follow-up</span>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Smart Invoice Distribution</h3>
+                    <p className="text-gray-600">
+                      Automatically send invoices via email, portal, or EDI based on customer preferences
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Smart prioritization of collection activities</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Intelligent Follow-up Sequences</h3>
+                    <p className="text-gray-600">AI-powered reminders that adapt based on customer payment behavior</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Integrated payment processing</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Payment Tracking & Matching</h3>
+                    <p className="text-gray-600">Automatically match payments to invoices and update your ERP system</p>
+                  </div>
                 </div>
               </div>
+              <Button className="bg-red-600 hover:bg-red-700" asChild>
+                <Link href="/demo">
+                  See AR Software in Action <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
             <div className="relative">
-              <Image
-                src="/images/ar-dashboard.png"
-                alt="Invoice to Cash Life-cycle showing integrated workflow from online credit applications through global payments and reconciliation"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-lg"
-                loading="lazy"
-              />
+              <img src="/images/ar-dashboard.png" alt="AR Dashboard Interface" className="rounded-lg shadow-2xl" />
             </div>
           </div>
         </div>
       </section>
 
       {/* Digital Collections Tools */}
-      <section id="digital-collections" className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <Image
+              <img
                 src="/images/digital-collections.png"
-                alt="Digital Collections workflow with email templates, SMS automation, payment tracking, and activity logging"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-lg"
-                loading="lazy"
+                alt="Digital Collections Interface"
+                className="rounded-lg shadow-2xl"
               />
             </div>
-
             <div className="order-1 lg:order-2">
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Digital Collections Tools</h2>
+              <Badge variant="secondary" className="mb-4">
+                Digital Collections
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                Advanced Collection Tools & Workflows
+              </h2>
               <p className="text-lg text-gray-600 mb-8">
-                Use email/SMS templates, automated workflows, and smart routing to reach the right customer at the right
-                time.
+                Transform your collections process with AI-powered tools that prioritize accounts, automate outreach,
+                and maximize recovery rates.
               </p>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Automated email and SMS reminders</span>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Email & SMS Templates</h3>
+                    <p className="text-gray-600">
+                      Pre-built, customizable templates for every stage of the collection process
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Customizable collection sequences</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Automated Workflows</h3>
+                    <p className="text-gray-600">
+                      Set up escalation sequences that adapt based on customer response and payment history
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Performance tracking for collectors</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Priority Scoring</h3>
+                    <p className="text-gray-600">
+                      AI algorithms rank accounts by likelihood to pay and collection difficulty
+                    </p>
+                  </div>
                 </div>
               </div>
+              <Button className="bg-red-600 hover:bg-red-700" asChild>
+                <Link href="/demo">
+                  Explore Collections Tools <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
       {/* Customer Credit Portal */}
-      <section id="credit-portal" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Customer Credit Portal</h2>
+              <Badge variant="secondary" className="mb-4">
+                Customer Portal
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Self-Service Invoice Management</h2>
               <p className="text-lg text-gray-600 mb-8">
-                Let customers check balances, view invoices, and submit payments or disputes online.
+                Empower your customers with a branded portal where they can view invoices, make payments, and manage
+                their account information 24/7.
               </p>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Self-service invoice management</span>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Branded Customer Experience</h3>
+                    <p className="text-gray-600">White-labeled portal that matches your company branding and style</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Online payment options</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Multiple Payment Options</h3>
+                    <p className="text-gray-600">Accept credit cards, ACH, wire transfers, and digital wallets</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-                  <span className="text-gray-700">Branded customer experience</span>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Dispute Management</h3>
+                    <p className="text-gray-600">Customers can submit disputes and track resolution status online</p>
+                  </div>
                 </div>
               </div>
+              <Button className="bg-red-600 hover:bg-red-700" asChild>
+                <Link href="/demo">
+                  View Customer Portal <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
             <div className="relative">
-              <Image
+              <img
                 src="/images/customer-portal.png"
-                alt="Customer Credit Portal interface showing account dashboard with balance overview, invoice management, payment options, and dispute submission capabilities"
-                width={800}
-                height={600}
-                className="rounded-lg shadow-lg w-full h-auto"
-                loading="lazy"
+                alt="Customer Portal Interface"
+                className="rounded-lg shadow-2xl"
               />
             </div>
           </div>
@@ -150,113 +221,153 @@ export default function ProductPage() {
       </section>
 
       {/* Additional Features Grid */}
-      <section id="dispute-management" className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Everything You Need for AR Automation</h2>
-            <p className="text-xl text-gray-600">
-              Comprehensive tools designed to streamline your entire receivables process
+            <Badge variant="secondary" className="mb-4">
+              Complete Feature Set
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Everything You Need for AR Success</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Our comprehensive platform includes all the tools and features you need to transform your accounts
+              receivable operations.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Credit Applications</h3>
-                <p className="text-gray-600">
-                  Streamline credit approval with automated workflows and risk assessment tools.
-                </p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <CreditCard className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Credit Applications</CardTitle>
+                <CardDescription>
+                  Digital credit application forms with automated approval workflows and credit scoring integration.
+                </CardDescription>
+              </CardHeader>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Invoice Management</h3>
-                <p className="text-gray-600">
-                  Automated invoice delivery, tracking, and follow-up to ensure timely payments.
-                </p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <FileText className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Invoice Management</CardTitle>
+                <CardDescription>
+                  Centralized invoice tracking, automated delivery, and real-time status updates across all channels.
+                </CardDescription>
+              </CardHeader>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Dispute Resolution</h3>
-                <p className="text-gray-600">
-                  Centralized dispute management with automated workflows and documentation.
-                </p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <BarChart3 className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Analytics & Reporting</CardTitle>
+                <CardDescription>
+                  Comprehensive dashboards and reports to track DSO, collection rates, and team performance.
+                </CardDescription>
+              </CardHeader>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Payment Processing</h3>
-                <p className="text-gray-600">Multiple payment options with automatic reconciliation and posting.</p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Zap className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>ERP Integration</CardTitle>
+                <CardDescription>
+                  Seamless integration with popular ERP systems including SAP, Oracle, NetSuite, and QuickBooks.
+                </CardDescription>
+              </CardHeader>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Analytics & Reporting</h3>
-                <p className="text-gray-600">
-                  Real-time dashboards and comprehensive reports for better decision making.
-                </p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Mail className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Communication Hub</CardTitle>
+                <CardDescription>
+                  Unified inbox for all customer communications with automated response suggestions and templates.
+                </CardDescription>
+              </CardHeader>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow bg-white">
-              <CardContent className="p-0">
-                <div className="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center mb-4">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">ERP Integration</h3>
-                <p className="text-gray-600">Seamless integration with your existing ERP and accounting systems.</p>
-              </CardContent>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Shield className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Compliance & Security</CardTitle>
+                <CardDescription>
+                  Bank-level security with SOC 2 compliance, data encryption, and audit trails for all activities.
+                </CardDescription>
+              </CardHeader>
             </Card>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Results</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Proven Results for Finance Teams</h2>
-            <p className="text-xl text-gray-600">See the impact Kuhlekt has on key AR metrics</p>
+            <Badge variant="secondary" className="mb-4">
+              Proven Results
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Transform Your AR Performance</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Join hundreds of companies that have revolutionized their accounts receivable operations with Kuhlekt.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div className="p-6">
-              <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">30%</div>
-              <div className="text-gray-600 font-medium">Average DSO Reduction</div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">30%</h3>
+              <p className="text-gray-600">DSO Reduction</p>
             </div>
-            <div className="p-6">
-              <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">80%</div>
-              <div className="text-gray-600 font-medium">Manual Tasks Eliminated</div>
+
+            <div className="text-center">
+              <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Clock className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">80%</h3>
+              <p className="text-gray-600">Manual Tasks Eliminated</p>
             </div>
-            <div className="p-6">
-              <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">40%</div>
-              <div className="text-gray-600 font-medium">Cash Flow Improvement</div>
+
+            <div className="text-center">
+              <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">60%</h3>
+              <p className="text-gray-600">Increase in Collection Rates</p>
             </div>
-            <div className="p-6">
-              <div className="text-4xl lg:text-5xl font-bold text-cyan-500 mb-2">60%</div>
-              <div className="text-gray-600 font-medium">Faster Dispute Resolution</div>
+
+            <div className="text-center">
+              <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">25%</h3>
+              <p className="text-gray-600">Improvement in Cash Flow</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-red-600">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Transform Your AR Process?</h2>
+          <p className="text-xl text-red-100 mb-8">
+            See how Kuhlekt can help you reduce DSO, improve cash flow, and eliminate manual AR tasks.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" variant="secondary" asChild>
+              <Link href="/demo">
+                Get Free Demo <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-red-600 bg-transparent"
+              asChild
+            >
+              <Link href="/contact">Contact Sales</Link>
+            </Button>
           </div>
         </div>
       </section>
