@@ -17,7 +17,13 @@ export default function HomePage() {
                   AI-Powered Collections Platform
                 </Badge>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Transform Your <span className="text-blue-600">Accounts Receivable</span> Process
+                  Transform Your <span className="text-blue-600">Accounts Receivable</span> Process.
+                  <br />
+                  <span className="text-red-500">
+                    Get
+                    <br />
+                    Paid Faster.
+                  </span>
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed">
                   Reduce DSO by 40% and increase collection rates by 60% with our AI-driven automation platform.

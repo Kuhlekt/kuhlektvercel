@@ -9,97 +9,62 @@ function VisitorTrackerComponent() {
   useEffect(() => {
     const trackVisitor = async () => {
       try {
-        // Get UTM parameters
+        // Get UTM parameters and other tracking data
         const utmSource = searchParams.get("utm_source") || ""
         const utmMedium = searchParams.get("utm_medium") || ""
         const utmCampaign = searchParams.get("utm_campaign") || ""
         const utmTerm = searchParams.get("utm_term") || ""
         const utmContent = searchParams.get("utm_content") || ""
-
-        // Get affiliate code
-        const affiliateCode = searchParams.get("ref") || searchParams.get("affiliate") || ""
-
-        // Get referrer
+        const affiliate = searchParams.get("affiliate") || searchParams.get("aff") || ""
         const referrer = document.referrer || ""
-
-        // Get current page
-        const currentPage = window.location.pathname
-
-        // Get user agent
-        const userAgent = navigator.userAgent
-
-        // Get timestamp
+        const userAgent = navigator.userAgent || ""
+        const currentUrl = window.location.href
         const timestamp = new Date().toISOString()
 
-        // Get session ID (create if doesn't exist)
-        let sessionId = sessionStorage.getItem("kuhlekt_session_id")
-        if (!sessionId) {
-          sessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
-          sessionStorage.setItem("kuhlekt_session_id", sessionId)
-        }
-
-        // Get visitor ID (create if doesn't exist)
-        let visitorId = localStorage.getItem("kuhlekt_visitor_id")
-        if (!visitorId) {
-          visitorId = "visitor_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
-          localStorage.setItem("kuhlekt_visitor_id", visitorId)
-        }
-
-        // Prepare tracking data
-        const trackingData = {
-          visitorId,
-          sessionId,
-          timestamp,
-          currentPage,
+        // Get visitor's IP and location (this would typically be done server-side)
+        const visitorData = {
+          url: currentUrl,
           referrer,
           userAgent,
+          timestamp,
           utmSource,
           utmMedium,
           utmCampaign,
           utmTerm,
           utmContent,
-          affiliateCode,
-          screenResolution: `${screen.width}x${screen.height}`,
-          viewportSize: `${window.innerWidth}x${window.innerHeight}`,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          language: navigator.language,
+          affiliate,
+          sessionId: sessionStorage.getItem("sessionId") || generateSessionId(),
+        }
+
+        // Store session ID if not exists
+        if (!sessionStorage.getItem("sessionId")) {
+          sessionStorage.setItem("sessionId", visitorData.sessionId)
         }
 
         // Send tracking data to your analytics endpoint
-        // For now, we'll just log it to console in development
-        if (process.env.NODE_ENV === "development") {
-          console.log("Visitor tracking data:", trackingData)
-        }
-
-        // In production, you would send this to your analytics service
-        // await fetch('/api/track-visitor', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(trackingData)
-        // })
+        await fetch("/api/track-visitor", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(visitorData),
+        }).catch((error) => {
+          console.warn("Visitor tracking failed:", error)
+        })
       } catch (error) {
-        console.error("Error tracking visitor:", error)
+        console.warn("Visitor tracking error:", error)
       }
     }
 
-    // Track on component mount
+    // Track visitor on component mount
     trackVisitor()
-
-    // Track page visibility changes
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        trackVisitor()
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
   }, [searchParams])
 
   return null
+}
+
+function generateSessionId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
 
 export function VisitorTracker() {
