@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +20,7 @@ import {
   Trash2,
   Pause,
   Activity,
+  AlertCircle,
 } from "lucide-react"
 
 interface Visitor {
@@ -51,12 +52,14 @@ export default function TrackingPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("24h")
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [refreshInterval, setRefreshInterval] = useState(30) // seconds
+  const [refreshInterval, setRefreshInterval] = useState(10) // seconds
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [dataChanged, setDataChanged] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const previousDataRef = useRef<string>("")
 
   // Get all visitors from localStorage
-  const getAllVisitors = (): Visitor[] => {
+  const getAllVisitors = useCallback((): Visitor[] => {
     if (typeof window === "undefined") return []
 
     try {
@@ -69,10 +72,10 @@ export default function TrackingPage() {
       console.error("Error loading visitors:", error)
     }
     return []
-  }
+  }, [])
 
   // Get page history from localStorage
-  const getPageHistory = (): PageHistory[] => {
+  const getPageHistory = useCallback((): PageHistory[] => {
     if (typeof window === "undefined") return []
 
     try {
@@ -85,21 +88,43 @@ export default function TrackingPage() {
       console.error("Error loading page history:", error)
     }
     return []
-  }
+  }, [])
 
-  // Load data
-  const loadData = () => {
+  // Load data and detect changes
+  const loadData = useCallback(() => {
     setIsLoading(true)
     const allVisitors = getAllVisitors()
     const allPageHistory = getPageHistory()
+
+    // Create a hash of the current data to detect changes
+    const currentDataHash = JSON.stringify({
+      visitors: allVisitors.length,
+      pages: allPageHistory.length,
+      lastVisitor: allVisitors[allVisitors.length - 1]?.lastVisit,
+    })
+
+    // Check if data has changed
+    if (previousDataRef.current && previousDataRef.current !== currentDataHash) {
+      setDataChanged(true)
+      setTimeout(() => setDataChanged(false), 2000) // Clear indicator after 2 seconds
+    }
+
+    previousDataRef.current = currentDataHash
+
     setVisitors(allVisitors)
     setPageHistory(allPageHistory)
     setLastUpdated(new Date())
     setIsLoading(false)
-  }
+
+    console.log("Analytics data loaded:", {
+      visitors: allVisitors.length,
+      pageHistory: allPageHistory.length,
+      timestamp: new Date().toISOString(),
+    })
+  }, [getAllVisitors, getPageHistory])
 
   // Setup auto-refresh
-  const setupAutoRefresh = () => {
+  const setupAutoRefresh = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
@@ -109,7 +134,7 @@ export default function TrackingPage() {
         loadData()
       }, refreshInterval * 1000)
     }
-  }
+  }, [autoRefresh, refreshInterval, loadData])
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
@@ -129,6 +154,7 @@ export default function TrackingPage() {
 
       setVisitors([])
       setPageHistory([])
+      previousDataRef.current = ""
 
       alert("All tracking data has been cleared.")
     }
@@ -358,12 +384,12 @@ export default function TrackingPage() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [autoRefresh, refreshInterval])
+  }, [setupAutoRefresh])
 
   // Initial load
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const analytics = calculateAnalytics()
 
@@ -373,7 +399,15 @@ export default function TrackingPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+              {dataChanged && (
+                <div className="flex items-center gap-1 text-green-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">New Data</span>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -440,14 +474,17 @@ export default function TrackingPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="5">5 seconds</SelectItem>
                       <SelectItem value="10">10 seconds</SelectItem>
                       <SelectItem value="30">30 seconds</SelectItem>
                       <SelectItem value="60">1 minute</SelectItem>
-                      <SelectItem value="300">5 minutes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="text-sm text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</div>
+                <div className="text-sm text-gray-500">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                  {dataChanged && <span className="ml-2 text-green-600 font-medium">• Updated</span>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -642,7 +679,7 @@ export default function TrackingPage() {
               <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Data</h3>
               <p className="text-gray-500 mb-4">
-                No visitor data has been collected yet. Analytics will appear here once visitors start using your site.
+                No visitor data has been collected yet. Visit the main site to generate tracking data.
               </p>
               <Button variant="outline" onClick={loadData}>
                 <RefreshCw className="w-4 h-4 mr-2" />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Play,
   Pause,
+  AlertCircle,
 } from "lucide-react"
 
 interface Visitor {
@@ -57,12 +58,15 @@ export default function VisitorsPage() {
   const [filterBy, setFilterBy] = useState("all")
   const [sortBy, setSortBy] = useState("lastVisit")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
-  const [autoRefresh, setAutoRefresh] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState(30) // seconds
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval, setRefreshInterval] = useState(10) // seconds
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [dataChanged, setDataChanged] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const previousDataRef = useRef<string>("")
 
   // Get all visitors from localStorage
-  const getAllVisitors = (): Visitor[] => {
+  const getAllVisitors = useCallback((): Visitor[] => {
     if (typeof window === "undefined") return []
 
     try {
@@ -75,10 +79,10 @@ export default function VisitorsPage() {
       console.error("Error loading visitors:", error)
     }
     return []
-  }
+  }, [])
 
   // Get page history from localStorage
-  const getPageHistory = (): PageHistory[] => {
+  const getPageHistory = useCallback((): PageHistory[] => {
     if (typeof window === "undefined") return []
 
     try {
@@ -91,20 +95,43 @@ export default function VisitorsPage() {
       console.error("Error loading page history:", error)
     }
     return []
-  }
+  }, [])
 
-  // Load data
-  const loadData = () => {
+  // Load data and detect changes
+  const loadData = useCallback(() => {
     setIsLoading(true)
     const allVisitors = getAllVisitors()
     const allPageHistory = getPageHistory()
+
+    // Create a hash of the current data to detect changes
+    const currentDataHash = JSON.stringify({
+      visitors: allVisitors.length,
+      pages: allPageHistory.length,
+      lastVisitor: allVisitors[allVisitors.length - 1]?.lastVisit,
+    })
+
+    // Check if data has changed
+    if (previousDataRef.current && previousDataRef.current !== currentDataHash) {
+      setDataChanged(true)
+      setTimeout(() => setDataChanged(false), 2000) // Clear indicator after 2 seconds
+    }
+
+    previousDataRef.current = currentDataHash
+
     setVisitors(allVisitors)
     setPageHistory(allPageHistory)
+    setLastUpdated(new Date())
     setIsLoading(false)
-  }
+
+    console.log("Data loaded:", {
+      visitors: allVisitors.length,
+      pageHistory: allPageHistory.length,
+      timestamp: new Date().toISOString(),
+    })
+  }, [getAllVisitors, getPageHistory])
 
   // Setup auto-refresh
-  const setupAutoRefresh = () => {
+  const setupAutoRefresh = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
@@ -114,7 +141,7 @@ export default function VisitorsPage() {
         loadData()
       }, refreshInterval * 1000)
     }
-  }
+  }, [autoRefresh, refreshInterval, loadData])
 
   // Toggle auto-refresh
   const toggleAutoRefresh = () => {
@@ -135,6 +162,7 @@ export default function VisitorsPage() {
       setVisitors([])
       setPageHistory([])
       setFilteredVisitors([])
+      previousDataRef.current = ""
 
       alert("All visitor data has been cleared.")
     }
@@ -299,12 +327,12 @@ export default function VisitorsPage() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [autoRefresh, refreshInterval])
+  }, [setupAutoRefresh])
 
   // Initial load
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -326,7 +354,15 @@ export default function VisitorsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900">Visitor Tracking</h1>
+              {dataChanged && (
+                <div className="flex items-center gap-1 text-green-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">New Data</span>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={exportPageHistory} disabled={pageHistory.length === 0}>
                 <Download className="w-4 h-4 mr-2" />
@@ -368,9 +404,15 @@ export default function VisitorsPage() {
                     <Switch checked={autoRefresh} onCheckedChange={toggleAutoRefresh} />
                     <span className="text-sm font-medium">Auto Refresh</span>
                     {autoRefresh ? (
-                      <Play className="w-4 h-4 text-green-500" />
+                      <div className="flex items-center gap-1">
+                        <Play className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-600">Active</span>
+                      </div>
                     ) : (
-                      <Pause className="w-4 h-4 text-gray-400" />
+                      <div className="flex items-center gap-1">
+                        <Pause className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs text-gray-500">Paused</span>
+                      </div>
                     )}
                   </div>
                   <Select
@@ -382,14 +424,17 @@ export default function VisitorsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="5">5 seconds</SelectItem>
                       <SelectItem value="10">10 seconds</SelectItem>
                       <SelectItem value="30">30 seconds</SelectItem>
                       <SelectItem value="60">1 minute</SelectItem>
-                      <SelectItem value="300">5 minutes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="text-sm text-gray-500">Last updated: {new Date().toLocaleTimeString()}</div>
+                <div className="text-sm text-gray-500">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                  {dataChanged && <span className="ml-2 text-green-600 font-medium">• Updated</span>}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -509,7 +554,7 @@ export default function VisitorsPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Visitors Found</h3>
                 <p className="text-gray-500 mb-4">
                   {visitors.length === 0
-                    ? "No visitor data has been collected yet."
+                    ? "No visitor data has been collected yet. Visit the main site to generate tracking data."
                     : "No visitors match your current filters."}
                 </p>
                 <Button variant="outline" onClick={loadData}>
