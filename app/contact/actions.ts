@@ -1,23 +1,24 @@
 "use server"
 
 import { sendContactEmail } from "@/lib/email-service"
+import { verifyCaptcha } from "@/lib/captcha"
 
-interface ContactFormState {
+export interface ContactFormState {
   success: boolean
   message: string
-  errors?: Record<string, string>
+  errors: Record<string, string>
 }
 
 export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
   try {
-    // Extract form data with null safety
+    // Extract form data
     const firstName = formData.get("firstName")?.toString()?.trim() || ""
     const lastName = formData.get("lastName")?.toString()?.trim() || ""
     const email = formData.get("email")?.toString()?.trim() || ""
-    const phone = formData.get("phone")?.toString()?.trim() || ""
     const company = formData.get("company")?.toString()?.trim() || ""
+    const phone = formData.get("phone")?.toString()?.trim() || ""
     const message = formData.get("message")?.toString()?.trim() || ""
-    const recaptchaToken = formData.get("recaptchaToken")?.toString()?.trim() || ""
+    const captchaToken = formData.get("captchaToken")?.toString()?.trim() || ""
 
     // Validation
     const errors: Record<string, string> = {}
@@ -28,7 +29,8 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     if (!message) errors.message = "Message is required"
 
     // Email validation
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (email && !emailRegex.test(email)) {
       errors.email = "Please enter a valid email address"
     }
 
@@ -40,58 +42,69 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Send email
-    const emailResult = await sendContactEmail({
+    // Verify reCAPTCHA
+    const captchaValid = await verifyCaptcha(captchaToken)
+    if (!captchaValid) {
+      return {
+        success: false,
+        message: "Please complete the reCAPTCHA verification",
+        errors: {},
+      }
+    }
+
+    // Send contact email
+    const emailSent = await sendContactEmail({
       firstName,
       lastName,
       email,
-      phone,
       company,
+      phone,
       message,
-      recaptchaToken,
     })
 
-    if (!emailResult.success) {
+    if (!emailSent) {
       return {
         success: false,
-        message: emailResult.error || "Failed to send message. Please try again.",
+        message: "Failed to send message. Please try again.",
+        errors: {},
       }
     }
 
     return {
       success: true,
-      message: "Thank you! Your message has been sent successfully. We'll get back to you soon.",
+      message: "Message sent successfully! We'll get back to you within 24 hours.",
+      errors: {},
     }
   } catch (error) {
     console.error("Contact form submission error:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "An error occurred while sending your message. Please try again.",
+      errors: {},
     }
   }
 }
 
-export async function testAWSSES() {
+export async function testAWSSES(): Promise<{ success: boolean; message: string }> {
   try {
     const testResult = await sendContactEmail({
       firstName: "Test",
       lastName: "User",
       email: "test@example.com",
-      phone: "555-0123",
       company: "Test Company",
-      message: "This is a test message",
-      recaptchaToken: "test-token",
+      phone: "555-123-4567",
+      message: "This is a test message to verify AWS SES configuration.",
     })
 
     return {
-      success: testResult.success,
-      message: testResult.success ? "AWS SES test successful" : testResult.error || "AWS SES test failed",
+      success: testResult,
+      message: testResult ? "AWS SES test successful" : "AWS SES test failed",
     }
   } catch (error) {
     console.error("AWS SES test error:", error)
     return {
       success: false,
-      message: "AWS SES test failed with error",
+      message: `AWS SES test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     }
   }
 }

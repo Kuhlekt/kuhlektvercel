@@ -1,74 +1,105 @@
 // Affiliate validation utility functions
 // These are NOT server actions, just utility functions
 
-interface AffiliateInfo {
-  isValid: boolean
-  name?: string
-  discount?: number
-  category?: string
-  isActive?: boolean
+export interface AffiliateInfo {
   code?: string
+  name?: string
+  isValid: boolean
+  isActive?: boolean
+  category?: string
+  discountPercentage?: number
 }
 
-// Define affiliate codes and their information
-const AFFILIATE_CODES = {
-  PARTNER001: { name: "Strategic Partner A", discount: 15, category: "strategic", isActive: true },
-  PARTNER002: { name: "Strategic Partner B", discount: 12, category: "strategic", isActive: true },
-  RESELLER001: { name: "Reseller Partner A", discount: 10, category: "reseller", isActive: true },
-  RESELLER002: { name: "Reseller Partner B", discount: 8, category: "reseller", isActive: true },
-  CONSULTANT001: { name: "Consultant Partner A", discount: 5, category: "consultant", isActive: true },
-  CONSULTANT002: { name: "Consultant Partner B", discount: 5, category: "consultant", isActive: true },
-  REFERRAL001: { name: "Referral Partner A", discount: 3, category: "referral", isActive: true },
-  REFERRAL002: { name: "Referral Partner B", discount: 3, category: "referral", isActive: true },
-  TRIAL001: { name: "Trial Partner", discount: 0, category: "trial", isActive: true },
-  DEMO001: { name: "Demo Partner", discount: 0, category: "demo", isActive: true },
-} as const
-
-// Valid affiliate codes array
-const VALID_AFFILIATE_CODES = Object.keys(AFFILIATE_CODES)
-
-// Affiliate partners object for additional functionality
-const affiliatePartners: Record<string, AffiliateInfo> = {}
-
-// Initialize affiliate partners
-Object.entries(AFFILIATE_CODES).forEach(([code, info]) => {
-  affiliatePartners[code] = {
+// Predefined affiliate codes with their information
+const AFFILIATE_CODES: Record<string, AffiliateInfo> = {
+  PARTNER001: {
+    name: "Strategic Partner Alpha",
     isValid: true,
-    code,
-    name: info.name,
-    discount: info.discount,
-    category: info.category,
-    isActive: info.isActive,
-  }
-})
+    isActive: true,
+    category: "strategic",
+    discountPercentage: 15,
+  },
+  PARTNER002: {
+    name: "Channel Partner Beta",
+    isValid: true,
+    isActive: true,
+    category: "channel",
+    discountPercentage: 10,
+  },
+  PARTNER003: {
+    name: "Referral Partner Gamma",
+    isValid: true,
+    isActive: true,
+    category: "referral",
+    discountPercentage: 5,
+  },
+  CONSULTANT001: {
+    name: "Consulting Partner Delta",
+    isValid: true,
+    isActive: true,
+    category: "consultant",
+    discountPercentage: 12,
+  },
+  RESELLER001: {
+    name: "Reseller Partner Epsilon",
+    isValid: true,
+    isActive: true,
+    category: "reseller",
+    discountPercentage: 8,
+  },
+  DEMO2024: {
+    name: "Demo Special 2024",
+    isValid: true,
+    isActive: true,
+    category: "promotion",
+    discountPercentage: 20,
+  },
+  EARLY2024: {
+    name: "Early Adopter 2024",
+    isValid: true,
+    isActive: true,
+    category: "promotion",
+    discountPercentage: 25,
+  },
+  STARTUP50: {
+    name: "Startup Discount",
+    isValid: true,
+    isActive: true,
+    category: "startup",
+    discountPercentage: 50,
+  },
+}
+
+// Valid affiliate codes array for quick lookup
+const VALID_AFFILIATE_CODES = Object.keys(AFFILIATE_CODES)
 
 /**
  * Validates an affiliate code and returns affiliate information
  * @param code - The affiliate code to validate
- * @returns true if valid, false otherwise
+ * @returns AffiliateInfo object with validation result
  */
 export function validateAffiliate(code: string): AffiliateInfo {
   const upperCode = code.toUpperCase().trim()
   const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
-  if (affiliate) {
-    return {
-      isValid: true,
-      name: affiliate.name,
-      discount: affiliate.discount,
-      category: affiliate.category,
-      isActive: affiliate.isActive,
-      code: upperCode,
-    }
+  if (!affiliate) {
+    return { isValid: false }
   }
 
-  return { isValid: false }
+  return {
+    code: upperCode,
+    name: affiliate.name,
+    isValid: true,
+    isActive: affiliate.isActive,
+    category: affiliate.category,
+    discountPercentage: affiliate.discountPercentage,
+  }
 }
 
 /**
- * Simple validation function for affiliate codes
+ * Simple validation function that returns boolean
  * @param code - The affiliate code to validate
- * @returns The validated code in uppercase or null if invalid
+ * @returns true if valid, false otherwise
  */
 export function validateAffiliateCode(code: string): boolean {
   if (!code || typeof code !== "string") {
@@ -105,7 +136,7 @@ export function formatAffiliateCode(code: string): string {
 }
 
 /**
- * Gets affiliate information for a given code
+ * Gets detailed affiliate information for a code
  * @param code - The affiliate code to validate
  * @returns Object with isValid boolean and partner string if valid, null otherwise
  */
@@ -114,17 +145,22 @@ export function getAffiliateInfo(code: string): AffiliateInfo {
     return { isValid: false }
   }
 
-  const upperCode = normalizeAffiliateCode(code)
-  const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
+  const normalizedCode = normalizeAffiliateCode(code)
+  const affiliate = AFFILIATE_CODES[normalizedCode]
 
   return {
-    isValid: true,
+    code: normalizedCode,
     name: affiliate.name,
-    discount: affiliate.discount,
-    category: affiliate.category,
+    isValid: true,
     isActive: affiliate.isActive,
-    code: upperCode,
+    category: affiliate.category,
+    discountPercentage: affiliate.discountPercentage,
   }
+}
+
+// Additional utility functions for affiliate management
+const affiliatePartners = {
+  ...AFFILIATE_CODES,
 }
 
 export function getAllAffiliatePartners(): AffiliateInfo[] {
@@ -139,10 +175,10 @@ export function getAllAffiliates(): AffiliateInfo[] {
   return Object.entries(AFFILIATE_CODES).map(([code, info]) => ({
     code,
     name: info.name || "",
-    discount: info.discount || 0,
-    category: info.category || "",
+    isValid: info.isValid,
     isActive: info.isActive || false,
-    isValid: true,
+    category: info.category || "",
+    discountPercentage: info.discountPercentage || 0,
   }))
 }
 
@@ -160,15 +196,13 @@ export function getAffiliateDiscount(code: string): number {
   // Define discount percentages for different codes
   const discounts: Record<string, number> = {
     PARTNER001: 15,
-    PARTNER002: 12,
-    RESELLER001: 10,
-    RESELLER002: 8,
-    CONSULTANT001: 5,
-    CONSULTANT002: 5,
-    REFERRAL001: 3,
-    REFERRAL002: 3,
-    TRIAL001: 0,
-    DEMO001: 0,
+    PARTNER002: 10,
+    PARTNER003: 5,
+    CONSULTANT001: 12,
+    RESELLER001: 8,
+    DEMO2024: 20,
+    EARLY2024: 25,
+    STARTUP50: 50,
   }
 
   return discounts[normalizedCode] || 0
