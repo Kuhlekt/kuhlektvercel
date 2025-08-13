@@ -9,17 +9,22 @@ interface AffiliateInfo {
 }
 
 // Predefined list of valid affiliate codes
-const VALID_AFFILIATE_CODES = [
+const VALID_AFFILIATES = [
   "PARTNER001",
   "PARTNER002",
-  "RESELLER01",
-  "RESELLER02",
+  "PARTNER003",
+  "RESELLER001",
+  "RESELLER002",
   "CHANNEL001",
   "CHANNEL002",
-  "REFERRAL01",
-  "REFERRAL02",
+  "REFERRAL001",
+  "REFERRAL002",
+  "MARKETING001",
+  "MARKETING002",
   "PROMO2024",
-  "SPECIAL01",
+  "SPECIAL001",
+  "VIP001",
+  "ENTERPRISE001",
 ]
 
 const affiliatePartners: Record<string, AffiliateInfo> = {
@@ -258,16 +263,19 @@ const affiliatePartners: Record<string, AffiliateInfo> = {
 
 /**
  * Validates if an affiliate code is in the approved list
- * @param code - The affiliate code to validate
+ * @param affiliateCode - The affiliate code to validate
  * @returns true if valid, false otherwise
  */
-export function validateAffiliate(code: string): boolean {
-  if (!code || typeof code !== "string") {
+export function validateAffiliate(affiliateCode: string): boolean {
+  if (!affiliateCode || typeof affiliateCode !== "string") {
     return false
   }
 
-  const normalizedCode = code.trim().toUpperCase()
-  return VALID_AFFILIATE_CODES.includes(normalizedCode)
+  // Convert to uppercase for case-insensitive comparison
+  const normalizedCode = affiliateCode.trim().toUpperCase()
+
+  // Check if the code exists in our valid affiliates list
+  return VALID_AFFILIATES.includes(normalizedCode)
 }
 
 /**
@@ -281,15 +289,15 @@ export function validateAffiliateCode(code: string): string | null {
   }
 
   const normalizedCode = code.trim().toUpperCase()
-  return VALID_AFFILIATE_CODES.includes(normalizedCode) ? normalizedCode : null
+  return VALID_AFFILIATES.includes(normalizedCode) ? normalizedCode : null
 }
 
 /**
  * Gets the list of all valid affiliate codes (for admin use)
  * @returns Array of valid affiliate codes
  */
-export function getValidAffiliateCodes(): string[] {
-  return [...VALID_AFFILIATE_CODES]
+export function getValidAffiliates(): string[] {
+  return [...VALID_AFFILIATES]
 }
 
 /**
@@ -318,7 +326,7 @@ export function formatAffiliateCode(code: string): string {
 export function getAffiliateInfo(code: string) {
   const normalizedCode = normalizeAffiliateCode(code)
 
-  if (!VALID_AFFILIATE_CODES.includes(normalizedCode)) {
+  if (!VALID_AFFILIATES.includes(normalizedCode)) {
     return null
   }
 
@@ -334,11 +342,15 @@ export function getAffiliateInfo(code: string) {
           ? "channel"
           : normalizedCode.startsWith("REFERRAL")
             ? "referral"
-            : normalizedCode.startsWith("PROMO")
-              ? "promo"
-              : normalizedCode.startsWith("SPECIAL")
-                ? "special"
-                : "other",
+            : normalizedCode.startsWith("MARKETING")
+              ? "marketing"
+              : normalizedCode.startsWith("PROMO")
+                ? "promo"
+                : normalizedCode.startsWith("SPECIAL")
+                  ? "special"
+                  : normalizedCode.startsWith("VIP")
+                    ? "vip"
+                    : "other",
   }
 }
 

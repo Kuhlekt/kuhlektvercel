@@ -1,288 +1,337 @@
 "use client"
 
 import { useActionState } from "react"
-import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Clock, Users, TrendingUp, ArrowRight } from "lucide-react"
-import ReCAPTCHA from "@/components/recaptcha"
-import { submitDemoRequest } from "./actions"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CheckCircle, Clock, Users, TrendingUp, Shield, Zap } from "lucide-react"
+import { submitDemoForm } from "./actions"
+import { ReCaptcha } from "@/components/recaptcha"
 
-const initialState = {
-  success: false,
-  message: "",
-}
-
-export default function DemoFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
-  const [captchaToken, setCaptchaToken] = useState<string>("")
+export function DemoFormComponent() {
+  const [state, action, isPending] = useActionState(submitDemoForm, null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4 bg-blue-100 text-blue-800">
-            🚀 Free Demo
-          </Badge>
-          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">See Kuhlekt in Action</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Get a personalized demo of our accounts receivable automation platform and discover how we can accelerate
-            your cash flow.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Schedule Your Personalized Demo</h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              See how Kuhlekt can transform your accounts receivable process and accelerate your cash flow in just 30
+              minutes.
+            </p>
+          </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Demo Form */}
-          <Card className="shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-2xl font-semibold">Request Your Demo</CardTitle>
-              <p className="text-gray-600">Fill out the form below and we'll contact you within 24 hours.</p>
-            </CardHeader>
-            <CardContent>
-              <form action={formAction} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                      First Name *
-                    </Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      required
-                      className="mt-1"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                      Last Name *
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      required
-                      className="mt-1"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="businessEmail" className="text-sm font-medium text-gray-700">
-                    Business Email *
-                  </Label>
-                  <Input
-                    id="businessEmail"
-                    name="businessEmail"
-                    type="email"
-                    required
-                    className="mt-1"
-                    placeholder="Enter your business email"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="companyName" className="text-sm font-medium text-gray-700">
-                    Company Name *
-                  </Label>
-                  <Input
-                    id="companyName"
-                    name="companyName"
-                    type="text"
-                    required
-                    className="mt-1"
-                    placeholder="Enter your company name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
-                    Phone Number *
-                  </Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="mt-1"
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="arChallenges" className="text-sm font-medium text-gray-700">
-                    Current AR Challenges (Optional)
-                  </Label>
-                  <Textarea
-                    id="arChallenges"
-                    name="arChallenges"
-                    rows={4}
-                    className="mt-1"
-                    placeholder="Tell us about your current accounts receivable challenges..."
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="affiliateCode" className="text-sm font-medium text-gray-700">
-                    Affiliate Code (Optional)
-                  </Label>
-                  <Input
-                    id="affiliateCode"
-                    name="affiliateCode"
-                    type="text"
-                    className="mt-1"
-                    placeholder="Enter affiliate code if you have one"
-                  />
-                </div>
-
-                <div className="flex justify-center">
-                  <ReCAPTCHA onVerify={setCaptchaToken} />
-                </div>
-
-                <input type="hidden" name="recaptchaToken" value={captchaToken} />
-
-                {state?.message && (
-                  <div
-                    className={`p-4 rounded-md ${
-                      state.success
-                        ? "bg-green-50 border border-green-200 text-green-800"
-                        : "bg-red-50 border border-red-200 text-red-800"
-                    }`}
-                  >
-                    {state.message}
-                  </div>
+          <div className="grid lg:grid-cols-2 gap-12">
+            {/* Demo Form */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl">Request Your Demo</CardTitle>
+                <CardDescription>
+                  Fill out the form below and we'll contact you within 24 hours to schedule your personalized demo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {state?.success && (
+                  <Alert className="mb-6 border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">{state.message}</AlertDescription>
+                  </Alert>
                 )}
 
-                <Button
-                  type="submit"
-                  disabled={isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300"
-                >
-                  {isPending ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Requesting Demo...
-                    </div>
-                  ) : (
-                    <>
-                      Request Demo <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Benefits Section */}
-          <div className="space-y-8">
-            <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">What You'll See in Your Demo</h3>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium">Automated Invoice Processing</h4>
-                    <p className="text-sm text-gray-600">See how we streamline your entire invoice-to-cash process</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium">Real-time Analytics Dashboard</h4>
-                    <p className="text-sm text-gray-600">Get instant insights into your AR performance and cash flow</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium">Smart Collections Workflow</h4>
-                    <p className="text-sm text-gray-600">Automated follow-ups and personalized collection strategies</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium">Integration Capabilities</h4>
-                    <p className="text-sm text-gray-600">
-                      Seamless connection with your existing ERP and accounting systems
+                {state?.success ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Demo Request Submitted!</h3>
+                    <p className="text-gray-600">
+                      We'll be in touch within 24 hours to schedule your personalized demo.
                     </p>
                   </div>
-                </div>
-              </div>
+                ) : (
+                  <form action={action} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="firstName">First Name *</Label>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          required
+                          className={state?.errors?.firstName ? "border-red-500" : ""}
+                        />
+                        {state?.errors?.firstName && (
+                          <p className="text-red-500 text-sm mt-1">{state.errors.firstName}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          required
+                          className={state?.errors?.lastName ? "border-red-500" : ""}
+                        />
+                        {state?.errors?.lastName && (
+                          <p className="text-red-500 text-sm mt-1">{state.errors.lastName}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="email">Business Email *</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        className={state?.errors?.email ? "border-red-500" : ""}
+                      />
+                      {state?.errors?.email && <p className="text-red-500 text-sm mt-1">{state.errors.email}</p>}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="company">Company *</Label>
+                        <Input
+                          id="company"
+                          name="company"
+                          type="text"
+                          required
+                          className={state?.errors?.company ? "border-red-500" : ""}
+                        />
+                        {state?.errors?.company && <p className="text-red-500 text-sm mt-1">{state.errors.company}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone Number *</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          required
+                          className={state?.errors?.phone ? "border-red-500" : ""}
+                        />
+                        {state?.errors?.phone && <p className="text-red-500 text-sm mt-1">{state.errors.phone}</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="jobTitle">Job Title *</Label>
+                      <Input
+                        id="jobTitle"
+                        name="jobTitle"
+                        type="text"
+                        required
+                        className={state?.errors?.jobTitle ? "border-red-500" : ""}
+                      />
+                      {state?.errors?.jobTitle && <p className="text-red-500 text-sm mt-1">{state.errors.jobTitle}</p>}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="companySize">Company Size *</Label>
+                      <Select name="companySize" required>
+                        <SelectTrigger className={state?.errors?.companySize ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select company size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1-10">1-10 employees</SelectItem>
+                          <SelectItem value="11-50">11-50 employees</SelectItem>
+                          <SelectItem value="51-200">51-200 employees</SelectItem>
+                          <SelectItem value="201-1000">201-1,000 employees</SelectItem>
+                          <SelectItem value="1000+">1,000+ employees</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {state?.errors?.companySize && (
+                        <p className="text-red-500 text-sm mt-1">{state.errors.companySize}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="currentSolution">Current AR Solution *</Label>
+                      <Select name="currentSolution" required>
+                        <SelectTrigger className={state?.errors?.currentSolution ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select your current solution" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual processes (Excel, email)</SelectItem>
+                          <SelectItem value="quickbooks">QuickBooks</SelectItem>
+                          <SelectItem value="xero">Xero</SelectItem>
+                          <SelectItem value="sage">Sage</SelectItem>
+                          <SelectItem value="netsuite">NetSuite</SelectItem>
+                          <SelectItem value="sap">SAP</SelectItem>
+                          <SelectItem value="other-erp">Other ERP system</SelectItem>
+                          <SelectItem value="other-ar">Other AR solution</SelectItem>
+                          <SelectItem value="none">No current solution</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {state?.errors?.currentSolution && (
+                        <p className="text-red-500 text-sm mt-1">{state.errors.currentSolution}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="challenges">What are your biggest AR challenges? *</Label>
+                      <Textarea
+                        id="challenges"
+                        name="challenges"
+                        rows={4}
+                        required
+                        placeholder="e.g., slow payment collection, manual follow-ups, lack of visibility into receivables..."
+                        className={state?.errors?.challenges ? "border-red-500" : ""}
+                      />
+                      {state?.errors?.challenges && (
+                        <p className="text-red-500 text-sm mt-1">{state.errors.challenges}</p>
+                      )}
+                    </div>
+
+                    <input type="hidden" name="affiliate" value="" />
+
+                    <ReCaptcha />
+
+                    {state?.message && !state?.success && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-800">{state.message}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button type="submit" className="w-full" size="lg" disabled={isPending}>
+                      {isPending ? "Submitting..." : "Request Demo"}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <h3 className="text-xl font-semibold mb-4">Results You Can Expect</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <Clock className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">40%</div>
-                  <div className="text-sm text-gray-600">Faster Collections</div>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">25%</div>
-                  <div className="text-sm text-gray-600">DSO Reduction</div>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <Users className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">80%</div>
-                  <div className="text-sm text-gray-600">Time Savings</div>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                    <CheckCircle className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">98%</div>
-                  <div className="text-sm text-gray-600">Accuracy Rate</div>
-                </div>
-              </div>
-            </Card>
+            {/* Benefits & What to Expect */}
+            <div className="space-y-8">
+              {/* What You'll See */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-cyan-600" />
+                    What You'll See in Your Demo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <span className="text-gray-700">Live walkthrough of the Kuhlekt platform</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <span className="text-gray-700">Automated collection workflows in action</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <span className="text-gray-700">Real-time analytics and reporting dashboard</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <span className="text-gray-700">Integration capabilities with your existing systems</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                      <span className="text-gray-700">Customized ROI projection for your business</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
 
-            <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4">Simple 3-Step Process</h3>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                    1
+              {/* Key Benefits */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-cyan-600" />
+                    Key Benefits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-cyan-100 p-2 rounded-lg">
+                        <Zap className="h-4 w-4 text-cyan-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">40% Faster Collections</h4>
+                        <p className="text-sm text-gray-600">Automated workflows accelerate payment cycles</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-cyan-100 p-2 rounded-lg">
+                        <Users className="h-4 w-4 text-cyan-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">75% Less Manual Work</h4>
+                        <p className="text-sm text-gray-600">Free up your team for strategic activities</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-cyan-100 p-2 rounded-lg">
+                        <Shield className="h-4 w-4 text-cyan-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">25% DSO Reduction</h4>
+                        <p className="text-sm text-gray-600">Improve cash flow and working capital</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium">Schedule Your Demo</h4>
-                    <p className="text-sm text-gray-600">Fill out the form and we'll contact you within 24 hours</p>
+                </CardContent>
+              </Card>
+
+              {/* Demo Process */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Demo Process</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Submit Request</h4>
+                        <p className="text-sm text-gray-600">Complete the form with your business details</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Schedule Call</h4>
+                        <p className="text-sm text-gray-600">We'll contact you within 24 hours to schedule</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Live Demo</h4>
+                        <p className="text-sm text-gray-600">30-minute personalized demonstration</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold">
+                        4
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Next Steps</h4>
+                        <p className="text-sm text-gray-600">Discuss implementation and pricing options</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Personalized Walkthrough</h4>
-                    <p className="text-sm text-gray-600">30-minute demo tailored to your specific AR challenges</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Get Your Custom Proposal</h4>
-                    <p className="text-sm text-gray-600">Receive a tailored solution and implementation plan</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
