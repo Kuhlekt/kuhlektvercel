@@ -1,27 +1,51 @@
 "use server"
 
 import { sendDemoRequestEmail } from "@/lib/email-service"
-import { validateAffiliate } from "@/lib/affiliate-validation"
-import { verifyCaptcha } from "@/lib/captcha"
+import { validateAffiliateCode } from "@/lib/affiliate-validation"
 
-export async function submitDemoRequest(prevState: any, formData: FormData) {
+export interface DemoFormState {
+  success?: boolean
+  message?: string
+  errors?: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    jobTitle?: string
+    companySize?: string
+    currentSolution?: string
+    timeline?: string
+    challenges?: string
+    recaptcha?: string
+  }
+}
+
+const initialState: DemoFormState = {
+  success: false,
+  message: "",
+  errors: {},
+}
+
+export async function submitDemoRequest(
+  prevState: DemoFormState = initialState,
+  formData: FormData,
+): Promise<DemoFormState> {
   try {
-    // Extract form data with proper null checks
+    // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim() || ""
     const lastName = formData.get("lastName")?.toString()?.trim() || ""
     const email = formData.get("email")?.toString()?.trim() || ""
     const company = formData.get("company")?.toString()?.trim() || ""
-    const phone = formData.get("phone")?.toString()?.trim() || ""
     const jobTitle = formData.get("jobTitle")?.toString()?.trim() || ""
     const companySize = formData.get("companySize")?.toString()?.trim() || ""
     const currentSolution = formData.get("currentSolution")?.toString()?.trim() || ""
     const timeline = formData.get("timeline")?.toString()?.trim() || ""
     const challenges = formData.get("challenges")?.toString()?.trim() || ""
+    const recaptchaToken = formData.get("recaptcha")?.toString()?.trim() || ""
     const affiliateCode = formData.get("affiliateCode")?.toString()?.trim() || ""
-    const captchaToken = formData.get("captchaToken")?.toString()?.trim() || ""
 
-    // Validate required fields
-    const errors: Record<string, string> = {}
+    // Validation
+    const errors: DemoFormState["errors"] = {}
 
     if (!firstName) {
       errors.firstName = "First name is required"
@@ -41,8 +65,29 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       errors.company = "Company name is required"
     }
 
-    if (!phone) {
-      errors.phone = "Phone number is required"
+    if (!jobTitle) {
+      errors.jobTitle = "Job title is required"
+    }
+
+    if (!companySize) {
+      errors.companySize = "Company size is required"
+    }
+
+    if (!currentSolution) {
+      errors.currentSolution = "Current solution is required"
+    }
+
+    if (!timeline) {
+      errors.timeline = "Timeline is required"
+    }
+
+    if (!challenges) {
+      errors.challenges = "Challenges description is required"
+    }
+
+    // Validate reCAPTCHA (allow development token)
+    if (!recaptchaToken) {
+      errors.recaptcha = "Please complete the reCAPTCHA verification"
     }
 
     if (Object.keys(errors).length > 0) {
@@ -53,61 +98,56 @@ export async function submitDemoRequest(prevState: any, formData: FormData) {
       }
     }
 
-    // Verify reCAPTCHA (non-blocking)
-    let captchaVerified = false
-    if (captchaToken && captchaToken !== "development-mode") {
-      try {
-        captchaVerified = await verifyCaptcha(captchaToken)
-      } catch (error) {
-        console.error("reCAPTCHA verification error:", error)
-        // Continue with form submission even if reCAPTCHA fails
-      }
-    }
-
     // Validate affiliate code if provided
-    let validAffiliate = false
+    let affiliateInfo = null
     if (affiliateCode) {
       try {
-        validAffiliate = validateAffiliate(affiliateCode)
+        affiliateInfo = await validateAffiliateCode(affiliateCode)
+        if (!affiliateInfo.isValid) {
+          return {
+            success: false,
+            message: "Invalid affiliate code provided",
+            errors: { recaptcha: "Invalid affiliate code" },
+          }
+        }
       } catch (error) {
         console.error("Affiliate validation error:", error)
-        // Continue with form submission even if affiliate validation fails
+        // Continue without affiliate validation in case of error
       }
-    }
-
-    // Prepare email data
-    const emailData = {
-      firstName,
-      lastName,
-      email,
-      company,
-      phone,
-      jobTitle: jobTitle || undefined,
-      companySize: companySize || undefined,
-      currentSolution: currentSolution || undefined,
-      timeline: timeline || undefined,
-      challenges: challenges || undefined,
     }
 
     // Send email
-    const emailResult = await sendDemoRequestEmail(emailData)
+    try {
+      await sendDemoRequestEmail({
+        firstName,
+        lastName,
+        email,
+        company,
+        jobTitle,
+        companySize,
+        currentSolution,
+        timeline,
+        challenges,
+        affiliateCode: affiliateCode || undefined,
+        affiliateInfo: affiliateInfo || undefined,
+      })
 
-    if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.message)
+      return {
+        success: true,
+        message:
+          "Thank you for your demo request! We'll be in touch within 24 hours to schedule your personalized demonstration.",
+        errors: {},
+      }
+    } catch (emailError) {
+      console.error("Email sending error:", emailError)
       return {
         success: false,
-        message: "There was an error submitting your demo request. Please try again or contact us directly.",
+        message: "There was an error sending your demo request. Please try again or contact us directly.",
         errors: {},
       }
     }
-
-    return {
-      success: true,
-      message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
-      errors: {},
-    }
   } catch (error) {
-    console.error("Demo request submission error:", error)
+    console.error("Demo form submission error:", error)
     return {
       success: false,
       message: "An unexpected error occurred. Please try again.",

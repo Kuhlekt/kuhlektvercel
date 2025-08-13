@@ -1,18 +1,18 @@
 "use client"
 
 import type React from "react"
-import { useActionState, useState } from "react"
+import { useActionState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Mail, Phone, MapPin } from "lucide-react"
-import { submitContactForm } from "./actions"
-import ReCAPTCHA from "@/components/recaptcha"
+import { CheckCircle, AlertCircle, Mail, Phone, MapPin } from "lucide-react"
+import ReCaptcha from "@/components/recaptcha"
+import { submitContactForm, type ContactFormState } from "./actions"
 
-const initialState = {
+const initialState: ContactFormState = {
   success: false,
   message: "",
   errors: {},
@@ -20,22 +20,27 @@ const initialState = {
 
 export default function ContactFormComponent() {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
-  const [captchaToken, setCaptchaToken] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
+  const recaptchaTokenRef = useRef<string>("")
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleRecaptchaVerify = (token: string) => {
+    recaptchaTokenRef.current = token
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
-    formData.append("captchaToken", captchaToken)
-
-    // Execute invisible reCAPTCHA before form submission
-    const recaptchaElement = document.querySelector(".invisible-recaptcha") as any
-    if (recaptchaElement && recaptchaElement.execute) {
-      recaptchaElement.execute()
-    }
+    formData.set("recaptcha", recaptchaTokenRef.current)
 
     // Submit the form
-    formAction(formData)
+    await formAction(formData)
+
+    // Reset form if successful
+    if (state?.success && formRef.current) {
+      formRef.current.reset()
+      recaptchaTokenRef.current = ""
+    }
   }
 
   return (
@@ -59,37 +64,59 @@ export default function ContactFormComponent() {
                 <CardDescription>We'll get back to you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input
-                        id="name"
-                        name="name"
+                        id="firstName"
+                        name="firstName"
                         type="text"
                         required
-                        className={state.errors?.name ? "border-red-500" : ""}
+                        className={state?.errors?.firstName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state.errors?.name && <p className="text-sm text-red-600">{state.errors.name}</p>}
+                      {state?.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input
-                        id="email"
-                        name="email"
-                        type="email"
+                        id="lastName"
+                        name="lastName"
+                        type="text"
                         required
-                        className={state.errors?.email ? "border-red-500" : ""}
+                        className={state?.errors?.lastName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
+                      {state?.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input id="company" name="company" type="text" disabled={isPending} />
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      className={state?.errors?.email ? "border-red-500" : ""}
+                      disabled={isPending}
+                    />
+                    {state?.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company Name *</Label>
+                    <Input
+                      id="company"
+                      name="company"
+                      type="text"
+                      required
+                      className={state?.errors?.company ? "border-red-500" : ""}
+                      disabled={isPending}
+                    />
+                    {state?.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -100,23 +127,22 @@ export default function ContactFormComponent() {
                       rows={5}
                       required
                       placeholder="Tell us about your accounts receivable challenges or questions..."
-                      className={state.errors?.message ? "border-red-500" : ""}
+                      className={state?.errors?.message ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.message && <p className="text-sm text-red-600">{state.errors.message}</p>}
+                    {state?.errors?.message && <p className="text-sm text-red-600">{state.errors.message}</p>}
                   </div>
 
-                  <ReCAPTCHA onVerify={setCaptchaToken} />
+                  <div className="space-y-2">
+                    <ReCaptcha
+                      onVerify={handleRecaptchaVerify}
+                      onError={(error) => console.error("reCAPTCHA error:", error)}
+                    />
+                    {state?.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
+                  </div>
 
                   <Button type="submit" className="w-full" disabled={isPending}>
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending Message...
-                      </>
-                    ) : (
-                      "Send Message"
-                    )}
+                    {isPending ? "Sending..." : "Send Message"}
                   </Button>
 
                   {state.message && (
