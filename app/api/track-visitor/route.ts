@@ -210,14 +210,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
-      const pageHistoryData = (data.pageHistory as PageHistoryItem[])
-        .filter((page) => page.page && page.timestamp) // Filter out invalid entries
-        .map((page) => ({
-          session_id: data.sessionId,
-          page: page.page?.substring(0, 500) || "",
-          timestamp: page.timestamp || new Date().toISOString(),
-          visitor_id: data.visitorId,
-        }))
+      const pageHistoryData: Array<{
+        session_id: string
+        page: string
+        timestamp: string
+        visitor_id: string
+      }> = []
+
+      // Process each page history item individually
+      for (const item of data.pageHistory) {
+        if (item && typeof item === "object" && item.page && item.timestamp) {
+          pageHistoryData.push({
+            session_id: data.sessionId,
+            page: item.page.substring(0, 500),
+            timestamp: item.timestamp,
+            visitor_id: data.visitorId,
+          })
+        }
+      }
 
       if (pageHistoryData.length > 0) {
         const { error: historyError } = await supabase.from("page_history").insert(pageHistoryData).select("id")
