@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
-import { submitDemoRequest } from "./actions"
 
 interface DemoFormState {
   success: boolean
@@ -35,7 +34,7 @@ interface DemoFormState {
 const initialState: DemoFormState = {
   success: false,
   message: "",
-  errors: {}, // Added required errors object
+  errors: {},
 }
 
 export default function DemoFormComponent() {
@@ -51,7 +50,13 @@ export default function DemoFormComponent() {
     })
 
     try {
-      const result = await submitDemoRequest(state, formData)
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
       startTransition(() => {
         setState(result)
       })
