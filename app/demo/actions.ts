@@ -135,6 +135,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
       html: emailBody,
+      text: `New Demo Request from ${firstName} ${lastName} at ${company}\n\nName: ${firstName} ${lastName}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}${jobTitle ? `\nJob Title: ${jobTitle}` : ""}${companySize ? `\nCompany Size: ${companySize}` : ""}${currentSolution ? `\nCurrent Solution: ${currentSolution}` : ""}${timeline ? `\nTimeline: ${timeline}` : ""}${challenges ? `\nChallenges: ${challenges}` : ""}${affiliateCode ? `\nAffiliate Code: ${affiliateCode}` : ""}\n\nSubmitted: ${new Date().toLocaleString()}\nreCAPTCHA: ${recaptchaToken ? "Token Received" : "Bypassed (Debug Mode)"}`,
     })
 
     if (!emailResult.success) {
