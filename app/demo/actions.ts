@@ -24,11 +24,22 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
   try {
     console.log("Demo form - Server action started")
 
-    // Basic validation
-    const firstName = formData.get("firstName")?.toString()?.trim()
-    const email = formData.get("email")?.toString()?.trim()
+    // Ensure formData is valid
+    if (!formData || typeof formData.get !== "function") {
+      console.error("Demo form - Invalid FormData received")
+      return {
+        success: false,
+        message: "Invalid form data received",
+        shouldClearForm: false,
+        errors: {},
+      }
+    }
 
-    console.log("Demo form - Processing:", { firstName, email })
+    // Basic validation with null checks
+    const firstName = formData.get("firstName")?.toString()?.trim() || ""
+    const email = formData.get("email")?.toString()?.trim() || ""
+
+    console.log("Demo form - Processing:", { firstName: firstName.length > 0, email: email.length > 0 })
 
     if (!firstName || !email) {
       console.log("Demo form - Validation failed")
