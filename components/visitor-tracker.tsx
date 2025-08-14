@@ -199,16 +199,25 @@ function VisitorTrackerComponent() {
         )
 
         // Store visitor data in Supabase
-        const response = await fetch("/api/track-visitor", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(visitorData),
-        })
+        try {
+          const response = await fetch("/api/track-visitor", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(visitorData),
+          })
 
-        if (!response.ok) {
-          console.warn("Failed to track visitor:", response.statusText)
+          if (!response.ok) {
+            console.warn("Failed to track visitor:", response.statusText)
+          } else {
+            const result = await response.json().catch(() => null)
+            if (result && !result.success) {
+              console.warn("Visitor tracking returned error:", result.message)
+            }
+          }
+        } catch (fetchError) {
+          console.warn("Error making visitor tracking request:", fetchError)
         }
 
         console.log("🔍 Visitor tracked:", {
