@@ -40,7 +40,7 @@ export async function changePassword(formData: FormData) {
   return { success: "Password changed successfully" }
 }
 
-export async function changePasswordFormAction(formData: FormData): Promise<void> {
+export const handleSubmit = async (formData: FormData) => {
   const cookieStore = cookies()
   const adminSession = cookieStore.get("admin-session")
 
