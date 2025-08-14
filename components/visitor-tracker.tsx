@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { validateAffiliate } from "@/lib/affiliate-validation"
 
@@ -237,10 +237,18 @@ function VisitorTrackerComponent() {
   return null
 }
 
+function VisitorTrackerWithSuspense() {
+  return (
+    <Suspense fallback={null}>
+      <VisitorTrackerComponent />
+    </Suspense>
+  )
+}
+
 export function VisitorTracker() {
   return (
     <div className="visitor-tracker">
-      <VisitorTrackerComponent />
+      <VisitorTrackerWithSuspense />
     </div>
   )
 }
