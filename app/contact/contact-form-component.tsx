@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,8 +23,10 @@ export default function ContactFormComponent() {
   const [state, setState] = useState(initialState)
   const [isPending, setIsPending] = useState(false)
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setIsPending(true)
+    const formData = new FormData(event.currentTarget)
     try {
       const result = await submitContactForm(state, formData)
       setState(result)
@@ -58,7 +62,7 @@ export default function ContactFormComponent() {
                 <CardDescription>Fill out the form below and we'll get back to you soon.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
