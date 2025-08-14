@@ -1,6 +1,5 @@
 "use client"
-import { useState } from "react"
-import type React from "react"
+import { useActionState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,26 +18,7 @@ const initialState: DemoFormState = {
 }
 
 export default function DemoFormComponent() {
-  const [state, setState] = useState<DemoFormState>(initialState)
-  const [isPending, setIsPending] = useState(false)
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setIsPending(true)
-    const formData = new FormData(event.currentTarget)
-    try {
-      const result = await submitDemoRequest(state, formData)
-      setState(result)
-    } catch (error) {
-      setState({
-        success: false,
-        message: "An unexpected error occurred. Please try again.",
-        errors: {},
-      })
-    } finally {
-      setIsPending(false)
-    }
-  }
+  const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -61,7 +41,7 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form action={formAction} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
