@@ -81,8 +81,8 @@ export async function sendEmailWithSES(params: EmailParams) {
     const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
 
     // Create signing key
-    const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-    const kRegion = await hmacSha256(kDate, region)
+    const kDate = await hmacSha256(`AWS4${secretAccessKey!}`, date)
+    const kRegion = await hmacSha256(kDate, region!)
     const kService = await hmacSha256(kRegion, "ses")
     const kSigning = await hmacSha256(kService, "aws4_request")
 
@@ -212,8 +212,8 @@ export async function testAWSSESConnection() {
       const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(payload)}`
       const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
 
-      const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-      const kRegion = await hmacSha256(kDate, region)
+      const kDate = await hmacSha256(`AWS4${secretAccessKey!}`, date)
+      const kRegion = await hmacSha256(kDate, region!)
       const kService = await hmacSha256(kRegion, "ses")
       const kSigning = await hmacSha256(kService, "aws4_request")
 
