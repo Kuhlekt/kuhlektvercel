@@ -4,7 +4,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import bcrypt from "bcryptjs"
 
-export async function handleSubmit(previousState: any, formData: FormData) {
+export async function handleSubmit(formData: FormData) {
   const cookieStore = cookies()
   const adminSession = cookieStore.get("admin-session")
 
@@ -17,25 +17,25 @@ export async function handleSubmit(previousState: any, formData: FormData) {
   const confirmPassword = formData.get("confirmPassword") as string
 
   if (!currentPassword || !newPassword || !confirmPassword) {
-    return { error: "All fields are required" }
+    throw new Error("All fields are required")
   }
 
   if (newPassword !== confirmPassword) {
-    return { error: "New passwords do not match" }
+    throw new Error("New passwords do not match")
   }
 
   if (newPassword.length < 8) {
-    return { error: "New password must be at least 8 characters long" }
+    throw new Error("New password must be at least 8 characters long")
   }
 
   // Verify current password
   const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
 
   if (!isCurrentPasswordValid) {
-    return { error: "Current password is incorrect" }
+    throw new Error("Current password is incorrect")
   }
 
-  // Password changed successfully
+  // Password changed successfully - redirect
   redirect("/admin/change-password?success=true")
 }
 
