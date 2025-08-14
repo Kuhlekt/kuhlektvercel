@@ -11,7 +11,10 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [siteKey, setSiteKey] = useState<string | null>(null)
   const [isEnabled, setIsEnabled] = useState(false)
   const [token, setToken] = useState<string>("")
+  const [errorState, setErrorState] = useState<string | null>(null)
   const hiddenInputRef = useRef<HTMLInputElement>(null)
+  const retryCountRef = useRef(0)
+  const maxRetries = 3
 
   useEffect(() => {
     const fetchRecaptchaConfig = async () => {
@@ -30,37 +33,31 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         if (data.enabled && data.siteKey) {
           loadReCAPTCHA(data.siteKey)
         } else {
-          // Provide bypass token for development
-          const bypassToken = "development-bypass-token"
-          setToken(bypassToken)
-          updateHiddenInput(bypassToken)
-          if (onVerify) {
-            onVerify(bypassToken)
-          }
+          handleFallbackToken("development-disabled")
         }
       } catch (error) {
         console.error("Failed to fetch reCAPTCHA config:", error)
-        // Provide bypass token on error
-        const bypassToken = "development-bypass-token"
-        setToken(bypassToken)
-        updateHiddenInput(bypassToken)
-        if (onVerify) {
-          onVerify(bypassToken)
-        }
+        setErrorState("config-fetch-failed")
+        handleFallbackToken("config-error")
       }
     }
 
     fetchRecaptchaConfig().catch((error) => {
       console.error("Unhandled error in reCAPTCHA config fetch:", error)
-      // Ensure we always have a token even if everything fails
-      const bypassToken = "development-bypass-token"
-      setToken(bypassToken)
-      updateHiddenInput(bypassToken)
-      if (onVerify) {
-        onVerify(bypassToken)
-      }
+      setErrorState("config-fetch-critical")
+      handleFallbackToken("critical-error")
     })
   }, [onVerify])
+
+  const handleFallbackToken = (reason: string) => {
+    const bypassToken = `development-bypass-token-${reason}`
+    console.log(`reCAPTCHA fallback activated: ${reason}`)
+    setToken(bypassToken)
+    updateHiddenInput(bypassToken)
+    if (onVerify) {
+      onVerify(bypassToken)
+    }
+  }
 
   const updateHiddenInput = (tokenValue: string) => {
     if (hiddenInputRef.current) {
@@ -76,58 +73,80 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     script.async = true
     script.defer = true
 
+    const scriptTimeout = setTimeout(() => {
+      console.error("reCAPTCHA script loading timeout")
+      setErrorState("script-timeout")
+      handleFallbackToken("script-timeout")
+    }, 10000) // 10 second timeout
+
     script.onload = () => {
+      clearTimeout(scriptTimeout)
       setIsLoaded(true)
+      setErrorState(null)
 
       if (window.grecaptcha) {
         window.grecaptcha.ready(() => {
           executeReCAPTCHA(key)
         })
+      } else {
+        console.error("grecaptcha not available after script load")
+        setErrorState("grecaptcha-unavailable")
+        handleFallbackToken("grecaptcha-unavailable")
       }
     }
 
-    script.onerror = () => {
-      console.error("Failed to load reCAPTCHA script")
-      // Provide bypass token on script load error
-      const bypassToken = "development-bypass-token"
-      setToken(bypassToken)
-      updateHiddenInput(bypassToken)
-      if (onVerify) {
-        onVerify(bypassToken)
-      }
+    script.onerror = (error) => {
+      clearTimeout(scriptTimeout)
+      console.error("Failed to load reCAPTCHA script:", error)
+      setErrorState("script-load-failed")
+      handleFallbackToken("script-load-failed")
     }
 
-    document.head.appendChild(script)
+    try {
+      document.head.appendChild(script)
+    } catch (error) {
+      clearTimeout(scriptTimeout)
+      console.error("Failed to append reCAPTCHA script:", error)
+      setErrorState("script-append-failed")
+      handleFallbackToken("script-append-failed")
+    }
   }
 
   const executeReCAPTCHA = async (key: string) => {
     if (!window.grecaptcha || !key) {
-      const bypassToken = "development-bypass-token"
-      setToken(bypassToken)
-      updateHiddenInput(bypassToken)
-      if (onVerify) {
-        onVerify(bypassToken)
-      }
+      setErrorState("execution-prerequisites-missing")
+      handleFallbackToken("execution-prerequisites-missing")
       return
     }
 
     try {
       const tokenValue = await window.grecaptcha.execute(key, { action: "submit" })
+
+      if (!tokenValue) {
+        throw new Error("reCAPTCHA returned empty token")
+      }
+
       console.log("reCAPTCHA token received:", tokenValue ? "✓" : "✗")
       setToken(tokenValue)
       updateHiddenInput(tokenValue)
+      setErrorState(null)
+      retryCountRef.current = 0
+
       if (onVerify) {
         onVerify(tokenValue)
       }
     } catch (error) {
       console.error("reCAPTCHA execution error:", error)
-      // Provide bypass token on execution error
-      const bypassToken = "development-bypass-token"
-      setToken(bypassToken)
-      updateHiddenInput(bypassToken)
-      if (onVerify) {
-        onVerify(bypassToken)
+      retryCountRef.current += 1
+
+      if (retryCountRef.current < maxRetries) {
+        console.log(`Retrying reCAPTCHA execution (${retryCountRef.current}/${maxRetries})`)
+        setTimeout(() => executeReCAPTCHA(key), 1000 * retryCountRef.current)
+        return
       }
+
+      setErrorState("execution-failed")
+      handleFallbackToken("execution-failed")
     }
   }
 
@@ -135,6 +154,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     <div>
       <input ref={hiddenInputRef} type="hidden" name="recaptcha-token" value={token} readOnly />
       {!isEnabled && <p className="text-xs text-gray-500 mt-2">reCAPTCHA is disabled in development mode</p>}
+      {errorState && <p className="text-xs text-yellow-600 mt-2">reCAPTCHA fallback active ({errorState})</p>}
     </div>
   )
 }
