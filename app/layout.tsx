@@ -7,7 +7,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
 export const metadata: Metadata = {
   title: "Kuhlekt - AR Automation & Digital Collections Platform",
