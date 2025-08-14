@@ -27,29 +27,31 @@ export default function DemoFormComponent() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
 
-    startTransition(() => {
-      submitDemoRequest(state, formData)
-        .then((result) => {
-          setState(result)
+    try {
+      startTransition(() => {
+        // Set pending state immediately
+      })
 
-          // Clear form if successful and shouldClearForm is true
-          if (result.success && result.shouldClearForm) {
-            const form = event.currentTarget
-            if (form) {
-              form.reset()
-            }
-          }
-        })
-        .catch((error) => {
-          console.error("Form submission error:", error)
-          setState({
-            success: false,
-            message: "There was an error submitting your demo request. Please try again.",
-            errors: {},
-            shouldClearForm: false,
-          })
-        })
-    })
+      const result = await submitDemoRequest(state, formData)
+
+      setState(result)
+
+      // Clear form if successful and shouldClearForm is true
+      if (result.success && result.shouldClearForm) {
+        const form = event.currentTarget
+        if (form) {
+          form.reset()
+        }
+      }
+    } catch (error) {
+      console.error("Form submission error:", error)
+      setState({
+        success: false,
+        message: "There was an error submitting your demo request. Please try again.",
+        errors: {},
+        shouldClearForm: false,
+      })
+    }
   }
 
   return (
