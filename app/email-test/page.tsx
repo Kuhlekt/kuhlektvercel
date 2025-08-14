@@ -18,7 +18,7 @@ interface TestResult {
     secretKey: boolean
     fromEmail: boolean
   }
-  messageId?: string | null
+  messageId?: string | null // Changed from string | undefined to string | null to match sendTestEmail return type
 }
 
 export default function EmailTestPage() {
