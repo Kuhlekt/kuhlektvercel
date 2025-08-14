@@ -22,18 +22,25 @@ export default function ContactFormComponent() {
   const [isPending, startTransition] = useTransition()
 
   const handleSubmit = async (formData: FormData) => {
-    startTransition(async () => {
-      try {
-        const result = await submitContactForm(state, formData)
+    startTransition(() => {
+      setState({ ...initialState, message: "Sending..." })
+    })
+
+    try {
+      const result = await submitContactForm(state, formData)
+      startTransition(() => {
         setState(result)
-      } catch (error) {
+      })
+    } catch (error) {
+      console.error("Form submission error:", error)
+      startTransition(() => {
         setState({
           success: false,
           message: "There was an error sending your message. Please try again.",
           errors: {},
         })
-      }
-    })
+      })
+    }
   }
 
   return (
