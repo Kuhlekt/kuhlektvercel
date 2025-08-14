@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import bcrypt from "bcryptjs"
 
 export async function handleSubmit(formData: FormData) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const adminSession = cookieStore.get("admin-session")
 
   if (!adminSession) {
@@ -40,7 +40,7 @@ export async function handleSubmit(formData: FormData) {
 }
 
 export async function changePassword(formData: FormData) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const adminSession = cookieStore.get("admin-session")
 
   if (!adminSession) {
