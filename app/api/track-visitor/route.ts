@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+// FORCE_REBUILD_TIMESTAMP_2024_01_14_15_30_00 - Added to force Git recognition
 // Rate limiting map (in production, use Redis or similar)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // CORRECTED_PAGE_HISTORY_PROCESSING - No filter functions used here
     if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
       const pageHistoryData: Array<{
         session_id: string
@@ -217,7 +219,7 @@ export async function POST(request: NextRequest) {
         visitor_id: string
       }> = []
 
-      // Process each page history item individually
+      // Process each page history item individually using for-loop (no filter/map)
       for (const item of data.pageHistory) {
         if (item && typeof item === "object" && item.page && item.timestamp) {
           pageHistoryData.push({
