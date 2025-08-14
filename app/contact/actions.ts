@@ -5,9 +5,9 @@ import { testAWSSESConnection } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 export interface ContactFormState {
-  success?: boolean
-  message?: string
-  errors?: Record<string, string>
+  success: boolean
+  message: string
+  errors: Record<string, string>
 }
 
 export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
