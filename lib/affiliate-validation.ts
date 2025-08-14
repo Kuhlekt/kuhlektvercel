@@ -415,15 +415,20 @@ export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
   const upperCode = code.toUpperCase().trim()
   const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
+  const hasPartnerName = "partnerName" in affiliate
+  const hasName = "name" in affiliate
+  const hasCommissionRate = "commissionRate" in affiliate
+  const hasCommission = "commission" in affiliate
+
   return {
     code: upperCode,
-    name: ("partnerName" in affiliate ? affiliate.partnerName : affiliate.name) || "",
-    commission: ("commissionRate" in affiliate ? affiliate.commissionRate : affiliate.commission) || 0,
-    isActive: affiliate.isActive !== undefined ? affiliate.isActive : true,
+    name: hasPartnerName ? affiliate.partnerName : hasName ? affiliate.name : "",
+    commission: hasCommissionRate ? affiliate.commissionRate : hasCommission ? affiliate.commission : 0,
+    isActive: "isActive" in affiliate ? affiliate.isActive : true,
     isValid: true,
-    partnerName: "partnerName" in affiliate ? affiliate.partnerName : undefined,
+    partnerName: hasPartnerName ? affiliate.partnerName : undefined,
     discountPercent: "discountPercent" in affiliate ? affiliate.discountPercent : undefined,
-    commissionRate: "commissionRate" in affiliate ? affiliate.commissionRate : undefined,
+    commissionRate: hasCommissionRate ? affiliate.commissionRate : undefined,
   }
 }
 
