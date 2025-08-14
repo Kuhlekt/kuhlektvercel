@@ -30,7 +30,7 @@ export default function SolutionsPage() {
                   <img
                     src="/images/sme-credit-management.png"
                     alt="SME Credit Management Tools"
-                    className="w-full h-60 object-cover rounded-lg"
+                    className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
                 <CardTitle className="text-2xl">SME Credit Management Tools</CardTitle>
@@ -63,7 +63,7 @@ export default function SolutionsPage() {
                   <img
                     src="/images/enterprise-receivables-dashboard.png"
                     alt="Enterprise Receivables Software"
-                    className="w-full h-60 object-cover rounded-lg"
+                    className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
                 <CardTitle className="text-2xl">Enterprise Receivables Software</CardTitle>
@@ -95,7 +95,7 @@ export default function SolutionsPage() {
                   <img
                     src="/images/debt-collection-system.png"
                     alt="Corporate Debt Collection System"
-                    className="w-full h-60 object-cover rounded-lg"
+                    className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
                 <CardTitle className="text-2xl">Corporate Debt Collection System</CardTitle>
@@ -127,7 +127,7 @@ export default function SolutionsPage() {
                   <img
                     src="/images/credit-control-software.png"
                     alt="Credit Control Software for Businesses"
-                    className="w-full h-60 object-cover rounded-lg"
+                    className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
                 <CardTitle className="text-2xl">Credit Control Software for Businesses</CardTitle>
