@@ -417,9 +417,9 @@ export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
 
   return {
     code: upperCode,
-    name: affiliate.partnerName || "",
-    commission: affiliate.commissionRate || 0,
-    isActive: true,
+    name: affiliate.partnerName || affiliate.name || "",
+    commission: affiliate.commissionRate || affiliate.commission || 0,
+    isActive: affiliate.isActive !== undefined ? affiliate.isActive : true,
     isValid: true,
     partnerName: affiliate.partnerName,
     discountPercent: affiliate.discountPercent,
