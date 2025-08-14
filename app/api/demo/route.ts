@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server"
+
 export async function POST(request: Request) {
   try {
     console.log("🔍 Demo API route called")
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
 
     // Basic validation
     if (!name || !email || !company || !message) {
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
           message: "All fields are required.",
@@ -26,14 +28,14 @@ export async function POST(request: Request) {
     // For now, just return success without sending email
     console.log("✅ Demo form submission successful")
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       message: "Thank you for your demo request! We will contact you soon.",
       shouldClearForm: true,
     })
   } catch (error) {
     console.error("❌ Demo API error:", error)
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         message: "An error occurred while submitting your demo request. Please try again.",
