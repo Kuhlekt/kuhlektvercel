@@ -40,7 +40,7 @@ export async function changePassword(formData: FormData) {
   return { success: "Password changed successfully" }
 }
 
-export async function changePasswordFormAction(formData: FormData) {
+export async function changePasswordAction(formData: FormData) {
   const cookieStore = cookies()
   const adminSession = cookieStore.get("admin-session")
 
@@ -69,19 +69,6 @@ export async function changePasswordFormAction(formData: FormData) {
 
   if (!isCurrentPasswordValid) {
     throw new Error("Current password is incorrect")
-  }
-
-  // Redirect on success for form actions
-  redirect("/admin/tracking?message=Password changed successfully")
-}
-
-export async function changePasswordAction(formData: FormData) {
-  const result = await changePassword(formData)
-
-  if (result.error) {
-    // For form actions, we need to handle errors differently
-    // This will be caught by the error boundary or handled by the form
-    throw new Error(result.error)
   }
 
   // Redirect on success for form actions
