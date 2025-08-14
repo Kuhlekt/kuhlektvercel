@@ -40,7 +40,7 @@ export async function changePassword(formData: FormData) {
   return { success: "Password changed successfully" }
 }
 
-export const handleSubmit = async (formData: FormData) => {
+async function _handleSubmit(formData: FormData) {
   const cookieStore = cookies()
   const adminSession = cookieStore.get("admin-session")
 
@@ -74,3 +74,5 @@ export const handleSubmit = async (formData: FormData) => {
   // Password changed successfully - redirect
   redirect("/admin/change-password?success=true")
 }
+
+export const handleSubmit = _handleSubmit.bind(null)
