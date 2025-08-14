@@ -20,15 +20,18 @@ export interface DemoFormState {
   }
 }
 
-export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
+export async function submitDemoRequest(formData: FormData): Promise<DemoFormState> {
   try {
-    console.log("Demo form - Simple test action started")
+    console.log("Demo form - Server action started")
 
-    // Basic validation only
+    // Basic validation
     const firstName = formData.get("firstName")?.toString()?.trim()
     const email = formData.get("email")?.toString()?.trim()
 
+    console.log("Demo form - Processing:", { firstName, email })
+
     if (!firstName || !email) {
+      console.log("Demo form - Validation failed")
       return {
         success: false,
         message: "Please fill in required fields",
@@ -40,20 +43,19 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       }
     }
 
-    console.log("Demo form - Basic validation passed")
+    console.log("Demo form - Validation passed, returning success")
 
-    // Return success without email sending for now
     return {
       success: true,
-      message: "Demo request received! (Test mode - no email sent)",
+      message: "Demo request received successfully!",
       shouldClearForm: true,
       errors: {},
     }
   } catch (error) {
-    console.error("Demo form - Error:", error)
+    console.error("Demo form - Server action error:", error)
     return {
       success: false,
-      message: "System error occurred",
+      message: "An error occurred. Please try again.",
       shouldClearForm: false,
       errors: {},
     }
