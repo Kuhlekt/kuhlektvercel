@@ -53,7 +53,7 @@ export function getPageHistory() {
 }
 
 // Helper function to get all visitors (for admin)
-export function getAllVisitors() {
+export function getAllVisitors(): VisitorData[] {
   if (typeof window === "undefined") return []
 
   try {
