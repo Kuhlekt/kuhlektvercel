@@ -7,7 +7,13 @@ import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 export interface ContactFormState {
   success: boolean
   message: string
-  errors: Record<string, string>
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    message?: string
+    recaptcha?: string
+  }
 }
 
 export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
@@ -73,7 +79,7 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     }
 
     // Validation
-    const errors: Record<string, string> = {}
+    const errors: { firstName?: string; lastName?: string; email?: string; message?: string; recaptcha?: string } = {}
 
     if (!firstName) {
       errors.firstName = "First name is required"
