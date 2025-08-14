@@ -374,7 +374,9 @@ async function hmacSha256(
   return signatureArray
 }
 
-export async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmail(
+  params: EmailParams,
+): Promise<{ success: boolean; message: string; messageId: string | null }> {
   return await sendEmailWithSES(params)
 }
 
