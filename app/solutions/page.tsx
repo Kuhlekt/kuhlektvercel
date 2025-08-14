@@ -26,18 +26,18 @@ export default function SolutionsPage() {
           <div className="grid md:grid-cols-2 gap-8 mb-16">
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="mb-4">
+                <CardTitle className="text-2xl">SME Credit Management Tools</CardTitle>
+                <CardDescription>
+                  Streamlined credit management for small and medium enterprises with automated workflows and real-time
+                  insights.
+                </CardDescription>
+                <div className="mt-4">
                   <img
                     src="/images/sme-credit-management.png"
                     alt="SME Credit Management Tools"
                     className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
-                <CardTitle className="text-2xl">SME Credit Management Tools</CardTitle>
-                <CardDescription>
-                  Streamlined credit management for small and medium enterprises with automated workflows and real-time
-                  insights.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -59,17 +59,17 @@ export default function SolutionsPage() {
 
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="mb-4">
+                <CardTitle className="text-2xl">Enterprise Receivables Software</CardTitle>
+                <CardDescription>
+                  Comprehensive AR management for large enterprises with advanced analytics and multi-entity support.
+                </CardDescription>
+                <div className="mt-4">
                   <img
                     src="/images/enterprise-receivables-dashboard.png"
                     alt="Enterprise Receivables Software"
                     className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
-                <CardTitle className="text-2xl">Enterprise Receivables Software</CardTitle>
-                <CardDescription>
-                  Comprehensive AR management for large enterprises with advanced analytics and multi-entity support.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -91,17 +91,17 @@ export default function SolutionsPage() {
 
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="mb-4">
+                <CardTitle className="text-2xl">Corporate Debt Collection System</CardTitle>
+                <CardDescription>
+                  Intelligent debt collection workflows with automated escalation and compliance management.
+                </CardDescription>
+                <div className="mt-4">
                   <img
                     src="/images/debt-collection-system.png"
                     alt="Corporate Debt Collection System"
                     className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
-                <CardTitle className="text-2xl">Corporate Debt Collection System</CardTitle>
-                <CardDescription>
-                  Intelligent debt collection workflows with automated escalation and compliance management.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -123,17 +123,17 @@ export default function SolutionsPage() {
 
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="mb-4">
+                <CardTitle className="text-2xl">Credit Control Software for Businesses</CardTitle>
+                <CardDescription>
+                  Complete credit control solution with risk assessment, limit management, and automated workflows.
+                </CardDescription>
+                <div className="mt-4">
                   <img
                     src="/images/credit-control-software.png"
                     alt="Credit Control Software for Businesses"
                     className="w-full h-45 object-cover rounded-lg"
                   />
                 </div>
-                <CardTitle className="text-2xl">Credit Control Software for Businesses</CardTitle>
-                <CardDescription>
-                  Complete credit control solution with risk assessment, limit management, and automated workflows.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
