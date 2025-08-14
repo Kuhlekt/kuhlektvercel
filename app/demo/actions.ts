@@ -1,5 +1,7 @@
 "use server"
 
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+
 export interface DemoFormState {
   success: boolean
   message: string
@@ -33,6 +35,46 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
         shouldClearForm: false,
         errors: {},
       }
+    }
+
+    let recaptchaToken = null
+    const possibleFields = [
+      "recaptcha-token",
+      "g-recaptcha-response",
+      "recaptchaToken",
+      "recaptcha_token",
+      "recaptcha",
+      "captcha",
+      "token",
+    ]
+
+    for (const field of possibleFields) {
+      const value = formData.get(field)?.toString()?.trim()
+      if (value && value.length > 10) {
+        recaptchaToken = value
+        console.log(`Demo form: Found reCAPTCHA token in field '${field}'`)
+        break
+      }
+    }
+
+    console.log("Demo form - reCAPTCHA token received:", !!recaptchaToken)
+
+    if (recaptchaToken) {
+      console.log("Demo form: Verifying reCAPTCHA token...")
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken)
+      console.log("Demo form: reCAPTCHA result:", recaptchaResult)
+
+      if (!recaptchaResult.success) {
+        console.error("Demo form: reCAPTCHA verification failed:", recaptchaResult.error)
+        return {
+          success: false,
+          message: `reCAPTCHA verification failed: ${recaptchaResult.error}`,
+          shouldClearForm: false,
+          errors: { recaptcha: "Verification failed. Please try again." },
+        }
+      }
+    } else {
+      console.warn("Demo form: No reCAPTCHA token found - proceeding for debugging")
     }
 
     // Basic validation with null checks
