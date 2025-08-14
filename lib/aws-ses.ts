@@ -8,13 +8,6 @@ interface EmailParams {
   html?: string
 }
 
-interface EmailOptions {
-  to: string
-  subject: string
-  text: string
-  html?: string
-}
-
 export async function sendEmailWithSES(params: EmailParams) {
   // Check if AWS SES is configured
   const region = process.env.AWS_SES_REGION
@@ -381,24 +374,9 @@ async function hmacSha256(
   return signatureArray
 }
 
-export async function sendEmailViaSES(params: EmailParams): Promise<boolean> {
-  try {
-    // Mock AWS SES implementation
-    console.log("AWS SES Email:", {
-      to: params.to,
-      subject: params.subject,
-      preview: params.text.substring(0, 50) + "...",
-    })
-
-    // Simulate email sending delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    return true
-  } catch (error) {
-    console.error("AWS SES Error:", error)
-    return false
-  }
+export async function sendEmail(params: EmailParams): Promise<boolean> {
+  return await sendEmailWithSES(params)
 }
 
 // Legacy export for backward compatibility
-export const sendEmail = sendEmailWithSES
+export const sendEmailLegacy = sendEmailWithSES

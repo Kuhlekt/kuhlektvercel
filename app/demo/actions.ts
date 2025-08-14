@@ -4,9 +4,22 @@ import { sendEmail } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 export interface DemoFormState {
-  success?: boolean
-  message?: string
-  errors?: Record<string, string>
+  success: boolean
+  message: string
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    phone?: string
+    jobTitle?: string
+    companySize?: string
+    currentSolution?: string
+    timeline?: string
+    challenges?: string
+    affiliateCode?: string
+    recaptcha?: string
+  }
 }
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {

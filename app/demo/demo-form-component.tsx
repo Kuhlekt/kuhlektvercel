@@ -9,17 +9,17 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
-import { submitDemoRequest } from "./actions"
+import { submitDemoRequest, type DemoFormState } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
 
-const initialState = {
+const initialState: DemoFormState = {
   success: false,
   message: "",
   errors: {},
 }
 
 export default function DemoFormComponent() {
-  const [state, setState] = useState(initialState)
+  const [state, setState] = useState<DemoFormState>(initialState)
   const [isPending, setIsPending] = useState(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
