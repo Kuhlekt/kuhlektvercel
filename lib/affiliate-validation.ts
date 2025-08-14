@@ -446,13 +446,14 @@ export async function getAllAffiliates(): Promise<AffiliateInfo[]> {
     const hasName = "name" in info
     const hasCommissionRate = "commissionRate" in info
     const hasCommission = "commission" in info
+    const hasIsValid = "isValid" in info
 
     return {
       code,
       name: hasPartnerName ? info.partnerName : hasName ? info.name : "",
       commission: hasCommissionRate ? info.commissionRate : hasCommission ? info.commission : 0,
       isActive: "isActive" in info ? info.isActive : true,
-      isValid: info.isValid,
+      isValid: hasIsValid ? info.isValid : true,
       partnerName: hasPartnerName ? info.partnerName : undefined,
       discountPercent: "discountPercent" in info ? info.discountPercent : undefined,
       commissionRate: hasCommissionRate ? info.commissionRate : undefined,
