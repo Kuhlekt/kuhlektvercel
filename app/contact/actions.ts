@@ -132,7 +132,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     })
 
     if (!emailResult.success) {
-      console.error("Failed to send contact form email:", emailResult.error)
+      console.error("Failed to send contact form email:", emailResult.message)
       return {
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
