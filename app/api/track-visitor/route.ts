@@ -122,6 +122,14 @@ export async function POST(request: NextRequest) {
         autoRefreshToken: false,
         persistSession: false,
       },
+      db: {
+        schema: "public",
+      },
+      global: {
+        headers: {
+          "x-application-name": "kuhlekt-tracking-system",
+        },
+      },
     })
 
     const validIpAddress = getValidIpAddress(request)
@@ -153,26 +161,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database configuration error" }, { status: 500 })
     }
 
-    // Store in Supabase with upsert to handle duplicate visitors
-    const { error } = await supabase.from("visitor_tracking").upsert(sanitizedData, {
-      onConflict: "visitor_id",
-      ignoreDuplicates: false,
-    })
-
-    if (error) {
-      console.error("Supabase error:", error)
-      return NextResponse.json({ success: false, error: "Database error" }, { status: 500 })
+    const { error: healthError } = await supabase.from("visitor_tracking").select("id").limit(1)
+    if (healthError && healthError.code === "PGRST301") {
+      console.error("Supabase connection error:", healthError)
+      return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    if (data.pageHistory && Array.isArray(data.pageHistory)) {
-      const pageHistoryData = data.pageHistory.map((page: any) => ({
-        session_id: data.sessionId,
-        page: page.page?.substring(0, 500) || "",
-        timestamp: page.timestamp || new Date().toISOString(),
-        visitor_id: data.visitorId,
-      }))
+    const { data: upsertData, error: upsertError } = await supabase
+      .from("visitor_tracking")
+      .upsert(sanitizedData, {
+        onConflict: "visitor_id",
+        ignoreDuplicates: false,
+      })
+      .select("id, is_new_user, session_duration")
 
-      await supabase.from("page_history").upsert(pageHistoryData)
+    if (upsertError) {
+      console.error("Supabase upsert error:", {
+        code: upsertError.code,
+        message: upsertError.message,
+        details: upsertError.details,
+        hint: upsertError.hint,
+      })
+
+      // Handle specific Supabase errors
+      if (upsertError.code === "23505") {
+        // Unique constraint violation
+        console.warn("Duplicate visitor ID detected, updating existing record")
+        const { error: updateError } = await supabase
+          .from("visitor_tracking")
+          .update({
+            ...sanitizedData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("visitor_id", sanitizedData.visitor_id)
+
+        if (updateError) {
+          console.error("Supabase update error:", updateError)
+          return NextResponse.json({ success: false, error: "Database update failed" }, { status: 500 })
+        }
+      } else {
+        return NextResponse.json({ success: false, error: "Database operation failed" }, { status: 500 })
+      }
+    }
+
+    if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
+      const pageHistoryData = data.pageHistory
+        .filter((page) => page.page && page.timestamp) // Filter out invalid entries
+        .map((page: any) => ({
+          session_id: data.sessionId,
+          page: page.page?.substring(0, 500) || "",
+          timestamp: page.timestamp || new Date().toISOString(),
+          visitor_id: data.visitorId,
+        }))
+
+      if (pageHistoryData.length > 0) {
+        const { error: historyError } = await supabase.from("page_history").insert(pageHistoryData).select("id")
+
+        if (historyError) {
+          console.warn("Page history insertion failed:", historyError)
+          // Don't fail the main request if page history fails
+        }
+      }
     }
 
     if (data.isNewUser) {
