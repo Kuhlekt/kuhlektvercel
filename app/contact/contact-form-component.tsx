@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import { submitContactForm } from "./actions"
+import { submitContactForm, type ContactFormState } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
 
-const initialState = {
+const initialState: ContactFormState = {
   success: false,
   message: "",
   errors: {},
