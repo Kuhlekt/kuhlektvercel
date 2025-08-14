@@ -145,6 +145,14 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     `
 
     // Send email
+    console.log("Demo form - About to send email with AWS SES")
+    console.log("Demo form - Email params:", {
+      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
+      subject: emailSubject,
+      hasHtml: !!emailBody,
+      hasText: true,
+    })
+
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
@@ -152,8 +160,21 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       text: `New Demo Request from ${firstName} ${lastName} at ${company}\n\nName: ${firstName} ${lastName}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}${jobTitle ? `\nJob Title: ${jobTitle}` : ""}${companySize ? `\nCompany Size: ${companySize}` : ""}${currentSolution ? `\nCurrent Solution: ${currentSolution}` : ""}${timeline ? `\nTimeline: ${timeline}` : ""}${challenges ? `\nChallenges: ${challenges}` : ""}${affiliateCode ? `\nAffiliate Code: ${affiliateCode}` : ""}\n\nSubmitted: ${new Date().toLocaleString()}\nreCAPTCHA: ${recaptchaToken ? "Token Received" : "Bypassed (Debug Mode)"}`,
     })
 
+    console.log("Demo form - Email result:", {
+      success: emailResult.success,
+      message: emailResult.message,
+      messageId: emailResult.messageId,
+    })
+
     if (!emailResult.success) {
       console.error("Failed to send demo request email:", emailResult.message)
+      console.error("Demo form - Email failure details:", {
+        adminEmail: process.env.ADMIN_EMAIL,
+        awsRegion: process.env.AWS_SES_REGION,
+        awsFromEmail: process.env.AWS_SES_FROM_EMAIL,
+        hasAccessKey: !!process.env.AWS_SES_ACCESS_KEY_ID,
+        hasSecretKey: !!process.env.AWS_SES_SECRET_ACCESS_KEY,
+      })
       return {
         success: false,
         message: "There was an error submitting your demo request. Please try again or contact us directly.",
