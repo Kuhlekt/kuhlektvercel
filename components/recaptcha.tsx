@@ -14,10 +14,16 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const hiddenInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Fetch reCAPTCHA configuration
-    fetch("/api/recaptcha-config")
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchRecaptchaConfig = async () => {
+      try {
+        const response = await fetch("/api/recaptcha-config")
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+
         setSiteKey(data.siteKey)
         setIsEnabled(data.enabled)
 
@@ -32,8 +38,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
             onVerify(bypassToken)
           }
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Failed to fetch reCAPTCHA config:", error)
         // Provide bypass token on error
         const bypassToken = "development-bypass-token"
@@ -42,7 +47,19 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         if (onVerify) {
           onVerify(bypassToken)
         }
-      })
+      }
+    }
+
+    fetchRecaptchaConfig().catch((error) => {
+      console.error("Unhandled error in reCAPTCHA config fetch:", error)
+      // Ensure we always have a token even if everything fails
+      const bypassToken = "development-bypass-token"
+      setToken(bypassToken)
+      updateHiddenInput(bypassToken)
+      if (onVerify) {
+        onVerify(bypassToken)
+      }
+    })
   }, [onVerify])
 
   const updateHiddenInput = (tokenValue: string) => {
@@ -83,7 +100,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     document.head.appendChild(script)
   }
 
-  const executeReCAPTCHA = (key: string) => {
+  const executeReCAPTCHA = async (key: string) => {
     if (!window.grecaptcha || !key) {
       const bypassToken = "development-bypass-token"
       setToken(bypassToken)
@@ -95,29 +112,16 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     }
 
     try {
-      window.grecaptcha
-        .execute(key, { action: "submit" })
-        .then((tokenValue: string) => {
-          console.log("reCAPTCHA token received:", tokenValue ? "✓" : "✗")
-          setToken(tokenValue)
-          updateHiddenInput(tokenValue)
-          if (onVerify) {
-            onVerify(tokenValue)
-          }
-        })
-        .catch((error: any) => {
-          console.error("reCAPTCHA execution error:", error)
-          // Provide bypass token on execution error
-          const bypassToken = "development-bypass-token"
-          setToken(bypassToken)
-          updateHiddenInput(bypassToken)
-          if (onVerify) {
-            onVerify(bypassToken)
-          }
-        })
+      const tokenValue = await window.grecaptcha.execute(key, { action: "submit" })
+      console.log("reCAPTCHA token received:", tokenValue ? "✓" : "✗")
+      setToken(tokenValue)
+      updateHiddenInput(tokenValue)
+      if (onVerify) {
+        onVerify(tokenValue)
+      }
     } catch (error) {
-      console.error("reCAPTCHA error:", error)
-      // Provide bypass token on any error
+      console.error("reCAPTCHA execution error:", error)
+      // Provide bypass token on execution error
       const bypassToken = "development-bypass-token"
       setToken(bypassToken)
       updateHiddenInput(bypassToken)
