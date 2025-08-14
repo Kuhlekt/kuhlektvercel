@@ -1,9 +1,3 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -12,67 +6,22 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  webpack: (config, { isServer, dev }) => {
-    // Handle potential module resolution issues
+  experimental: {
+    serverComponentsExternalPackages: ['bcryptjs'],
+  },
+  webpack: (config, { isServer }) => {
+    // Simplified webpack configuration to prevent ELIFECYCLE errors
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'bcryptjs'];
+    }
+    
+    // Essential fallbacks only
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
-      crypto: false,
-      stream: false,
-      url: false,
-      zlib: false,
-      http: false,
-      https: false,
-      assert: false,
-      os: false,
-      path: false,
-      buffer: false,
-      util: false,
-      events: false,
-      querystring: false,
-      child_process: false,
-      worker_threads: false,
-      perf_hooks: false,
     };
-    
-    if (isServer) {
-      config.externals = [...(config.externals || []), 'bcryptjs'];
-    }
-    
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@': path.resolve(__dirname, './'),
-        'server-only': false,
-      };
-    }
-    
-    // Add proper handling for .mjs files
-    config.module.rules.push({
-      test: /\.mjs$/,
-      include: /node_modules/,
-      type: 'javascript/auto',
-    });
-    
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...config.optimization.splitChunks.cacheGroups,
-            vendor: {
-              name: 'vendor',
-              test: /[\\/]node_modules[\\/]/,
-              chunks: 'all',
-              priority: 10,
-            },
-          },
-        },
-      };
-    }
     
     return config;
   },
@@ -99,27 +48,6 @@ const nextConfig = {
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=()',
-          },
-        ],
-      },
-      {
-        source: '/admin/(.*)',
-        headers: [
-          {
-            key: 'X-Robots-Tag',
-            value: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate, private',
           },
         ],
       },
