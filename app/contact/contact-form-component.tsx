@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,24 @@ const initialState = {
 }
 
 export default function ContactFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
+  const [state, setState] = useState(initialState)
+  const [isPending, setIsPending] = useState(false)
+
+  const handleSubmit = async (formData: FormData) => {
+    setIsPending(true)
+    try {
+      const result = await submitContactForm(state, formData)
+      setState(result)
+    } catch (error) {
+      setState({
+        success: false,
+        message: "An unexpected error occurred. Please try again.",
+        errors: {},
+      })
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -41,7 +58,7 @@ export default function ContactFormComponent() {
                 <CardDescription>Fill out the form below and we'll get back to you soon.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={formAction} className="space-y-6">
+                <form action={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
