@@ -10,8 +10,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
-import { submitDemoRequest, type DemoFormState } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
+
+interface DemoFormState {
+  success: boolean
+  message: string
+  errors?: Record<string, string>
+  shouldClearForm?: boolean
+}
 
 const initialState: DemoFormState = {
   success: false,
@@ -32,7 +38,12 @@ export default function DemoFormComponent() {
         // Set pending state immediately
       })
 
-      const result = await submitDemoRequest(state, formData)
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
 
       setState(result)
 
