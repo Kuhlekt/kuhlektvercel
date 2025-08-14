@@ -139,7 +139,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     })
 
     if (!emailResult.success) {
-      console.error("Failed to send demo request email:", emailResult.error)
+      console.error("Failed to send demo request email:", emailResult.message)
       return {
         success: false,
         message: "There was an error submitting your demo request. Please try again or contact us directly.",
