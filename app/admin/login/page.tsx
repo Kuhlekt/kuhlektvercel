@@ -42,7 +42,14 @@ export default function AdminLoginPage() {
             </Alert>
           )}
 
-          <form action={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              handleSubmit(formData)
+            }}
+            className="space-y-4"
+          >
             <div>
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required disabled={isSubmitting} className="mt-1" />
