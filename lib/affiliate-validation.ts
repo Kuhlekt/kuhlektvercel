@@ -403,13 +403,23 @@ export async function formatAffiliateCode(code: string): Promise<string> {
  */
 export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
   if (!(await validateAffiliateCode(code))) {
-    return { isValid: false }
+    return {
+      code: "",
+      name: "",
+      commission: 0,
+      isActive: false,
+      isValid: false,
+    }
   }
 
   const upperCode = code.toUpperCase().trim()
   const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
   return {
+    code: upperCode,
+    name: affiliate.partnerName || "",
+    commission: affiliate.commissionRate || 0,
+    isActive: true,
     isValid: true,
     partnerName: affiliate.partnerName,
     discountPercent: affiliate.discountPercent,
