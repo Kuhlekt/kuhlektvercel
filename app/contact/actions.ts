@@ -7,6 +7,7 @@ import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 export interface ContactFormState {
   success: boolean
   message: string
+  shouldClearForm?: boolean // Added flag to signal form should be cleared
   errors: {
     firstName?: string
     lastName?: string
@@ -142,6 +143,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       return {
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
+        shouldClearForm: false, // Don't clear form on error
         errors: {},
       }
     }
@@ -149,6 +151,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     return {
       success: true,
       message: "Thank you for your message! We'll get back to you within 24 hours.",
+      shouldClearForm: true, // Added flag to signal form clearing
       errors: {},
     }
   } catch (error) {
@@ -156,6 +159,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     return {
       success: false,
       message: "An unexpected error occurred. Please try again.",
+      shouldClearForm: false, // Don't clear form on error
       errors: {},
     }
   }

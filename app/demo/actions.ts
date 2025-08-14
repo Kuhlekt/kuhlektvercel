@@ -6,6 +6,7 @@ import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 export interface DemoFormState {
   success: boolean
   message: string
+  shouldClearForm?: boolean // Added flag to signal form should be cleared
   errors: {
     firstName?: string
     lastName?: string
@@ -156,6 +157,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       return {
         success: false,
         message: "There was an error submitting your demo request. Please try again or contact us directly.",
+        shouldClearForm: false, // Don't clear form on error
         errors: {},
       }
     }
@@ -163,6 +165,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     return {
       success: true,
       message: "Thank you for your demo request! We'll contact you within 24 hours to schedule your personalized demo.",
+      shouldClearForm: true, // Added flag to signal form clearing
       errors: {},
     }
   } catch (error) {
@@ -170,6 +173,7 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     return {
       success: false,
       message: "An unexpected error occurred. Please try again.",
+      shouldClearForm: false, // Don't clear form on error
       errors: {},
     }
   }
