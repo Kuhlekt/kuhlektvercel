@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json()
 
-    // Validate input data
     const validation = validateVisitorData(data)
     if (!validation.isValid) {
       console.warn("Invalid visitor data:", validation.errors)
@@ -127,7 +126,6 @@ export async function POST(request: NextRequest) {
 
     const validIpAddress = getValidIpAddress(request)
 
-    // Sanitize data before storing
     const sanitizedData = {
       visitor_id: data.visitorId.substring(0, 100),
       session_id: data.sessionId.substring(0, 100),
@@ -143,8 +141,11 @@ export async function POST(request: NextRequest) {
       page_views: Math.min(Math.max(data.pageViews || 1, 1), 10000),
       first_visit: data.firstVisit || new Date().toISOString(),
       last_visit: data.lastVisit || new Date().toISOString(),
-      ip_address: validIpAddress, // Use validated IP or null instead of "unknown"
+      ip_address: validIpAddress,
+      is_new_user: data.isNewUser || false, // Track if this is a new user sign-on
+      session_duration: data.sessionDuration || 0, // Track session length for real-time analytics
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
 
     if (typeof supabase.from !== "function") {
@@ -163,7 +164,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database error" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    if (data.pageHistory && Array.isArray(data.pageHistory)) {
+      const pageHistoryData = data.pageHistory.map((page: any) => ({
+        session_id: data.sessionId,
+        page: page.page?.substring(0, 500) || "",
+        timestamp: page.timestamp || new Date().toISOString(),
+        visitor_id: data.visitorId,
+      }))
+
+      await supabase.from("page_history").upsert(pageHistoryData)
+    }
+
+    if (data.isNewUser) {
+      console.log("🆕 New user detected:", {
+        visitorId: data.visitorId.substring(0, 16) + "...",
+        timestamp: new Date().toISOString(),
+        page: data.page,
+        referrer: data.referrer,
+        utmSource: data.utmSource,
+      })
+    }
+
+    return NextResponse.json({
+      success: true,
+      isNewUser: data.isNewUser,
+      timestamp: new Date().toISOString(),
+    })
   } catch (error) {
     console.error("Visitor tracking error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })

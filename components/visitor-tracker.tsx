@@ -21,6 +21,9 @@ interface VisitorData {
   pageViews?: number
   firstVisit?: string
   lastVisit?: string
+  isNewUser?: boolean
+  sessionDuration?: number
+  pageHistory?: any[]
 }
 
 // Helper function to get visitor data (can be used by forms)
@@ -114,6 +117,17 @@ function VisitorTrackerComponent() {
         // Get existing visitor data
         const existingVisitorData = getVisitorData()
         const isFirstVisit = !existingVisitorData
+        const isNewUser = isFirstVisit || !localStorage.getItem("kuhlekt_visitor_id")
+
+        const sessionStartTime = sessionStorage.getItem("kuhlekt_session_start")
+        const currentTime = Date.now()
+        let sessionDuration = 0
+
+        if (!sessionStartTime) {
+          sessionStorage.setItem("kuhlekt_session_start", currentTime.toString())
+        } else {
+          sessionDuration = Math.floor((currentTime - Number.parseInt(sessionStartTime)) / 1000) // in seconds
+        }
 
         const visitorData: VisitorData = {
           sessionId,
@@ -125,6 +139,9 @@ function VisitorTrackerComponent() {
           pageViews: (existingVisitorData?.pageViews || 0) + 1,
           firstVisit: existingVisitorData?.firstVisit || new Date().toISOString(),
           lastVisit: new Date().toISOString(),
+          isNewUser,
+          sessionDuration,
+          pageHistory: getPageHistory(),
           ...(utmSource && { utmSource }),
           ...(utmMedium && { utmMedium }),
           ...(utmCampaign && { utmCampaign }),
@@ -171,11 +188,13 @@ function VisitorTrackerComponent() {
 
         localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
 
-        // Dispatch storage event for real-time admin updates
         window.dispatchEvent(
-          new StorageEvent("storage", {
-            key: "kuhlekt_all_visitors",
-            newValue: JSON.stringify(allVisitors),
+          new CustomEvent("kuhlekt-visitor-update", {
+            detail: {
+              type: isNewUser ? "new-user" : "returning-user",
+              visitorData,
+              timestamp: new Date().toISOString(),
+            },
           }),
         )
 
@@ -197,6 +216,8 @@ function VisitorTrackerComponent() {
           sessionId: sessionId.slice(0, 16) + "...",
           page: window.location.pathname,
           isFirstVisit,
+          isNewUser,
+          sessionDuration,
           pageViews: visitorData.pageViews,
           utmSource,
           utmCampaign,
