@@ -15,14 +15,27 @@ import { submitDemoRequest } from "./actions"
 interface DemoFormState {
   success: boolean
   message: string
-  errors?: Record<string, string>
   shouldClearForm?: boolean
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    phone?: string
+    jobTitle?: string
+    companySize?: string
+    currentSolution?: string
+    timeline?: string
+    challenges?: string
+    affiliateCode?: string
+    recaptcha?: string
+  }
 }
 
 const initialState: DemoFormState = {
   success: false,
   message: "",
-  errors: {},
+  errors: {}, // Added required errors object
 }
 
 export default function DemoFormComponent() {
@@ -148,6 +161,7 @@ export default function DemoFormComponent() {
                   <div className="space-y-2">
                     <Label htmlFor="jobTitle">Job Title</Label>
                     <Input id="jobTitle" name="jobTitle" type="text" disabled={isPending} />
+                    {state.errors?.jobTitle && <p className="text-sm text-red-600">{state.errors.jobTitle}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -159,6 +173,7 @@ export default function DemoFormComponent() {
                       placeholder="e.g., 50-100 employees"
                       disabled={isPending}
                     />
+                    {state.errors?.companySize && <p className="text-sm text-red-600">{state.errors.companySize}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -170,6 +185,9 @@ export default function DemoFormComponent() {
                       placeholder="e.g., QuickBooks, SAP, Manual process"
                       disabled={isPending}
                     />
+                    {state.errors?.currentSolution && (
+                      <p className="text-sm text-red-600">{state.errors.currentSolution}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -181,6 +199,7 @@ export default function DemoFormComponent() {
                       placeholder="e.g., Within 3 months"
                       disabled={isPending}
                     />
+                    {state.errors?.timeline && <p className="text-sm text-red-600">{state.errors.timeline}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -192,6 +211,7 @@ export default function DemoFormComponent() {
                       placeholder="Tell us about your current accounts receivable challenges..."
                       disabled={isPending}
                     />
+                    {state.errors?.challenges && <p className="text-sm text-red-600">{state.errors.challenges}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -203,9 +223,13 @@ export default function DemoFormComponent() {
                       placeholder="Enter affiliate code if you have one"
                       disabled={isPending}
                     />
+                    {state.errors?.affiliateCode && (
+                      <p className="text-sm text-red-600">{state.errors.affiliateCode}</p>
+                    )}
                   </div>
 
                   <ReCAPTCHA />
+                  {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
 
                   <Button type="submit" className="w-full" disabled={isPending}>
                     {isPending ? (
