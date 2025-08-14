@@ -25,6 +25,15 @@ export interface DemoFormState {
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
+    console.log("Demo form - Server action started")
+    console.log("Demo form - Environment check:", {
+      hasAdminEmail: !!process.env.ADMIN_EMAIL,
+      hasAwsAccessKey: !!process.env.AWS_SES_ACCESS_KEY_ID,
+      hasAwsSecretKey: !!process.env.AWS_SES_SECRET_ACCESS_KEY,
+      hasAwsRegion: !!process.env.AWS_SES_REGION,
+      hasAwsFromEmail: !!process.env.AWS_SES_FROM_EMAIL,
+    })
+
     // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
     const lastName = formData.get("lastName")?.toString()?.trim()
@@ -37,6 +46,8 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
     const timeline = formData.get("timeline")?.toString()?.trim()
     const challenges = formData.get("challenges")?.toString()?.trim()
     const affiliateCode = formData.get("affiliateCode")?.toString()?.trim()
+
+    console.log("Demo form - Form data extracted successfully")
 
     console.log(
       "Demo form - All form fields:",
@@ -190,11 +201,17 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       errors: {},
     }
   } catch (error) {
-    console.error("Demo request submission error:", error)
+    console.error("Demo request submission error - Full details:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      timestamp: new Date().toISOString(),
+    })
+
     return {
       success: false,
       message: "An unexpected error occurred. Please try again.",
-      shouldClearForm: false, // Don't clear form on error
+      shouldClearForm: false,
       errors: {},
     }
   }
