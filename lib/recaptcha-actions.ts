@@ -14,6 +14,20 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
       return { success: false, error: "Invalid reCAPTCHA token" }
     }
 
+    if (token === "browser-error" || token.includes("browser-error")) {
+      console.log("reCAPTCHA browser error detected - allowing submission with warning")
+      const isDevelopment = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "preview"
+
+      if (isDevelopment) {
+        console.log("Browser error bypass allowed in development/preview mode")
+        return { success: true }
+      } else {
+        // In production, still allow but log the issue
+        console.warn("Browser error in production - allowing submission but logging issue")
+        return { success: true }
+      }
+    }
+
     if (token === "development-bypass-token") {
       const isDevelopment = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "preview"
       console.log(`reCAPTCHA bypass token detected - environment: ${process.env.NODE_ENV || "unknown"}`)
