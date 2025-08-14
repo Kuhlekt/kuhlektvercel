@@ -20,7 +20,7 @@ export interface DemoFormState {
   }
 }
 
-export async function submitDemoRequest(formData: FormData): Promise<DemoFormState> {
+export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
     console.log("Demo form - Server action started")
 
