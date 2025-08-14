@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
 
@@ -31,16 +31,7 @@ export default function SolutionsPage() {
                   Streamlined credit management for small and medium enterprises with automated workflows and real-time
                   insights.
                 </CardDescription>
-                <div className="mt-4">
-                  <img
-                    src="/images/sme-credit-management.png"
-                    alt="SME Credit Management Tools"
-                    className="w-full h-45 object-cover rounded-lg"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 mt-4">
                   <li className="flex items-center space-x-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm">Automated credit scoring</span>
@@ -54,7 +45,14 @@ export default function SolutionsPage() {
                     <span className="text-sm">Customer portal access</span>
                   </li>
                 </ul>
-              </CardContent>
+                <div className="mt-6">
+                  <img
+                    src="/images/sme-credit-management.png"
+                    alt="SME Credit Management Tools"
+                    className="w-full h-45 object-cover rounded-lg"
+                  />
+                </div>
+              </CardHeader>
             </Card>
 
             <Card className="shadow-lg">
@@ -63,16 +61,7 @@ export default function SolutionsPage() {
                 <CardDescription>
                   Comprehensive AR management for large enterprises with advanced analytics and multi-entity support.
                 </CardDescription>
-                <div className="mt-4">
-                  <img
-                    src="/images/enterprise-receivables-dashboard.png"
-                    alt="Enterprise Receivables Software"
-                    className="w-full h-45 object-cover rounded-lg"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 mt-4">
                   <li className="flex items-center space-x-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm">Multi-entity management</span>
@@ -86,7 +75,14 @@ export default function SolutionsPage() {
                     <span className="text-sm">API integrations</span>
                   </li>
                 </ul>
-              </CardContent>
+                <div className="mt-6">
+                  <img
+                    src="/images/enterprise-receivables-dashboard.png"
+                    alt="Enterprise Receivables Software"
+                    className="w-full h-45 object-cover rounded-lg"
+                  />
+                </div>
+              </CardHeader>
             </Card>
 
             <Card className="shadow-lg">
@@ -95,16 +91,7 @@ export default function SolutionsPage() {
                 <CardDescription>
                   Intelligent debt collection workflows with automated escalation and compliance management.
                 </CardDescription>
-                <div className="mt-4">
-                  <img
-                    src="/images/debt-collection-system.png"
-                    alt="Corporate Debt Collection System"
-                    className="w-full h-45 object-cover rounded-lg"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 mt-4">
                   <li className="flex items-center space-x-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm">Automated escalation rules</span>
@@ -118,7 +105,14 @@ export default function SolutionsPage() {
                     <span className="text-sm">Performance analytics</span>
                   </li>
                 </ul>
-              </CardContent>
+                <div className="mt-6">
+                  <img
+                    src="/images/debt-collection-system.png"
+                    alt="Corporate Debt Collection System"
+                    className="w-full h-45 object-cover rounded-lg"
+                  />
+                </div>
+              </CardHeader>
             </Card>
 
             <Card className="shadow-lg">
@@ -127,16 +121,7 @@ export default function SolutionsPage() {
                 <CardDescription>
                   Complete credit control solution with risk assessment, limit management, and automated workflows.
                 </CardDescription>
-                <div className="mt-4">
-                  <img
-                    src="/images/credit-control-software.png"
-                    alt="Credit Control Software for Businesses"
-                    className="w-full h-45 object-cover rounded-lg"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-2 mt-4">
                   <li className="flex items-center space-x-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-sm">Risk assessment tools</span>
@@ -150,7 +135,14 @@ export default function SolutionsPage() {
                     <span className="text-sm">Workflow automation</span>
                   </li>
                 </ul>
-              </CardContent>
+                <div className="mt-6">
+                  <img
+                    src="/images/credit-control-software.png"
+                    alt="Credit Control Software for Businesses"
+                    className="w-full h-45 object-cover rounded-lg"
+                  />
+                </div>
+              </CardHeader>
             </Card>
           </div>
 
