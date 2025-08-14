@@ -25,14 +25,20 @@ export interface DemoFormState {
 
 export async function submitDemoRequest(prevState: DemoFormState, formData: FormData): Promise<DemoFormState> {
   try {
-    console.log("Demo form - Server action started")
-    console.log("Demo form - Environment check:", {
-      hasAdminEmail: !!process.env.ADMIN_EMAIL,
-      hasAwsAccessKey: !!process.env.AWS_SES_ACCESS_KEY_ID,
-      hasAwsSecretKey: !!process.env.AWS_SES_SECRET_ACCESS_KEY,
-      hasAwsRegion: !!process.env.AWS_SES_REGION,
-      hasAwsFromEmail: !!process.env.AWS_SES_FROM_EMAIL,
-    })
+    // Validate inputs immediately
+    if (!formData || typeof formData.get !== "function") {
+      console.error("Demo form - Invalid formData object:", formData)
+      return {
+        success: false,
+        message: "Invalid form submission. Please try again.",
+        shouldClearForm: false,
+        errors: {},
+      }
+    }
+
+    console.log("Demo form - Server action started successfully")
+    console.log("Demo form - FormData type:", typeof formData)
+    console.log("Demo form - FormData entries count:", Array.from(formData.entries()).length)
 
     // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
@@ -200,17 +206,17 @@ export async function submitDemoRequest(prevState: DemoFormState, formData: Form
       shouldClearForm: true, // Added flag to signal form clearing
       errors: {},
     }
-  } catch (error) {
-    console.error("Demo request submission error - Full details:", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
+  } catch (topLevelError) {
+    console.error("Demo form - Top-level error before main processing:", {
+      error: topLevelError instanceof Error ? topLevelError.message : String(topLevelError),
+      stack: topLevelError instanceof Error ? topLevelError.stack : undefined,
+      type: typeof topLevelError,
       timestamp: new Date().toISOString(),
     })
 
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again.",
+      message: "A system error occurred. Please try again.",
       shouldClearForm: false,
       errors: {},
     }
