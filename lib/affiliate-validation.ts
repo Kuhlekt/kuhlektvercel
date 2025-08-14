@@ -417,13 +417,13 @@ export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
 
   return {
     code: upperCode,
-    name: affiliate.partnerName || affiliate.name || "",
-    commission: affiliate.commissionRate || affiliate.commission || 0,
+    name: ("partnerName" in affiliate ? affiliate.partnerName : affiliate.name) || "",
+    commission: ("commissionRate" in affiliate ? affiliate.commissionRate : affiliate.commission) || 0,
     isActive: affiliate.isActive !== undefined ? affiliate.isActive : true,
     isValid: true,
-    partnerName: affiliate.partnerName,
-    discountPercent: affiliate.discountPercent,
-    commissionRate: affiliate.commissionRate,
+    partnerName: "partnerName" in affiliate ? affiliate.partnerName : undefined,
+    discountPercent: "discountPercent" in affiliate ? affiliate.discountPercent : undefined,
+    commissionRate: "commissionRate" in affiliate ? affiliate.commissionRate : undefined,
   }
 }
 
