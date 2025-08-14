@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
+import { submitDemoRequest } from "./actions"
 
 interface DemoFormState {
   success: boolean
@@ -33,36 +33,28 @@ export default function DemoFormComponent() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
 
-    try {
-      startTransition(() => {
-        // Set pending state immediately
-      })
+    startTransition(async () => {
+      try {
+        const result = await submitDemoRequest(state, formData)
+        setState(result)
 
-      const response = await fetch("/api/demo", {
-        method: "POST",
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      setState(result)
-
-      // Clear form if successful and shouldClearForm is true
-      if (result.success && result.shouldClearForm) {
-        const form = event.currentTarget
-        if (form) {
-          form.reset()
+        // Clear form if successful and shouldClearForm is true
+        if (result.success && result.shouldClearForm) {
+          const form = event.currentTarget
+          if (form) {
+            form.reset()
+          }
         }
+      } catch (error) {
+        console.error("Form submission error:", error)
+        setState({
+          success: false,
+          message: "There was an error submitting your demo request. Please try again.",
+          errors: {},
+          shouldClearForm: false,
+        })
       }
-    } catch (error) {
-      console.error("Form submission error:", error)
-      setState({
-        success: false,
-        message: "There was an error submitting your demo request. Please try again.",
-        errors: {},
-        shouldClearForm: false,
-      })
-    }
+    })
   }
 
   return (
