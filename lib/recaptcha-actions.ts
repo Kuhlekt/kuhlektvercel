@@ -76,7 +76,7 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
       }
     } catch (fetchError) {
       clearTimeout(timeoutId)
-      if (fetchError.name === "AbortError") {
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
         console.error("reCAPTCHA verification timeout")
         console.warn("reCAPTCHA timeout - allowing submission with warning")
         return { success: true }
