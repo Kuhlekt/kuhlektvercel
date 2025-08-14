@@ -100,7 +100,7 @@ function VisitorTrackerComponent() {
         // Validate affiliate code if present
         let validatedAffiliate: string | undefined
         if (affiliate) {
-          const isValid = validateAffiliate(affiliate)
+          const isValid = await validateAffiliate(affiliate)
           if (isValid) {
             validatedAffiliate = affiliate.toUpperCase()
             // Store validated affiliate in localStorage for future reference
