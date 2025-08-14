@@ -40,4 +40,37 @@ export async function changePassword(formData: FormData) {
   return { success: "Password changed successfully" }
 }
 
-export const changePasswordAction = changePassword.bind(null)
+export async function changePasswordFormAction(formData: FormData): Promise<void> {
+  const cookieStore = cookies()
+  const adminSession = cookieStore.get("admin-session")
+
+  if (!adminSession) {
+    redirect("/admin/login")
+  }
+
+  const currentPassword = formData.get("currentPassword") as string
+  const newPassword = formData.get("newPassword") as string
+  const confirmPassword = formData.get("confirmPassword") as string
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    throw new Error("All fields are required")
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new Error("New passwords do not match")
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error("New password must be at least 8 characters long")
+  }
+
+  // Verify current password
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, process.env.ADMIN_PASSWORD || "")
+
+  if (!isCurrentPasswordValid) {
+    throw new Error("Current password is incorrect")
+  }
+
+  // Password changed successfully - redirect
+  redirect("/admin/change-password?success=true")
+}
