@@ -21,40 +21,28 @@ export default function DemoFormComponent() {
   const [state, setState] = useState<DemoFormState>(initialState)
   const [isPending, startTransition] = useTransition()
 
-  const handleSubmit = (formData: FormData) => {
-    startTransition(() => {
-      submitDemoRequest(state, formData)
-        .then((result) => {
-          // Ensure result is valid before setting state
-          if (result && typeof result === "object") {
-            setState(result)
+  const handleSubmit = async (formData: FormData) => {
+    startTransition(async () => {
+      try {
+        const result = await submitDemoRequest(state, formData)
+        setState(result)
 
-            // Clear form if successful and shouldClearForm is true
-            if (result.success && result.shouldClearForm) {
-              const form = document.querySelector("form") as HTMLFormElement
-              if (form) {
-                form.reset()
-              }
-            }
-          } else {
-            console.error("Invalid response from server action:", result)
-            setState({
-              success: false,
-              message: "There was an error submitting your demo request. Please try again.",
-              errors: {},
-              shouldClearForm: false,
-            })
+        // Clear form if successful and shouldClearForm is true
+        if (result.success && result.shouldClearForm) {
+          const form = document.querySelector("form") as HTMLFormElement
+          if (form) {
+            form.reset()
           }
+        }
+      } catch (error) {
+        console.error("Form submission error:", error)
+        setState({
+          success: false,
+          message: "There was an error submitting your demo request. Please try again.",
+          errors: {},
+          shouldClearForm: false,
         })
-        .catch((error) => {
-          console.error("Form submission error:", error)
-          setState({
-            success: false,
-            message: "There was an error submitting your demo request. Please try again.",
-            errors: {},
-            shouldClearForm: false,
-          })
-        })
+      }
     })
   }
 
@@ -79,14 +67,7 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.currentTarget)
-                    handleSubmit(formData)
-                  }}
-                  className="space-y-6"
-                >
+                <form action={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
