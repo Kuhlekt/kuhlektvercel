@@ -101,6 +101,11 @@ function isValidIpAddress(ip: string): boolean {
   return ipv4Regex.test(ip) || ipv6Regex.test(ip)
 }
 
+interface PageHistoryItem {
+  page?: string
+  timestamp?: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -206,8 +211,8 @@ export async function POST(request: NextRequest) {
 
     if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
       const pageHistoryData = data.pageHistory
-        .filter((page) => page.page && page.timestamp) // Filter out invalid entries
-        .map((page: any) => ({
+        .filter((page: PageHistoryItem) => page.page && page.timestamp) // Filter out invalid entries
+        .map((page: PageHistoryItem) => ({
           session_id: data.sessionId,
           page: page.page?.substring(0, 500) || "",
           timestamp: page.timestamp || new Date().toISOString(),
