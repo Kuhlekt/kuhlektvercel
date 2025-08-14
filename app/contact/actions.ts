@@ -111,11 +111,24 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       <p><strong>reCAPTCHA:</strong> ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}</p>
     `
 
+    const emailText = `
+New Contact Form Submission
+
+Name: ${firstName} ${lastName}
+Email: ${email}
+${company ? `Company: ${company}` : ""}
+${phone ? `Phone: ${phone}` : ""}
+${message ? `Message: ${message}` : "Message: No message provided"}
+Submitted: ${new Date().toLocaleString()}
+reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
+    `
+
     // Send email
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
       html: emailBody,
+      text: emailText, // Added required text property
     })
 
     if (!emailResult.success) {
