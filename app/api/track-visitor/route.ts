@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
       const pageHistoryData = (data.pageHistory as PageHistoryItem[])
-        .filter((page) => page.page && page.timestamp) // Filter out invalid entries
+        .filter((page: PageHistoryItem) => page.page && page.timestamp) // Added explicit type annotation to fix TypeScript error
         .map((page) => ({
           session_id: data.sessionId,
           page: page.page?.substring(0, 500) || "",
