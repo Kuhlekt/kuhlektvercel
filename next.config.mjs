@@ -6,8 +6,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  serverComponentsExternalPackages: ['bcryptjs'],
   experimental: {
-    serverComponentsExternalPackages: ['bcryptjs'],
   },
   webpack: (config, { isServer }) => {
     // Simplified webpack configuration to prevent ELIFECYCLE errors
