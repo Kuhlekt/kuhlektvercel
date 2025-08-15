@@ -42,9 +42,27 @@ export default function ContactFormComponent() {
       const response = await fetch("/api/contact", {
         method: "POST",
         body: formData,
+      }).catch((fetchError) => {
+        console.error("[v0] Fetch error caught:", fetchError)
+        throw new Error("Network error occurred")
       })
 
-      const result = await response.json()
+      if (!response) {
+        throw new Error("No response received")
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json().catch((jsonError) => {
+        console.error("[v0] JSON parsing error:", jsonError)
+        throw new Error("Invalid response format")
+      })
+
+      if (!result) {
+        throw new Error("Empty response received")
+      }
 
       startTransition(() => {
         setState(result)
@@ -57,11 +75,12 @@ export default function ContactFormComponent() {
         }
       })
     } catch (error) {
-      console.error("Form submission error:", error)
+      console.error("[v0] Form submission error:", error)
       startTransition(() => {
         setState({
           success: false,
-          message: "There was an error sending your message. Please try again.",
+          message:
+            error instanceof Error ? error.message : "There was an error sending your message. Please try again.",
           errors: {},
         })
       })
