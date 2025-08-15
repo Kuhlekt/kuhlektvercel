@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -47,6 +48,7 @@ interface PageHistory {
 }
 
 export default function TrackingPage() {
+  const router = useRouter()
   const [visitors, setVisitors] = useState<Visitor[]>([])
   const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -57,6 +59,24 @@ export default function TrackingPage() {
   const [dataChanged, setDataChanged] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const previousDataRef = useRef<string>("")
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/admin/check-auth")
+        if (!response.ok) {
+          router.push("/admin/login")
+          return
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error)
+        router.push("/admin/login")
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   // Get all visitors from localStorage
   const getAllVisitors = useCallback((): Visitor[] => {

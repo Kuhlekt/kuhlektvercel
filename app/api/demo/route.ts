@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { sendEmailWithSES } from "@/lib/aws-ses"
+import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 export async function POST(request: Request) {
   try {
@@ -22,6 +24,7 @@ export async function POST(request: Request) {
       recaptchaToken: recaptchaToken ? "✓" : "✗",
     })
 
+    // Basic validation
     if (!firstName || !lastName || !email || !company || !phone) {
       return NextResponse.json(
         {
@@ -34,7 +37,87 @@ export async function POST(request: Request) {
       )
     }
 
-    // For now, just return success without sending email
+    // Verify reCAPTCHA
+    console.log("🔒 Verifying reCAPTCHA...")
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken)
+
+    if (!recaptchaResult.success) {
+      console.warn("⚠️ reCAPTCHA verification failed, but allowing submission:", recaptchaResult.message)
+      // Allow submission to proceed even if reCAPTCHA fails
+    } else {
+      console.log("✅ reCAPTCHA verification successful")
+    }
+
+    // Send email notification
+    console.log("📧 Sending demo request email...")
+
+    const adminEmail = process.env.ADMIN_EMAIL
+    if (!adminEmail) {
+      console.error("❌ ADMIN_EMAIL environment variable not set")
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email configuration error. Please try again later.",
+          shouldClearForm: false,
+          errors: {},
+        },
+        { status: 500 },
+      )
+    }
+
+    const emailSubject = `New Demo Request from ${firstName} ${lastName} - ${company}`
+    const emailText = `
+New Demo Request Received
+
+Contact Information:
+- Name: ${firstName} ${lastName}
+- Email: ${email}
+- Company: ${company}
+- Phone: ${phone}
+
+Submitted at: ${new Date().toLocaleString()}
+
+Please follow up with this demo request within 24 hours.
+    `.trim()
+
+    const emailHtml = `
+<h2>New Demo Request Received</h2>
+
+<h3>Contact Information:</h3>
+<ul>
+  <li><strong>Name:</strong> ${firstName} ${lastName}</li>
+  <li><strong>Email:</strong> <a href="mailto:${email}">${email}</a></li>
+  <li><strong>Company:</strong> ${company}</li>
+  <li><strong>Phone:</strong> <a href="tel:${phone}">${phone}</a></li>
+</ul>
+
+<p><strong>Submitted at:</strong> ${new Date().toLocaleString()}</p>
+
+<p><em>Please follow up with this demo request within 24 hours.</em></p>
+    `.trim()
+
+    const emailResult = await sendEmailWithSES({
+      to: adminEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+    })
+
+    if (!emailResult.success) {
+      console.error("❌ Failed to send demo request email:", emailResult.message)
+      // Still return success to user, but log the email failure
+      console.log("📝 Demo request logged for manual follow-up:", {
+        firstName,
+        lastName,
+        email,
+        company,
+        phone,
+        timestamp: new Date().toISOString(),
+      })
+    } else {
+      console.log("✅ Demo request email sent successfully:", emailResult.messageId)
+    }
+
     console.log("✅ Demo form submission successful")
 
     return NextResponse.json({
