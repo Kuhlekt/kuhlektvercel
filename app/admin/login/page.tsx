@@ -1,16 +1,17 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { adminLogin } from "./actions"
 
 export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(formData: FormData) {
     console.log("[v0] Admin login form submission started")
@@ -18,15 +19,24 @@ export default function AdminLoginPage() {
     setError("")
 
     try {
-      console.log("[v0] Calling adminLogin server action")
-      const result = await adminLogin(formData)
-      console.log("[v0] adminLogin result:", result)
+      console.log("[v0] Making fetch request to /api/admin/login")
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (result && !result.success) {
+      console.log("[v0] Fetch response received:", response.status)
+
+      const result = await response.json()
+      console.log("[v0] API response:", result)
+
+      if (!result.success) {
         console.log("[v0] Login failed with error:", result.error)
         setError(result.error)
       } else {
-        console.log("[v0] Login successful")
+        console.log("[v0] Login successful, redirecting to:", result.redirectTo)
+        // Redirect to admin dashboard on successful login
+        router.push(result.redirectTo || "/admin/tracking")
       }
     } catch (error) {
       console.error("[v0] Admin login error caught:", error)
