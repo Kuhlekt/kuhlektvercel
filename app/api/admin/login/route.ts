@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 60 * 60 * 8, // 8 hours
-      path: "/admin", // Restrict cookie to admin paths only
     })
 
     console.log("[v0] Cookie set successfully")
