@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 
 interface RecaptchaProps {
-  onVerify?: (token: string) => void
+  onVerify?: (token: string) => void | Promise<any>
 }
 
 export default function Recaptcha({ onVerify }: RecaptchaProps) {
@@ -16,8 +16,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     try {
       if (onVerify) {
         const result = onVerify(token)
-        // Handle if onVerify returns a promise
-        if (result && typeof result.then === "function") {
+        if (result && typeof result === "object" && "then" in result && typeof result.then === "function") {
           result.catch((error: any) => {
             console.log("[v0] onVerify promise rejected:", error)
           })
