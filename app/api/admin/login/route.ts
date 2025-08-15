@@ -1,32 +1,6 @@
 import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
-// Rate limiting for login attempts (in production, use Redis)
-const loginAttempts = new Map<string, { count: number; resetTime: number }>()
-
-function getRateLimitKey(ip: string): string {
-  return `login_${ip}`
-}
-
-function isLoginRateLimited(ip: string): boolean {
-  const key = getRateLimitKey(ip)
-  const now = Date.now()
-  const attempts = loginAttempts.get(key)
-
-  if (!attempts || now > attempts.resetTime) {
-    // Reset attempts (5 attempts per 15 minutes)
-    loginAttempts.set(key, { count: 1, resetTime: now + 15 * 60 * 1000 })
-    return false
-  }
-
-  if (attempts.count >= 5) {
-    return true
-  }
-
-  attempts.count++
-  return false
-}
-
 export async function POST(request: NextRequest) {
   console.log("[v0] Admin login API route called")
 
@@ -34,10 +8,8 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Parsing form data...")
     const formData = await request.formData()
     const password = formData.get("password") as string
-    const clientIP = request.ip || request.headers.get("x-forwarded-for") || "127.0.0.1"
 
     console.log("[v0] Password received:", password ? "present" : "missing")
-    console.log("[v0] Client IP:", clientIP)
     console.log("[v0] Environment check - ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "present" : "missing")
 
     if (!password) {
@@ -48,19 +20,6 @@ export async function POST(request: NextRequest) {
           error: "Password is required",
         },
         { status: 400 },
-      )
-    }
-
-    console.log("[v0] Checking rate limiting...")
-    // Check rate limiting
-    if (isLoginRateLimited(clientIP)) {
-      console.log("[v0] Login failed: Rate limited")
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Too many login attempts. Please try again in 15 minutes.",
-        },
-        { status: 429 },
       )
     }
 
@@ -91,10 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Password validated successfully")
-    // Clear rate limiting on successful login
-    loginAttempts.delete(getRateLimitKey(clientIP))
-
     console.log("[v0] Setting authentication cookie...")
+
     // Set authentication cookie with enhanced security
     const cookieStore = await cookies()
     cookieStore.set("admin-auth", "authenticated", {
