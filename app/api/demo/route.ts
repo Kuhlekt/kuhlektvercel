@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const recaptchaResult = await verifyRecaptcha(recaptchaToken)
 
     if (!recaptchaResult.success) {
-      console.warn("⚠️ reCAPTCHA verification failed, but allowing submission:", recaptchaResult.message)
+      console.warn("⚠️ reCAPTCHA verification failed, but allowing submission:", recaptchaResult.error)
       // Allow submission to proceed even if reCAPTCHA fails
     } else {
       console.log("✅ reCAPTCHA verification successful")
