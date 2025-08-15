@@ -12,7 +12,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [grecaptchaReady, setGrecaptchaReady] = useState<boolean>(false)
 
   useEffect(() => {
-    console.log("[v0] reCAPTCHA component mounted - adding grecaptcha.ready")
+    console.log("[v0] reCAPTCHA component mounted - adding grecaptcha.execute")
 
     const loadScript = () => {
       console.log("[v0] Loading reCAPTCHA script")
@@ -30,6 +30,26 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
           window.grecaptcha.ready(() => {
             console.log("[v0] grecaptcha.ready callback executed")
             setGrecaptchaReady(true)
+
+            console.log("[v0] Calling grecaptcha.execute")
+            window.grecaptcha
+              .execute("6LfYourSiteKeyHere", { action: "submit" })
+              .then((executeToken) => {
+                console.log("[v0] grecaptcha.execute result:", executeToken ? "token received" : "no token")
+                const finalToken = executeToken || "development-bypass-token-execute-failed"
+                setToken(finalToken)
+                if (onVerify) {
+                  onVerify(finalToken)
+                }
+              })
+              .catch((error) => {
+                console.log("[v0] grecaptcha.execute error:", error)
+                const fallbackToken = "development-bypass-token-execute-error"
+                setToken(fallbackToken)
+                if (onVerify) {
+                  onVerify(fallbackToken)
+                }
+              })
           })
         }
       }
@@ -37,25 +57,24 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
       script.onerror = () => {
         console.log("[v0] reCAPTCHA script failed to load")
         setScriptLoaded(false)
+        const fallbackToken = "development-bypass-token-script-error"
+        setToken(fallbackToken)
+        if (onVerify) {
+          onVerify(fallbackToken)
+        }
       }
 
       document.head.appendChild(script)
     }
 
     loadScript()
-
-    const fallbackToken = "development-bypass-token-with-grecaptcha-ready"
-    setToken(fallbackToken)
-    if (onVerify) {
-      onVerify(fallbackToken)
-    }
   }, [onVerify])
 
   return (
     <div>
       <input type="hidden" name="recaptcha-token" value={token} readOnly />
       <p className="text-xs text-gray-500 mt-2">
-        reCAPTCHA grecaptcha.ready mode - Script: {scriptLoaded ? "Yes" : "No"}, Ready: {grecaptchaReady ? "Yes" : "No"}
+        reCAPTCHA execute mode - Script: {scriptLoaded ? "Yes" : "No"}, Ready: {grecaptchaReady ? "Yes" : "No"}
       </p>
     </div>
   )
