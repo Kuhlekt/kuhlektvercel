@@ -30,44 +30,59 @@ function isLoginRateLimited(ip: string): boolean {
 }
 
 export async function adminLogin(formData: FormData) {
+  console.log("[v0] Admin login attempt started")
+
   try {
+    console.log("[v0] Extracting form data...")
     const password = formData.get("password") as string
     const clientIP = "127.0.0.1" // In production, get real IP from headers
 
+    console.log("[v0] Password received:", password ? "present" : "missing")
+    console.log("[v0] Environment check - ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "present" : "missing")
+
     if (!password) {
+      console.log("[v0] Login failed: No password provided")
       return {
         success: false,
         error: "Password is required",
       }
     }
 
+    console.log("[v0] Checking rate limiting...")
     // Check rate limiting
     if (isLoginRateLimited(clientIP)) {
+      console.log("[v0] Login failed: Rate limited")
       return {
         success: false,
         error: "Too many login attempts. Please try again in 15 minutes.",
       }
     }
 
+    console.log("[v0] Validating password length...")
     // Validate password length to prevent timing attacks
     if (password.length < 8 || password.length > 128) {
+      console.log("[v0] Login failed: Invalid password length")
       return {
         success: false,
         error: "Invalid password",
       }
     }
 
+    console.log("[v0] Checking password against environment variable...")
     // Check password against environment variable
     if (password !== process.env.ADMIN_PASSWORD) {
+      console.log("[v0] Login failed: Password mismatch")
       return {
         success: false,
         error: "Invalid password",
       }
     }
 
+    console.log("[v0] Password validated successfully")
     // Clear rate limiting on successful login
     loginAttempts.delete(getRateLimitKey(clientIP))
 
+    console.log("[v0] Setting authentication cookie...")
     // Set authentication cookie with enhanced security
     const cookieStore = await cookies()
     cookieStore.set("admin-auth", "authenticated", {
@@ -78,9 +93,14 @@ export async function adminLogin(formData: FormData) {
       path: "/admin", // Restrict cookie to admin paths only
     })
 
+    console.log("[v0] Cookie set successfully, redirecting...")
     redirect("/admin/tracking")
   } catch (error) {
-    console.error("Admin login error:", error)
+    console.error("[v0] Admin login error:", error)
+    console.error("[v0] Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : "No stack trace",
+    })
     return {
       success: false,
       error: "An error occurred during login. Please try again.",
@@ -89,12 +109,16 @@ export async function adminLogin(formData: FormData) {
 }
 
 export async function adminLogout() {
+  console.log("[v0] Admin logout attempt started")
+
   try {
+    console.log("[v0] Deleting authentication cookie...")
     const cookieStore = await cookies()
     cookieStore.delete("admin-auth")
+    console.log("[v0] Cookie deleted, redirecting...")
     redirect("/admin/login")
   } catch (error) {
-    console.error("Admin logout error:", error)
+    console.error("[v0] Admin logout error:", error)
     redirect("/admin/login")
   }
 }
