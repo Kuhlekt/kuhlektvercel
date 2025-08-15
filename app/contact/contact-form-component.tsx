@@ -34,11 +34,13 @@ export default function ContactFormComponent() {
   const [isPending, startTransition] = useTransition()
 
   const handleSubmit = async (formData: FormData) => {
+    console.log("[v0] Form submission started")
     startTransition(() => {
       setState({ ...initialState, message: "Sending..." })
     })
 
     try {
+      console.log("[v0] Making fetch request to /api/contact")
       const response = await fetch("/api/contact", {
         method: "POST",
         body: formData,
@@ -47,33 +49,44 @@ export default function ContactFormComponent() {
         throw new Error("Network error occurred")
       })
 
+      console.log("[v0] Fetch response received:", response?.status, response?.ok)
+
       if (!response) {
+        console.error("[v0] No response received")
         throw new Error("No response received")
       }
 
       if (!response.ok) {
+        console.error("[v0] HTTP error:", response.status)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
+      console.log("[v0] Parsing JSON response...")
       const result = await response.json().catch((jsonError) => {
         console.error("[v0] JSON parsing error:", jsonError)
         throw new Error("Invalid response format")
       })
 
+      console.log("[v0] JSON result:", result)
+
       if (!result) {
+        console.error("[v0] Empty response received")
         throw new Error("Empty response received")
       }
 
+      console.log("[v0] Setting state with result:", result)
       startTransition(() => {
         setState(result)
 
         if (result.success && result.shouldClearForm) {
+          console.log("[v0] Clearing form...")
           const form = document.querySelector("form") as HTMLFormElement
           if (form) {
             form.reset()
           }
         }
       })
+      console.log("[v0] Form submission completed successfully")
     } catch (error) {
       console.error("[v0] Form submission error:", error)
       startTransition(() => {
