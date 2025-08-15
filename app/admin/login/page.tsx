@@ -13,18 +13,30 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleSubmit(formData: FormData) {
+    console.log("[v0] Admin login form submission started")
     setIsSubmitting(true)
     setError("")
 
     try {
+      console.log("[v0] Calling adminLogin server action")
       const result = await adminLogin(formData)
+      console.log("[v0] adminLogin result:", result)
+
       if (result && !result.success) {
+        console.log("[v0] Login failed with error:", result.error)
         setError(result.error)
+      } else {
+        console.log("[v0] Login successful")
       }
     } catch (error) {
+      console.error("[v0] Admin login error caught:", error)
+      console.error("[v0] Error type:", typeof error)
+      console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
+      console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
       setError("An unexpected error occurred")
     } finally {
       setIsSubmitting(false)
+      console.log("[v0] Admin login form submission completed")
     }
   }
 
