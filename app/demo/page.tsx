@@ -22,6 +22,12 @@ function ErrorBoundaryWrapper({ children, componentName }: { children: React.Rea
 export default function DemoPage() {
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason === null) {
+        // Silently ignore null promise rejections (typically from reCAPTCHA library)
+        event.preventDefault()
+        return
+      }
+
       console.error("Unhandled promise rejection caught:", {
         reason: event.reason,
         promise: event.promise,
