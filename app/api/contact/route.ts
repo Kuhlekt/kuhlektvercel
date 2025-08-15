@@ -31,10 +31,16 @@ export async function POST(request: NextRequest) {
       const value = formData.get(field)?.toString()?.trim()
       if (value && value.length > 10) {
         recaptchaToken = value
-        console.log(`Contact form: Found reCAPTCHA token in field '${field}'`)
+        console.log(`Contact form: Found reCAPTCHA token in field '${field}': ${value.substring(0, 20)}...`)
         break
       }
     }
+
+    console.log("[v0] reCAPTCHA token details:")
+    console.log("[v0] - Token exists:", !!recaptchaToken)
+    console.log("[v0] - Token type:", typeof recaptchaToken)
+    console.log("[v0] - Token value:", recaptchaToken)
+    console.log("[v0] - Token length:", recaptchaToken?.length)
 
     console.log("Contact form submission - reCAPTCHA token received:", !!recaptchaToken)
 
