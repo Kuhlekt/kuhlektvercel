@@ -9,9 +9,10 @@ interface RecaptchaProps {
 export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [token, setToken] = useState<string>("")
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false)
+  const [grecaptchaReady, setGrecaptchaReady] = useState<boolean>(false)
 
   useEffect(() => {
-    console.log("[v0] reCAPTCHA component mounted - adding script loading")
+    console.log("[v0] reCAPTCHA component mounted - adding grecaptcha.ready")
 
     const loadScript = () => {
       console.log("[v0] Loading reCAPTCHA script")
@@ -23,6 +24,14 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
       script.onload = () => {
         console.log("[v0] reCAPTCHA script loaded successfully")
         setScriptLoaded(true)
+
+        if (window.grecaptcha) {
+          console.log("[v0] Calling grecaptcha.ready")
+          window.grecaptcha.ready(() => {
+            console.log("[v0] grecaptcha.ready callback executed")
+            setGrecaptchaReady(true)
+          })
+        }
       }
 
       script.onerror = () => {
@@ -35,7 +44,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
     loadScript()
 
-    const fallbackToken = "development-bypass-token-with-script"
+    const fallbackToken = "development-bypass-token-with-grecaptcha-ready"
     setToken(fallbackToken)
     if (onVerify) {
       onVerify(fallbackToken)
@@ -46,7 +55,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     <div>
       <input type="hidden" name="recaptcha-token" value={token} readOnly />
       <p className="text-xs text-gray-500 mt-2">
-        reCAPTCHA script loading mode - Script loaded: {scriptLoaded ? "Yes" : "No"}
+        reCAPTCHA grecaptcha.ready mode - Script: {scriptLoaded ? "Yes" : "No"}, Ready: {grecaptchaReady ? "Yes" : "No"}
       </p>
     </div>
   )
