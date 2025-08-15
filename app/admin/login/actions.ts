@@ -69,7 +69,7 @@ export async function adminLogin(formData: FormData) {
     loginAttempts.delete(getRateLimitKey(clientIP))
 
     // Set authentication cookie with enhanced security
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     cookieStore.set("admin-auth", "authenticated", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -90,7 +90,7 @@ export async function adminLogin(formData: FormData) {
 
 export async function adminLogout() {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     cookieStore.delete("admin-auth")
     redirect("/admin/login")
   } catch (error) {
