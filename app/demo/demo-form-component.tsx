@@ -46,7 +46,7 @@ export default function DemoFormComponent() {
     const formData = new FormData(event.currentTarget)
 
     console.log("[v0] Form submission started")
-    const recaptchaToken = formData.get("recaptcha")
+    const recaptchaToken = formData.get("recaptcha-token")
     console.log("[v0] reCAPTCHA token from form:", recaptchaToken ? "present" : "missing")
 
     startTransition(() => {
