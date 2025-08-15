@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
+import { GlobalErrorHandler } from "@/components/global-error-handler"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
@@ -40,6 +41,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.gif" />
       </head>
       <body className={inter.className}>
+        <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex flex-col min-h-screen">
             <Header />
