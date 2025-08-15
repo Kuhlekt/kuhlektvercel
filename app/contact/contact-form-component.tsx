@@ -8,8 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import { submitContactForm, type ContactFormState } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
+
+interface ContactFormState {
+  success: boolean
+  message: string
+  shouldClearForm?: boolean
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    message?: string
+    recaptcha?: string
+  }
+}
 
 const initialState: ContactFormState = {
   success: false,
@@ -27,9 +39,22 @@ export default function ContactFormComponent() {
     })
 
     try {
-      const result = await submitContactForm(state, formData)
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
       startTransition(() => {
         setState(result)
+
+        if (result.success && result.shouldClearForm) {
+          const form = document.querySelector("form") as HTMLFormElement
+          if (form) {
+            form.reset()
+          }
+        }
       })
     } catch (error) {
       console.error("Form submission error:", error)
