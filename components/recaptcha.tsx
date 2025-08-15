@@ -112,14 +112,14 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     }
   }
 
-  const executeReCAPTCHA = async (key: string) => {
+  const executeReCAPTCHA = async (key: string): Promise<void> => {
     console.log("[v0] executeReCAPTCHA called with key:", key ? "present" : "missing")
 
     if (!window.grecaptcha || !key) {
       console.log("[v0] executeReCAPTCHA prerequisites missing")
       setErrorState("execution-prerequisites-missing")
       handleFallbackToken("execution-prerequisites-missing")
-      return
+      return Promise.resolve()
     }
 
     try {
@@ -142,6 +142,8 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         console.log("[v0] Calling onVerify with token")
         onVerify(tokenValue)
       }
+
+      return Promise.resolve()
     } catch (error) {
       console.error("[v0] reCAPTCHA execution error:", error)
       console.log("[v0] Error type:", typeof error, "Error value:", error)
@@ -149,20 +151,26 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
       if (retryCountRef.current < maxRetries) {
         console.log(`[v0] Retrying reCAPTCHA execution (${retryCountRef.current}/${maxRetries})`)
-        setTimeout(() => {
-          console.log("[v0] Executing retry...")
-          executeReCAPTCHA(key).catch((retryError) => {
-            console.error("[v0] Retry execution failed:", retryError)
-            setErrorState("retry-failed")
-            handleFallbackToken("retry-failed")
-          })
-        }, 1000 * retryCountRef.current)
-        return
+        return new Promise<void>((resolve) => {
+          setTimeout(async () => {
+            try {
+              console.log("[v0] Executing retry...")
+              await executeReCAPTCHA(key)
+              resolve()
+            } catch (retryError) {
+              console.error("[v0] Retry execution failed:", retryError)
+              setErrorState("retry-failed")
+              handleFallbackToken("retry-failed")
+              resolve()
+            }
+          }, 1000 * retryCountRef.current)
+        })
       }
 
       console.log("[v0] Max retries reached, using fallback")
       setErrorState("execution-failed")
       handleFallbackToken("execution-failed")
+      return Promise.resolve()
     }
   }
 
