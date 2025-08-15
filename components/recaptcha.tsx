@@ -14,10 +14,22 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   useEffect(() => {
     console.log("[v0] reCAPTCHA component mounted - adding grecaptcha.execute")
 
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY
+
+    if (!siteKey) {
+      console.log("[v0] No reCAPTCHA site key found, using fallback token")
+      const fallbackToken = "development-bypass-token-no-site-key"
+      setToken(fallbackToken)
+      if (onVerify) {
+        onVerify(fallbackToken)
+      }
+      return
+    }
+
     const loadScript = () => {
-      console.log("[v0] Loading reCAPTCHA script")
+      console.log("[v0] Loading reCAPTCHA script with site key")
       const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js?render=6LfYourSiteKeyHere"
+      script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
       script.async = true
       script.defer = true
 
@@ -33,7 +45,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
             console.log("[v0] Calling grecaptcha.execute")
             window.grecaptcha
-              .execute("6LfYourSiteKeyHere", { action: "submit" })
+              .execute(siteKey, { action: "submit" })
               .then((executeToken) => {
                 console.log("[v0] grecaptcha.execute result:", executeToken ? "token received" : "no token")
                 const finalToken = executeToken || "development-bypass-token-execute-failed"
