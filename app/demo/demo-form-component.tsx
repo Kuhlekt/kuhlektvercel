@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
-import ReCAPTCHA from "@/components/recaptcha"
 
 interface DemoFormState {
   success: boolean
@@ -270,7 +269,7 @@ export default function DemoFormComponent() {
                     )}
                   </div>
 
-                  <ReCAPTCHA />
+                  {/* <ReCAPTCHA /> */}
                   {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
 
                   <Button type="submit" className="w-full" disabled={isPending}>
