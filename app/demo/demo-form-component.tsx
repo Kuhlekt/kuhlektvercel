@@ -45,11 +45,16 @@ export default function DemoFormComponent() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
 
+    console.log("[v0] Form submission started")
+    const recaptchaToken = formData.get("recaptcha")
+    console.log("[v0] reCAPTCHA token from form:", recaptchaToken ? "present" : "missing")
+
     startTransition(() => {
       setState({ ...initialState, message: "Submitting..." })
     })
 
     try {
+      console.log("[v0] Making fetch request to /api/demo")
       const response = await fetch("/api/demo", {
         method: "POST",
         body: formData,
@@ -57,6 +62,8 @@ export default function DemoFormComponent() {
         console.error("[v0] Fetch error caught:", fetchError)
         throw new Error("Network error occurred")
       })
+
+      console.log("[v0] Fetch response received:", response?.status)
 
       if (!response) {
         throw new Error("No response received")
@@ -66,10 +73,13 @@ export default function DemoFormComponent() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
+      console.log("[v0] Parsing JSON response")
       const result = await response.json().catch((jsonError) => {
         console.error("[v0] JSON parsing error:", jsonError)
         throw new Error("Invalid response format")
       })
+
+      console.log("[v0] JSON response parsed:", result)
 
       if (!result) {
         throw new Error("Empty response received")
