@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface RecaptchaProps {
   onVerify?: (token: string) => void
@@ -10,8 +10,14 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [token, setToken] = useState<string>("")
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false)
   const [grecaptchaReady, setGrecaptchaReady] = useState<boolean>(false)
+  const initializedRef = useRef<boolean>(false)
 
   useEffect(() => {
+    if (initializedRef.current) {
+      return
+    }
+    initializedRef.current = true
+
     console.log("[v0] reCAPTCHA component mounted - fetching server config")
 
     const fetchConfigAndInitialize = async () => {
@@ -92,7 +98,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     }
 
     fetchConfigAndInitialize()
-  }, [onVerify])
+  }, [])
 
   return (
     <div>
