@@ -54,6 +54,7 @@ export default function VisitorsPage() {
   const [pageHistory, setPageHistory] = useState<PageHistory[]>([])
   const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterBy, setFilterBy] = useState("all")
   const [sortBy, setSortBy] = useState("lastVisit")
@@ -351,15 +352,18 @@ export default function VisitorsPage() {
     }
   }, [setupAutoRefresh])
 
-  // Initial load
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    setIsMounted(true)
+  }, [])
 
   // Format date
   const formatDate = (dateString: string) => {
+    if (!isMounted) return dateString // Return raw string during SSR
+
     try {
-      return new Date(dateString).toLocaleString()
+      const date = new Date(dateString)
+      // Use consistent formatting that works the same on server and client
+      return date.toISOString().replace("T", " ").substring(0, 19)
     } catch {
       return dateString
     }
@@ -368,6 +372,19 @@ export default function VisitorsPage() {
   // Get visitor session pages
   const getVisitorPages = (sessionId: string) => {
     return pageHistory.filter((page) => page.sessionId === sessionId)
+  }
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-600">Loading...</span>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
