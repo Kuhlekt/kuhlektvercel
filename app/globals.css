@@ -221,11 +221,7 @@
   }
 }
 
-/* Ensure proper font loading */
-html {
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
+/* Removed hardcoded font-family to fix preload warning */
 /* Fix any layout issues */
 body {
   min-height: 100vh;
