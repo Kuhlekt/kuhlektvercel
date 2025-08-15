@@ -86,7 +86,11 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
       if (window.grecaptcha) {
         window.grecaptcha.ready(() => {
-          executeReCAPTCHA(key)
+          executeReCAPTCHA(key).catch((error) => {
+            console.error("[v0] Unhandled error in executeReCAPTCHA:", error)
+            setErrorState("execution-unhandled-error")
+            handleFallbackToken("execution-unhandled-error")
+          })
         })
       } else {
         console.error("grecaptcha not available after script load")
@@ -151,20 +155,8 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
       if (retryCountRef.current < maxRetries) {
         console.log(`[v0] Retrying reCAPTCHA execution (${retryCountRef.current}/${maxRetries})`)
-        return new Promise<void>((resolve) => {
-          setTimeout(async () => {
-            try {
-              console.log("[v0] Executing retry...")
-              await executeReCAPTCHA(key)
-              resolve()
-            } catch (retryError) {
-              console.error("[v0] Retry execution failed:", retryError)
-              setErrorState("retry-failed")
-              handleFallbackToken("retry-failed")
-              resolve()
-            }
-          }, 1000 * retryCountRef.current)
-        })
+        await new Promise((resolve) => setTimeout(resolve, 1000 * retryCountRef.current))
+        return executeReCAPTCHA(key)
       }
 
       console.log("[v0] Max retries reached, using fallback")
