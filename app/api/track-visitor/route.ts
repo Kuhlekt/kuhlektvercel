@@ -109,28 +109,40 @@ interface PageHistoryItem {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Visitor tracking request received")
+
     // Rate limiting
     const rateLimitKey = getRateLimitKey(request)
     if (isRateLimited(rateLimitKey)) {
+      console.log("[v0] Rate limit exceeded for key:", rateLimitKey)
       return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 })
     }
 
     const data = await request.json()
+    console.log("[v0] Visitor data received:", {
+      visitorId: data.visitorId?.substring(0, 16) + "...",
+      sessionId: data.sessionId?.substring(0, 16) + "...",
+      page: data.page,
+      isNewUser: data.isNewUser,
+    })
 
     const validation = validateVisitorData(data)
     if (!validation.isValid) {
-      console.warn("Invalid visitor data:", validation.errors)
+      console.warn("[v0] Invalid visitor data:", validation.errors)
       return NextResponse.json({ success: false, error: "Invalid data", details: validation.errors }, { status: 400 })
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    console.log("[v0] Supabase environment check:", {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlFormat: supabaseUrl?.startsWith("https://") ? "valid" : "invalid",
+    })
+
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase environment variables:", {
-        hasUrl: !!supabaseUrl,
-        hasServiceKey: !!supabaseServiceKey,
-      })
+      console.error("[v0] Missing Supabase environment variables")
       return NextResponse.json(
         {
           success: false,
@@ -141,7 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!supabaseUrl.startsWith("https://")) {
-      console.error("Invalid Supabase URL format:", supabaseUrl)
+      console.error("[v0] Invalid Supabase URL format:", supabaseUrl)
       return NextResponse.json(
         {
           success: false,
@@ -151,6 +163,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log("[v0] Creating Supabase client")
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -167,6 +180,7 @@ export async function POST(request: NextRequest) {
     })
 
     const validIpAddress = getValidIpAddress(request)
+    console.log("[v0] IP address extracted:", validIpAddress || "none")
 
     const sanitizedData = {
       visitor_id: data.visitorId.substring(0, 100),
@@ -184,23 +198,34 @@ export async function POST(request: NextRequest) {
       first_visit: data.firstVisit || new Date().toISOString(),
       last_visit: data.lastVisit || new Date().toISOString(),
       ip_address: validIpAddress,
-      is_new_user: data.isNewUser || false, // Track if this is a new user sign-on
-      session_duration: data.sessionDuration || 0, // Track session length for real-time analytics
+      is_new_user: data.isNewUser || false,
+      session_duration: data.sessionDuration || 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
 
+    console.log("[v0] Data sanitized, attempting database connection test")
+
     if (typeof supabase.from !== "function") {
-      console.error("Supabase client not properly configured")
+      console.error("[v0] Supabase client not properly configured")
       return NextResponse.json({ success: false, error: "Database configuration error" }, { status: 500 })
     }
 
     const { error: healthError } = await supabase.from("visitor_tracking").select("id").limit(1)
-    if (healthError && healthError.code === "PGRST301") {
-      console.error("Supabase connection error:", healthError)
-      return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
+    if (healthError) {
+      console.error("[v0] Database health check failed:", {
+        code: healthError.code,
+        message: healthError.message,
+        details: healthError.details,
+      })
+      if (healthError.code === "PGRST301") {
+        return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
+      }
+    } else {
+      console.log("[v0] Database health check passed")
     }
 
+    console.log("[v0] Attempting to upsert visitor data")
     const { data: upsertData, error: upsertError } = await supabase
       .from("visitor_tracking")
       .upsert(sanitizedData, {
@@ -210,7 +235,7 @@ export async function POST(request: NextRequest) {
       .select("id, is_new_user, session_duration")
 
     if (upsertError) {
-      console.error("Supabase upsert error:", {
+      console.error("[v0] Supabase upsert error:", {
         code: upsertError.code,
         message: upsertError.message,
         details: upsertError.details,
@@ -219,8 +244,7 @@ export async function POST(request: NextRequest) {
 
       // Handle specific Supabase errors
       if (upsertError.code === "23505") {
-        // Unique constraint violation
-        console.warn("Duplicate visitor ID detected, updating existing record")
+        console.log("[v0] Duplicate visitor ID detected, attempting update")
         const { error: updateError } = await supabase
           .from("visitor_tracking")
           .update({
@@ -230,12 +254,19 @@ export async function POST(request: NextRequest) {
           .eq("visitor_id", sanitizedData.visitor_id)
 
         if (updateError) {
-          console.error("Supabase update error:", updateError)
+          console.error("[v0] Supabase update error:", updateError)
           return NextResponse.json({ success: false, error: "Database update failed" }, { status: 500 })
+        } else {
+          console.log("[v0] Visitor data updated successfully")
         }
       } else {
         return NextResponse.json({ success: false, error: "Database operation failed" }, { status: 500 })
       }
+    } else {
+      console.log("[v0] Visitor data upserted successfully:", {
+        recordId: upsertData?.[0]?.id,
+        isNewUser: upsertData?.[0]?.is_new_user,
+      })
     }
 
     // CORRECTED_PAGE_HISTORY_PROCESSING - No filter functions used here
@@ -279,13 +310,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log("[v0] Visitor tracking completed successfully")
     return NextResponse.json({
       success: true,
       isNewUser: data.isNewUser,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Visitor tracking error:", error)
+    console.error("[v0] Visitor tracking error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
