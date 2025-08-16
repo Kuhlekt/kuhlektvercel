@@ -8,6 +8,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
+import { GoogleAnalytics } from "@/components/google-analytics"
+import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
 
@@ -48,22 +50,22 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-Z5H3V9LW83', {
-              page_title: document.title,
-              page_location: window.location.href
-            });
+            gtag('config', 'G-Z5H3V9LW83');
             console.log('[v0] Google Analytics initialized');
           `}
         </Script>
 
         <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <VisitorTracker />
+          <Suspense fallback={null}>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <VisitorTracker />
+            <GoogleAnalytics />
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>
