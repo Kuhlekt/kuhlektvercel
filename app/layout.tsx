@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import Script from "next/script"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
@@ -39,19 +40,22 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.gif" type="image/gif" />
         <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
         <link rel="apple-touch-icon" href="/favicon.gif" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z5H3V9LW83"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-Z5H3V9LW83');
-            `,
-          }}
-        />
       </head>
       <body className={inter.className}>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-Z5H3V9LW83" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-Z5H3V9LW83', {
+              page_title: document.title,
+              page_location: window.location.href
+            });
+            console.log('[v0] Google Analytics initialized');
+          `}
+        </Script>
+
         <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex flex-col min-h-screen">
