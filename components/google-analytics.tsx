@@ -18,7 +18,7 @@ export function GoogleAnalytics() {
       const url = pathname + searchParams.toString()
       console.log("[v0] Sending page view to Google Analytics:", url)
 
-      window.gtag("config", "G-Z5H3V9LW83", {
+      window.gtag("config", "AW-942617128", {
         page_path: url,
         page_title: document.title,
         page_location: window.location.href,
