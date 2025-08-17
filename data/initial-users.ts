@@ -7,22 +7,22 @@ export const initialUsers: User[] = [
     password: "admin123",
     role: "admin",
     createdAt: new Date("2024-01-01"),
-    lastLogin: undefined
+    lastLogin: undefined,
   },
   {
-    id: "2", 
+    id: "2",
     username: "editor",
     password: "editor123",
     role: "editor",
     createdAt: new Date("2024-01-01"),
-    lastLogin: undefined
+    lastLogin: undefined,
   },
   {
     id: "3",
-    username: "viewer", 
+    username: "viewer",
     password: "viewer123",
     role: "viewer",
     createdAt: new Date("2024-01-01"),
-    lastLogin: undefined
-  }
+    lastLogin: undefined,
+  },
 ]
