@@ -8,7 +8,7 @@ export const initialAuditLog: AuditLogEntry[] = [
     articleTitle: "How to Access Account Menu",
     categoryName: "Account Menu",
     performedBy: "admin",
-    timestamp: new Date("2024-01-15T10:30:00"),
+    timestamp: new Date("2024-01-15T00:30:00.000Z"),
     details: "Initial article creation during system setup",
   },
   {
@@ -19,7 +19,7 @@ export const initialAuditLog: AuditLogEntry[] = [
     categoryName: "Account Menu",
     subcategoryName: "Accounts Credit Monitoring",
     performedBy: "admin",
-    timestamp: new Date("2024-01-20T14:15:00"),
+    timestamp: new Date("2024-01-20T04:15:00.000Z"),
     details: "Added comprehensive credit monitoring guide",
   },
   {
@@ -30,7 +30,7 @@ export const initialAuditLog: AuditLogEntry[] = [
     categoryName: "Account Menu",
     subcategoryName: "Accounts Credit Reports",
     performedBy: "editor",
-    timestamp: new Date("2024-01-18T09:45:00"),
+    timestamp: new Date("2024-01-17T23:45:00.000Z"),
     details: "Created detailed credit report explanation",
   },
   {
@@ -40,7 +40,7 @@ export const initialAuditLog: AuditLogEntry[] = [
     articleTitle: "Understanding Batch Job Processing",
     categoryName: "Batch Jobs",
     performedBy: "admin",
-    timestamp: new Date("2024-01-22T16:20:00"),
+    timestamp: new Date("2024-01-22T06:20:00.000Z"),
     details: "Added batch job documentation",
   },
   {
@@ -51,7 +51,7 @@ export const initialAuditLog: AuditLogEntry[] = [
     categoryName: "Communications",
     subcategoryName: "Comms Bulk Activities",
     performedBy: "editor",
-    timestamp: new Date("2024-01-25T11:30:00"),
+    timestamp: new Date("2024-01-25T01:30:00.000Z"),
     details: "Created bulk communication guide",
   },
 ]
