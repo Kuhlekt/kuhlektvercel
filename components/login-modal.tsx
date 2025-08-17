@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { X, LogIn } from "lucide-react"
 import type { User } from "../types/knowledge-base"
@@ -62,7 +62,7 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Sign In</DialogTitle>
@@ -70,11 +70,12 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               <X className="h-4 w-4" />
             </Button>
           </div>
+          <DialogDescription>Sign in to access the knowledge base administration features</DialogDescription>
         </DialogHeader>
 
-        <div id="login-description" className="text-center mb-6">
+        <div className="text-center mb-6">
           <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="mx-auto mb-4 h-12 w-auto" />
-          <p className="text-sm text-gray-600">Sign in to access the knowledge base</p>
+          <p className="text-sm text-gray-600">Enter your credentials to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,6 +95,7 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               placeholder="Enter your username"
               required
               disabled={isLoading}
+              autoFocus
             />
           </div>
 

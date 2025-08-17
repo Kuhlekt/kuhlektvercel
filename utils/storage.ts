@@ -1,672 +1,376 @@
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
-const STORAGE_KEYS = {
-  CATEGORIES: "kb_categories",
-  USERS: "kb_users",
-  AUDIT_LOG: "kb_audit_log",
-  PAGE_VISITS: "kb_page_visits",
-  INITIALIZED: "kb_initialized",
-  DATA_VERSION: "kb_data_version",
+interface StorageHealth {
+  isAvailable: boolean
+  hasData: boolean
+  lastError: string | null
+  dataIntegrity: boolean
 }
 
-const CURRENT_DATA_VERSION = "1.1"
-
-// Helper function to safely parse dates
-const parseDate = (dateValue: any): Date => {
-  if (dateValue instanceof Date) return dateValue
-  if (typeof dateValue === "string") return new Date(dateValue)
-  if (typeof dateValue === "number") return new Date(dateValue)
-  return new Date()
+interface StorageInfo {
+  totalSize: number
+  categoriesSize: number
+  usersSize: number
+  auditLogSize: number
+  pageVisitsSize: number
+  availableSpace: number
 }
 
-// Helper function to safely parse JSON
-const safeJSONParse = (value: string | null, fallback: any = []) => {
-  if (!value) return fallback
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : fallback
-  } catch {
-    return fallback
+class StorageManager {
+  private readonly STORAGE_KEYS = {
+    CATEGORIES: "kuhlekt_kb_categories",
+    USERS: "kuhlekt_kb_users",
+    AUDIT_LOG: "kuhlekt_kb_audit_log",
+    PAGE_VISITS: "kuhlekt_kb_page_visits",
+    LAST_BACKUP: "kuhlekt_kb_last_backup",
   }
-}
 
-// Helper function to check localStorage availability and quota
-const checkStorageAvailability = (): { available: boolean; quota?: number; used?: number } => {
-  try {
-    // Test if localStorage is available
-    const testKey = "__storage_test__"
-    localStorage.setItem(testKey, "test")
-    localStorage.removeItem(testKey)
+  private lastError: string | null = null
 
-    // Try to estimate storage usage
-    let used = 0
-    for (const key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
-        used += localStorage[key].length + key.length
-      }
-    }
-
-    return { available: true, used }
-  } catch (error) {
-    console.error("localStorage not available:", error)
-    return { available: false }
-  }
-}
-
-export const storage = {
-  // Check storage health and availability
-  checkHealth(): { healthy: boolean; issues: string[] } {
-    const issues: string[] = []
-    const storageCheck = checkStorageAvailability()
-
-    if (!storageCheck.available) {
-      issues.push("localStorage is not available")
-      return { healthy: false, issues }
-    }
-
-    // Check if we can read/write
+  // Health check method
+  checkHealth(): StorageHealth {
     try {
-      const testData = { test: "data", timestamp: new Date().toISOString() }
-      localStorage.setItem("__health_check__", JSON.stringify(testData))
-      const retrieved = JSON.parse(localStorage.getItem("__health_check__") || "{}")
-      localStorage.removeItem("__health_check__")
+      const testKey = "kuhlekt_kb_health_test"
+      const testValue = "test"
 
-      if (retrieved.test !== "data") {
-        issues.push("Data integrity check failed")
+      localStorage.setItem(testKey, testValue)
+      const retrieved = localStorage.getItem(testKey)
+      localStorage.removeItem(testKey)
+
+      const hasData = this.hasAnyData()
+      const dataIntegrity = this.validateDataIntegrity()
+
+      return {
+        isAvailable: retrieved === testValue,
+        hasData,
+        lastError: this.lastError,
+        dataIntegrity,
       }
     } catch (error) {
-      issues.push(`Storage read/write error: ${error}`)
+      this.lastError = error instanceof Error ? error.message : "Unknown error"
+      return {
+        isAvailable: false,
+        hasData: false,
+        lastError: this.lastError,
+        dataIntegrity: false,
+      }
     }
+  }
 
-    // Check data version compatibility
-    const storedVersion = localStorage.getItem(STORAGE_KEYS.DATA_VERSION)
-    if (storedVersion && storedVersion !== CURRENT_DATA_VERSION) {
-      issues.push(`Data version mismatch: stored ${storedVersion}, expected ${CURRENT_DATA_VERSION}`)
+  // Get storage information
+  getStorageInfo(): StorageInfo {
+    try {
+      const categories = localStorage.getItem(this.STORAGE_KEYS.CATEGORIES) || ""
+      const users = localStorage.getItem(this.STORAGE_KEYS.USERS) || ""
+      const auditLog = localStorage.getItem(this.STORAGE_KEYS.AUDIT_LOG) || ""
+      const pageVisits = localStorage.getItem(this.STORAGE_KEYS.PAGE_VISITS) || ""
+
+      const categoriesSize = new Blob([categories]).size
+      const usersSize = new Blob([users]).size
+      const auditLogSize = new Blob([auditLog]).size
+      const pageVisitsSize = new Blob([pageVisits]).size
+      const totalSize = categoriesSize + usersSize + auditLogSize + pageVisitsSize
+
+      // Estimate available space (localStorage typically has 5-10MB limit)
+      const estimatedLimit = 5 * 1024 * 1024 // 5MB
+      const availableSpace = Math.max(0, estimatedLimit - totalSize)
+
+      return {
+        totalSize,
+        categoriesSize,
+        usersSize,
+        auditLogSize,
+        pageVisitsSize,
+        availableSpace,
+      }
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : "Unknown error"
+      return {
+        totalSize: 0,
+        categoriesSize: 0,
+        usersSize: 0,
+        auditLogSize: 0,
+        pageVisitsSize: 0,
+        availableSpace: 0,
+      }
     }
+  }
 
-    return { healthy: issues.length === 0, issues }
-  },
-
-  // Check if any data exists (to determine if this is first-time setup)
+  // Check if any data exists
   hasAnyData(): boolean {
     try {
-      const healthCheck = this.checkHealth()
-      if (!healthCheck.healthy) {
-        console.warn("Storage health issues:", healthCheck.issues)
-      }
-
-      const hasInitFlag = localStorage.getItem(STORAGE_KEYS.INITIALIZED) === "true"
-      const categoriesData = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      const usersData = localStorage.getItem(STORAGE_KEYS.USERS)
-      const auditLogData = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
-      const pageVisitsData = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
-
-      // Check if categories data actually contains articles
-      let hasRealCategoriesData = false
-      if (categoriesData) {
-        try {
-          const categories = JSON.parse(categoriesData)
-          if (Array.isArray(categories) && categories.length > 0) {
-            // Check if any category has articles
-            const totalArticles = categories.reduce((total, cat) => {
-              const catArticles = Array.isArray(cat.articles) ? cat.articles.length : 0
-              const subArticles = Array.isArray(cat.subcategories)
-                ? cat.subcategories.reduce(
-                    (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-                    0,
-                  )
-                : 0
-              return total + catArticles + subArticles
-            }, 0)
-            hasRealCategoriesData = totalArticles > 0
-            console.log("hasAnyData check - found", totalArticles, "articles in storage")
-          }
-        } catch (e) {
-          console.warn("Error parsing categories data in hasAnyData:", e)
-        }
-      }
-
-      const result = hasInitFlag || hasRealCategoriesData || !!usersData || !!auditLogData || !!pageVisitsData
-
-      console.log("Data existence check:", {
-        hasInitFlag,
-        hasRealCategoriesData,
-        hasUsersData: !!usersData,
-        hasAuditLogData: !!auditLogData,
-        hasPageVisitsData: !!pageVisitsData,
-        finalResult: result,
-      })
-
-      return result
+      return Object.values(this.STORAGE_KEYS).some((key) => localStorage.getItem(key) !== null)
     } catch (error) {
-      console.error("Error checking data existence:", error)
+      this.lastError = error instanceof Error ? error.message : "Unknown error"
       return false
     }
-  },
+  }
 
-  // Mark the app as initialized with version tracking
-  markAsInitialized(): void {
+  // Validate data integrity
+  private validateDataIntegrity(): boolean {
     try {
-      localStorage.setItem(STORAGE_KEYS.INITIALIZED, "true")
-      localStorage.setItem(STORAGE_KEYS.DATA_VERSION, CURRENT_DATA_VERSION)
-      console.log("Marked as initialized with version", CURRENT_DATA_VERSION)
-    } catch (error) {
-      console.error("Error marking as initialized:", error)
-    }
-  },
+      const categoriesData = localStorage.getItem(this.STORAGE_KEYS.CATEGORIES)
+      const usersData = localStorage.getItem(this.STORAGE_KEYS.USERS)
+      const auditLogData = localStorage.getItem(this.STORAGE_KEYS.AUDIT_LOG)
 
-  // Categories with enhanced error handling and data validation
+      if (categoriesData) {
+        JSON.parse(categoriesData)
+      }
+      if (usersData) {
+        JSON.parse(usersData)
+      }
+      if (auditLogData) {
+        JSON.parse(auditLogData)
+      }
+
+      return true
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : "Data integrity check failed"
+      return false
+    }
+  }
+
+  // Categories management
   getCategories(): Category[] {
     try {
-      const healthCheck = this.checkHealth()
-      if (!healthCheck.healthy) {
-        console.error("Storage health check failed:", healthCheck.issues)
-        // Continue anyway but log the issues
-      }
+      console.log("Getting categories from storage...")
+      const data = localStorage.getItem(this.STORAGE_KEYS.CATEGORIES)
+      console.log("Raw categories data:", data ? `${data.length} characters` : "null")
 
-      const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      console.log("Raw stored categories data length:", stored ? stored.length : 0)
-
-      if (!stored) {
-        console.log("No categories data found in localStorage")
+      if (!data) {
+        console.log("No categories data found")
         return []
       }
 
-      let categories
-      try {
-        categories = JSON.parse(stored)
-        console.log("Successfully parsed categories JSON")
-      } catch (parseError) {
-        console.error("Failed to parse categories JSON:", parseError)
-        return []
-      }
+      const parsed = JSON.parse(data)
+      console.log("Parsed categories:", parsed.length, "categories")
 
-      if (!Array.isArray(categories)) {
-        console.warn("Categories data is not an array:", typeof categories)
-        return []
-      }
+      // Convert date strings back to Date objects
+      const categoriesWithDates = parsed.map((category: any) => ({
+        ...category,
+        articles: (category.articles || []).map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt),
+        })),
+        subcategories: (category.subcategories || []).map((subcategory: any) => ({
+          ...subcategory,
+          articles: (subcategory.articles || []).map((article: any) => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt),
+          })),
+        })),
+      }))
 
-      console.log("Raw categories array length:", categories.length)
-
-      // Enhanced data validation and processing
-      const processedCategories = categories.map((category: any, index: number) => {
-        if (!category || typeof category !== "object") {
-          console.warn(`Category ${index} is invalid:`, category)
-          return {
-            id: `invalid-${index}`,
-            name: `Invalid Category ${index}`,
-            articles: [],
-            subcategories: [],
-            expanded: false,
-          }
-        }
-
-        const articles = Array.isArray(category.articles) ? category.articles : []
-        const subcategories = Array.isArray(category.subcategories) ? category.subcategories : []
-
-        console.log(`Category "${category.name}": ${articles.length} articles, ${subcategories.length} subcategories`)
-
-        const processedCategory = {
-          ...category,
-          articles: articles.map((article: any) => {
-            if (!article || typeof article !== "object") {
-              console.warn("Invalid article in category:", category.name, article)
-              return {
-                id: `invalid-${Date.now()}`,
-                title: "Invalid Article",
-                content: "",
-                categoryId: category.id || "",
-                tags: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                createdBy: "system",
-                editCount: 0,
-              }
-            }
-            return {
-              ...article,
-              createdAt: parseDate(article.createdAt),
-              updatedAt: parseDate(article.updatedAt),
-              editCount: article.editCount || 0,
-              tags: Array.isArray(article.tags) ? article.tags : [],
-            }
-          }),
-          subcategories: subcategories.map((subcategory: any) => {
-            if (!subcategory || typeof subcategory !== "object") {
-              console.warn("Invalid subcategory in category:", category.name, subcategory)
-              return {
-                id: `invalid-sub-${Date.now()}`,
-                name: "Invalid Subcategory",
-                articles: [],
-              }
-            }
-
-            const subArticles = Array.isArray(subcategory.articles) ? subcategory.articles : []
-            console.log(`  Subcategory "${subcategory.name}": ${subArticles.length} articles`)
-
-            return {
-              ...subcategory,
-              articles: subArticles.map((article: any) => {
-                if (!article || typeof article !== "object") {
-                  console.warn("Invalid subcategory article:", subcategory.name, article)
-                  return {
-                    id: `invalid-${Date.now()}`,
-                    title: "Invalid Article",
-                    content: "",
-                    categoryId: category.id || "",
-                    subcategoryId: subcategory.id || "",
-                    tags: [],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    createdBy: "system",
-                    editCount: 0,
-                  }
-                }
-                return {
-                  ...article,
-                  createdAt: parseDate(article.createdAt),
-                  updatedAt: parseDate(article.updatedAt),
-                  editCount: article.editCount || 0,
-                  tags: Array.isArray(article.tags) ? article.tags : [],
-                }
-              }),
-            }
-          }),
-        }
-
-        // Count articles in this processed category
-        const categoryArticleCount = processedCategory.articles.length
-        const subcategoryArticleCount = processedCategory.subcategories.reduce(
-          (total, sub) => total + sub.articles.length,
-          0,
-        )
-        console.log(
-          `Processed category "${category.name}": ${categoryArticleCount} + ${subcategoryArticleCount} = ${categoryArticleCount + subcategoryArticleCount} total articles`,
-        )
-
-        return processedCategory
-      })
-
-      // Final count verification
-      const totalArticles = processedCategories.reduce((total, category) => {
-        const categoryArticles = category.articles.length
-        const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
-        return total + categoryArticles + subcategoryArticles
-      }, 0)
-
-      console.log("FINAL RESULT - Categories loaded:", processedCategories.length, "Total articles:", totalArticles)
-
-      // Log each category's contribution
-      processedCategories.forEach((cat) => {
-        const catArticles = cat.articles.length
-        const subArticles = cat.subcategories.reduce((total, sub) => total + sub.articles.length, 0)
-        console.log(
-          `  ${cat.name}: ${catArticles} direct + ${subArticles} in subcategories = ${catArticles + subArticles}`,
-        )
-      })
-
-      return processedCategories
+      console.log("Categories with dates processed")
+      return categoriesWithDates
     } catch (error) {
-      console.error("Error in getCategories:", error)
-      console.error("Stack trace:", error.stack)
-      throw error
+      console.error("Error getting categories:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to get categories"
+      return []
     }
-  },
+  }
 
   saveCategories(categories: Category[]): void {
     try {
-      const healthCheck = this.checkHealth()
-      if (!healthCheck.healthy) {
-        console.error("Cannot save - storage health check failed:", healthCheck.issues)
-        throw new Error("Storage system is unhealthy")
-      }
-
-      // Validate input data
-      if (!Array.isArray(categories)) {
-        throw new Error("Categories must be an array")
-      }
-
-      // Ensure all categories have the required structure
-      const sanitizedCategories = categories.map((category) => ({
-        ...category,
-        articles: Array.isArray(category.articles) ? category.articles : [],
-        subcategories: Array.isArray(category.subcategories)
-          ? category.subcategories.map((subcategory) => ({
-              ...subcategory,
-              articles: Array.isArray(subcategory.articles) ? subcategory.articles : [],
-            }))
-          : [],
-      }))
-
-      const dataString = JSON.stringify(sanitizedCategories)
-
-      // Check if data is too large (rough estimate)
-      if (dataString.length > 5 * 1024 * 1024) {
-        // 5MB limit
-        console.warn("Data size is very large:", dataString.length, "characters")
-      }
-
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, dataString)
-
-      // Mark as initialized when we save data
-      this.markAsInitialized()
-
-      // Log the save operation
-      const totalArticles = sanitizedCategories.reduce((total, category) => {
-        const categoryArticles = category.articles.length
-        const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
-        return total + categoryArticles + subcategoryArticles
-      }, 0)
-
-      console.log("Successfully saved:", sanitizedCategories.length, "categories with", totalArticles, "total articles")
+      console.log("Saving categories to storage...", categories.length, "categories")
+      const data = JSON.stringify(categories)
+      console.log("Serialized data size:", data.length, "characters")
+      localStorage.setItem(this.STORAGE_KEYS.CATEGORIES, data)
+      console.log("Categories saved successfully")
+      this.lastError = null
     } catch (error) {
       console.error("Error saving categories:", error)
-      throw new Error(`Failed to save categories to storage: ${error}`)
+      this.lastError = error instanceof Error ? error.message : "Failed to save categories"
+      throw error
     }
-  },
+  }
 
-  // Users with enhanced error handling
+  // Users management
   getUsers(): User[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.USERS)
-      const users = safeJSONParse(stored, [])
+      const data = localStorage.getItem(this.STORAGE_KEYS.USERS)
+      if (!data) return []
 
-      if (!Array.isArray(users)) {
-        return []
-      }
-
-      // Convert date strings back to Date objects
-      return users.map((user: any) => ({
+      const parsed = JSON.parse(data)
+      return parsed.map((user: any) => ({
         ...user,
-        createdAt: parseDate(user.createdAt),
-        lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined,
+        createdAt: new Date(user.createdAt),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
       }))
     } catch (error) {
-      console.error("Error in getUsers:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to get users"
       return []
     }
-  },
+  }
 
   saveUsers(users: User[]): void {
     try {
-      if (!Array.isArray(users)) {
-        throw new Error("Users must be an array")
-      }
-
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-      this.markAsInitialized()
-      console.log("Successfully saved", users.length, "users")
+      localStorage.setItem(this.STORAGE_KEYS.USERS, JSON.stringify(users))
+      this.lastError = null
     } catch (error) {
-      console.error("Error saving users:", error)
-      throw new Error(`Failed to save users: ${error}`)
+      this.lastError = error instanceof Error ? error.message : "Failed to save users"
+      throw error
     }
-  },
+  }
 
-  // Audit Log with enhanced error handling
+  // Audit log management
   getAuditLog(): AuditLogEntry[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
-      const auditLog = safeJSONParse(stored, [])
+      const data = localStorage.getItem(this.STORAGE_KEYS.AUDIT_LOG)
+      if (!data) return []
 
-      if (!Array.isArray(auditLog)) {
-        return []
-      }
-
-      // Convert date strings back to Date objects
-      return auditLog.map((entry: any) => ({
+      const parsed = JSON.parse(data)
+      return parsed.map((entry: any) => ({
         ...entry,
-        timestamp: parseDate(entry.timestamp),
+        timestamp: new Date(entry.timestamp),
       }))
     } catch (error) {
-      console.error("Error in getAuditLog:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to get audit log"
       return []
     }
-  },
+  }
 
   saveAuditLog(auditLog: AuditLogEntry[]): void {
     try {
-      if (!Array.isArray(auditLog)) {
-        throw new Error("Audit log must be an array")
-      }
-
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
-      this.markAsInitialized()
+      localStorage.setItem(this.STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
+      this.lastError = null
     } catch (error) {
-      console.error("Error saving audit log:", error)
-      throw new Error(`Failed to save audit log: ${error}`)
+      this.lastError = error instanceof Error ? error.message : "Failed to save audit log"
+      throw error
     }
-  },
+  }
 
-  addAuditEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): void {
+  addAuditEntry(entry: Omit<AuditLogEntry, "id">): void {
     try {
-      const currentLog = this.getAuditLog()
+      const auditLog = this.getAuditLog()
       const newEntry: AuditLogEntry = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
         ...entry,
+        id: Date.now().toString(),
       }
-      const updatedLog = [newEntry, ...currentLog]
-
-      // Keep only the last 1000 entries to prevent storage bloat
-      if (updatedLog.length > 1000) {
-        updatedLog.splice(1000)
-      }
-
-      this.saveAuditLog(updatedLog)
+      auditLog.unshift(newEntry)
+      this.saveAuditLog(auditLog)
     } catch (error) {
-      console.error("Error adding audit entry:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to add audit entry"
+      console.error("Failed to add audit entry:", error)
     }
-  },
+  }
 
-  // Page Visits
+  // Page visits management
   getPageVisits(): number {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
-      return stored ? Number.parseInt(stored, 10) || 0 : 0
+      const data = localStorage.getItem(this.STORAGE_KEYS.PAGE_VISITS)
+      return data ? Number.parseInt(data, 10) : 0
     } catch (error) {
-      console.error("Error getting page visits:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to get page visits"
       return 0
     }
-  },
+  }
 
   incrementPageVisits(): number {
     try {
       const current = this.getPageVisits()
       const newCount = current + 1
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
-      this.markAsInitialized()
+      localStorage.setItem(this.STORAGE_KEYS.PAGE_VISITS, newCount.toString())
+      this.lastError = null
       return newCount
     } catch (error) {
-      console.error("Error incrementing page visits:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to increment page visits"
       return 0
     }
-  },
+  }
 
-  resetPageVisits(): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, "0")
-    } catch (error) {
-      console.error("Error resetting page visits:", error)
-    }
-  },
-
-  // Clear all data (for development/testing) - with confirmation
-  clearAll(confirm = false): void {
-    if (!confirm) {
-      console.warn("clearAll() called without confirmation. Pass true to confirm.")
-      return
-    }
-
-    try {
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        localStorage.removeItem(key)
-      })
-      console.log("All storage data cleared")
-    } catch (error) {
-      console.error("Error clearing all data:", error)
-    }
-  },
-
-  // Get comprehensive storage info for debugging
-  getStorageInfo(): object {
-    try {
-      const healthCheck = this.checkHealth()
-      const storageCheck = checkStorageAvailability()
-
-      const info = {
-        healthy: healthCheck.healthy,
-        issues: healthCheck.issues,
-        hasInitialized: localStorage.getItem(STORAGE_KEYS.INITIALIZED) === "true",
-        dataVersion: localStorage.getItem(STORAGE_KEYS.DATA_VERSION),
-        currentVersion: CURRENT_DATA_VERSION,
-        categoriesSize: localStorage.getItem(STORAGE_KEYS.CATEGORIES)?.length || 0,
-        usersSize: localStorage.getItem(STORAGE_KEYS.USERS)?.length || 0,
-        auditLogSize: localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)?.length || 0,
-        pageVisits: this.getPageVisits(),
-        totalStorageUsed: storageCheck.used || 0,
-        storageAvailable: storageCheck.available,
-        timestamp: new Date().toISOString(),
-      }
-
-      console.log("Storage info:", info)
-      return info
-    } catch (error) {
-      console.error("Error getting storage info:", error)
-      return { error: error.toString() }
-    }
-  },
-
-  // Force data persistence (useful for critical saves)
+  // Force persist critical data
   forcePersist(): boolean {
     try {
-      // Try to force localStorage to persist by triggering a sync
-      const testKey = "__persist_test__"
-      const testData = { timestamp: Date.now(), random: Math.random() }
+      // Force a write to ensure data is persisted
+      const testKey = "kuhlekt_kb_persist_test"
+      const testValue = Date.now().toString()
+      localStorage.setItem(testKey, testValue)
 
-      localStorage.setItem(testKey, JSON.stringify(testData))
-      const retrieved = JSON.parse(localStorage.getItem(testKey) || "{}")
+      // Verify it was written
+      const retrieved = localStorage.getItem(testKey)
       localStorage.removeItem(testKey)
 
-      return retrieved.timestamp === testData.timestamp
+      return retrieved === testValue
     } catch (error) {
-      console.error("Force persist failed:", error)
+      this.lastError = error instanceof Error ? error.message : "Failed to force persist"
       return false
     }
-  },
+  }
+
+  // Clear all data
+  clearAll(): void {
+    try {
+      Object.values(this.STORAGE_KEYS).forEach((key) => {
+        localStorage.removeItem(key)
+      })
+      this.lastError = null
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : "Failed to clear data"
+      throw error
+    }
+  }
+
+  // Export data for backup
+  exportData(): string {
+    try {
+      const data = {
+        categories: this.getCategories(),
+        users: this.getUsers(),
+        auditLog: this.getAuditLog(),
+        pageVisits: this.getPageVisits(),
+        exportedAt: new Date().toISOString(),
+      }
+      return JSON.stringify(data, null, 2)
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : "Failed to export data"
+      throw error
+    }
+  }
+
+  // Import data from backup
+  importData(jsonData: string): void {
+    try {
+      const data = JSON.parse(jsonData)
+
+      if (data.categories) {
+        this.saveCategories(data.categories)
+      }
+      if (data.users) {
+        this.saveUsers(data.users)
+      }
+      if (data.auditLog) {
+        this.saveAuditLog(data.auditLog)
+      }
+      if (data.pageVisits) {
+        localStorage.setItem(this.STORAGE_KEYS.PAGE_VISITS, data.pageVisits.toString())
+      }
+
+      this.lastError = null
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : "Failed to import data"
+      throw error
+    }
+  }
 }
 
-// Export/Import utilities for file operations
+// Create singleton instance
+export const storage = new StorageManager()
+
+// Data manager for backward compatibility
 export const dataManager = {
-  // Export all data as JSON file
-  exportData: () => {
-    try {
-      const storageInfo = storage.getStorageInfo()
-      const data = {
-        categories: storage.getCategories(),
-        users: storage.getUsers(),
-        auditLog: storage.getAuditLog(),
-        pageVisits: storage.getPageVisits(),
-        exportedAt: new Date().toISOString(),
-        version: "1.1",
-        storageInfo,
-      }
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      console.log("Data exported successfully")
-    } catch (error) {
-      console.error("Error exporting data:", error)
-      throw new Error("Failed to export data")
-    }
-  },
-
-  // Import data from JSON file with validation
-  importData: (
-    file: File,
-  ): Promise<{ categories: Category[]; users: User[]; auditLog: AuditLogEntry[]; pageVisits?: number }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target?.result as string)
-
-          // Validate data structure
-          if (!data.categories || !Array.isArray(data.categories)) {
-            throw new Error("Invalid backup file: missing or invalid categories")
-          }
-          if (!data.users || !Array.isArray(data.users)) {
-            throw new Error("Invalid backup file: missing or invalid users")
-          }
-          if (!data.auditLog || !Array.isArray(data.auditLog)) {
-            throw new Error("Invalid backup file: missing or invalid audit log")
-          }
-
-          // Convert date strings back to Date objects with safe parsing
-          const categories = data.categories.map((cat: any) => ({
-            ...cat,
-            articles: (cat.articles || []).map((article: any) => ({
-              ...article,
-              createdAt: parseDate(article.createdAt),
-              updatedAt: parseDate(article.updatedAt),
-              editCount: article.editCount || 0,
-              tags: Array.isArray(article.tags) ? article.tags : [],
-            })),
-            subcategories: (cat.subcategories || []).map((sub: any) => ({
-              ...sub,
-              articles: (sub.articles || []).map((article: any) => ({
-                ...article,
-                createdAt: parseDate(article.createdAt),
-                updatedAt: parseDate(article.updatedAt),
-                editCount: article.editCount || 0,
-                tags: Array.isArray(article.tags) ? article.tags : [],
-              })),
-            })),
-          }))
-
-          const users = data.users.map((user: any) => ({
-            ...user,
-            createdAt: parseDate(user.createdAt),
-            lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined,
-          }))
-
-          const auditLog = data.auditLog.map((entry: any) => ({
-            ...entry,
-            timestamp: parseDate(entry.timestamp),
-          }))
-
-          console.log("Data import successful:", {
-            categories: categories.length,
-            users: users.length,
-            auditLog: auditLog.length,
-          })
-
-          resolve({
-            categories,
-            users,
-            auditLog,
-            pageVisits: data.pageVisits || 0,
-          })
-        } catch (error) {
-          console.error("Error parsing backup file:", error)
-          reject(new Error(`Failed to parse backup file: ${error instanceof Error ? error.message : "Unknown error"}`))
-        }
-      }
-
-      reader.onerror = () => {
-        console.error("Error reading file")
-        reject(new Error("Failed to read file"))
-      }
-
-      reader.readAsText(file)
-    })
-  },
+  getCategories: () => storage.getCategories(),
+  saveCategories: (categories: Category[]) => storage.saveCategories(categories),
+  getUsers: () => storage.getUsers(),
+  saveUsers: (users: User[]) => storage.saveUsers(users),
+  getAuditLog: () => storage.getAuditLog(),
+  saveAuditLog: (auditLog: AuditLogEntry[]) => storage.saveAuditLog(auditLog),
+  addAuditEntry: (entry: Omit<AuditLogEntry, "id">) => storage.addAuditEntry(entry),
+  getPageVisits: () => storage.getPageVisits(),
+  incrementPageVisits: () => storage.incrementPageVisits(),
+  clearAll: () => storage.clearAll(),
+  exportData: () => storage.exportData(),
+  importData: (data: string) => storage.importData(data),
 }
