@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive } from "lucide-react"
-import { storage, dataManager } from "../utils/storage"
+import { storage } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface DataManagementProps {
@@ -63,9 +63,28 @@ export function DataManagement({
     setMessage(null)
 
     try {
-      dataManager.exportData()
+      const data = {
+        categories,
+        users,
+        auditLog,
+        pageVisits: storage.getPageVisits(),
+        exportedAt: new Date().toISOString(),
+        version: "1.1",
+      }
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
       setMessage({ type: "success", text: "Data exported successfully!" })
     } catch (error) {
+      console.error("Export error:", error)
       setMessage({ type: "error", text: "Failed to export data. Please try again." })
     } finally {
       setIsExporting(false)
@@ -79,22 +98,83 @@ export function DataManagement({
     setMessage(null)
 
     try {
-      const importedData = await dataManager.importData(importFile)
+      const fileText = await readFileAsText(importFile)
+      console.log("File read successfully, length:", fileText.length)
 
-      // Update all data
-      onCategoriesUpdate(importedData.categories)
-      onUsersUpdate(importedData.users)
-      onAuditLogUpdate(importedData.auditLog)
-
-      // Save to localStorage
-      storage.saveCategories(importedData.categories)
-      storage.saveUsers(importedData.users)
-      storage.saveAuditLog(importedData.auditLog)
-
-      if (importedData.pageVisits) {
-        localStorage.setItem("kb_page_visits", importedData.pageVisits.toString())
+      let importedData
+      try {
+        importedData = JSON.parse(fileText)
+        console.log("JSON parsed successfully")
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError)
+        throw new Error("Invalid JSON file. Please check the file format.")
       }
 
+      // Validate required fields
+      if (!importedData.categories || !Array.isArray(importedData.categories)) {
+        throw new Error("Invalid backup file: missing or invalid categories")
+      }
+      if (!importedData.users || !Array.isArray(importedData.users)) {
+        throw new Error("Invalid backup file: missing or invalid users")
+      }
+      if (!importedData.auditLog || !Array.isArray(importedData.auditLog)) {
+        throw new Error("Invalid backup file: missing or invalid audit log")
+      }
+
+      console.log("Data validation passed")
+
+      // Process categories with date conversion
+      const processedCategories = importedData.categories.map((category: any) => ({
+        ...category,
+        articles: (category.articles || []).map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt),
+          editCount: article.editCount || 0,
+          tags: Array.isArray(article.tags) ? article.tags : [],
+        })),
+        subcategories: (category.subcategories || []).map((subcategory: any) => ({
+          ...subcategory,
+          articles: (subcategory.articles || []).map((article: any) => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt),
+            editCount: article.editCount || 0,
+            tags: Array.isArray(article.tags) ? article.tags : [],
+          })),
+        })),
+      }))
+
+      // Process users with date conversion
+      const processedUsers = importedData.users.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+      }))
+
+      // Process audit log with date conversion
+      const processedAuditLog = importedData.auditLog.map((entry: any) => ({
+        ...entry,
+        timestamp: new Date(entry.timestamp),
+      }))
+
+      console.log("Data processing completed")
+
+      // Update state
+      onCategoriesUpdate(processedCategories)
+      onUsersUpdate(processedUsers)
+      onAuditLogUpdate(processedAuditLog)
+
+      // Save to storage
+      storage.saveCategories(processedCategories)
+      storage.saveUsers(processedUsers)
+      storage.saveAuditLog(processedAuditLog)
+
+      if (importedData.pageVisits) {
+        localStorage.setItem("kuhlekt_kb_page_visits", importedData.pageVisits.toString())
+      }
+
+      console.log("Import completed successfully")
       setMessage({ type: "success", text: "Data imported successfully!" })
       setImportFile(null)
 
@@ -102,6 +182,7 @@ export function DataManagement({
       const fileInput = document.getElementById("import-file") as HTMLInputElement
       if (fileInput) fileInput.value = ""
     } catch (error) {
+      console.error("Import error:", error)
       setMessage({
         type: "error",
         text: error instanceof Error ? error.message : "Failed to import data. Please check the file format.",
@@ -109,6 +190,22 @@ export function DataManagement({
     } finally {
       setIsImporting(false)
     }
+  }
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result
+        if (typeof result === "string") {
+          resolve(result)
+        } else {
+          reject(new Error("Failed to read file as text"))
+        }
+      }
+      reader.onerror = () => reject(new Error("Failed to read file"))
+      reader.readAsText(file)
+    })
   }
 
   const handleClearAll = () => {

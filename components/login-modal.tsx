@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, LogIn } from "lucide-react"
+import { LogIn, Eye, EyeOff } from "lucide-react"
 import type { User } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  users: User[]
   onLogin: (user: User) => void
+  users: User[]
 }
 
-export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -31,33 +31,33 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      // Find user with matching credentials
-      const user = users.find((u) => u.username === username && u.password === password)
+      // Find user by username
+      const user = users.find((u) => u.username === username)
 
       if (!user) {
         setError("Invalid username or password")
-        setIsLoading(false)
         return
       }
 
-      // Update user's last login time
+      // Check password
+      if (user.password !== password) {
+        setError("Invalid username or password")
+        return
+      }
+
+      // Update last login
       const updatedUser = {
         ...user,
         lastLogin: new Date(),
       }
 
-      // Simulate login delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
       onLogin(updatedUser)
-
-      // Reset form
+      onClose()
       setUsername("")
       setPassword("")
       setError("")
-    } catch (error) {
-      console.error("Login error:", error)
-      setError("An error occurred during login")
+    } catch (err) {
+      setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -73,18 +73,24 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
-            Sign In
+            <span>Sign In</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="login-description">
             Enter your credentials to access the knowledge base administration features.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -120,42 +126,29 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-400" />
+                )}
               </Button>
             </div>
           </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading || !username || !password}>
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Signing In...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </>
-              )}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </div>
         </form>
 
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-          <div className="space-y-1 text-xs text-gray-500">
+          <p className="text-xs text-gray-600 mb-2">Demo Credentials:</p>
+          <div className="text-xs space-y-1">
             <div>
               <strong>Admin:</strong> admin / admin123
             </div>
