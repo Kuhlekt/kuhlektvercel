@@ -1,31 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react'
-import type { Category } from "../types/knowledge-base"
+import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen } from "lucide-react"
+import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
   categories: Category[]
-  selectedCategories: Set<string>
-  selectedSubcategories: Set<string>
-  onCategoryToggle: (categoryId: string) => void
-  onSubcategoryToggle: (subcategoryId: string) => void
+  onSelectArticle: (article: Article) => void
+  selectedArticle: Article | null
 }
 
-export function CategoryTree({
-  categories,
-  selectedCategories,
-  selectedSubcategories,
-  onCategoryToggle,
-  onSubcategoryToggle,
-}: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.filter(cat => cat.expanded).map(cat => cat.id))
-  )
+export function CategoryTree({ categories, onSelectArticle, selectedArticle }: CategoryTreeProps) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
-  const toggleExpanded = (categoryId: string) => {
+  const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
     if (newExpanded.has(categoryId)) {
       newExpanded.delete(categoryId)
@@ -35,80 +23,78 @@ export function CategoryTree({
     setExpandedCategories(newExpanded)
   }
 
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return <div className="text-gray-500 text-sm">No categories available</div>
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {categories.map((category) => {
         const isExpanded = expandedCategories.has(category.id)
-        const isSelected = selectedCategories.has(category.id)
-        const hasSubcategories = category.subcategories.length > 0
-        
-        // Only count direct articles in the category, not subcategory articles
-        const directArticleCount = category.articles.length
+        const hasArticles = Array.isArray(category.articles) && category.articles.length > 0
+        const hasSubcategories = Array.isArray(category.subcategories) && category.subcategories.length > 0
 
         return (
-          <div key={category.id} className="space-y-1">
-            <div className="flex items-center space-x-2">
-              {hasSubcategories ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => toggleExpanded(category.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : (
-                <div className="w-6" />
-              )}
-              
-              <Button
-                variant={isSelected ? "default" : "ghost"}
-                size="sm"
-                className="flex-1 justify-start h-8"
-                onClick={() => onCategoryToggle(category.id)}
-              >
-                {isExpanded ? (
-                  <FolderOpen className="h-4 w-4 mr-2" />
+          <div key={category.id}>
+            <div
+              className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded"
+              onClick={() => toggleCategory(category.id)}
+            >
+              {hasArticles || hasSubcategories ? (
+                isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
                 ) : (
-                  <Folder className="h-4 w-4 mr-2" />
-                )}
-                <span className="truncate">{category.name}</span>
-                {directArticleCount > 0 && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {directArticleCount}
-                  </Badge>
-                )}
-              </Button>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                )
+              ) : (
+                <div className="w-4" />
+              )}
+              {isExpanded ? (
+                <FolderOpen className="h-4 w-4 text-blue-600" />
+              ) : (
+                <Folder className="h-4 w-4 text-blue-600" />
+              )}
+              <span className="text-sm font-medium">{category.name}</span>
             </div>
 
-            {isExpanded && hasSubcategories && (
-              <div className="ml-8 space-y-1">
-                {category.subcategories.map((subcategory) => {
-                  const isSubSelected = selectedSubcategories.has(subcategory.id)
-                  const subcategoryArticleCount = subcategory.articles.length
-
-                  return (
-                    <Button
-                      key={subcategory.id}
-                      variant={isSubSelected ? "default" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start h-8"
-                      onClick={() => onSubcategoryToggle(subcategory.id)}
+            {isExpanded && (
+              <div className="ml-6 space-y-1">
+                {hasArticles &&
+                  category.articles.map((article) => (
+                    <div
+                      key={article.id}
+                      className={`flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded ${
+                        selectedArticle?.id === article.id ? "bg-blue-50 border-l-2 border-blue-500" : ""
+                      }`}
+                      onClick={() => onSelectArticle(article)}
                     >
-                      <Folder className="h-4 w-4 mr-2" />
-                      <span className="truncate">{subcategory.name}</span>
-                      {subcategoryArticleCount > 0 && (
-                        <Badge variant="outline" className="ml-auto">
-                          {subcategoryArticleCount}
-                        </Badge>
-                      )}
-                    </Button>
-                  )
-                })}
+                      <FileText className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">{article.title}</span>
+                    </div>
+                  ))}
+
+                {hasSubcategories &&
+                  category.subcategories.map((subcategory) => (
+                    <div key={subcategory.id} className="ml-4">
+                      <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded">
+                        <Folder className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">{subcategory.name}</span>
+                      </div>
+                      {Array.isArray(subcategory.articles) &&
+                        subcategory.articles.map((article) => (
+                          <div
+                            key={article.id}
+                            className={`flex items-center space-x-2 p-2 ml-6 hover:bg-gray-50 cursor-pointer rounded ${
+                              selectedArticle?.id === article.id ? "bg-blue-50 border-l-2 border-blue-500" : ""
+                            }`}
+                            onClick={() => onSelectArticle(article)}
+                          >
+                            <FileText className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">{article.title}</span>
+                          </div>
+                        ))}
+                    </div>
+                  ))}
               </div>
             )}
           </div>
