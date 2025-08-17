@@ -6,5 +6,11 @@
     "app/**/*.{js,ts,jsx,tsx}": {
       "runtime": "nodejs18.x"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertCircle, Eye, EyeOff, LogIn } from "lucide-react"
+import { AlertCircle, LogIn } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -18,8 +18,6 @@ interface LoginModalProps {
 
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -32,8 +30,8 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       // Get users from localStorage
       const users = JSON.parse(localStorage.getItem("kb-users") || "[]")
 
-      // Find user with matching credentials
-      const user = users.find((u: any) => u.username === username && u.password === password)
+      // Find user with matching username (no password required)
+      const user = users.find((u: any) => u.username === username)
 
       if (user) {
         // Store current user
@@ -53,9 +51,8 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         onLogin(user)
         onClose()
         setUsername("")
-        setPassword("")
       } else {
-        setError("Invalid username or password")
+        setError("Username not found")
       }
     } catch (error) {
       setError("Login failed. Please try again.")
@@ -70,7 +67,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "1",
         name: "Admin User",
         username: "admin",
-        password: "admin123",
         role: "admin",
         email: "admin@example.com",
       },
@@ -78,7 +74,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "2",
         name: "Editor User",
         username: "editor",
-        password: "editor123",
         role: "editor",
         email: "editor@example.com",
       },
@@ -86,7 +81,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "3",
         name: "Viewer User",
         username: "viewer",
-        password: "viewer123",
         role: "viewer",
         email: "viewer@example.com",
       },
@@ -119,7 +113,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             <span>Login to Knowledge Base</span>
           </DialogTitle>
           <DialogDescription id="login-description">
-            Enter your credentials to access the admin dashboard
+            Enter your username to access the admin dashboard
           </DialogDescription>
         </DialogHeader>
 
@@ -137,30 +131,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                required
-                disabled={isLoading}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -174,7 +144,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         </form>
 
         <div className="mt-4 pt-4 border-t">
-          <p className="text-sm text-muted-foreground mb-2">Demo Accounts:</p>
+          <p className="text-sm text-muted-foreground mb-2">Quick Login:</p>
           <div className="space-y-2">
             <Button
               variant="outline"
@@ -182,7 +152,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               onClick={() => handleDemoLogin("admin")}
               className="w-full text-left justify-start"
             >
-              Admin (admin/admin123)
+              Login as Admin
             </Button>
             <Button
               variant="outline"
@@ -190,7 +160,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               onClick={() => handleDemoLogin("editor")}
               className="w-full text-left justify-start"
             >
-              Editor (editor/editor123)
+              Login as Editor
             </Button>
             <Button
               variant="outline"
@@ -198,7 +168,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               onClick={() => handleDemoLogin("viewer")}
               className="w-full text-left justify-start"
             >
-              Viewer (viewer/viewer123)
+              Login as Viewer
             </Button>
           </div>
         </div>

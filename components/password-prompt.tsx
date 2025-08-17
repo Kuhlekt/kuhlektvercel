@@ -17,13 +17,17 @@ interface PasswordPromptProps {
 }
 
 export function PasswordPrompt({ onPasswordSubmit, onCancel, error }: PasswordPromptProps) {
-  const [password, setPassword] = useState("")
+  const [username, setUsername] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.trim()) {
-      onPasswordSubmit(password)
+    if (username.trim()) {
+      onPasswordSubmit(username)
     }
+  }
+
+  const handleQuickAccess = () => {
+    onPasswordSubmit("admin")
   }
 
   return (
@@ -34,7 +38,7 @@ export function PasswordPrompt({ onPasswordSubmit, onCancel, error }: PasswordPr
             <Lock className="h-8 w-8 text-blue-600" />
           </div>
           <CardTitle>Authentication Required</CardTitle>
-          <p className="text-sm text-gray-600">Please enter the password to add articles</p>
+          <p className="text-sm text-gray-600">Please enter your username to add articles</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -45,13 +49,13 @@ export function PasswordPrompt({ onPasswordSubmit, onCancel, error }: PasswordPr
             )}
 
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
                 autoFocus
                 required
               />
@@ -63,6 +67,12 @@ export function PasswordPrompt({ onPasswordSubmit, onCancel, error }: PasswordPr
               </Button>
               <Button type="button" variant="outline" onClick={onCancel} className="flex-1 bg-transparent">
                 Cancel
+              </Button>
+            </div>
+
+            <div className="pt-2 border-t">
+              <Button type="button" variant="secondary" onClick={handleQuickAccess} className="w-full">
+                Quick Access (Admin)
               </Button>
             </div>
           </form>
