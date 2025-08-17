@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   USERS: "kb_users",
   AUDIT_LOG: "kb_audit_log",
   PAGE_VISITS: "kb_page_visits",
+  INITIALIZED: "kb_initialized", // New key to track if app has been initialized
 }
 
 // Helper function to safely parse dates
@@ -27,14 +28,53 @@ const safeJSONParse = (value: string | null, fallback: any = []) => {
 }
 
 export const storage = {
+  // Check if any data exists (to determine if this is first-time setup)
+  hasAnyData(): boolean {
+    try {
+      const hasInitFlag = localStorage.getItem(STORAGE_KEYS.INITIALIZED) === "true"
+      const hasCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES) !== null
+      const hasUsers = localStorage.getItem(STORAGE_KEYS.USERS) !== null
+      const hasAuditLog = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG) !== null
+      const hasPageVisits = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) !== null
+
+      console.log("Data existence check:", {
+        hasInitFlag,
+        hasCategories,
+        hasUsers,
+        hasAuditLog,
+        hasPageVisits,
+      })
+
+      // If we have the init flag OR any substantial data, consider it not first-time
+      return hasInitFlag || hasCategories || hasUsers || hasAuditLog || hasPageVisits
+    } catch (error) {
+      console.error("Error checking data existence:", error)
+      return false
+    }
+  },
+
+  // Mark the app as initialized
+  markAsInitialized(): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.INITIALIZED, "true")
+    } catch (error) {
+      console.error("Error marking as initialized:", error)
+    }
+  },
+
   // Categories
   getCategories(): Category[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      console.log("Raw stored categories:", stored)
+      console.log("Raw stored categories:", stored ? "Data found" : "No data")
+
+      if (!stored) {
+        console.log("No categories in storage")
+        return []
+      }
 
       const categories = safeJSONParse(stored, [])
-      console.log("Parsed categories:", categories)
+      console.log("Parsed categories count:", categories.length)
 
       if (!Array.isArray(categories)) {
         console.warn("Categories is not an array, returning empty array")
@@ -43,8 +83,6 @@ export const storage = {
 
       // Convert date strings back to Date objects with proper null checks
       const processedCategories = categories.map((category: any, index: number) => {
-        console.log(`Processing category ${index}:`, category)
-
         if (!category || typeof category !== "object") {
           console.warn(`Category ${index} is invalid:`, category)
           return {
@@ -121,12 +159,24 @@ export const storage = {
         }
       })
 
-      console.log("Final processed categories:", processedCategories)
+      // Count total articles for logging
+      const totalArticles = processedCategories.reduce((total, category) => {
+        const categoryArticles = category.articles.length
+        const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
+      console.log(
+        "Final processed categories:",
+        processedCategories.length,
+        "categories with",
+        totalArticles,
+        "total articles",
+      )
       return processedCategories
     } catch (error) {
       console.error("Error in getCategories:", error)
-      // Clear corrupted data and return empty array
-      localStorage.removeItem(STORAGE_KEYS.CATEGORIES)
+      // Don't clear data on error - let the app handle it
       return []
     }
   },
@@ -144,9 +194,23 @@ export const storage = {
             }))
           : [],
       }))
+
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(sanitizedCategories))
+
+      // Mark as initialized when we save data
+      this.markAsInitialized()
+
+      // Log the save operation
+      const totalArticles = sanitizedCategories.reduce((total, category) => {
+        const categoryArticles = category.articles.length
+        const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
+      console.log("Saved categories:", sanitizedCategories.length, "categories with", totalArticles, "total articles")
     } catch (error) {
       console.error("Error saving categories:", error)
+      throw new Error("Failed to save categories to storage")
     }
   },
 
@@ -168,7 +232,6 @@ export const storage = {
       }))
     } catch (error) {
       console.error("Error in getUsers:", error)
-      localStorage.removeItem(STORAGE_KEYS.USERS)
       return []
     }
   },
@@ -176,6 +239,7 @@ export const storage = {
   saveUsers(users: User[]): void {
     try {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+      this.markAsInitialized()
     } catch (error) {
       console.error("Error saving users:", error)
     }
@@ -198,7 +262,6 @@ export const storage = {
       }))
     } catch (error) {
       console.error("Error in getAuditLog:", error)
-      localStorage.removeItem(STORAGE_KEYS.AUDIT_LOG)
       return []
     }
   },
@@ -206,6 +269,7 @@ export const storage = {
   saveAuditLog(auditLog: AuditLogEntry[]): void {
     try {
       localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
+      this.markAsInitialized()
     } catch (error) {
       console.error("Error saving audit log:", error)
     }
@@ -242,6 +306,7 @@ export const storage = {
       const current = this.getPageVisits()
       const newCount = current + 1
       localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
+      this.markAsInitialized()
       return newCount
     } catch (error) {
       console.error("Error incrementing page visits:", error)
@@ -257,14 +322,37 @@ export const storage = {
     }
   },
 
-  // Clear all data
+  // Clear all data (for development/testing)
   clearAll(): void {
     try {
       Object.values(STORAGE_KEYS).forEach((key) => {
         localStorage.removeItem(key)
       })
+      console.log("All storage data cleared")
     } catch (error) {
       console.error("Error clearing all data:", error)
+    }
+  },
+
+  // Get storage info for debugging
+  getStorageInfo(): object {
+    try {
+      const info = {
+        hasInitialized: localStorage.getItem(STORAGE_KEYS.INITIALIZED) === "true",
+        categoriesSize: localStorage.getItem(STORAGE_KEYS.CATEGORIES)?.length || 0,
+        usersSize: localStorage.getItem(STORAGE_KEYS.USERS)?.length || 0,
+        auditLogSize: localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)?.length || 0,
+        pageVisits: this.getPageVisits(),
+        totalStorageUsed: Object.values(STORAGE_KEYS).reduce((total, key) => {
+          const item = localStorage.getItem(key)
+          return total + (item ? item.length : 0)
+        }, 0),
+      }
+      console.log("Storage info:", info)
+      return info
+    } catch (error) {
+      console.error("Error getting storage info:", error)
+      return {}
     }
   },
 }

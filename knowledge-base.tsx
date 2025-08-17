@@ -53,14 +53,14 @@ export default function KnowledgeBase() {
       try {
         console.log("Starting data initialization...")
 
-        // Load existing data or initialize with defaults
+        // Load existing data
         let storedCategories: Category[] = []
         let storedUsers: User[] = []
         let storedAuditLog: AuditLogEntry[] = []
 
         try {
           storedCategories = storage.getCategories()
-          console.log("Loaded categories:", storedCategories)
+          console.log("Loaded categories from storage:", storedCategories?.length || 0, "categories")
         } catch (error) {
           console.error("Error loading categories:", error)
           storedCategories = []
@@ -68,7 +68,7 @@ export default function KnowledgeBase() {
 
         try {
           storedUsers = storage.getUsers()
-          console.log("Loaded users:", storedUsers)
+          console.log("Loaded users from storage:", storedUsers?.length || 0, "users")
         } catch (error) {
           console.error("Error loading users:", error)
           storedUsers = []
@@ -76,15 +76,20 @@ export default function KnowledgeBase() {
 
         try {
           storedAuditLog = storage.getAuditLog()
-          console.log("Loaded audit log:", storedAuditLog)
+          console.log("Loaded audit log from storage:", storedAuditLog?.length || 0, "entries")
         } catch (error) {
           console.error("Error loading audit log:", error)
           storedAuditLog = []
         }
 
-        if (!Array.isArray(storedCategories) || storedCategories.length === 0) {
-          // First time setup - initialize with default data
-          console.log("Initializing with default categories...")
+        // Check if this is truly a first-time setup (no data exists at all)
+        const isFirstTimeSetup = !storage.hasAnyData()
+        console.log("Is first time setup:", isFirstTimeSetup)
+
+        // Handle categories
+        if (isFirstTimeSetup && (!Array.isArray(storedCategories) || storedCategories.length === 0)) {
+          // Only initialize with sample data if this is genuinely the first time
+          console.log("First time setup - initializing with sample categories...")
           const categoriesWithDates = initialCategories.map((category) => ({
             ...category,
             articles: (category.articles || []).map((article) => ({
@@ -106,24 +111,55 @@ export default function KnowledgeBase() {
 
           setCategories(categoriesWithDates)
           storage.saveCategories(categoriesWithDates)
-        } else {
+          console.log("Saved initial categories to storage")
+        } else if (Array.isArray(storedCategories) && storedCategories.length > 0) {
+          // Use existing production data
+          console.log("Loading existing production data...")
           setCategories(storedCategories)
+
+          // Count total articles for verification
+          const totalArticles = storedCategories.reduce((total, category) => {
+            const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+            const subcategoryArticles = Array.isArray(category.subcategories)
+              ? category.subcategories.reduce(
+                  (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+                  0,
+                )
+              : 0
+            return total + categoryArticles + subcategoryArticles
+          }, 0)
+          console.log("Total articles loaded:", totalArticles)
+        } else {
+          // Data loading failed but not first time - show error instead of overwriting
+          console.error("Failed to load existing data and not first time setup")
+          setError("Failed to load existing data. Please contact support if this persists.")
+          setCategories([])
         }
 
-        if (!Array.isArray(storedUsers) || storedUsers.length === 0) {
-          console.log("Initializing with default users...")
+        // Handle users
+        if (isFirstTimeSetup && (!Array.isArray(storedUsers) || storedUsers.length === 0)) {
+          console.log("First time setup - initializing with sample users...")
           setUsers(initialUsers)
           storage.saveUsers(initialUsers)
-        } else {
+        } else if (Array.isArray(storedUsers) && storedUsers.length > 0) {
           setUsers(storedUsers)
+        } else {
+          // For users, we can safely fall back to initial users if needed
+          console.log("No users found, using initial users...")
+          setUsers(initialUsers)
+          storage.saveUsers(initialUsers)
         }
 
-        if (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0) {
-          console.log("Initializing with default audit log...")
+        // Handle audit log
+        if (isFirstTimeSetup && (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0)) {
+          console.log("First time setup - initializing with sample audit log...")
           setAuditLog(initialAuditLog)
           storage.saveAuditLog(initialAuditLog)
-        } else {
+        } else if (Array.isArray(storedAuditLog) && storedAuditLog.length > 0) {
           setAuditLog(storedAuditLog)
+        } else {
+          // Start with empty audit log if none exists
+          setAuditLog([])
         }
 
         // Increment page visits
@@ -133,9 +169,9 @@ export default function KnowledgeBase() {
         console.log("Data initialization completed successfully")
       } catch (error) {
         console.error("Error during initialization:", error)
-        setError("Failed to load application data. Please refresh the page.")
+        setError("Failed to load application data. Please refresh the page or contact support.")
 
-        // Set fallback empty data
+        // Don't set fallback data that might overwrite production data
         setCategories([])
         setUsers([])
         setAuditLog([])

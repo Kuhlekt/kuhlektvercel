@@ -1,117 +1,109 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Edit, Trash2, ArrowLeft, Calendar, User, Tag, Hash, Clock } from "lucide-react"
+import { ArrowLeft, Edit, Trash2, Calendar, User, Tag, FolderOpen } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
   article: Article
   categories: Category[]
-  onEdit?: (article: Article) => void
-  onDelete?: (articleId: string) => void
   onBack: () => void
   backButtonText?: string
+  onEdit?: (article: Article) => void
+  onDelete?: (articleId: string) => void
 }
 
-// Function to process content and render images properly
-function processArticleContent(content: string): string {
+// Process article content to handle images and formatting
+const processArticleContent = (content: string): string => {
+  console.log("Processing article content:", content.substring(0, 200) + "...")
+
+  // If content already contains HTML img tags and no placeholders, return as is
+  if (
+    content.includes("<img") &&
+    !content.includes("https://images.unsplash.com/") &&
+    !content.includes("data:image/")
+  ) {
+    console.log("Content already has processed images, returning as is")
+    return content
+  }
+
   let processedContent = content
 
-  console.log("Processing article content:", content)
-
-  // If content is already HTML with img tags, return it as-is
-  if (content.includes("<img") && !content.includes("[IMAGE:")) {
-    console.log("Content already contains HTML img tags, returning as-is")
-    return processedContent
-  }
-
   // Replace image placeholders with actual images
-  processedContent = processedContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
-    // Check if we have stored images in global reference
-    const storedImages = (window as any).textareaImages || (window as any).editingImages || []
-    const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
-
-    console.log("Looking for image:", { id, filename, match, storedImages })
-
-    if (imageData && imageData.dataUrl) {
-      console.log("Found image data:", imageData)
-      return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-    }
-
-    // If no stored image found, return a placeholder div
-    console.log("No image data found for:", { id, filename })
-    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
-      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
-    </div>`
+  // Handle Unsplash URLs
+  processedContent = processedContent.replace(/https:\/\/images\.unsplash\.com\/[^\s\n]+/g, (match) => {
+    console.log("Converting Unsplash URL to img tag:", match)
+    return `<img src="${match}" alt="Article image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />`
   })
 
-  // Convert URLs to actual images (handle both HTTP and data URLs)
-  processedContent = processedContent.replace(
-    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
-    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
+  // Handle standalone data URLs
+  processedContent = processedContent.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, (match) => {
+    console.log("Converting data URL to img tag")
+    return `<img src="${match}" alt="Pasted image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />`
+  })
 
-  // Convert standalone data URLs to images
-  processedContent = processedContent.replace(
-    /(?<!src=["'])(data:image\/[^;]+;base64,[^\s"'<>]+)(?!["'])/gi,
-    '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
-
-  // Convert line breaks to proper HTML if content doesn't already have HTML structure
-  if (!processedContent.includes("<p>") && !processedContent.includes("<div>") && !processedContent.includes("<br>")) {
+  // Convert line breaks to HTML if content doesn't already have HTML structure
+  if (!processedContent.includes("<p>") && !processedContent.includes("<div>") && !processedContent.includes("<img")) {
     processedContent = processedContent.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")
-    if (processedContent && !processedContent.startsWith("<p>")) {
-      processedContent = "<p>" + processedContent + "</p>"
-    }
+    processedContent = `<p>${processedContent}</p>`
+  } else if (!processedContent.includes("<p>") && !processedContent.includes("<div>")) {
+    // Has images but no paragraphs, wrap text in paragraphs while preserving images
+    const parts = processedContent.split(/(<img[^>]*>)/g)
+    processedContent = parts
+      .map((part) => {
+        if (part.startsWith("<img")) {
+          return part
+        } else if (part.trim()) {
+          return `<p>${part.replace(/\n/g, "<br>")}</p>`
+        }
+        return part
+      })
+      .join("")
   }
 
-  console.log("Final processed content:", processedContent)
+  console.log("Final processed content:", processedContent.substring(0, 200) + "...")
   return processedContent
 }
 
 export function ArticleViewer({
   article,
   categories,
-  onEdit,
-  onDelete,
   onBack,
   backButtonText = "Back to Articles",
+  onEdit,
+  onDelete,
 }: ArticleViewerProps) {
-  const [currentArticle, setCurrentArticle] = useState(article)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  useEffect(() => {
-    setCurrentArticle(article)
-  }, [article])
+  // Get category and subcategory names
+  const getCategoryInfo = () => {
+    const category = categories.find((c) => c.id === article.categoryId)
+    if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
 
-  useEffect(() => {
-    console.log("ArticleViewer received article:", currentArticle)
-    console.log("Article content:", currentArticle.content)
-    console.log("Current stored images:", (window as any).textareaImages)
-  }, [currentArticle])
+    if (article.subcategoryId) {
+      const subcategory = category.subcategories.find((s) => s.id === article.subcategoryId)
+      return {
+        categoryName: category.name,
+        subcategoryName: subcategory?.name || "Unknown Subcategory",
+      }
+    }
 
-  const category = categories.find((cat) => cat.id === currentArticle.categoryId)
-  const subcategory = category?.subcategories.find((sub) => sub.id === currentArticle.subcategoryId)
+    return { categoryName: category.name, subcategoryName: undefined }
+  }
+
+  const { categoryName, subcategoryName } = getCategoryInfo()
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(currentArticle.id)
-      setShowDeleteDialog(false)
+      onDelete(article.id)
+      setShowDeleteConfirm(false)
     }
   }
 
-  const processedContent = processArticleContent(currentArticle.content)
+  const processedContent = processArticleContent(article.content)
 
   return (
     <div className="space-y-6">
@@ -123,17 +115,27 @@ export function ArticleViewer({
         </Button>
 
         {(onEdit || onDelete) && (
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
             {onEdit && (
-              <Button variant="outline" onClick={() => onEdit(currentArticle)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(article)}
+                className="flex items-center space-x-2"
+              >
+                <Edit className="h-4 w-4" />
+                <span>Edit</span>
               </Button>
             )}
             {onDelete && (
-              <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center space-x-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
               </Button>
             )}
           </div>
@@ -143,89 +145,84 @@ export function ArticleViewer({
       {/* Article Content */}
       <Card>
         <CardHeader>
-          <div className="space-y-4">
-            <CardTitle className="text-2xl">{currentArticle.title}</CardTitle>
+          <CardTitle className="text-2xl">{article.title}</CardTitle>
 
-            {/* Metadata */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              {currentArticle.createdBy && (
-                <div className="flex items-center space-x-1">
-                  <User className="h-4 w-4" />
-                  <span>By {currentArticle.createdBy}</span>
-                </div>
+          {/* Article Metadata */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 pt-2">
+            <div className="flex items-center space-x-1">
+              <FolderOpen className="h-4 w-4" />
+              <span>{categoryName}</span>
+              {subcategoryName && (
+                <>
+                  <span>→</span>
+                  <span>{subcategoryName}</span>
+                </>
               )}
+            </div>
+
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-4 w-4" />
+              <span>Created {article.createdAt.toLocaleDateString()}</span>
+            </div>
+
+            {article.updatedAt && article.updatedAt.getTime() !== article.createdAt.getTime() && (
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
-                <span>Created {currentArticle.createdAt.toLocaleDateString()}</span>
+                <span>Updated {article.updatedAt.toLocaleDateString()}</span>
               </div>
-              {currentArticle.updatedAt.getTime() !== currentArticle.createdAt.getTime() && (
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>Updated {currentArticle.updatedAt.toLocaleDateString()}</span>
-                </div>
-              )}
-              {currentArticle.editCount && currentArticle.editCount > 0 && (
-                <div className="flex items-center space-x-1">
-                  <Hash className="h-4 w-4" />
-                  <span>
-                    {currentArticle.editCount} edit{currentArticle.editCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              )}
-              {currentArticle.lastEditedBy && (
-                <div className="flex items-center space-x-1">
-                  <Edit className="h-4 w-4" />
-                  <span>Last edited by {currentArticle.lastEditedBy}</span>
-                </div>
-              )}
+            )}
+
+            <div className="flex items-center space-x-1">
+              <User className="h-4 w-4" />
+              <span>By {article.createdBy}</span>
             </div>
 
-            {/* Categories and Tags */}
-            <div className="flex flex-wrap gap-2">
-              {category && <Badge variant="secondary">{category.name}</Badge>}
-              {subcategory && <Badge variant="outline">{subcategory.name}</Badge>}
-              {currentArticle.tags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  <Tag className="h-3 w-3 mr-1" />
-                  {tag}
-                </Badge>
-              ))}
-            </div>
+            {article.editCount && article.editCount > 0 && <Badge variant="secondary">Edit #{article.editCount}</Badge>}
           </div>
+
+          {/* Tags */}
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex items-center space-x-2 pt-2">
+              <Tag className="h-4 w-4 text-gray-500" />
+              <div className="flex flex-wrap gap-1">
+                {article.tags.map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent>
-          <div
-            className="prose max-w-none text-gray-800 leading-relaxed"
-            style={{
-              lineHeight: "1.7",
-              fontSize: "16px",
-              fontFamily: "system-ui, -apple-system, sans-serif",
-            }}
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
+          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: processedContent }} />
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent aria-describedby="delete-article-description">
-          <DialogHeader>
-            <DialogTitle>Delete Article</DialogTitle>
-            <DialogDescription id="delete-article-description">
-              Are you sure you want to delete "{currentArticle.title}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Confirm Delete</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete "{article.title}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
