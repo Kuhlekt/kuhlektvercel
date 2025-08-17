@@ -3,111 +3,83 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Bug, Database, Download, Trash2, RefreshCw } from "lucide-react"
+import { Bug, Database, HardDrive, FileText, Activity } from "lucide-react"
 import { storage } from "../utils/storage"
+import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
-export function StorageDebug() {
+interface StorageDebugProps {
+  categories: Category[]
+  users: User[]
+  auditLog: AuditLogEntry[]
+}
+
+export function StorageDebug({ categories, users, auditLog }: StorageDebugProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [debugInfo, setDebugInfo] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const refreshDebugInfo = () => {
-    setIsLoading(true)
-    try {
-      const health = storage.checkHealth()
-      const info = storage.getStorageInfo()
-      const categories = storage.getCategories()
-      const users = storage.getUsers()
-      const auditLog = storage.getAuditLog()
-      const pageVisits = storage.getPageVisits()
+  const runDiagnostics = () => {
+    const health = storage.checkHealth()
+    const storageInfo = storage.getStorageInfo()
 
-      // Calculate article counts
-      const totalArticles = categories.reduce((total, category) => {
-        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-        const subcategoryArticles = Array.isArray(category.subcategories)
-          ? category.subcategories.reduce(
-              (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-              0,
-            )
-          : 0
-        return total + categoryArticles + subcategoryArticles
-      }, 0)
+    // Count articles
+    const totalArticles = categories.reduce((total, category) => {
+      const categoryArticles = category.articles.length
+      const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
 
-      const categoryBreakdown = categories.map((category) => ({
-        name: category.name,
-        id: category.id,
-        articleCount: Array.isArray(category.articles) ? category.articles.length : 0,
-        subcategoryCount: Array.isArray(category.subcategories) ? category.subcategories.length : 0,
-        subcategories: Array.isArray(category.subcategories)
-          ? category.subcategories.map((sub) => ({
-              name: sub.name,
-              id: sub.id,
-              articleCount: Array.isArray(sub.articles) ? sub.articles.length : 0,
-            }))
-          : [],
-      }))
+    // Get localStorage keys
+    const localStorageKeys = Object.keys(localStorage).filter(
+      (key) => key.startsWith("kuhlekt_kb_") || key.startsWith("kb_"),
+    )
 
-      setDebugInfo({
-        health,
-        info,
-        counts: {
-          categories: categories.length,
-          users: users.length,
-          auditEntries: auditLog.length,
-          pageVisits,
-          totalArticles,
-        },
-        categoryBreakdown,
-        rawData: {
-          categories: categories.slice(0, 2), // Show first 2 categories for inspection
-          users: users.map((u) => ({ ...u, password: "[HIDDEN]" })), // Hide passwords
-          auditLog: auditLog.slice(0, 5), // Show first 5 audit entries
-        },
-        localStorage: {
-          keys: Object.keys(localStorage).filter((key) => key.startsWith("kuhlekt_kb_")),
-          totalKeys: localStorage.length,
-        },
-      })
-    } catch (error) {
-      console.error("Debug info error:", error)
-      setDebugInfo({ error: error instanceof Error ? error.message : "Unknown error" })
-    } finally {
-      setIsLoading(false)
+    // Get raw data sizes
+    const rawData = {
+      categories: localStorage.getItem("kuhlekt_kb_categories") || localStorage.getItem("kb_categories"),
+      users: localStorage.getItem("kuhlekt_kb_users") || localStorage.getItem("kb_users"),
+      auditLog: localStorage.getItem("kuhlekt_kb_audit_log") || localStorage.getItem("kb_audit_log"),
+      pageVisits: localStorage.getItem("kuhlekt_kb_page_visits") || localStorage.getItem("kb_page_visits"),
     }
-  }
 
-  const handleExportData = () => {
-    try {
-      const data = storage.exportData()
-      const blob = new Blob([data], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error("Export failed:", error)
+    const info = {
+      timestamp: new Date().toISOString(),
+      health,
+      storageInfo,
+      counts: {
+        categories: categories.length,
+        totalArticles,
+        users: users.length,
+        auditEntries: auditLog.length,
+      },
+      localStorage: {
+        keys: localStorageKeys,
+        rawDataSizes: {
+          categories: rawData.categories ? rawData.categories.length : 0,
+          users: rawData.users ? rawData.users.length : 0,
+          auditLog: rawData.auditLog ? rawData.auditLog.length : 0,
+          pageVisits: rawData.pageVisits ? rawData.pageVisits.length : 0,
+        },
+        hasData: {
+          categories: !!rawData.categories,
+          users: !!rawData.users,
+          auditLog: !!rawData.auditLog,
+          pageVisits: !!rawData.pageVisits,
+        },
+      },
+      categoryBreakdown: categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        articles: cat.articles.length,
+        subcategories: cat.subcategories.length,
+        subcategoryArticles: cat.subcategories.reduce((total, sub) => total + sub.articles.length, 0),
+      })),
     }
-  }
 
-  const handleClearData = () => {
-    if (confirm("Are you sure you want to clear all data? This cannot be undone.")) {
-      try {
-        storage.clearAll()
-        refreshDebugInfo()
-        alert("All data cleared successfully")
-      } catch (error) {
-        console.error("Clear data failed:", error)
-        alert("Failed to clear data")
-      }
-    }
+    setDebugInfo(info)
+    setIsOpen(true)
   }
 
   const formatBytes = (bytes: number) => {
@@ -119,174 +91,179 @@ export function StorageDebug() {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="fixed bottom-4 right-4 z-50 bg-transparent"
-          onClick={refreshDebugInfo}
-        >
-          <Bug className="h-4 w-4 mr-2" />
-          Debug Storage
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Storage Debug Information
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Button
+        onClick={runDiagnostics}
+        variant="outline"
+        size="sm"
+        className="fixed bottom-4 right-4 z-50 bg-transparent"
+      >
+        <Bug className="h-4 w-4 mr-2" />
+        Debug Storage
+      </Button>
 
-        <div className="flex gap-2 mb-4">
-          <Button onClick={refreshDebugInfo} disabled={isLoading} size="sm">
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button onClick={handleExportData} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Data
-          </Button>
-          <Button onClick={handleClearData} variant="destructive" size="sm">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All Data
-          </Button>
-        </div>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Database className="h-5 w-5" />
+              <span>Storage Debug Information</span>
+            </DialogTitle>
+            <DialogDescription>Detailed information about the knowledge base storage system</DialogDescription>
+          </DialogHeader>
 
-        <ScrollArea className="h-[60vh]">
-          {debugInfo?.error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{debugInfo.error}</AlertDescription>
-            </Alert>
-          ) : debugInfo ? (
-            <div className="space-y-4">
+          {debugInfo && (
+            <div className="space-y-6">
               {/* Health Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Storage Health</CardTitle>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-4 w-4" />
+                    <span>Health Status</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span>Available:</span>
-                    <Badge variant={debugInfo.health.isAvailable ? "default" : "destructive"}>
-                      {debugInfo.health.isAvailable ? "Yes" : "No"}
-                    </Badge>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={debugInfo.health.isAvailable ? "default" : "destructive"}>
+                        {debugInfo.health.isAvailable ? "Available" : "Unavailable"}
+                      </Badge>
+                      <Badge variant={debugInfo.health.hasData ? "default" : "secondary"}>
+                        {debugInfo.health.hasData ? "Has Data" : "No Data"}
+                      </Badge>
+                      <Badge variant={debugInfo.health.dataIntegrity ? "default" : "destructive"}>
+                        {debugInfo.health.dataIntegrity ? "Integrity OK" : "Integrity Issues"}
+                      </Badge>
+                    </div>
+                    {debugInfo.health.lastError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{debugInfo.health.lastError}</AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span>Has Data:</span>
-                    <Badge variant={debugInfo.health.hasData ? "default" : "secondary"}>
-                      {debugInfo.health.hasData ? "Yes" : "No"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>Data Integrity:</span>
-                    <Badge variant={debugInfo.health.dataIntegrity ? "default" : "destructive"}>
-                      {debugInfo.health.dataIntegrity ? "Good" : "Corrupted"}
-                    </Badge>
-                  </div>
-                  {debugInfo.health.lastError && (
-                    <div className="text-sm text-red-600">Last Error: {debugInfo.health.lastError}</div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Storage Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Storage Usage</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div>Total Size: {formatBytes(debugInfo.info.totalSize)}</div>
-                  <div>Categories: {formatBytes(debugInfo.info.categoriesSize)}</div>
-                  <div>Users: {formatBytes(debugInfo.info.usersSize)}</div>
-                  <div>Audit Log: {formatBytes(debugInfo.info.auditLogSize)}</div>
-                  <div>Page Visits: {formatBytes(debugInfo.info.pageVisitsSize)}</div>
-                  <div>Available Space: {formatBytes(debugInfo.info.availableSpace)}</div>
                 </CardContent>
               </Card>
 
               {/* Data Counts */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Data Counts</CardTitle>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Data Counts</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div>Categories: {debugInfo.counts.categories}</div>
-                  <div>Total Articles: {debugInfo.counts.totalArticles}</div>
-                  <div>Users: {debugInfo.counts.users}</div>
-                  <div>Audit Entries: {debugInfo.counts.auditEntries}</div>
-                  <div>Page Visits: {debugInfo.counts.pageVisits}</div>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{debugInfo.counts.categories}</div>
+                      <div className="text-sm text-gray-600">Categories</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{debugInfo.counts.totalArticles}</div>
+                      <div className="text-sm text-gray-600">Articles</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">{debugInfo.counts.users}</div>
+                      <div className="text-sm text-gray-600">Users</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">{debugInfo.counts.auditEntries}</div>
+                      <div className="text-sm text-gray-600">Audit Entries</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Storage Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <HardDrive className="h-4 w-4" />
+                    <span>Storage Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-sm text-gray-600">Total Size</div>
+                        <div className="font-mono">{formatBytes(debugInfo.storageInfo.totalSize)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Categories</div>
+                        <div className="font-mono">{formatBytes(debugInfo.storageInfo.categoriesSize)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Users</div>
+                        <div className="font-mono">{formatBytes(debugInfo.storageInfo.usersSize)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Audit Log</div>
+                        <div className="font-mono">{formatBytes(debugInfo.storageInfo.auditLogSize)}</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">localStorage Keys:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {debugInfo.localStorage.keys.map((key: string) => (
+                          <Badge key={key} variant="outline" className="text-xs">
+                            {key}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
               {/* Category Breakdown */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Category Breakdown</CardTitle>
+                  <CardTitle>Category Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {debugInfo.categoryBreakdown.map((category: any, index: number) => (
-                      <div key={category.id} className="border rounded p-3">
-                        <div className="font-medium">{category.name}</div>
-                        <div className="text-sm text-gray-600">
-                          ID: {category.id} | Articles: {category.articleCount} | Subcategories:{" "}
-                          {category.subcategoryCount}
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {debugInfo.categoryBreakdown.map((cat: any) => (
+                      <div key={cat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div>
+                          <div className="font-medium">{cat.name}</div>
+                          <div className="text-sm text-gray-600">ID: {cat.id}</div>
                         </div>
-                        {category.subcategories.length > 0 && (
-                          <div className="mt-2 ml-4 space-y-1">
-                            {category.subcategories.map((sub: any) => (
-                              <div key={sub.id} className="text-sm">
-                                └ {sub.name} ({sub.articleCount} articles)
-                              </div>
-                            ))}
+                        <div className="text-right">
+                          <div className="text-sm">
+                            {cat.articles} articles, {cat.subcategories} subcategories
                           </div>
-                        )}
+                          <div className="text-xs text-gray-600">{cat.subcategoryArticles} in subcategories</div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* LocalStorage Keys */}
+              {/* Raw Data Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">LocalStorage Keys</CardTitle>
+                  <CardTitle>Raw Data Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm">
-                    <div>Total Keys: {debugInfo.localStorage.totalKeys}</div>
-                    <div>Kuhlekt KB Keys:</div>
-                    <ul className="list-disc list-inside ml-4">
-                      {debugInfo.localStorage.keys.map((key: string) => (
-                        <li key={key}>{key}</li>
-                      ))}
-                    </ul>
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(debugInfo.localStorage.hasData).map(([key, hasData]) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <span className="capitalize">{key}</span>
+                        <Badge variant={hasData ? "default" : "secondary"}>{hasData ? "Present" : "Missing"}</Badge>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Raw Data Sample */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Raw Data Sample</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-40">
-                    {JSON.stringify(debugInfo.rawData, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p>Loading debug information...</p>
+              <div className="text-xs text-gray-500 text-center">Debug run at: {debugInfo.timestamp}</div>
             </div>
           )}
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
