@@ -1,105 +1,177 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
-import type { User } from "./types" // Assuming User type is defined in a separate file
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LogIn, AlertCircle, Lock } from "lucide-react"
+import type { User as KnowledgeBaseUser } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
-  onClose: () => void
-  users: User[]
-  onLogin: (user: User) => void
+  users?: KnowledgeBaseUser[]
+  onLogin: (user: KnowledgeBaseUser) => void
 }
 
-export function LoginModal({ isOpen, onClose, users = [], onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, users = [], onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = () => {
-    const user = users.find((u) => u.username === username && u.password === password)
-    if (user) {
-      onLogin(user)
-      onClose()
-    } else {
-      setError("Invalid username or password")
+  console.log("LoginModal rendered with users:", users)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    console.log("Login attempt:", { username: username.trim(), password: password.trim() })
+    console.log(
+      "Available users:",
+      users.map((u) => ({ username: u.username, password: u.password })),
+    )
+
+    try {
+      const trimmedUsername = username.trim()
+      const trimmedPassword = password.trim()
+
+      if (!trimmedUsername || !trimmedPassword) {
+        setError("Please enter both username and password")
+        return
+      }
+
+      const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
+
+      console.log("Found user:", user)
+
+      if (user) {
+        // Update last login
+        const updatedUser = { ...user, lastLogin: new Date() }
+        onLogin(updatedUser)
+        setUsername("")
+        setPassword("")
+      } else {
+        setError("Invalid username or password")
+      }
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("An error occurred during login")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  if (!isOpen) {
-    return null
+  const fillCredentials = (user: KnowledgeBaseUser) => {
+    setUsername(user.username)
+    setPassword(user.password)
+    setError("")
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        {/* Demo Credentials */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm font-medium text-blue-900 mb-2">Demo Credentials (click to fill):</p>
-          <div className="space-y-1 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setUsername("admin")
-                setPassword("admin123")
-              }}
-              className="block w-full text-left p-1 hover:bg-blue-100 rounded"
-            >
-              <strong>Admin:</strong> admin / admin123
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUsername("editor")
-                setPassword("editor123")
-              }}
-              className="block w-full text-left p-1 hover:bg-blue-100 rounded"
-            >
-              <strong>Editor:</strong> editor / editor123
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUsername("viewer")
-                setPassword("viewer123")
-              }}
-              className="block w-full text-left p-1 hover:bg-blue-100 rounded"
-            >
-              <strong>Viewer:</strong> viewer / viewer123
-            </button>
-          </div>
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <LogIn className="h-5 w-5" />
+            <span>Sign In to Kuhlekt KB</span>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div id="login-description" className="sr-only">
+          Sign in to access the Kuhlekt Knowledge Base with your username and password
         </div>
 
-        <h2 className="text-lg font-medium mb-4">Login</h2>
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-2 mb-4 border border-gray-300 rounded"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 mb-4 border border-gray-300 rounded"
-        />
-        <button
-          type="button"
-          onClick={handleLogin}
-          className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Login
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full p-2 mt-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-        >
-          Close
-        </button>
-      </div>
-    </div>
+        <div className="space-y-6">
+          {/* Demo Credentials */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-blue-800">Demo Credentials</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => fillCredentials(user)}
+                      className="text-left hover:bg-blue-100 p-2 rounded transition-colors"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className="capitalize">
+                          {user.role}
+                        </Badge>
+                        <span className="text-sm font-mono">
+                          {user.username} / {user.password}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-blue-700">Loading users...</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {error && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="flex items-center space-x-2">
+                <Lock className="h-4 w-4" />
+                <span>Username</span>
+              </Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                disabled={isLoading}
+                autoComplete="username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="flex items-center space-x-2">
+                <Lock className="h-4 w-4" />
+                <span>Password</span>
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          {/* Debug Info */}
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>Users loaded: {users.length}</p>
+            <p>Click on demo credentials above to auto-fill the form</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

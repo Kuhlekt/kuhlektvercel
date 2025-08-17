@@ -1,114 +1,133 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RefreshCw, Database } from "lucide-react"
 import { storage } from "../utils/storage"
 import { initialUsers } from "../data/initial-users"
-import type { User } from "../types/knowledge-base"
+import type { KnowledgeBaseUser } from "../types/knowledge-base"
 
 interface LoginDebugProps {
-  users: User[]
-  onLogin: (user: User) => void
+  users: KnowledgeBaseUser[]
+  onLogin: (user: KnowledgeBaseUser) => void
+  onUsersUpdate: (users: KnowledgeBaseUser[]) => void
 }
 
-export function LoginDebug({ users, onLogin }: LoginDebugProps) {
-  const [debugInfo, setDebugInfo] = useState<string>("")
+export function LoginDebug({ users, onLogin, onUsersUpdate }: LoginDebugProps) {
+  const storageUsers = storage.getUsers()
 
-  const handleResetUsers = () => {
-    try {
-      storage.saveUsers(initialUsers)
-      setDebugInfo("Users reset to initial state successfully!")
-      setTimeout(() => window.location.reload(), 1000)
-    } catch (error) {
-      setDebugInfo(`Error resetting users: ${error}`)
-    }
-  }
-
-  const handleDirectLogin = (user: User) => {
-    const updatedUser = {
-      ...user,
-      lastLogin: new Date(),
-    }
-
-    // Update storage
-    const allUsers = storage.getUsers()
-    const updatedUsers = allUsers.map((u) => (u.id === user.id ? updatedUser : u))
-    storage.saveUsers(updatedUsers)
-
+  const handleDirectLogin = (user: KnowledgeBaseUser) => {
+    const updatedUser = { ...user, lastLogin: new Date() }
     onLogin(updatedUser)
   }
 
-  const storageUsers = storage.getUsers()
+  const handleResetUsers = () => {
+    storage.saveUsers(initialUsers)
+    onUsersUpdate(initialUsers)
+  }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-96 max-h-96 overflow-y-auto z-50 bg-yellow-50 border-yellow-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-yellow-800">🐛 Login Debug Panel</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-xs">
-        <div>
-          <strong>Users from props ({users.length}):</strong>
-          {users.map((user) => (
-            <div key={user.id} className="flex items-center justify-between ml-2">
-              <span>
-                {user.username} ({user.role})
-              </span>
-              <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)} className="h-6 text-xs">
-                Login
-              </Button>
-            </div>
-          ))}
-        </div>
+    <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Login Debug Panel</h3>
+        <Button onClick={handleResetUsers} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Reset Users to Initial State
+        </Button>
+      </div>
 
-        <div>
-          <strong>Users from storage ({storageUsers.length}):</strong>
-          {storageUsers.map((user) => (
-            <div key={user.id} className="flex items-center justify-between ml-2">
-              <span>
-                {user.username} ({user.role})
-              </span>
-              <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)} className="h-6 text-xs">
-                Login
-              </Button>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Users from Props */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center space-x-2">
+              <RefreshCw className="h-4 w-4" />
+              <span>Users from Props ({users.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {users.length > 0 ? (
+              users.map((user) => (
+                <div key={user.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="capitalize">
+                      {user.role}
+                    </Badge>
+                    <span className="text-sm">{user.username}</span>
+                  </div>
+                  <Button onClick={() => handleDirectLogin(user)} size="sm" variant="ghost">
+                    Login
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No users in props</p>
+            )}
+          </CardContent>
+        </Card>
 
-        <div>
-          <strong>Initial users ({initialUsers.length}):</strong>
-          {initialUsers.map((user) => (
-            <div key={user.id} className="flex items-center justify-between ml-2">
-              <span>
-                {user.username} ({user.role})
-              </span>
-              <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)} className="h-6 text-xs">
-                Login
-              </Button>
-            </div>
-          ))}
-        </div>
+        {/* Users from Storage */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center space-x-2">
+              <Database className="h-4 w-4" />
+              <span>Users from Storage ({storageUsers.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {storageUsers.length > 0 ? (
+              storageUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="capitalize">
+                      {user.role}
+                    </Badge>
+                    <span className="text-sm">{user.username}</span>
+                  </div>
+                  <Button onClick={() => handleDirectLogin(user)} size="sm" variant="ghost">
+                    Login
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No users in storage</p>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="flex gap-2">
-          <Button size="sm" variant="destructive" onClick={handleResetUsers} className="h-6 text-xs">
-            Reset Users to Initial State
-          </Button>
-        </div>
+        {/* Initial Users */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center space-x-2">
+              <RefreshCw className="h-4 w-4" />
+              <span>Initial Users ({initialUsers.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {initialUsers.map((user) => (
+              <div key={user.id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="capitalize">
+                    {user.role}
+                  </Badge>
+                  <span className="text-sm">{user.username}</span>
+                </div>
+                <Button onClick={() => handleDirectLogin(user)} size="sm" variant="ghost">
+                  Login
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
-        {debugInfo && (
-          <div className="p-2 bg-white rounded border">
-            <Badge variant="outline" className="text-xs">
-              {debugInfo}
-            </Badge>
-          </div>
-        )}
-
-        <div className="text-xs text-gray-500">
-          <p>Storage health: {storage.checkHealth() ? "✅ OK" : "❌ Failed"}</p>
-          <p>Has data: {storage.hasAnyData() ? "✅ Yes" : "❌ No"}</p>
-        </div>
-      </CardContent>
-    </Card>
+      <Alert>
+        <AlertDescription>
+          This debug panel helps troubleshoot login issues. Use "Reset Users to Initial State" if login isn't working.
+        </AlertDescription>
+      </Alert>
+    </div>
   )
 }
