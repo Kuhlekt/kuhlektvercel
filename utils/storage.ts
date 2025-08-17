@@ -322,6 +322,7 @@ class StorageManager {
         auditLog: this.getAuditLog(),
         pageVisits: this.getPageVisits(),
         exportedAt: new Date().toISOString(),
+        version: "1.1",
       }
       return JSON.stringify(data, null, 2)
     } catch (error) {
@@ -361,16 +362,74 @@ export const storage = new StorageManager()
 
 // Data manager for backward compatibility
 export const dataManager = {
-  getCategories: () => storage.getCategories(),
-  saveCategories: (categories: Category[]) => storage.saveCategories(categories),
-  getUsers: () => storage.getUsers(),
-  saveUsers: (users: User[]) => storage.saveUsers(users),
-  getAuditLog: () => storage.getAuditLog(),
-  saveAuditLog: (auditLog: AuditLogEntry[]) => storage.saveAuditLog(auditLog),
-  addAuditEntry: (entry: Omit<AuditLogEntry, "id">) => storage.addAuditEntry(entry),
-  getPageVisits: () => storage.getPageVisits(),
-  incrementPageVisits: () => storage.incrementPageVisits(),
-  clearAll: () => storage.clearAll(),
-  exportData: () => storage.exportData(),
-  importData: (data: string) => storage.importData(data),
+  exportData: () => {
+    const data = storage.exportData()
+    const blob = new Blob([data], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  },
+  importData: async (file: File) => {
+    const text = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          resolve(e.target.result as string)
+        } else {
+          reject(new Error("Failed to read file"))
+        }
+      }
+      reader.onerror = () => reject(new Error("File reading failed"))
+      reader.readAsText(file)
+    })
+
+    const data = JSON.parse(text)
+
+    // Process categories with date conversion
+    const processedCategories = data.categories.map((category: any) => ({
+      ...category,
+      articles: (category.articles || []).map((article: any) => ({
+        ...article,
+        createdAt: new Date(article.createdAt),
+        updatedAt: new Date(article.updatedAt),
+        editCount: article.editCount || 0,
+        tags: Array.isArray(article.tags) ? article.tags : [],
+      })),
+      subcategories: (category.subcategories || []).map((subcategory: any) => ({
+        ...subcategory,
+        articles: (subcategory.articles || []).map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt),
+          editCount: article.editCount || 0,
+          tags: Array.isArray(article.tags) ? article.tags : [],
+        })),
+      })),
+    }))
+
+    // Process users with date conversion
+    const processedUsers = data.users.map((user: any) => ({
+      ...user,
+      createdAt: new Date(user.createdAt),
+      lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+    }))
+
+    // Process audit log with date conversion
+    const processedAuditLog = data.auditLog.map((entry: any) => ({
+      ...entry,
+      timestamp: new Date(entry.timestamp),
+    }))
+
+    return {
+      categories: processedCategories,
+      users: processedUsers,
+      auditLog: processedAuditLog,
+      pageVisits: data.pageVisits || 0,
+    }
+  },
 }

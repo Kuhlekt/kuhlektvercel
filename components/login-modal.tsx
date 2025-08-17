@@ -34,7 +34,7 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
       console.log("Login attempt:", { username, password })
       console.log(
         "Available users:",
-        users.map((u) => ({ username: u.username, password: u.password })),
+        users.map((u) => ({ username: u.username, role: u.role })),
       )
 
       // Find user by username and password
@@ -46,7 +46,7 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
         return
       }
 
-      console.log("User found:", user)
+      console.log("User found:", { username: user.username, role: user.role })
 
       // Update last login
       const updatedUser = {
