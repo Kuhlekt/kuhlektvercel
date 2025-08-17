@@ -7,12 +7,14 @@ import { ArrowLeft, Edit, Trash2, Calendar, User, Tag } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
-  article: Article
-  categories: Category[]
-  onBack: () => void
-  backButtonText: string
+  article: Article | null
+  categories?: Category[]
+  onBack?: () => void
+  backButtonText?: string
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
+  onEditArticle?: (article: Article) => void
+  onDeleteArticle?: (articleId: string) => void
 }
 
 // Helper function to clean HTML content and convert to readable text
@@ -75,21 +77,51 @@ const extractImages = (htmlContent: string): string[] => {
   return images
 }
 
-export function ArticleViewer({ article, categories, onBack, backButtonText, onEdit, onDelete }: ArticleViewerProps) {
+export function ArticleViewer({
+  article,
+  categories = [],
+  onBack,
+  backButtonText = "Back",
+  onEdit,
+  onDelete,
+  onEditArticle,
+  onDeleteArticle,
+}: ArticleViewerProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Get category and subcategory names
-  const category = categories.find((c) => c.id === article.categoryId)
-  const subcategory = category?.subcategories.find((s) => s.id === article.subcategoryId)
+  // Handle case where no article is selected
+  if (!article) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-white">
+        <div className="text-center text-gray-500">
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-2xl font-semibold mb-2">Welcome to Kuhlekt Knowledge Base</h2>
+          <p className="text-lg">Select an article from the sidebar to get started</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Get category and subcategory names safely
+  const category = Array.isArray(categories) ? categories.find((c) => c.id === article.categoryId) : null
+  const subcategory = category?.subcategories?.find((s) => s.id === article.subcategoryId)
 
   // Clean the article content and extract images
-  const cleanedContent = cleanContent(article.content)
-  const images = extractImages(article.content)
+  const cleanedContent = cleanContent(article.content || "")
+  const images = extractImages(article.content || "")
 
   const handleDelete = () => {
-    if (onDelete) {
-      onDelete(article.id)
+    const deleteHandler = onDelete || onDeleteArticle
+    if (deleteHandler) {
+      deleteHandler(article.id)
       setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleEdit = () => {
+    const editHandler = onEdit || onEditArticle
+    if (editHandler) {
+      editHandler(article)
     }
   }
 
@@ -97,130 +129,136 @@ export function ArticleViewer({ article, categories, onBack, backButtonText, onE
   const paragraphs = cleanedContent.split("\n\n").filter((p) => p.trim() !== "")
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>{backButtonText}</span>
-          </Button>
+    <div className="flex-1 bg-white overflow-y-auto">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header */}
+        <div className="border-b border-gray-200 pb-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            {onBack && (
+              <Button
+                variant="ghost"
+                onClick={onBack}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>{backButtonText}</span>
+              </Button>
+            )}
 
-          {(onEdit || onDelete) && (
-            <div className="flex items-center space-x-2">
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(article)}
-                  className="flex items-center space-x-1"
-                >
-                  <Edit className="h-4 w-4" />
-                  <span>Edit</span>
-                </Button>
-              )}
-              {onDelete && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Delete</span>
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
-
-        {/* Article metadata */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-          <div className="flex items-center space-x-1">
-            <Calendar className="h-4 w-4" />
-            <span>Created {article.createdAt.toLocaleDateString()}</span>
+            {(onEdit || onEditArticle || onDelete || onDeleteArticle) && (
+              <div className="flex items-center space-x-2">
+                {(onEdit || onEditArticle) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEdit}
+                    className="flex items-center space-x-1 bg-transparent"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Edit</span>
+                  </Button>
+                )}
+                {(onDelete || onDeleteArticle) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
-          {article.updatedAt.getTime() !== article.createdAt.getTime() && (
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
+
+          {/* Article metadata */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
             <div className="flex items-center space-x-1">
               <Calendar className="h-4 w-4" />
-              <span>Updated {article.updatedAt.toLocaleDateString()}</span>
+              <span>Created {new Date(article.createdAt).toLocaleDateString()}</span>
+            </div>
+
+            {article.updatedAt && new Date(article.updatedAt).getTime() !== new Date(article.createdAt).getTime() && (
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>Updated {new Date(article.updatedAt).toLocaleDateString()}</span>
+              </div>
+            )}
+
+            {article.createdBy && (
+              <div className="flex items-center space-x-1">
+                <User className="h-4 w-4" />
+                <span>By {article.createdBy}</span>
+              </div>
+            )}
+
+            {article.editCount && article.editCount > 0 && (
+              <div className="flex items-center space-x-1">
+                <Edit className="h-4 w-4" />
+                <span>
+                  {article.editCount} edit{article.editCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Category breadcrumb */}
+          {category && (
+            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+              <span>{category.name}</span>
+              {subcategory && (
+                <>
+                  <span>›</span>
+                  <span>{subcategory.name}</span>
+                </>
+              )}
             </div>
           )}
 
-          <div className="flex items-center space-x-1">
-            <User className="h-4 w-4" />
-            <span>By {article.createdBy}</span>
-          </div>
-
-          {article.editCount && article.editCount > 0 && (
-            <div className="flex items-center space-x-1">
-              <Edit className="h-4 w-4" />
-              <span>
-                {article.editCount} edit{article.editCount !== 1 ? "s" : ""}
-              </span>
+          {/* Tags */}
+          {article.tags && Array.isArray(article.tags) && article.tags.length > 0 && (
+            <div className="flex items-center space-x-2 mb-4">
+              <Tag className="h-4 w-4 text-gray-400" />
+              <div className="flex flex-wrap gap-2">
+                {article.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Category breadcrumb */}
-        <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-          <span>{category?.name || "Unknown Category"}</span>
-          {subcategory && (
-            <>
-              <span>›</span>
-              <span>{subcategory.name}</span>
-            </>
-          )}
-        </div>
-
-        {/* Tags */}
-        {article.tags && article.tags.length > 0 && (
-          <div className="flex items-center space-x-2 mb-4">
-            <Tag className="h-4 w-4 text-gray-400" />
-            <div className="flex flex-wrap gap-2">
-              {article.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-6">
-        {/* Images */}
-        {images.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Images</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {images.map((src, index) => (
-                <div key={index} className="border rounded-lg overflow-hidden">
-                  <img
-                    src={src || "/placeholder.svg"}
-                    alt={`Article image ${index + 1}`}
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = "none"
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Article content */}
+        {/* Content */}
         <div className="prose prose-lg max-w-none">
+          {/* Images */}
+          {images.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">Images</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {images.map((src, index) => (
+                  <div key={index} className="border rounded-lg overflow-hidden">
+                    <img
+                      src={src || "/placeholder.svg"}
+                      alt={`Article image ${index + 1}`}
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = "none"
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Article content */}
           <div className="text-gray-800 leading-relaxed">
             {paragraphs.length > 0 ? (
               paragraphs.map((paragraph, index) => (

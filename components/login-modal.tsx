@@ -6,11 +6,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { LogIn, AlertTriangle, User, Shield, FileEdit, Eye } from "lucide-react"
+import { User, AlertCircle } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { KnowledgeBaseUser } from "../types/knowledge-base"
 
@@ -25,49 +23,65 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  const users = storage.getUsers()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username.trim()) {
-      setError("Username is required")
-      return
-    }
-
-    setIsLoading(true)
     setError("")
+    setIsLoading(true)
 
     try {
-      const users = storage.getUsers()
+      if (!username.trim()) {
+        setError("Please enter a username")
+        return
+      }
+
       const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
 
       if (!user) {
         setError("User not found")
-        setIsLoading(false)
         return
       }
 
       // Update last login
-      const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date() } : u))
+      const updatedUser = {
+        ...user,
+        lastLogin: new Date(),
+      }
+
+      // Update users in storage
+      const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
       storage.saveUsers(updatedUsers)
 
-      // Add audit entry
+      // Add audit log entry
       storage.addAuditEntry({
         action: "user_login",
         entityType: "user",
         entityId: user.id,
         performedBy: user.username,
         timestamp: new Date(),
-        details: `User login: ${user.username} (${user.role})`,
+        details: `User login: ${user.username}`,
       })
 
-      onLogin({ ...user, lastLogin: new Date() })
-      onClose()
+      onLogin(updatedUser)
       setUsername("")
-    } catch (error) {
-      console.error("Login error:", error)
+    } catch (err) {
       setError("Login failed. Please try again.")
+      console.error("Login error:", err)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDemoLogin = (demoUser: KnowledgeBaseUser) => {
+    setUsername(demoUser.username)
+    // Auto-submit after setting username
+    setTimeout(() => {
+      const form = document.getElementById("login-form") as HTMLFormElement
+      if (form) {
+        form.requestSubmit()
+      }
+    }, 100)
   }
 
   const handleClose = () => {
@@ -76,41 +90,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     onClose()
   }
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Shield className="h-3 w-3" />
-      case "editor":
-        return <FileEdit className="h-3 w-3" />
-      case "viewer":
-        return <Eye className="h-3 w-3" />
-      default:
-        return <User className="h-3 w-3" />
-    }
-  }
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "destructive"
-      case "editor":
-        return "default"
-      case "viewer":
-        return "secondary"
-      default:
-        return "secondary"
-    }
-  }
-
-  // Get available users for demo purposes
-  const availableUsers = storage.getUsers().slice(0, 3)
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            <LogIn className="h-5 w-5" />
+            <User className="h-5 w-5" />
             <span>Login to Knowledge Base</span>
           </DialogTitle>
           <DialogDescription id="login-description">
@@ -118,7 +103,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -133,41 +118,46 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </div>
 
           {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">{error}</AlertDescription>
-            </Alert>
+            <div className="flex items-center space-x-2 text-red-600 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
+            </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading || !username.trim()}>
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading || !username.trim()}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+          </div>
         </form>
 
-        {availableUsers.length > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-gray-700">Available Demo Accounts:</div>
-              <div className="space-y-2">
-                {availableUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-3 w-3 text-gray-500" />
-                      <span className="text-sm font-medium">{user.username}</span>
-                    </div>
-                    <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1">
-                      {getRoleIcon(user.role)}
-                      <span className="capitalize">{user.role}</span>
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-              <div className="text-xs text-gray-500">
-                Use any of the usernames above to login. No password required for demo.
-              </div>
+        {/* Demo Accounts */}
+        {users.length > 0 && (
+          <div className="mt-6 pt-4 border-t">
+            <h4 className="text-sm font-medium mb-3">Demo Accounts</h4>
+            <div className="space-y-2">
+              {users.map((user) => (
+                <Button
+                  key={user.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDemoLogin(user)}
+                  disabled={isLoading}
+                  className="w-full justify-between"
+                >
+                  <span>{user.username}</span>
+                  <Badge
+                    variant={user.role === "admin" ? "destructive" : user.role === "editor" ? "default" : "secondary"}
+                  >
+                    {user.role}
+                  </Badge>
+                </Button>
+              ))}
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>

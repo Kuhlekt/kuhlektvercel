@@ -2,115 +2,160 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Upload, Download, FileText, AlertTriangle, CheckCircle, Database, Eye, Import, RefreshCw } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Upload, Download, Database, AlertCircle, CheckCircle, Eye, Trash2, RefreshCw } from "lucide-react"
 import { storage } from "../utils/storage"
-import type { Category, Article, KnowledgeBaseUser, AuditLogEntry } from "../types/knowledge-base"
+import type { Category, KnowledgeBaseUser, AuditLogEntry } from "../types/knowledge-base"
 
 interface DataManagementProps {
-  categories: Category[]
-  users: KnowledgeBaseUser[]
-  auditLog: AuditLogEntry[]
   onDataImported: () => void
 }
 
 interface ImportData {
   categories?: Category[]
-  articles?: Article[]
   users?: KnowledgeBaseUser[]
   auditLog?: AuditLogEntry[]
+  pageVisits?: number
 }
 
-interface ImportPreview {
+interface ImportStats {
   categories: number
   articles: number
   users: number
-  auditLog: number
-  totalSize: string
+  auditEntries: number
+  pageVisits: number
 }
 
-export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
+export function DataManagement({ onDataImported }: DataManagementProps) {
   const [importData, setImportData] = useState("")
   const [isImporting, setIsImporting] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
-  const [importStatus, setImportStatus] = useState("")
-  const [importError, setImportError] = useState("")
-  const [importSuccess, setImportSuccess] = useState("")
-  const [preview, setPreview] = useState<ImportPreview | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importStatus, setImportStatus] = useState<string>("")
+  const [importError, setImportError] = useState<string>("")
+  const [importSuccess, setImportSuccess] = useState<string>("")
+  const [previewData, setPreviewData] = useState<ImportData | null>(null)
+  const [previewStats, setPreviewStats] = useState<ImportStats | null>(null)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const getCurrentStats = (): ImportStats => {
+    try {
+      const categories = storage.getCategories()
+      const users = storage.getUsers()
+      const auditLog = storage.getAuditLog()
+      const pageVisits = storage.getPageVisits()
 
-    if (file.type !== "application/json") {
-      setImportError("Please select a JSON file")
+      const totalArticles = categories.reduce((total, category) => {
+        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+        const subcategoryArticles = Array.isArray(category.subcategories)
+          ? category.subcategories.reduce(
+              (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+              0,
+            )
+          : 0
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
+      return {
+        categories: categories.length,
+        articles: totalArticles,
+        users: users.length,
+        auditEntries: auditLog.length,
+        pageVisits,
+      }
+    } catch (error) {
+      console.error("Error getting current stats:", error)
+      return {
+        categories: 0,
+        articles: 0,
+        users: 0,
+        auditEntries: 0,
+        pageVisits: 0,
+      }
+    }
+  }
+
+  const parseImportData = (jsonString: string): ImportData | null => {
+    try {
+      const parsed = JSON.parse(jsonString)
+
+      // Handle different JSON structures
+      if (Array.isArray(parsed)) {
+        // If it's an array, assume it's categories
+        return { categories: parsed }
+      } else if (parsed.categories || parsed.users || parsed.auditLog) {
+        // If it has expected properties, use it directly
+        return parsed
+      } else {
+        // Try to find nested data
+        const result: ImportData = {}
+
+        // Look for categories in various places
+        if (parsed.categories) result.categories = parsed.categories
+        if (parsed.users) result.users = parsed.users
+        if (parsed.auditLog) result.auditLog = parsed.auditLog
+        if (parsed.pageVisits) result.pageVisits = parsed.pageVisits
+
+        return Object.keys(result).length > 0 ? result : null
+      }
+    } catch (error) {
+      console.error("Error parsing import data:", error)
+      return null
+    }
+  }
+
+  const calculateStats = (data: ImportData): ImportStats => {
+    const categories = data.categories || []
+    const totalArticles = categories.reduce((total, category) => {
+      const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+      const subcategoryArticles = Array.isArray(category.subcategories)
+        ? category.subcategories.reduce(
+            (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+            0,
+          )
+        : 0
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
+
+    return {
+      categories: categories.length,
+      articles: totalArticles,
+      users: (data.users || []).length,
+      auditEntries: (data.auditLog || []).length,
+      pageVisits: data.pageVisits || 0,
+    }
+  }
+
+  const handlePreview = () => {
+    setImportError("")
+    setImportSuccess("")
+    setPreviewData(null)
+    setPreviewStats(null)
+
+    if (!importData.trim()) {
+      setImportError("Please enter JSON data to preview")
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      setImportData(content)
-      generatePreview(content)
+    const parsed = parseImportData(importData.trim())
+    if (!parsed) {
+      setImportError("Invalid JSON format. Please check your data.")
+      return
     }
-    reader.onerror = () => {
-      setImportError("Failed to read file")
-    }
-    reader.readAsText(file)
-  }
 
-  const generatePreview = (jsonData: string) => {
-    try {
-      const data = JSON.parse(jsonData)
-      let parsedData: ImportData
-
-      // Handle different JSON structures
-      if (data.categories || data.articles || data.users || data.auditLog) {
-        parsedData = data
-      } else if (Array.isArray(data)) {
-        // Assume it's articles if it's an array
-        parsedData = { articles: data }
-      } else {
-        throw new Error("Invalid data structure")
-      }
-
-      const previewData: ImportPreview = {
-        categories: parsedData.categories?.length || 0,
-        articles: parsedData.articles?.length || 0,
-        users: parsedData.users?.length || 0,
-        auditLog: parsedData.auditLog?.length || 0,
-        totalSize: `${(jsonData.length / 1024).toFixed(1)} KB`,
-      }
-
-      setPreview(previewData)
-      setImportError("")
-    } catch (error) {
-      setImportError("Invalid JSON format")
-      setPreview(null)
-    }
-  }
-
-  const handlePasteData = (value: string) => {
-    setImportData(value)
-    if (value.trim()) {
-      generatePreview(value)
-    } else {
-      setPreview(null)
-    }
+    const stats = calculateStats(parsed)
+    setPreviewData(parsed)
+    setPreviewStats(stats)
+    setImportSuccess("Data preview loaded successfully!")
   }
 
   const handleImport = async () => {
-    if (!importData.trim()) {
-      setImportError("Please provide data to import")
+    if (!previewData) {
+      setImportError("Please preview the data first")
       return
     }
 
@@ -118,116 +163,93 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     setImportProgress(0)
     setImportError("")
     setImportSuccess("")
-    setImportStatus("Parsing data...")
+    setImportStatus("Starting import...")
 
     try {
-      const data = JSON.parse(importData)
-      let parsedData: ImportData
+      // Convert date strings to Date objects
+      const processData = (data: any): any => {
+        if (Array.isArray(data)) {
+          return data.map(processData)
+        } else if (data && typeof data === "object") {
+          const processed = { ...data }
 
-      // Handle different JSON structures
-      if (data.categories || data.articles || data.users || data.auditLog) {
-        parsedData = data
-      } else if (Array.isArray(data)) {
-        parsedData = { articles: data }
-      } else {
-        throw new Error("Invalid data structure")
-      }
-
-      setImportProgress(20)
-      setImportStatus("Validating data...")
-
-      // Convert string dates to Date objects
-      const convertDates = (obj: any): any => {
-        if (obj === null || obj === undefined) return obj
-        if (typeof obj === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(obj)) {
-          return new Date(obj)
-        }
-        if (Array.isArray(obj)) {
-          return obj.map(convertDates)
-        }
-        if (typeof obj === "object") {
-          const converted: any = {}
-          for (const [key, value] of Object.entries(obj)) {
-            converted[key] = convertDates(value)
+          // Convert date fields
+          if (processed.createdAt && typeof processed.createdAt === "string") {
+            processed.createdAt = new Date(processed.createdAt)
           }
-          return converted
-        }
-        return obj
-      }
-
-      setImportProgress(40)
-      setImportStatus("Processing categories...")
-
-      if (parsedData.categories) {
-        const convertedCategories = convertDates(parsedData.categories)
-        storage.saveCategories(convertedCategories)
-      }
-
-      setImportProgress(60)
-      setImportStatus("Processing articles...")
-
-      if (parsedData.articles) {
-        const convertedArticles = convertDates(parsedData.articles)
-        // Get existing articles and merge
-        const existingArticles = storage.getArticles()
-        const mergedArticles = [...existingArticles]
-
-        convertedArticles.forEach((newArticle: Article) => {
-          const existingIndex = mergedArticles.findIndex((a) => a.id === newArticle.id)
-          if (existingIndex >= 0) {
-            mergedArticles[existingIndex] = newArticle
-          } else {
-            mergedArticles.push(newArticle)
+          if (processed.updatedAt && typeof processed.updatedAt === "string") {
+            processed.updatedAt = new Date(processed.updatedAt)
           }
-        })
+          if (processed.lastLogin && typeof processed.lastLogin === "string") {
+            processed.lastLogin = new Date(processed.lastLogin)
+          }
+          if (processed.timestamp && typeof processed.timestamp === "string") {
+            processed.timestamp = new Date(processed.timestamp)
+          }
 
-        storage.saveArticles(mergedArticles)
+          // Process nested objects and arrays
+          Object.keys(processed).forEach((key) => {
+            if (processed[key] && (typeof processed[key] === "object" || Array.isArray(processed[key]))) {
+              processed[key] = processData(processed[key])
+            }
+          })
+
+          return processed
+        }
+        return data
       }
 
-      setImportProgress(80)
-      setImportStatus("Processing users...")
-
-      if (parsedData.users) {
-        const convertedUsers = convertDates(parsedData.users)
-        storage.saveUsers(convertedUsers)
+      // Import categories
+      if (previewData.categories) {
+        setImportStatus("Importing categories...")
+        setImportProgress(25)
+        const processedCategories = processData(previewData.categories)
+        storage.saveCategories(processedCategories)
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
 
-      setImportProgress(90)
-      setImportStatus("Processing audit log...")
-
-      if (parsedData.auditLog) {
-        const convertedAuditLog = convertDates(parsedData.auditLog)
-        storage.saveAuditLog(convertedAuditLog)
+      // Import users
+      if (previewData.users) {
+        setImportStatus("Importing users...")
+        setImportProgress(50)
+        const processedUsers = processData(previewData.users)
+        storage.saveUsers(processedUsers)
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
 
-      setImportProgress(95)
-      setImportStatus("Updating page visits...")
+      // Import audit log
+      if (previewData.auditLog) {
+        setImportStatus("Importing audit log...")
+        setImportProgress(75)
+        const processedAuditLog = processData(previewData.auditLog)
+        storage.saveAuditLog(processedAuditLog)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
 
-      // Update page visits counter
-      const currentVisits = storage.getPageVisits()
-      localStorage.setItem("kuhlekt_kb_page_visits", (currentVisits + 1).toString())
+      // Import page visits
+      if (previewData.pageVisits) {
+        setImportStatus("Importing page visits...")
+        localStorage.setItem("kuhlekt_kb_page_visits", previewData.pageVisits.toString())
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
 
       setImportProgress(100)
       setImportStatus("Import completed successfully!")
-
-      setImportSuccess(
-        `Successfully imported: ${preview?.categories || 0} categories, ${preview?.articles || 0} articles, ${
-          preview?.users || 0
-        } users, ${preview?.auditLog || 0} audit entries`,
-      )
+      setImportSuccess("Data imported successfully! The application will refresh to show the new data.")
 
       // Clear form
       setImportData("")
-      setPreview(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      setPreviewData(null)
+      setPreviewStats(null)
 
       // Notify parent component
-      onDataImported()
+      setTimeout(() => {
+        onDataImported()
+      }, 1000)
     } catch (error) {
       console.error("Import error:", error)
-      setImportError(error instanceof Error ? error.message : "Import failed")
+      setImportError(`Import failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      setImportStatus("")
     } finally {
       setIsImporting(false)
       setTimeout(() => {
@@ -237,16 +259,19 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     }
   }
 
-  const handleExport = async () => {
-    setIsExporting(true)
+  const handleExport = () => {
     try {
-      const articles = storage.getArticles()
+      const categories = storage.getCategories()
+      const users = storage.getUsers()
+      const auditLog = storage.getAuditLog()
+      const pageVisits = storage.getPageVisits()
+
       const exportData = {
         categories,
-        articles,
         users,
         auditLog,
-        exportDate: new Date().toISOString(),
+        pageVisits,
+        exportedAt: new Date().toISOString(),
         version: "1.0",
       }
 
@@ -261,246 +286,268 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
+
+      setImportSuccess("Data exported successfully!")
     } catch (error) {
       console.error("Export error:", error)
-    } finally {
-      setIsExporting(false)
+      setImportError(`Export failed: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
-  const clearImportData = () => {
-    setImportData("")
-    setPreview(null)
-    setImportError("")
-    setImportSuccess("")
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+      setImportError("Please select a JSON file")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      setImportData(content)
+      setImportError("")
+      setImportSuccess("File loaded successfully! Click Preview to validate the data.")
+    }
+    reader.onerror = () => {
+      setImportError("Error reading file")
+    }
+    reader.readAsText(file)
+  }
+
+  const handleClearAll = () => {
+    if (confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
+      try {
+        storage.clearAll()
+        setImportSuccess("All data cleared successfully! The application will refresh.")
+        setTimeout(() => {
+          onDataImported()
+        }, 1000)
+      } catch (error) {
+        console.error("Clear error:", error)
+        setImportError(`Clear failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      }
     }
   }
+
+  const currentStats = getCurrentStats()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Data Management</h3>
-          <p className="text-sm text-gray-600">Import and export knowledge base data</p>
-        </div>
-        <Button onClick={handleExport} disabled={isExporting} variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          {isExporting ? "Exporting..." : "Export Data"}
-        </Button>
-      </div>
+      {/* Current Data Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Database className="h-5 w-5" />
+            <span>Current Data Overview</span>
+          </CardTitle>
+          <CardDescription>Overview of data currently stored in the knowledge base</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{currentStats.categories}</div>
+              <div className="text-sm text-gray-600">Categories</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{currentStats.articles}</div>
+              <div className="text-sm text-gray-600">Articles</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{currentStats.users}</div>
+              <div className="text-sm text-gray-600">Users</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{currentStats.auditEntries}</div>
+              <div className="text-sm text-gray-600">Audit Entries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-600">{currentStats.pageVisits}</div>
+              <div className="text-sm text-gray-600">Page Visits</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Tabs defaultValue="import" className="space-y-4">
-        <TabsList>
+      {/* Import/Export */}
+      <Tabs defaultValue="import" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="import">Import Data</TabsTrigger>
-          <TabsTrigger value="stats">Current Data</TabsTrigger>
+          <TabsTrigger value="export">Export Data</TabsTrigger>
         </TabsList>
 
         <TabsContent value="import" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Import className="h-5 w-5" />
+                <Upload className="h-5 w-5" />
                 <span>Import Data</span>
               </CardTitle>
-              <CardDescription>
-                Import categories, articles, users, and audit log data from a JSON file or paste JSON directly.
-              </CardDescription>
+              <CardDescription>Import categories, articles, users, and audit log from JSON data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Tabs defaultValue="file" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="file">File Upload</TabsTrigger>
-                  <TabsTrigger value="paste">Paste Data</TabsTrigger>
-                </TabsList>
+              {/* File Upload */}
+              <div>
+                <label htmlFor="file-upload" className="block text-sm font-medium mb-2">
+                  Upload JSON File
+                </label>
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  disabled={isImporting}
+                />
+              </div>
 
-                <TabsContent value="file" className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="file-upload" className="text-sm font-medium">
-                      Select JSON File
-                    </label>
-                    <input
-                      id="file-upload"
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".json"
-                      onChange={handleFileSelect}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                  </div>
-                </TabsContent>
+              {/* Manual JSON Input */}
+              <div>
+                <label htmlFor="json-input" className="block text-sm font-medium mb-2">
+                  Or Paste JSON Data
+                </label>
+                <Textarea
+                  id="json-input"
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="Paste your JSON data here..."
+                  className="min-h-[200px] font-mono text-sm"
+                  disabled={isImporting}
+                />
+              </div>
 
-                <TabsContent value="paste" className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="paste-data" className="text-sm font-medium">
-                      Paste JSON Data
-                    </label>
-                    <Textarea
-                      id="paste-data"
-                      value={importData}
-                      onChange={(e) => handlePasteData(e.target.value)}
-                      placeholder="Paste your JSON data here..."
-                      className="min-h-[200px] font-mono text-sm"
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {preview && (
-                <Card className="border-blue-200 bg-blue-50">
+              {/* Preview Section */}
+              {previewData && previewStats && (
+                <Card className="bg-blue-50 border-blue-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center space-x-2 text-blue-800">
+                    <CardTitle className="text-sm flex items-center space-x-2">
                       <Eye className="h-4 w-4" />
-                      <span>Import Preview</span>
+                      <span>Data Preview</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">{preview.categories}</div>
-                        <div className="text-sm text-blue-600">Categories</div>
+                        <div className="text-lg font-semibold text-blue-600">{previewStats.categories}</div>
+                        <div className="text-gray-600">Categories</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">{preview.articles}</div>
-                        <div className="text-sm text-blue-600">Articles</div>
+                        <div className="text-lg font-semibold text-green-600">{previewStats.articles}</div>
+                        <div className="text-gray-600">Articles</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">{preview.users}</div>
-                        <div className="text-sm text-blue-600">Users</div>
+                        <div className="text-lg font-semibold text-purple-600">{previewStats.users}</div>
+                        <div className="text-gray-600">Users</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">{preview.auditLog}</div>
-                        <div className="text-sm text-blue-600">Audit Entries</div>
+                        <div className="text-lg font-semibold text-orange-600">{previewStats.auditEntries}</div>
+                        <div className="text-gray-600">Audit Entries</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">{preview.totalSize}</div>
-                        <div className="text-sm text-blue-600">File Size</div>
+                        <div className="text-lg font-semibold text-gray-600">{previewStats.pageVisits}</div>
+                        <div className="text-gray-600">Page Visits</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
+              {/* Progress */}
               {isImporting && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Import Progress</span>
-                    <span className="text-sm text-gray-600">{importProgress}%</span>
-                  </div>
                   <Progress value={importProgress} className="w-full" />
-                  {importStatus && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      <span>{importStatus}</span>
-                    </div>
-                  )}
+                  <p className="text-sm text-gray-600 flex items-center space-x-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>{importStatus}</span>
+                  </p>
                 </div>
               )}
 
-              {importError && (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800">{importError}</AlertDescription>
-                </Alert>
-              )}
-
-              {importSuccess && (
-                <Alert className="border-green-200 bg-green-50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">{importSuccess}</AlertDescription>
-                </Alert>
-              )}
-
+              {/* Actions */}
               <div className="flex space-x-2">
-                <Button onClick={handleImport} disabled={isImporting || !importData.trim()} className="flex-1">
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isImporting ? "Importing..." : "Import Data"}
+                <Button
+                  onClick={handlePreview}
+                  disabled={!importData.trim() || isImporting}
+                  variant="outline"
+                  className="flex items-center space-x-2 bg-transparent"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Preview</span>
                 </Button>
-                <Button onClick={clearImportData} variant="outline" disabled={isImporting}>
-                  Clear
+                <Button
+                  onClick={handleImport}
+                  disabled={!previewData || isImporting}
+                  className="flex items-center space-x-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span>{isImporting ? "Importing..." : "Import"}</span>
                 </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="stats" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <div className="text-2xl font-bold">{categories.length}</div>
-                    <div className="text-sm text-gray-600">Categories</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 text-green-600" />
-                  <div>
-                    <div className="text-2xl font-bold">{storage.getArticles().length}</div>
-                    <div className="text-sm text-gray-600">Articles</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <div className="text-2xl font-bold">{users.length}</div>
-                    <div className="text-sm text-gray-600">Users</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <div className="text-2xl font-bold">{auditLog.length}</div>
-                    <div className="text-sm text-gray-600">Audit Entries</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+        <TabsContent value="export" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Storage Information</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Download className="h-5 w-5" />
+                <span>Export Data</span>
+              </CardTitle>
+              <CardDescription>Export all knowledge base data as JSON for backup or migration</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Page Visits:</span>
-                  <Badge variant="outline">{storage.getPageVisits()}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Storage Available:</span>
-                  <Badge variant="outline" className="text-green-600">
-                    Yes
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Last Export:</span>
-                  <Badge variant="outline">Never</Badge>
-                </div>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  This will export all categories, articles, users, audit log entries, and page visit statistics.
+                </p>
+                <Button onClick={handleExport} className="flex items-center space-x-2">
+                  <Download className="h-4 w-4" />
+                  <span>Export All Data</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-red-600">
+                <Trash2 className="h-5 w-5" />
+                <span>Danger Zone</span>
+              </CardTitle>
+              <CardDescription>Irreversible actions that will permanently delete data</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Clear all data from the knowledge base. This action cannot be undone.
+                </p>
+                <Button onClick={handleClearAll} variant="destructive" className="flex items-center space-x-2">
+                  <Trash2 className="h-4 w-4" />
+                  <span>Clear All Data</span>
+                </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Status Messages */}
+      {importError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{importError}</AlertDescription>
+        </Alert>
+      )}
+
+      {importSuccess && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{importSuccess}</AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }
