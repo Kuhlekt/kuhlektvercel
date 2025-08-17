@@ -93,25 +93,51 @@ export const storage = {
       const healthCheck = this.checkHealth()
       if (!healthCheck.healthy) {
         console.warn("Storage health issues:", healthCheck.issues)
-        return false
       }
 
       const hasInitFlag = localStorage.getItem(STORAGE_KEYS.INITIALIZED) === "true"
-      const hasCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES) !== null
-      const hasUsers = localStorage.getItem(STORAGE_KEYS.USERS) !== null
-      const hasAuditLog = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG) !== null
-      const hasPageVisits = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS) !== null
+      const categoriesData = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
+      const usersData = localStorage.getItem(STORAGE_KEYS.USERS)
+      const auditLogData = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
+      const pageVisitsData = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
+
+      // Check if categories data actually contains articles
+      let hasRealCategoriesData = false
+      if (categoriesData) {
+        try {
+          const categories = JSON.parse(categoriesData)
+          if (Array.isArray(categories) && categories.length > 0) {
+            // Check if any category has articles
+            const totalArticles = categories.reduce((total, cat) => {
+              const catArticles = Array.isArray(cat.articles) ? cat.articles.length : 0
+              const subArticles = Array.isArray(cat.subcategories)
+                ? cat.subcategories.reduce(
+                    (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+                    0,
+                  )
+                : 0
+              return total + catArticles + subArticles
+            }, 0)
+            hasRealCategoriesData = totalArticles > 0
+            console.log("hasAnyData check - found", totalArticles, "articles in storage")
+          }
+        } catch (e) {
+          console.warn("Error parsing categories data in hasAnyData:", e)
+        }
+      }
+
+      const result = hasInitFlag || hasRealCategoriesData || !!usersData || !!auditLogData || !!pageVisitsData
 
       console.log("Data existence check:", {
         hasInitFlag,
-        hasCategories,
-        hasUsers,
-        hasAuditLog,
-        hasPageVisits,
+        hasRealCategoriesData,
+        hasUsersData: !!usersData,
+        hasAuditLogData: !!auditLogData,
+        hasPageVisitsData: !!pageVisitsData,
+        finalResult: result,
       })
 
-      // If we have the init flag OR any substantial data, consider it not first-time
-      return hasInitFlag || hasCategories || hasUsers || hasAuditLog || hasPageVisits
+      return result
     } catch (error) {
       console.error("Error checking data existence:", error)
       return false
@@ -135,24 +161,32 @@ export const storage = {
       const healthCheck = this.checkHealth()
       if (!healthCheck.healthy) {
         console.error("Storage health check failed:", healthCheck.issues)
-        throw new Error("Storage system is unhealthy")
+        // Continue anyway but log the issues
       }
 
       const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      console.log("Raw stored categories:", stored ? `${stored.length} characters` : "No data")
+      console.log("Raw stored categories data length:", stored ? stored.length : 0)
 
       if (!stored) {
-        console.log("No categories in storage")
+        console.log("No categories data found in localStorage")
         return []
       }
 
-      const categories = safeJSONParse(stored, [])
-      console.log("Parsed categories count:", categories.length)
+      let categories
+      try {
+        categories = JSON.parse(stored)
+        console.log("Successfully parsed categories JSON")
+      } catch (parseError) {
+        console.error("Failed to parse categories JSON:", parseError)
+        return []
+      }
 
       if (!Array.isArray(categories)) {
-        console.warn("Categories is not an array, returning empty array")
+        console.warn("Categories data is not an array:", typeof categories)
         return []
       }
+
+      console.log("Raw categories array length:", categories.length)
 
       // Enhanced data validation and processing
       const processedCategories = categories.map((category: any, index: number) => {
@@ -170,11 +204,13 @@ export const storage = {
         const articles = Array.isArray(category.articles) ? category.articles : []
         const subcategories = Array.isArray(category.subcategories) ? category.subcategories : []
 
-        return {
+        console.log(`Category "${category.name}": ${articles.length} articles, ${subcategories.length} subcategories`)
+
+        const processedCategory = {
           ...category,
           articles: articles.map((article: any) => {
             if (!article || typeof article !== "object") {
-              console.warn("Invalid article:", article)
+              console.warn("Invalid article in category:", category.name, article)
               return {
                 id: `invalid-${Date.now()}`,
                 title: "Invalid Article",
@@ -197,7 +233,7 @@ export const storage = {
           }),
           subcategories: subcategories.map((subcategory: any) => {
             if (!subcategory || typeof subcategory !== "object") {
-              console.warn("Invalid subcategory:", subcategory)
+              console.warn("Invalid subcategory in category:", category.name, subcategory)
               return {
                 id: `invalid-sub-${Date.now()}`,
                 name: "Invalid Subcategory",
@@ -206,12 +242,13 @@ export const storage = {
             }
 
             const subArticles = Array.isArray(subcategory.articles) ? subcategory.articles : []
+            console.log(`  Subcategory "${subcategory.name}": ${subArticles.length} articles`)
 
             return {
               ...subcategory,
               articles: subArticles.map((article: any) => {
                 if (!article || typeof article !== "object") {
-                  console.warn("Invalid subcategory article:", article)
+                  console.warn("Invalid subcategory article:", subcategory.name, article)
                   return {
                     id: `invalid-${Date.now()}`,
                     title: "Invalid Article",
@@ -236,26 +273,42 @@ export const storage = {
             }
           }),
         }
+
+        // Count articles in this processed category
+        const categoryArticleCount = processedCategory.articles.length
+        const subcategoryArticleCount = processedCategory.subcategories.reduce(
+          (total, sub) => total + sub.articles.length,
+          0,
+        )
+        console.log(
+          `Processed category "${category.name}": ${categoryArticleCount} + ${subcategoryArticleCount} = ${categoryArticleCount + subcategoryArticleCount} total articles`,
+        )
+
+        return processedCategory
       })
 
-      // Count total articles for logging
+      // Final count verification
       const totalArticles = processedCategories.reduce((total, category) => {
         const categoryArticles = category.articles.length
         const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
         return total + categoryArticles + subcategoryArticles
       }, 0)
 
-      console.log(
-        "Successfully loaded:",
-        processedCategories.length,
-        "categories with",
-        totalArticles,
-        "total articles",
-      )
+      console.log("FINAL RESULT - Categories loaded:", processedCategories.length, "Total articles:", totalArticles)
+
+      // Log each category's contribution
+      processedCategories.forEach((cat) => {
+        const catArticles = cat.articles.length
+        const subArticles = cat.subcategories.reduce((total, sub) => total + sub.articles.length, 0)
+        console.log(
+          `  ${cat.name}: ${catArticles} direct + ${subArticles} in subcategories = ${catArticles + subArticles}`,
+        )
+      })
+
       return processedCategories
     } catch (error) {
       console.error("Error in getCategories:", error)
-      // Don't clear data on error - let the app handle it
+      console.error("Stack trace:", error.stack)
       throw error
     }
   },

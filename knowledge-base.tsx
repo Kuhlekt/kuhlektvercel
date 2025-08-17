@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { StorageDebug } from "./components/storage-debug"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -51,26 +52,30 @@ export default function KnowledgeBase() {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        console.log("Starting data initialization...")
+        console.log("=== STARTING DATA INITIALIZATION ===")
 
         // Check storage health first
         const healthCheck = storage.checkHealth()
-        if (!healthCheck.healthy) {
-          console.error("Storage health issues detected:", healthCheck.issues)
-          // Continue anyway but log the issues
-        }
+        console.log("Storage health check:", healthCheck)
 
-        // Load existing data with enhanced error handling
-        let storedCategories: Category[] = []
-        let storedUsers: User[] = []
-        let storedAuditLog: AuditLogEntry[] = []
+        // Get storage info for debugging
+        const storageInfo = storage.getStorageInfo()
+        console.log("Storage info:", storageInfo)
+
+        // Check if we have any existing data
+        const hasExistingData = storage.hasAnyData()
+        console.log("Has existing data:", hasExistingData)
+
+        // Load categories with detailed logging
+        console.log("--- LOADING CATEGORIES ---")
+        let loadedCategories: Category[] = []
 
         try {
-          storedCategories = storage.getCategories()
-          console.log("Loaded categories from storage:", storedCategories?.length || 0, "categories")
+          loadedCategories = storage.getCategories()
+          console.log("Categories loaded successfully:", loadedCategories.length)
 
-          // Count total articles for verification
-          const totalArticles = storedCategories.reduce((total, category) => {
+          // Verify article count immediately after loading
+          const articleCount = loadedCategories.reduce((total, category) => {
             const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
             const subcategoryArticles = Array.isArray(category.subcategories)
               ? category.subcategories.reduce(
@@ -80,36 +85,28 @@ export default function KnowledgeBase() {
               : 0
             return total + categoryArticles + subcategoryArticles
           }, 0)
-          console.log("Total articles in loaded categories:", totalArticles)
+          console.log("Total articles in loaded categories:", articleCount)
+
+          if (articleCount === 0 && hasExistingData) {
+            console.error("WARNING: No articles found but hasExistingData is true - possible data corruption")
+          }
         } catch (error) {
           console.error("Error loading categories:", error)
-          storedCategories = []
+          loadedCategories = []
         }
 
-        try {
-          storedUsers = storage.getUsers()
-          console.log("Loaded users from storage:", storedUsers?.length || 0, "users")
-        } catch (error) {
-          console.error("Error loading users:", error)
-          storedUsers = []
-        }
+        // Set categories in state
+        if (loadedCategories.length > 0) {
+          console.log("Setting categories in state...")
+          setCategories(loadedCategories)
 
-        try {
-          storedAuditLog = storage.getAuditLog()
-          console.log("Loaded audit log from storage:", storedAuditLog?.length || 0, "entries")
-        } catch (error) {
-          console.error("Error loading audit log:", error)
-          storedAuditLog = []
-        }
+          // Verify state was set correctly
+          setTimeout(() => {
+            console.log("Categories state verification will happen in next render")
+          }, 100)
+        } else if (!hasExistingData) {
+          console.log("No existing data found, initializing with sample data...")
 
-        // Check if this is truly a first-time setup
-        const hasExistingData = storage.hasAnyData()
-        console.log("Has existing data:", hasExistingData)
-
-        // Handle categories with better logic
-        if (!hasExistingData && (!Array.isArray(storedCategories) || storedCategories.length === 0)) {
-          // Only initialize with sample data if this is genuinely the first time
-          console.log("First time setup - initializing with sample categories...")
           const categoriesWithDates = initialCategories.map((category) => ({
             ...category,
             articles: (category.articles || []).map((article) => ({
@@ -131,76 +128,49 @@ export default function KnowledgeBase() {
 
           setCategories(categoriesWithDates)
 
-          // Save to storage and mark as initialized
           try {
             storage.saveCategories(categoriesWithDates)
-            console.log("Saved initial categories to storage")
+            console.log("Initial categories saved to storage")
           } catch (saveError) {
             console.error("Failed to save initial categories:", saveError)
           }
-        } else if (Array.isArray(storedCategories) && storedCategories.length > 0) {
-          // Use existing production data
-          console.log("Loading existing production data...")
-          setCategories(storedCategories)
-
-          // Verify the data integrity
-          const totalArticles = storedCategories.reduce((total, category) => {
-            const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-            const subcategoryArticles = Array.isArray(category.subcategories)
-              ? category.subcategories.reduce(
-                  (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-                  0,
-                )
-              : 0
-            return total + categoryArticles + subcategoryArticles
-          }, 0)
-          console.log("Total articles loaded into state:", totalArticles)
-
-          if (totalArticles === 0) {
-            console.warn("No articles found in loaded categories - this might indicate a data issue")
-          }
         } else {
-          // Data loading failed but not first time - show error
-          console.error("Failed to load existing data and not first time setup")
-          setError("Failed to load knowledge base data. Please refresh the page or contact support.")
+          console.error("Data loading failed - setting empty categories")
           setCategories([])
+          setError("Failed to load knowledge base data. Please refresh the page.")
         }
 
-        // Handle users
-        if (!hasExistingData && (!Array.isArray(storedUsers) || storedUsers.length === 0)) {
-          console.log("First time setup - initializing with sample users...")
-          setUsers(initialUsers)
-          try {
+        // Load users
+        console.log("--- LOADING USERS ---")
+        try {
+          const loadedUsers = storage.getUsers()
+          if (loadedUsers.length > 0) {
+            setUsers(loadedUsers)
+            console.log("Users loaded:", loadedUsers.length)
+          } else {
+            setUsers(initialUsers)
             storage.saveUsers(initialUsers)
-          } catch (saveError) {
-            console.error("Failed to save initial users:", saveError)
+            console.log("Initialized with default users")
           }
-        } else if (Array.isArray(storedUsers) && storedUsers.length > 0) {
-          setUsers(storedUsers)
-        } else {
-          // For users, we can safely fall back to initial users if needed
-          console.log("No users found, using initial users...")
+        } catch (error) {
+          console.error("Error loading users:", error)
           setUsers(initialUsers)
-          try {
-            storage.saveUsers(initialUsers)
-          } catch (saveError) {
-            console.error("Failed to save fallback users:", saveError)
-          }
         }
 
-        // Handle audit log
-        if (!hasExistingData && (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0)) {
-          console.log("First time setup - initializing with sample audit log...")
-          setAuditLog(initialAuditLog)
-          try {
+        // Load audit log
+        console.log("--- LOADING AUDIT LOG ---")
+        try {
+          const loadedAuditLog = storage.getAuditLog()
+          if (loadedAuditLog.length > 0) {
+            setAuditLog(loadedAuditLog)
+            console.log("Audit log loaded:", loadedAuditLog.length, "entries")
+          } else {
+            setAuditLog(initialAuditLog)
             storage.saveAuditLog(initialAuditLog)
-          } catch (saveError) {
-            console.error("Failed to save initial audit log:", saveError)
+            console.log("Initialized with default audit log")
           }
-        } else if (Array.isArray(storedAuditLog) && storedAuditLog.length > 0) {
-          setAuditLog(storedAuditLog)
-        } else {
-          // Start with empty audit log if none exists
+        } catch (error) {
+          console.error("Error loading audit log:", error)
           setAuditLog([])
         }
 
@@ -208,17 +178,16 @@ export default function KnowledgeBase() {
         try {
           const newVisitCount = storage.incrementPageVisits()
           setPageVisits(newVisitCount)
-        } catch (visitError) {
-          console.error("Failed to increment page visits:", visitError)
+          console.log("Page visits incremented to:", newVisitCount)
+        } catch (error) {
+          console.error("Error incrementing page visits:", error)
           setPageVisits(0)
         }
 
-        console.log("Data initialization completed successfully")
+        console.log("=== DATA INITIALIZATION COMPLETED ===")
       } catch (error) {
-        console.error("Error during initialization:", error)
-        setError("Failed to load application data. Please refresh the page or contact support.")
-
-        // Set safe fallback data
+        console.error("Critical error during initialization:", error)
+        setError("Failed to initialize application. Please refresh the page.")
         setCategories([])
         setUsers([])
         setAuditLog([])
@@ -230,6 +199,26 @@ export default function KnowledgeBase() {
 
     initializeData()
   }, [])
+
+  // Add a useEffect to log categories state changes
+  useEffect(() => {
+    const totalArticles = categories.reduce((total, category) => {
+      const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+      const subcategoryArticles = Array.isArray(category.subcategories)
+        ? category.subcategories.reduce(
+            (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+            0,
+          )
+        : 0
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
+
+    console.log("Categories state updated:", categories.length, "categories,", totalArticles, "total articles")
+
+    if (categories.length > 0 && totalArticles === 0) {
+      console.warn("WARNING: Categories exist but no articles found - possible data structure issue")
+    }
+  }, [categories])
 
   // Search function
   const handleSearch = (query: string) => {
@@ -840,6 +829,8 @@ export default function KnowledgeBase() {
         users={users}
         onLogin={handleLogin}
       />
+
+      <StorageDebug />
     </div>
   )
 }
