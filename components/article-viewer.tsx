@@ -3,293 +3,201 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Edit, Trash2, Calendar, User, Tag } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeft, Edit, Trash2, Calendar, User, Tag, FileText } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
   article: Article | null
   categories?: Category[]
-  onBack?: () => void
+  onBack: () => void
   backButtonText?: string
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
-  onEditArticle?: (article: Article) => void
-  onDeleteArticle?: (articleId: string) => void
-}
-
-// Helper function to clean HTML content and convert to readable text
-const cleanContent = (htmlContent: string): string => {
-  if (!htmlContent) return ""
-
-  // Remove HTML tags while preserving line breaks
-  let cleanText = htmlContent
-    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Remove scripts
-    .replace(/<style[^>]*>.*?<\/style>/gi, "") // Remove styles
-    .replace(/<br\s*\/?>/gi, "\n") // Convert br tags to newlines
-    .replace(/<\/p>/gi, "\n\n") // Convert closing p tags to double newlines
-    .replace(/<[^>]*>/g, "") // Remove all other HTML tags
-    .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
-    .replace(/&amp;/g, "&") // Replace HTML entities
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-
-  // Clean up whitespace
-  cleanText = cleanText
-    .replace(/\n\s*\n\s*\n/g, "\n\n") // Multiple newlines to double newline
-    .replace(/[ \t]+/g, " ") // Multiple spaces/tabs to single space
-    .trim()
-
-  return cleanText
-}
-
-// Helper function to extract images from HTML content
-const extractImages = (htmlContent: string): string[] => {
-  if (!htmlContent) return []
-
-  const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi
-  const images: string[] = []
-  let match
-
-  while ((match = imgRegex.exec(htmlContent)) !== null) {
-    if (match[1] && match[1].trim() !== "") {
-      images.push(match[1])
-    }
-  }
-
-  // Also check for standalone URLs that might be images
-  const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi
-  while ((match = urlRegex.exec(htmlContent)) !== null) {
-    if (!images.includes(match[1])) {
-      images.push(match[1])
-    }
-  }
-
-  // Check for data URLs
-  const dataUrlRegex = /(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g
-  while ((match = dataUrlRegex.exec(htmlContent)) !== null) {
-    if (!images.includes(match[1])) {
-      images.push(match[1])
-    }
-  }
-
-  return images
 }
 
 export function ArticleViewer({
   article,
   categories = [],
   onBack,
-  backButtonText = "Back",
+  backButtonText = "Back to Articles",
   onEdit,
   onDelete,
-  onEditArticle,
-  onDeleteArticle,
 }: ArticleViewerProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Handle case where no article is selected
   if (!article) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-white">
-        <div className="text-center text-gray-500">
-          <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-2xl font-semibold mb-2">Welcome to Kuhlekt Knowledge Base</h2>
-          <p className="text-lg">Select an article from the sidebar to get started</p>
+      <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="text-center">
+          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to Kuhlekt Knowledge Base</h3>
+          <p className="text-gray-600 mb-4">
+            Select an article from the categories on the left or use the search function to find what you're looking
+            for.
+          </p>
+          <div className="text-sm text-gray-500">
+            <p>Browse through our comprehensive collection of technical documentation and guides.</p>
+          </div>
         </div>
       </div>
     )
   }
 
-  // Get category and subcategory names safely
-  const category = Array.isArray(categories) ? categories.find((c) => c.id === article.categoryId) : null
-  const subcategory = category?.subcategories?.find((s) => s.id === article.subcategoryId)
+  // Find category and subcategory names
+  const getCategoryInfo = () => {
+    if (!Array.isArray(categories)) return { categoryName: "Unknown", subcategoryName: undefined }
 
-  // Clean the article content and extract images
-  const cleanedContent = cleanContent(article.content || "")
-  const images = extractImages(article.content || "")
+    for (const category of categories) {
+      // Check if article is in main category
+      if (Array.isArray(category.articles) && category.articles.some((a) => a.id === article.id)) {
+        return { categoryName: category.name, subcategoryName: undefined }
+      }
+
+      // Check subcategories
+      if (Array.isArray(category.subcategories)) {
+        for (const subcategory of category.subcategories) {
+          if (Array.isArray(subcategory.articles) && subcategory.articles.some((a) => a.id === article.id)) {
+            return { categoryName: category.name, subcategoryName: subcategory.name }
+          }
+        }
+      }
+    }
+
+    return { categoryName: "Unknown", subcategoryName: undefined }
+  }
+
+  const { categoryName, subcategoryName } = getCategoryInfo()
 
   const handleDelete = () => {
-    const deleteHandler = onDelete || onDeleteArticle
-    if (deleteHandler) {
-      deleteHandler(article.id)
+    if (onDelete) {
+      onDelete(article.id)
       setShowDeleteConfirm(false)
     }
   }
 
-  const handleEdit = () => {
-    const editHandler = onEdit || onEditArticle
-    if (editHandler) {
-      editHandler(article)
-    }
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === "string" ? new Date(date) : date
+    return dateObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
   }
 
-  // Format content into paragraphs
-  const paragraphs = cleanedContent.split("\n\n").filter((p) => p.trim() !== "")
-
   return (
-    <div className="flex-1 bg-white overflow-y-auto">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="border-b border-gray-200 pb-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            {onBack && (
-              <Button
-                variant="ghost"
-                onClick={onBack}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>{backButtonText}</span>
-              </Button>
-            )}
+    <div className="bg-white rounded-lg shadow-sm">
+      {/* Header */}
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>{backButtonText}</span>
+          </Button>
 
-            {(onEdit || onEditArticle || onDelete || onDeleteArticle) && (
-              <div className="flex items-center space-x-2">
-                {(onEdit || onEditArticle) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEdit}
-                    className="flex items-center space-x-1 bg-transparent"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span>Edit</span>
-                  </Button>
-                )}
-                {(onDelete || onDeleteArticle) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete</span>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
-
-          {/* Article metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>Created {new Date(article.createdAt).toLocaleDateString()}</span>
-            </div>
-
-            {article.updatedAt && new Date(article.updatedAt).getTime() !== new Date(article.createdAt).getTime() && (
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>Updated {new Date(article.updatedAt).toLocaleDateString()}</span>
-              </div>
-            )}
-
-            {article.createdBy && (
-              <div className="flex items-center space-x-1">
-                <User className="h-4 w-4" />
-                <span>By {article.createdBy}</span>
-              </div>
-            )}
-
-            {article.editCount && article.editCount > 0 && (
-              <div className="flex items-center space-x-1">
-                <Edit className="h-4 w-4" />
-                <span>
-                  {article.editCount} edit{article.editCount !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Category breadcrumb */}
-          {category && (
-            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-              <span>{category.name}</span>
-              {subcategory && (
-                <>
-                  <span>›</span>
-                  <span>{subcategory.name}</span>
-                </>
+          {(onEdit || onDelete) && (
+            <div className="flex items-center space-x-2">
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(article)}
+                  className="flex items-center space-x-1"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Edit</span>
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete</span>
+                </Button>
               )}
             </div>
           )}
+        </div>
 
-          {/* Tags */}
-          {article.tags && Array.isArray(article.tags) && article.tags.length > 0 && (
-            <div className="flex items-center space-x-2 mb-4">
-              <Tag className="h-4 w-4 text-gray-400" />
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
+
+        {/* Article Meta */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+          <div className="flex items-center space-x-1">
+            <Calendar className="h-4 w-4" />
+            <span>Created {formatDate(article.createdAt)}</span>
+          </div>
+          {article.updatedAt && article.updatedAt.getTime() !== article.createdAt.getTime() && (
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-4 w-4" />
+              <span>Updated {formatDate(article.updatedAt)}</span>
+            </div>
+          )}
+          <div className="flex items-center space-x-1">
+            <User className="h-4 w-4" />
+            <span>By {article.author}</span>
+          </div>
+          {article.editCount && article.editCount > 0 && (
+            <div className="flex items-center space-x-1">
+              <Edit className="h-4 w-4" />
+              <span>
+                {article.editCount} edit{article.editCount !== 1 ? "s" : ""}
+              </span>
             </div>
           )}
         </div>
 
-        {/* Content */}
-        <div className="prose prose-lg max-w-none">
-          {/* Images */}
-          {images.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Images</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {images.map((src, index) => (
-                  <div key={index} className="border rounded-lg overflow-hidden">
-                    <img
-                      src={src || "/placeholder.svg"}
-                      alt={`Article image ${index + 1}`}
-                      className="w-full h-auto"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.style.display = "none"
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Article content */}
-          <div className="text-gray-800 leading-relaxed">
-            {paragraphs.length > 0 ? (
-              paragraphs.map((paragraph, index) => (
-                <p key={index} className="mb-4 text-base leading-7">
-                  {paragraph.trim()}
-                </p>
-              ))
-            ) : (
-              <p className="text-gray-500 italic">No content available</p>
-            )}
-          </div>
+        {/* Category and Tags */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            {categoryName}
+            {subcategoryName && ` → ${subcategoryName}`}
+          </Badge>
+          {Array.isArray(article.tags) &&
+            article.tags.map((tag) => (
+              <Badge key={tag} variant="outline" className="flex items-center space-x-1">
+                <Tag className="h-3 w-3" />
+                <span>{tag}</span>
+              </Badge>
+            ))}
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* Content */}
+      <div className="p-6">
+        <div
+          className="prose prose-lg max-w-none"
+          dangerouslySetInnerHTML={{
+            __html: article.content.replace(/\n/g, "<br>"),
+          }}
+        />
+      </div>
+
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Delete Article</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{article.title}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete
-              </Button>
-            </div>
-          </div>
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="text-red-600">Delete Article</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to delete "{article.title}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
