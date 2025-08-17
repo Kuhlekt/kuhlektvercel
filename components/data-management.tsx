@@ -1,48 +1,61 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import {
   Download,
   Upload,
   FileText,
-  Users,
-  Activity,
-  AlertTriangle,
+  AlertCircle,
   CheckCircle,
   Database,
   Trash2,
   RefreshCw,
+  Clipboard,
 } from "lucide-react"
 import { storage } from "../utils/storage"
+import { initialCategories } from "../data/initial-data"
+import { initialUsers } from "../data/initial-users"
+import { initialAuditLog } from "../data/initial-audit-log"
+import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface DataManagementProps {
-  onDataImported?: () => void
+  onDataImported: () => void
+}
+
+interface BackupData {
+  categories?: Category[]
+  users?: User[]
+  auditLog?: AuditLogEntry[]
+  pageVisits?: number
+  exportDate?: string
+  version?: string
+  data?: {
+    categories?: Category[]
+    users?: User[]
+    auditLog?: AuditLogEntry[]
+    pageVisits?: number
+  }
 }
 
 export function DataManagement({ onDataImported }: DataManagementProps) {
   const [importData, setImportData] = useState("")
   const [isImporting, setIsImporting] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
-  const [status, setStatus] = useState<{
-    type: "success" | "error" | "info" | null
-    message: string
-  }>({ type: null, message: "" })
+  const [importStatus, setImportStatus] = useState<"idle" | "success" | "error">("idle")
+  const [importMessage, setImportMessage] = useState("")
+  const [previewData, setPreviewData] = useState<BackupData | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleExport = async () => {
-    setIsExporting(true)
-    setStatus({ type: "info", message: "Preparing export..." })
-
+  const handleExport = () => {
     try {
       const categories = storage.getCategories()
       const users = storage.getUsers()
@@ -50,202 +63,238 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
       const pageVisits = storage.getPageVisits()
 
       const exportData = {
-        version: "1.0",
-        timestamp: new Date().toISOString(),
         categories,
         users,
         auditLog,
         pageVisits,
-        stats: {
-          totalCategories: categories.length,
-          totalUsers: users.length,
-          totalAuditEntries: auditLog.length,
-          totalArticles: categories.reduce((total, category) => {
-            const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-            const subcategoryArticles = Array.isArray(category.subcategories)
-              ? category.subcategories.reduce(
-                  (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-                  0,
-                )
-              : 0
-            return total + categoryArticles + subcategoryArticles
-          }, 0),
-        },
+        exportDate: new Date().toISOString(),
+        version: "1.0",
       }
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: "application/json" })
+      const url = URL.createObjectURL(dataBlob)
+
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      setStatus({
-        type: "success",
-        message: `Export completed! Downloaded backup with ${exportData.stats.totalArticles} articles.`,
-      })
+      setImportStatus("success")
+      setImportMessage("Data exported successfully!")
+      setTimeout(() => setImportStatus("idle"), 3000)
     } catch (error) {
       console.error("Export error:", error)
-      setStatus({
-        type: "error",
-        message: "Export failed. Please try again.",
-      })
-    } finally {
-      setIsExporting(false)
+      setImportStatus("error")
+      setImportMessage("Failed to export data")
+      setTimeout(() => setImportStatus("idle"), 3000)
     }
   }
 
-  const validateImportData = (data: any): boolean => {
-    if (!data || typeof data !== "object") {
-      setStatus({ type: "error", message: "Invalid JSON format" })
-      return false
-    }
+  const validateImportData = (data: any): BackupData | null => {
+    try {
+      console.log("Validating import data:", data)
 
-    // Check for direct format (categories, users, auditLog at root level)
-    if (data.categories && Array.isArray(data.categories)) {
-      return true
-    }
-
-    // Check for nested format (data.categories, data.users, etc.)
-    if (data.data && data.data.categories && Array.isArray(data.data.categories)) {
-      return true
-    }
-
-    setStatus({ type: "error", message: "Invalid backup format. Missing categories data." })
-    return false
-  }
-
-  const convertDates = (obj: any): any => {
-    if (obj === null || obj === undefined) return obj
-    if (typeof obj === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(obj)) {
-      return new Date(obj)
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(convertDates)
-    }
-    if (typeof obj === "object") {
-      const converted: any = {}
-      for (const key in obj) {
-        converted[key] = convertDates(obj[key])
+      // Handle both direct format and nested data format
+      let actualData = data
+      if (data.data && typeof data.data === "object") {
+        console.log("Found nested data structure, extracting...")
+        actualData = data.data
       }
-      return converted
+
+      // Validate categories
+      if (actualData.categories && Array.isArray(actualData.categories)) {
+        console.log("Found categories:", actualData.categories.length)
+
+        // Validate category structure
+        for (const category of actualData.categories) {
+          if (!category.id || !category.name) {
+            throw new Error("Invalid category structure: missing id or name")
+          }
+
+          // Ensure articles array exists
+          if (!Array.isArray(category.articles)) {
+            category.articles = []
+          }
+
+          // Ensure subcategories array exists
+          if (!Array.isArray(category.subcategories)) {
+            category.subcategories = []
+          }
+
+          // Validate subcategories
+          for (const subcategory of category.subcategories) {
+            if (!subcategory.id || !subcategory.name) {
+              throw new Error("Invalid subcategory structure: missing id or name")
+            }
+            if (!Array.isArray(subcategory.articles)) {
+              subcategory.articles = []
+            }
+          }
+        }
+      } else {
+        console.log("No valid categories found in import data")
+        actualData.categories = []
+      }
+
+      // Validate users
+      if (actualData.users && Array.isArray(actualData.users)) {
+        console.log("Found users:", actualData.users.length)
+        for (const user of actualData.users) {
+          if (!user.id || !user.username) {
+            throw new Error("Invalid user structure: missing id or username")
+          }
+        }
+      } else {
+        console.log("No valid users found in import data")
+        actualData.users = []
+      }
+
+      // Validate audit log
+      if (actualData.auditLog && Array.isArray(actualData.auditLog)) {
+        console.log("Found audit log entries:", actualData.auditLog.length)
+      } else {
+        console.log("No valid audit log found in import data")
+        actualData.auditLog = []
+      }
+
+      return {
+        categories: actualData.categories || [],
+        users: actualData.users || [],
+        auditLog: actualData.auditLog || [],
+        pageVisits: actualData.pageVisits || 0,
+        exportDate: data.exportDate,
+        version: data.version,
+      }
+    } catch (error) {
+      console.error("Validation error:", error)
+      throw error
     }
-    return obj
+  }
+
+  const handlePreview = () => {
+    if (!importData.trim()) {
+      setImportStatus("error")
+      setImportMessage("Please enter data to preview")
+      return
+    }
+
+    try {
+      const parsedData = JSON.parse(importData)
+      const validatedData = validateImportData(parsedData)
+
+      if (validatedData) {
+        setPreviewData(validatedData)
+        setImportStatus("success")
+        setImportMessage("Data preview loaded successfully!")
+      }
+    } catch (error) {
+      console.error("Preview error:", error)
+      setImportStatus("error")
+      setImportMessage(`Preview failed: ${error instanceof Error ? error.message : "Invalid JSON format"}`)
+      setPreviewData(null)
+    }
   }
 
   const handleImport = async () => {
-    if (!importData.trim()) {
-      setStatus({ type: "error", message: "Please provide data to import" })
+    if (!previewData) {
+      setImportStatus("error")
+      setImportMessage("Please preview data first")
       return
     }
 
     setIsImporting(true)
     setImportProgress(0)
-    setStatus({ type: "info", message: "Parsing import data..." })
+    setImportStatus("idle")
 
     try {
-      let parsedData
-      try {
-        parsedData = JSON.parse(importData)
-      } catch (parseError) {
-        setStatus({ type: "error", message: "Invalid JSON format. Please check your data." })
-        return
+      // Simulate progress steps
+      const steps = [
+        { message: "Validating data...", progress: 20 },
+        { message: "Converting dates...", progress: 40 },
+        { message: "Saving categories...", progress: 60 },
+        { message: "Saving users...", progress: 80 },
+        { message: "Finalizing import...", progress: 100 },
+      ]
+
+      for (const step of steps) {
+        setImportMessage(step.message)
+        setImportProgress(step.progress)
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
 
-      setImportProgress(20)
+      // Convert date strings to Date objects
+      const processedCategories =
+        previewData.categories?.map((category) => ({
+          ...category,
+          articles:
+            category.articles?.map((article) => ({
+              ...article,
+              createdAt: new Date(article.createdAt),
+              updatedAt: new Date(article.updatedAt),
+              editCount: article.editCount || 0,
+            })) || [],
+          subcategories:
+            category.subcategories?.map((subcategory) => ({
+              ...subcategory,
+              articles:
+                subcategory.articles?.map((article) => ({
+                  ...article,
+                  createdAt: new Date(article.createdAt),
+                  updatedAt: new Date(article.updatedAt),
+                  editCount: article.editCount || 0,
+                })) || [],
+            })) || [],
+        })) || []
 
-      if (!validateImportData(parsedData)) {
-        return
+      const processedUsers =
+        previewData.users?.map((user) => ({
+          ...user,
+          createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+        })) || []
+
+      const processedAuditLog =
+        previewData.auditLog?.map((entry) => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp),
+        })) || []
+
+      // Save to storage
+      if (processedCategories.length > 0) {
+        storage.saveCategories(processedCategories)
+        console.log("Categories imported:", processedCategories.length)
       }
 
-      setImportProgress(40)
-      setStatus({ type: "info", message: "Converting date formats..." })
-
-      // Handle both direct format and nested format
-      let importCategories, importUsers, importAuditLog, importPageVisits
-
-      if (parsedData.data) {
-        // Nested format
-        importCategories = parsedData.data.categories || []
-        importUsers = parsedData.data.users || []
-        importAuditLog = parsedData.data.auditLog || []
-        importPageVisits = parsedData.data.pageVisits || 0
-      } else {
-        // Direct format
-        importCategories = parsedData.categories || []
-        importUsers = parsedData.users || []
-        importAuditLog = parsedData.auditLog || []
-        importPageVisits = parsedData.pageVisits || 0
+      if (processedUsers.length > 0) {
+        storage.saveUsers(processedUsers)
+        console.log("Users imported:", processedUsers.length)
       }
 
-      // Convert dates
-      const convertedCategories = convertDates(importCategories)
-      const convertedUsers = convertDates(importUsers)
-      const convertedAuditLog = convertDates(importAuditLog)
-
-      setImportProgress(60)
-      setStatus({ type: "info", message: "Saving data to storage..." })
-
-      // Save all data
-      storage.saveCategories(convertedCategories)
-      storage.saveUsers(convertedUsers)
-      storage.saveAuditLog(convertedAuditLog)
-
-      if (importPageVisits) {
-        localStorage.setItem("kuhlekt_kb_page_visits", importPageVisits.toString())
+      if (processedAuditLog.length > 0) {
+        storage.saveAuditLog(processedAuditLog)
+        console.log("Audit log imported:", processedAuditLog.length)
       }
 
-      setImportProgress(80)
+      if (previewData.pageVisits) {
+        storage.setPageVisits(previewData.pageVisits)
+        console.log("Page visits imported:", previewData.pageVisits)
+      }
 
-      // Calculate total articles
-      const totalArticles = convertedCategories.reduce((total: number, category: any) => {
-        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-        const subcategoryArticles = Array.isArray(category.subcategories)
-          ? category.subcategories.reduce(
-              (subTotal: number, sub: any) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-              0,
-            )
-          : 0
-        return total + categoryArticles + subcategoryArticles
-      }, 0)
-
-      // Add import audit entry
-      storage.addAuditEntry({
-        action: "data_imported",
-        entityType: "system",
-        entityId: "backup",
-        performedBy: "admin",
-        timestamp: new Date(),
-        details: `Imported ${totalArticles} articles, ${convertedCategories.length} categories, ${convertedUsers.length} users`,
-      })
-
-      setImportProgress(100)
-
-      setStatus({
-        type: "success",
-        message: `Import completed successfully! Imported ${totalArticles} articles, ${convertedCategories.length} categories, ${convertedUsers.length} users, and ${convertedAuditLog.length} audit entries.`,
-      })
-
+      setImportStatus("success")
+      setImportMessage("Data imported successfully!")
       setImportData("")
+      setPreviewData(null)
 
       // Notify parent component
-      if (onDataImported) {
-        onDataImported()
-      }
-
-      // Refresh the page after a short delay to ensure all components reload
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
+      onDataImported()
     } catch (error) {
       console.error("Import error:", error)
-      setStatus({
-        type: "error",
-        message: `Import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      })
+      setImportStatus("error")
+      setImportMessage(`Import failed: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsImporting(false)
       setImportProgress(0)
@@ -256,8 +305,9 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (file.type !== "application/json" && !file.name.endsWith(".json")) {
-      setStatus({ type: "error", message: "Please select a JSON file" })
+    if (file.type !== "application/json") {
+      setImportStatus("error")
+      setImportMessage("Please select a JSON file")
       return
     }
 
@@ -265,315 +315,292 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
     reader.onload = (e) => {
       const content = e.target?.result as string
       setImportData(content)
-      setStatus({ type: "info", message: "File loaded successfully. Click Import to proceed." })
+      setImportStatus("success")
+      setImportMessage("File loaded successfully! Click Preview to validate.")
     }
     reader.onerror = () => {
-      setStatus({ type: "error", message: "Failed to read file" })
+      setImportStatus("error")
+      setImportMessage("Failed to read file")
     }
     reader.readAsText(file)
   }
 
-  const handleClearAllData = async () => {
-    if (!confirm("Are you sure you want to clear ALL data? This action cannot be undone!")) {
-      return
-    }
-
-    if (!confirm("This will delete all articles, users, and audit logs. Are you absolutely sure?")) {
-      return
-    }
-
+  const handlePaste = async () => {
     try {
-      storage.clearAll()
-      setStatus({
-        type: "success",
-        message: "All data cleared successfully. The page will reload.",
-      })
-
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
+      const text = await navigator.clipboard.readText()
+      setImportData(text)
+      setImportStatus("success")
+      setImportMessage("Data pasted from clipboard!")
     } catch (error) {
-      console.error("Clear data error:", error)
-      setStatus({
-        type: "error",
-        message: "Failed to clear data. Please try again.",
-      })
+      setImportStatus("error")
+      setImportMessage("Failed to paste from clipboard")
     }
   }
 
-  const getCurrentStats = () => {
-    try {
-      const categories = storage.getCategories()
-      const users = storage.getUsers()
-      const auditLog = storage.getAuditLog()
+  const handleReset = () => {
+    if (
+      confirm(
+        "Are you sure you want to reset all data? This will restore the initial sample data and cannot be undone.",
+      )
+    ) {
+      try {
+        // Reset to initial data
+        storage.saveCategories(initialCategories)
+        storage.saveUsers(initialUsers)
+        storage.saveAuditLog(initialAuditLog)
+        storage.setPageVisits(1)
 
-      const totalArticles = categories.reduce((total, category) => {
-        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-        const subcategoryArticles = Array.isArray(category.subcategories)
-          ? category.subcategories.reduce(
-              (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-              0,
-            )
-          : 0
-        return total + categoryArticles + subcategoryArticles
-      }, 0)
+        setImportStatus("success")
+        setImportMessage("Data reset to initial state successfully!")
 
-      return {
-        categories: categories.length,
-        articles: totalArticles,
-        users: users.length,
-        auditEntries: auditLog.length,
+        // Notify parent component
+        onDataImported()
+      } catch (error) {
+        console.error("Reset error:", error)
+        setImportStatus("error")
+        setImportMessage("Failed to reset data")
       }
+    }
+  }
+
+  const handleClearStorage = () => {
+    if (confirm("Are you sure you want to clear ALL data? This will delete everything and cannot be undone.")) {
+      try {
+        storage.clearAll()
+        setImportStatus("success")
+        setImportMessage("All data cleared successfully!")
+
+        // Notify parent component
+        onDataImported()
+      } catch (error) {
+        console.error("Clear error:", error)
+        setImportStatus("error")
+        setImportMessage("Failed to clear data")
+      }
+    }
+  }
+
+  const getStorageInfo = () => {
+    try {
+      return storage.getStorageInfo()
     } catch (error) {
       return {
         categories: 0,
-        articles: 0,
         users: 0,
-        auditEntries: 0,
+        auditLog: 0,
+        pageVisits: 0,
+        totalSize: "Unknown",
       }
     }
   }
 
-  const stats = getCurrentStats()
+  const storageInfo = getStorageInfo()
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Data Management</h2>
-        <p className="text-gray-600">Import and export your knowledge base data</p>
-      </div>
-
-      {/* Status Alert */}
-      {status.type && (
-        <Alert
-          className={
-            status.type === "success"
-              ? "border-green-200 bg-green-50"
-              : status.type === "error"
-                ? "border-red-200 bg-red-50"
-                : "border-blue-200 bg-blue-50"
-          }
-        >
-          {status.type === "success" ? (
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          ) : status.type === "error" ? (
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          ) : (
-            <Database className="h-4 w-4 text-blue-600" />
-          )}
-          <AlertDescription
-            className={
-              status.type === "success" ? "text-green-800" : status.type === "error" ? "text-red-800" : "text-blue-800"
-            }
-          >
-            {status.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Progress Bar */}
-      {isImporting && importProgress > 0 && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Import Progress</span>
-            <span>{importProgress}%</span>
-          </div>
-          <Progress value={importProgress} className="w-full" />
-        </div>
-      )}
-
-      {/* Current Stats */}
+      {/* Storage Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Database className="h-5 w-5" />
-            <span>Current Data</span>
+            <span>Storage Overview</span>
           </CardTitle>
+          <CardDescription>Current data in local storage</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.articles}</div>
-              <div className="text-sm text-gray-600">Articles</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.categories}</div>
+              <div className="text-2xl font-bold text-blue-600">{storageInfo.categories}</div>
               <div className="text-sm text-gray-600">Categories</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{stats.users}</div>
+              <div className="text-2xl font-bold text-green-600">{storageInfo.users}</div>
               <div className="text-sm text-gray-600">Users</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{stats.auditEntries}</div>
+              <div className="text-2xl font-bold text-purple-600">{storageInfo.auditLog}</div>
               <div className="text-sm text-gray-600">Audit Entries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{storageInfo.pageVisits}</div>
+              <div className="text-sm text-gray-600">Page Visits</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="import" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="import">Import Data</TabsTrigger>
-          <TabsTrigger value="export">Export Data</TabsTrigger>
-          <TabsTrigger value="manage">Manage Data</TabsTrigger>
-        </TabsList>
+      {/* Export Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Download className="h-5 w-5" />
+            <span>Export Data</span>
+          </CardTitle>
+          <CardDescription>Download a backup of all your knowledge base data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleExport} className="w-full">
+            <Download className="h-4 w-4 mr-2" />
+            Export All Data
+          </Button>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="import" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Upload className="h-5 w-5" />
-                <span>Import Knowledge Base Data</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="file-upload">Upload JSON File</Label>
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleFileUpload}
-                  disabled={isImporting}
-                />
-                <p className="text-sm text-gray-600">Select a JSON backup file to upload</p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or paste data directly</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="import-textarea">Paste JSON Data</Label>
-                <Textarea
-                  id="import-textarea"
-                  placeholder="Paste your JSON backup data here..."
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  rows={10}
-                  disabled={isImporting}
-                  className="font-mono text-sm"
-                />
-              </div>
-
-              <Button onClick={handleImport} disabled={isImporting || !importData.trim()} className="w-full">
-                {isImporting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Data
-                  </>
-                )}
+      {/* Import Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Upload className="h-5 w-5" />
+            <span>Import Data</span>
+          </CardTitle>
+          <CardDescription>Upload or paste JSON data to import</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* File Upload */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Upload JSON File</label>
+            <div className="flex space-x-2">
+              <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                <FileText className="h-4 w-4 mr-2" />
+                Choose File
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="export" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Download className="h-5 w-5" />
-                <span>Export Knowledge Base Data</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-600">
-                Export all your knowledge base data including articles, categories, users, and audit logs as a JSON
-                backup file.
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="text-center">
-                  <Badge variant="outline" className="mb-1">
-                    <FileText className="h-3 w-3 mr-1" />
-                    Articles
-                  </Badge>
-                  <div className="text-lg font-semibold">{stats.articles}</div>
-                </div>
-                <div className="text-center">
-                  <Badge variant="outline" className="mb-1">
-                    <Database className="h-3 w-3 mr-1" />
-                    Categories
-                  </Badge>
-                  <div className="text-lg font-semibold">{stats.categories}</div>
-                </div>
-                <div className="text-center">
-                  <Badge variant="outline" className="mb-1">
-                    <Users className="h-3 w-3 mr-1" />
-                    Users
-                  </Badge>
-                  <div className="text-lg font-semibold">{stats.users}</div>
-                </div>
-                <div className="text-center">
-                  <Badge variant="outline" className="mb-1">
-                    <Activity className="h-3 w-3 mr-1" />
-                    Audit Logs
-                  </Badge>
-                  <div className="text-lg font-semibold">{stats.auditEntries}</div>
-                </div>
-              </div>
-
-              <Button onClick={handleExport} disabled={isExporting} className="w-full">
-                {isExporting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export All Data
-                  </>
-                )}
+              <Button variant="outline" onClick={handlePaste}>
+                <Clipboard className="h-4 w-4 mr-2" />
+                Paste
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </div>
 
-        <TabsContent value="manage" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-red-600">
-                <Trash2 className="h-5 w-5" />
-                <span>Danger Zone</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert className="border-red-200 bg-red-50">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">
-                  <strong>Warning:</strong> The following actions are irreversible and will permanently delete data.
-                </AlertDescription>
-              </Alert>
+          <Separator />
 
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-red-900 mb-2">Clear All Data</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    This will permanently delete all articles, categories, users, and audit logs. Make sure to export
-                    your data first if you want to keep a backup.
+          {/* Manual Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Or Paste JSON Data</label>
+            <Textarea
+              placeholder="Paste your JSON backup data here..."
+              value={importData}
+              onChange={(e) => setImportData(e.target.value)}
+              rows={8}
+              className="font-mono text-sm"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={handlePreview}
+              disabled={!importData.trim() || isImporting}
+              className="flex-1 bg-transparent"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Preview Data
+            </Button>
+            <Button onClick={handleImport} disabled={!previewData || isImporting} className="flex-1">
+              <Upload className="h-4 w-4 mr-2" />
+              {isImporting ? "Importing..." : "Import Data"}
+            </Button>
+          </div>
+
+          {/* Progress Bar */}
+          {isImporting && (
+            <div className="space-y-2">
+              <Progress value={importProgress} className="w-full" />
+              <p className="text-sm text-gray-600 text-center">{importMessage}</p>
+            </div>
+          )}
+
+          {/* Status Messages */}
+          {importStatus !== "idle" && !isImporting && (
+            <Alert className={importStatus === "error" ? "border-red-200" : "border-green-200"}>
+              {importStatus === "error" ? (
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              ) : (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              )}
+              <AlertDescription className={importStatus === "error" ? "text-red-800" : "text-green-800"}>
+                {importMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Preview Data */}
+          {previewData && (
+            <Card className="bg-gray-50">
+              <CardHeader>
+                <CardTitle className="text-lg">Data Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <Badge variant="outline" className="mb-1">
+                      Categories
+                    </Badge>
+                    <div className="text-xl font-bold">{previewData.categories?.length || 0}</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="outline" className="mb-1">
+                      Users
+                    </Badge>
+                    <div className="text-xl font-bold">{previewData.users?.length || 0}</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="outline" className="mb-1">
+                      Audit Log
+                    </Badge>
+                    <div className="text-xl font-bold">{previewData.auditLog?.length || 0}</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="outline" className="mb-1">
+                      Page Visits
+                    </Badge>
+                    <div className="text-xl font-bold">{previewData.pageVisits || 0}</div>
+                  </div>
+                </div>
+                {previewData.exportDate && (
+                  <p className="text-sm text-gray-600 mt-2 text-center">
+                    Exported: {new Date(previewData.exportDate).toLocaleString()}
                   </p>
-                  <Button variant="destructive" onClick={handleClearAllData}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Data
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-600">
+            <AlertCircle className="h-5 w-5" />
+            <span>Danger Zone</span>
+          </CardTitle>
+          <CardDescription>Irreversible actions that affect all data</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 border border-orange-200 rounded-lg">
+            <div>
+              <h4 className="font-medium">Reset to Sample Data</h4>
+              <p className="text-sm text-gray-600">Replace all data with initial sample content</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-3 border border-red-200 rounded-lg">
+            <div>
+              <h4 className="font-medium text-red-600">Clear All Data</h4>
+              <p className="text-sm text-gray-600">Permanently delete all stored data</p>
+            </div>
+            <Button variant="destructive" size="sm" onClick={handleClearStorage}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
