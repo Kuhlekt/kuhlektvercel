@@ -1,8 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, Tag, Camera } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Calendar, User, Tag, FileText, ImageIcon } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SearchResultsProps {
@@ -12,206 +12,200 @@ interface SearchResultsProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Function to extract clean text content for preview
-function extractCleanText(html: string): string {
-  // Create a temporary div to parse HTML
+// Helper function to clean HTML and extract text
+const extractCleanText = (htmlContent: string): string => {
+  if (!htmlContent) return ""
+
   const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = html
+  tempDiv.innerHTML = htmlContent
 
-  // Remove script and style elements
-  const scripts = tempDiv.querySelectorAll("script, style")
-  scripts.forEach((el) => el.remove())
-
-  // Get text content
+  // Get clean text content
   let text = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Clean up whitespace and normalize
-  text = text
-    .replace(/\s+/g, " ") // Multiple spaces to single space
-    .replace(/\n+/g, " ") // Newlines to spaces
-    .trim()
+  // Clean up whitespace
+  text = text.replace(/\s+/g, " ").trim()
 
-  // Create a meaningful preview
-  if (text.length > 200) {
-    // Find a good breaking point near 200 characters
-    const breakPoint = text.lastIndexOf(" ", 200)
-    text = text.substring(0, breakPoint > 150 ? breakPoint : 200) + "..."
-  }
-
-  return text || "No preview available"
+  return text
 }
 
-// Function to check if content contains images
-function hasImages(content: string): boolean {
+// Helper function to create preview text with search highlighting context
+const createPreview = (content: string, query: string, maxLength = 200): string => {
+  const cleanText = extractCleanText(content)
+
+  if (!cleanText) return "No content available"
+
+  if (!query.trim()) {
+    return cleanText.length > maxLength ? cleanText.substring(0, maxLength) + "..." : cleanText
+  }
+
+  const searchTerm = query.toLowerCase()
+  const lowerContent = cleanText.toLowerCase()
+  const index = lowerContent.indexOf(searchTerm)
+
+  if (index === -1) {
+    // Query not found in content, return beginning
+    return cleanText.length > maxLength ? cleanText.substring(0, maxLength) + "..." : cleanText
+  }
+
+  // Show context around the found term
+  const start = Math.max(0, index - 50)
+  const end = Math.min(cleanText.length, start + maxLength)
+
+  let preview = cleanText.substring(start, end)
+
+  if (start > 0) preview = "..." + preview
+  if (end < cleanText.length) preview = preview + "..."
+
+  return preview
+}
+
+// Helper function to check if content has images
+const hasImages = (htmlContent: string): boolean => {
+  if (!htmlContent) return false
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = htmlContent
+  return tempDiv.querySelectorAll("img").length > 0
+}
+
+// Helper function to highlight search terms in text
+const highlightSearchTerm = (text: string, query: string): JSX.Element => {
+  if (!query.trim()) {
+    return <span>{text}</span>
+  }
+
+  const searchTerm = query.toLowerCase()
+  const lowerText = text.toLowerCase()
+  const index = lowerText.indexOf(searchTerm)
+
+  if (index === -1) {
+    return <span>{text}</span>
+  }
+
+  const before = text.substring(0, index)
+  const match = text.substring(index, index + query.length)
+  const after = text.substring(index + query.length)
+
   return (
-    content.includes("<img") ||
-    content.includes("data:image/") ||
-    content.includes("[IMAGE:") ||
-    content.match(/https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg)/i) !== null
+    <span>
+      {before}
+      <mark className="bg-yellow-200 px-1 rounded">{match}</mark>
+      {highlightSearchTerm(after, query)}
+    </span>
   )
 }
 
-// Function to extract and display first image as thumbnail
-function getFirstImageThumbnail(content: string): string | null {
-  // Look for img tags first
-  const imgMatch = content.match(/<img[^>]+src="([^"]+)"[^>]*>/i)
-  if (imgMatch) {
-    return imgMatch[1]
-  }
-
-  // Look for data URLs
-  const dataUrlMatch = content.match(/(data:image\/[^;]+;base64,[^\s"'<>]+)/i)
-  if (dataUrlMatch) {
-    return dataUrlMatch[1]
-  }
-
-  // Look for regular image URLs
-  const urlMatch = content.match(/(https?:\/\/[^\s"')]+\.(jpg|jpeg|png|gif|webp|svg))/i)
-  if (urlMatch) {
-    return urlMatch[1]
-  }
-
-  return null
-}
-
 export function SearchResults({ results, categories, query, onArticleSelect }: SearchResultsProps) {
-  const getCategoryInfo = (categoryId: string, subcategoryId?: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
+  // Get category and subcategory info for an article
+  const getArticleLocation = (article: Article) => {
+    const category = categories.find((c) => c.id === article.categoryId)
+    const subcategory = category?.subcategories.find((s) => s.id === article.subcategoryId)
 
-    if (subcategoryId) {
-      const subcategory = category.subcategories.find((s) => s.id === subcategoryId)
-      return {
-        categoryName: category.name,
-        subcategoryName: subcategory?.name || "Unknown",
-      }
+    return {
+      categoryName: category?.name || "Unknown Category",
+      subcategoryName: subcategory?.name,
     }
-
-    return { categoryName: category.name, subcategoryName: undefined }
-  }
-
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text
-
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
-    const parts = text.split(regex)
-
-    return parts.map((part, index) =>
-      regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 px-1 rounded">
-          {part}
-        </mark>
-      ) : (
-        part
-      ),
-    )
   }
 
   if (results.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <div className="text-gray-500">
-          <p className="text-lg mb-2">No results found for "{query}"</p>
-          <p className="text-sm">Try different keywords or browse categories</p>
-        </div>
+        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Results Found</h3>
+        <p className="text-gray-600">
+          No articles found matching "{query}". Try different keywords or check your spelling.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-xl font-semibold mb-2">Search Results ({results.length})</h2>
+    <div className="bg-white rounded-lg shadow-sm">
+      <div className="border-b border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Search Results for "{query}"</h2>
         <p className="text-gray-600">
-          Found {results.length} article{results.length !== 1 ? "s" : ""} matching "{query}"
+          Found {results.length} article{results.length !== 1 ? "s" : ""}
         </p>
       </div>
 
-      <div className="space-y-4">
-        {results.map((article) => {
-          const { categoryName, subcategoryName } = getCategoryInfo(article.categoryId, article.subcategoryId)
-          const cleanPreview = extractCleanText(article.content)
-          const containsImages = hasImages(article.content)
-          const thumbnailSrc = getFirstImageThumbnail(article.content)
+      <div className="p-6">
+        <div className="space-y-4">
+          {results.map((article) => {
+            const location = getArticleLocation(article)
+            const preview = createPreview(article.content, query)
+            const articleHasImages = hasImages(article.content)
 
-          return (
-            <Card
-              key={`${article.id}-${article.updatedAt.getTime()}`}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onArticleSelect(article)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">{highlightText(article.title, query)}</CardTitle>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span>{categoryName}</span>
-                      {subcategoryName && (
-                        <>
-                          <span>•</span>
-                          <span>{subcategoryName}</span>
-                        </>
-                      )}
-                      <span>•</span>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{article.updatedAt.toLocaleDateString()}</span>
-                      </div>
-                      {containsImages && (
-                        <>
-                          <span>•</span>
-                          <div className="flex items-center space-x-1">
-                            <Camera className="h-3 w-3" />
-                            <span>Images</span>
+            return (
+              <Card
+                key={article.id}
+                className="cursor-pointer hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500"
+                onClick={() => onArticleSelect(article)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-blue-600">
+                        {highlightSearchTerm(article.title, query)}
+                      </h3>
+
+                      {/* Article metadata */}
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-3">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{article.updatedAt.toLocaleDateString()}</span>
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                          <User className="h-4 w-4" />
+                          <span>{article.createdBy}</span>
+                        </div>
+
+                        {articleHasImages && (
+                          <div className="flex items-center space-x-1 text-blue-600">
+                            <ImageIcon className="h-4 w-4" />
+                            <span>Has images</span>
                           </div>
-                        </>
-                      )}
+                        )}
+                      </div>
+
+                      {/* Category breadcrumb */}
+                      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-3">
+                        <span>{location.categoryName}</span>
+                        {location.subcategoryName && (
+                          <>
+                            <span>›</span>
+                            <span>{location.subcategoryName}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Thumbnail */}
-                  {thumbnailSrc && (
-                    <div className="ml-4 flex-shrink-0">
-                      <img
-                        src={thumbnailSrc || "/placeholder.svg"}
-                        alt="Article thumbnail"
-                        className="w-16 h-16 object-cover rounded-lg border"
-                        onError={(e) => {
-                          // Hide image if it fails to load
-                          e.currentTarget.style.display = "none"
-                        }}
-                      />
+                  {/* Article preview */}
+                  <div className="text-gray-700 mb-4 leading-relaxed">{highlightSearchTerm(preview, query)}</div>
+
+                  {/* Tags */}
+                  {article.tags && article.tags.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <Tag className="h-4 w-4 text-gray-400" />
+                      <div className="flex flex-wrap gap-2">
+                        {article.tags.slice(0, 5).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {highlightSearchTerm(tag, query)}
+                          </Badge>
+                        ))}
+                        {article.tags.length > 5 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{article.tags.length - 5} more
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {cleanPreview && (
-                  <CardDescription className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {highlightText(cleanPreview, query)}
-                  </CardDescription>
-                )}
-                {article.tags.length > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <Tag className="h-3 w-3 text-gray-400" />
-                    <div className="flex flex-wrap gap-1">
-                      {article.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {highlightText(tag, query)}
-                        </Badge>
-                      ))}
-                      {article.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{article.tags.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

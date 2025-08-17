@@ -3,103 +3,76 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Edit, Trash2, Calendar, User, Tag, FolderOpen } from "lucide-react"
+import { ArrowLeft, Edit, Trash2, Calendar, User, Tag } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
+import type { JSX } from "react"
 
 interface ArticleViewerProps {
   article: Article
   categories: Category[]
   onBack: () => void
-  backButtonText?: string
+  backButtonText: string
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
 }
 
-// Process article content to display clean, readable text with proper formatting
-const processArticleContent = (content: string): string => {
-  console.log("Processing article content for display...")
+// Helper function to clean HTML content and convert to readable text
+const cleanContent = (htmlContent: string): string => {
+  if (!htmlContent) return ""
 
-  let processedContent = content
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = htmlContent
 
-  // First, handle any existing HTML img tags - preserve them
-  const imgTags: string[] = []
-  processedContent = processedContent.replace(/<img[^>]*>/g, (match) => {
-    const placeholder = `__IMG_PLACEHOLDER_${imgTags.length}__`
-    imgTags.push(match)
-    return placeholder
-  })
+  // Get text content while preserving some structure
+  let cleanText = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Remove any other HTML tags except for basic formatting
-  processedContent = processedContent
-    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Remove scripts
-    .replace(/<style[^>]*>.*?<\/style>/gi, "") // Remove styles
-    .replace(/<[^>]*>/g, "") // Remove all other HTML tags
-    .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
-    .replace(/&amp;/g, "&") // Replace HTML entities
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-
-  // Clean up whitespace
-  processedContent = processedContent
-    .replace(/\s+/g, " ") // Multiple spaces to single space
-    .replace(/\n\s*\n/g, "\n\n") // Multiple newlines to double newline
+  // Clean up extra whitespace and normalize line breaks
+  cleanText = cleanText
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
+    .replace(/\n\s*\n/g, "\n\n") // Preserve paragraph breaks
     .trim()
 
-  // Convert to proper paragraphs
-  const paragraphs = processedContent.split(/\n\s*\n/).filter((p) => p.trim())
-  processedContent = paragraphs.map((p) => `<p>${p.trim()}</p>`).join("")
-
-  // Restore image tags
-  imgTags.forEach((imgTag, index) => {
-    const placeholder = `__IMG_PLACEHOLDER_${index}__`
-    processedContent = processedContent.replace(placeholder, imgTag)
-  })
-
-  // Handle any remaining image URLs that aren't in img tags
-  processedContent = processedContent.replace(
-    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
-    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />',
-  )
-
-  // Handle data URLs
-  processedContent = processedContent.replace(
-    /(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g,
-    '<img src="$1" alt="Embedded image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />',
-  )
-
-  console.log("Content processed for clean display")
-  return processedContent
+  return cleanText
 }
 
-export function ArticleViewer({
-  article,
-  categories,
-  onBack,
-  backButtonText = "Back to Articles",
-  onEdit,
-  onDelete,
-}: ArticleViewerProps) {
+// Helper function to extract and preserve images from HTML content
+const extractImages = (htmlContent: string): string[] => {
+  if (!htmlContent) return []
+
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = htmlContent
+  const images = tempDiv.querySelectorAll("img")
+
+  return Array.from(images)
+    .map((img) => img.src)
+    .filter((src) => src && src.trim() !== "")
+}
+
+// Helper function to format content with proper paragraphs
+const formatContent = (content: string): JSX.Element[] => {
+  if (!content) return []
+
+  const paragraphs = content.split("\n\n").filter((p) => p.trim() !== "")
+
+  return paragraphs.map((paragraph, index) => (
+    <p key={index} className="mb-4 leading-relaxed">
+      {paragraph.trim()}
+    </p>
+  ))
+}
+
+export function ArticleViewer({ article, categories, onBack, backButtonText, onEdit, onDelete }: ArticleViewerProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Get category and subcategory names
-  const getCategoryInfo = () => {
-    const category = categories.find((c) => c.id === article.categoryId)
-    if (!category) return { categoryName: "Unknown", subcategoryName: undefined }
+  const category = categories.find((c) => c.id === article.categoryId)
+  const subcategory = category?.subcategories.find((s) => s.id === article.subcategoryId)
 
-    if (article.subcategoryId) {
-      const subcategory = category.subcategories.find((s) => s.id === article.subcategoryId)
-      return {
-        categoryName: category.name,
-        subcategoryName: subcategory?.name || "Unknown Subcategory",
-      }
-    }
-
-    return { categoryName: category.name, subcategoryName: undefined }
-  }
-
-  const { categoryName, subcategoryName } = getCategoryInfo()
+  // Clean the article content
+  const cleanedContent = cleanContent(article.content)
+  const images = extractImages(article.content)
+  const formattedContent = formatContent(cleanedContent)
 
   const handleDelete = () => {
     if (onDelete) {
@@ -108,132 +81,158 @@ export function ArticleViewer({
     }
   }
 
-  const processedContent = processArticleContent(article.content)
-
   return (
-    <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
-          <ArrowLeft className="h-4 w-4" />
-          <span>{backButtonText}</span>
-        </Button>
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{backButtonText}</span>
+          </Button>
 
-        {(onEdit || onDelete) && (
-          <div className="flex items-center space-x-2">
-            {onEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(article)}
-                className="flex items-center space-x-2"
-              >
-                <Edit className="h-4 w-4" />
-                <span>Edit</span>
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center space-x-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>Delete</span>
-              </Button>
-            )}
+          {(onEdit || onDelete) && (
+            <div className="flex items-center space-x-2">
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(article)}
+                  className="flex items-center space-x-1"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Edit</span>
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete</span>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
+
+        {/* Article metadata */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+          <div className="flex items-center space-x-1">
+            <Calendar className="h-4 w-4" />
+            <span>Created {article.createdAt.toLocaleDateString()}</span>
+          </div>
+
+          {article.updatedAt.getTime() !== article.createdAt.getTime() && (
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-4 w-4" />
+              <span>Updated {article.updatedAt.toLocaleDateString()}</span>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-1">
+            <User className="h-4 w-4" />
+            <span>By {article.createdBy}</span>
+          </div>
+
+          {article.editCount && article.editCount > 0 && (
+            <div className="flex items-center space-x-1">
+              <Edit className="h-4 w-4" />
+              <span>
+                {article.editCount} edit{article.editCount !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Category breadcrumb */}
+        <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+          <span>{category?.name || "Unknown Category"}</span>
+          {subcategory && (
+            <>
+              <span>›</span>
+              <span>{subcategory.name}</span>
+            </>
+          )}
+        </div>
+
+        {/* Tags */}
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex items-center space-x-2 mb-4">
+            <Tag className="h-4 w-4 text-gray-400" />
+            <div className="flex flex-wrap gap-2">
+              {article.tags.map((tag, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Article Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">{article.title}</CardTitle>
-
-          {/* Article Metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 pt-2">
-            <div className="flex items-center space-x-1">
-              <FolderOpen className="h-4 w-4" />
-              <span>{categoryName}</span>
-              {subcategoryName && (
-                <>
-                  <span>→</span>
-                  <span>{subcategoryName}</span>
-                </>
-              )}
+      {/* Content */}
+      <div className="p-6">
+        {/* Images */}
+        {images.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">Images</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {images.map((src, index) => (
+                <div key={index} className="border rounded-lg overflow-hidden">
+                  <img
+                    src={src || "/placeholder.svg"}
+                    alt={`Article image ${index + 1}`}
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = "none"
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>Created {article.createdAt.toLocaleDateString()}</span>
-            </div>
-
-            {article.updatedAt && article.updatedAt.getTime() !== article.createdAt.getTime() && (
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>Updated {article.updatedAt.toLocaleDateString()}</span>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-1">
-              <User className="h-4 w-4" />
-              <span>By {article.createdBy}</span>
-            </div>
-
-            {article.editCount && article.editCount > 0 && <Badge variant="secondary">Edit #{article.editCount}</Badge>}
           </div>
+        )}
 
-          {/* Tags */}
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex items-center space-x-2 pt-2">
-              <Tag className="h-4 w-4 text-gray-500" />
-              <div className="flex flex-wrap gap-1">
-                {article.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardHeader>
+        {/* Article content */}
+        <div className="prose prose-lg max-w-none">
+          <div className="text-gray-800 leading-relaxed font-serif">
+            {formattedContent.length > 0 ? (
+              formattedContent
+            ) : (
+              <p className="text-gray-500 italic">No content available</p>
+            )}
+          </div>
+        </div>
+      </div>
 
-        <CardContent>
-          <div
-            className="prose prose-lg max-w-none text-gray-800"
-            style={{
-              lineHeight: "1.7",
-              fontSize: "16px",
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            }}
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Modal */}
+      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
-            <CardHeader>
-              <CardTitle className="text-lg">Confirm Delete</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-600">
-                Are you sure you want to delete "{article.title}"? This action cannot be undone.
-              </p>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Article</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{article.title}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
