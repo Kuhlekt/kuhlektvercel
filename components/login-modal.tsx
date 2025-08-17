@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { LogIn, AlertCircle, Shield, FileEdit, Eye } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { LogIn, AlertTriangle, User, Shield, FileEdit, Eye } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { KnowledgeBaseUser } from "../types/knowledge-base"
 
@@ -22,9 +25,10 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!username.trim()) {
-      setError("Please enter a username")
+      setError("Username is required")
       return
     }
 
@@ -33,10 +37,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
     try {
       const users = storage.getUsers()
-      const user = users.find((u) => u.username === username.trim())
+      const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
 
       if (!user) {
         setError("User not found")
+        setIsLoading(false)
         return
       }
 
@@ -51,12 +56,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         entityId: user.id,
         performedBy: user.username,
         timestamp: new Date(),
-        details: `User logged in: ${user.username} (${user.role})`,
+        details: `User login: ${user.username} (${user.role})`,
       })
 
       onLogin({ ...user, lastLogin: new Date() })
-      setUsername("")
       onClose()
+      setUsername("")
     } catch (error) {
       console.error("Login error:", error)
       setError("Login failed. Please try again.")
@@ -65,21 +70,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
-  const handleDemoLogin = (demoUsername: string) => {
-    setUsername(demoUsername)
-    setTimeout(() => handleLogin(), 100)
+  const handleClose = () => {
+    setUsername("")
+    setError("")
+    onClose()
   }
-
-  const getDemoUsers = () => {
-    try {
-      const users = storage.getUsers()
-      return users.slice(0, 3) // Show first 3 users as demo options
-    } catch (error) {
-      return []
-    }
-  }
-
-  const demoUsers = getDemoUsers()
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -90,7 +85,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       case "viewer":
         return <Eye className="h-3 w-3" />
       default:
-        return <Shield className="h-3 w-3" /> // Changed from User to Shield
+        return <User className="h-3 w-3" />
     }
   }
 
@@ -107,89 +102,73 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
+  // Get available users for demo purposes
+  const availableUsers = storage.getUsers().slice(0, 3)
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
             <span>Login to Knowledge Base</span>
           </DialogTitle>
-          <DialogDescription>Enter your username to access the knowledge base system.</DialogDescription>
+          <DialogDescription id="login-description">
+            Enter your username to access the knowledge base system.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Demo Users */}
-          {demoUsers.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Quick Login (Demo Users)</Label>
-              <div className="grid gap-2">
-                {demoUsers.map((user) => (
-                  <Button
-                    key={user.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDemoLogin(user.username)}
-                    disabled={isLoading}
-                    className="justify-start h-auto p-3"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center space-x-2">
-                        <Shield className="h-4 w-4" /> {/* Changed from User to Shield */}
-                        <span>{user.username}</span>
-                      </div>
-                      <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1">
-                        {getRoleIcon(user.role)}
-                        <span className="capitalize">{user.role}</span>
-                      </Badge>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {demoUsers.length > 0 && (
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or enter manually</span>
-              </div>
-            </div>
-          )}
-
-          {/* Manual Login */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
               type="text"
-              placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleLogin()}
+              placeholder="Enter your username"
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
           {error && (
             <Alert className="border-red-200 bg-red-50">
-              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button onClick={handleLogin} disabled={isLoading || !username.trim()}>
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </div>
-        </div>
+          <Button type="submit" className="w-full" disabled={isLoading || !username.trim()}>
+            {isLoading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
+
+        {availableUsers.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-gray-700">Available Demo Accounts:</div>
+              <div className="space-y-2">
+                {availableUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-3 w-3 text-gray-500" />
+                      <span className="text-sm font-medium">{user.username}</span>
+                    </div>
+                    <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1">
+                      {getRoleIcon(user.role)}
+                      <span className="capitalize">{user.role}</span>
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500">
+                Use any of the usernames above to login. No password required for demo.
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
