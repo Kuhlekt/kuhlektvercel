@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,8 +35,32 @@ export function DataManagement({
     message: string
   }>({ type: null, message: "" })
   const [isImporting, setIsImporting] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      setImportData(content)
+      setImportStatus({
+        type: "info",
+        message: `File "${file.name}" loaded. Click "Import Data" to proceed.`,
+      })
+    }
+    reader.onerror = () => {
+      setImportStatus({
+        type: "error",
+        message: "Failed to read file. Please try again.",
+      })
+    }
+    reader.readAsText(file)
+  }
 
   const handleExportData = () => {
+    setIsExporting(true)
     try {
       const exportData = {
         categories,
@@ -73,6 +99,8 @@ export function DataManagement({
         type: "error",
         message: "Failed to export data. Please try again.",
       })
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -80,7 +108,7 @@ export function DataManagement({
     if (!importData.trim()) {
       setImportStatus({
         type: "error",
-        message: "Please paste the backup data to import.",
+        message: "Please paste the backup data or upload a file to import.",
       })
       return
     }
@@ -92,17 +120,44 @@ export function DataManagement({
       const parsedData = JSON.parse(importData)
 
       // Validate the data structure
-      if (!parsedData.categories || !parsedData.users) {
-        throw new Error("Invalid backup format. Missing required data.")
+      if (!parsedData.categories || !Array.isArray(parsedData.categories)) {
+        throw new Error("Invalid backup format. Missing or invalid categories data.")
       }
 
-      // Convert date strings back to Date objects
-      const importedCategories = parsedData.categories
+      if (!parsedData.users || !Array.isArray(parsedData.users)) {
+        throw new Error("Invalid backup format. Missing or invalid users data.")
+      }
+
+      // Convert date strings back to Date objects for categories
+      const importedCategories = parsedData.categories.map((category: any) => ({
+        ...category,
+        articles: (category.articles || []).map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt),
+          updatedAt: new Date(article.updatedAt),
+          editCount: article.editCount || 0,
+          tags: Array.isArray(article.tags) ? article.tags : [],
+        })),
+        subcategories: (category.subcategories || []).map((subcategory: any) => ({
+          ...subcategory,
+          articles: (subcategory.articles || []).map((article: any) => ({
+            ...article,
+            createdAt: new Date(article.createdAt),
+            updatedAt: new Date(article.updatedAt),
+            editCount: article.editCount || 0,
+            tags: Array.isArray(article.tags) ? article.tags : [],
+          })),
+        })),
+      }))
+
+      // Convert date strings back to Date objects for users
       const importedUsers = parsedData.users.map((user: any) => ({
         ...user,
         createdAt: new Date(user.createdAt),
         lastLogin: user.lastLogin ? new Date(user.lastLogin) : null,
       }))
+
+      // Convert date strings back to Date objects for audit log
       const importedAuditLog = (parsedData.auditLog || []).map((entry: any) => ({
         ...entry,
         timestamp: new Date(entry.timestamp),
@@ -136,9 +191,21 @@ export function DataManagement({
       storage.saveAuditLog(updatedAuditLog)
       onAuditLogUpdate(updatedAuditLog)
 
+      // Count total articles
+      const totalArticles = importedCategories.reduce((total, category) => {
+        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+        const subcategoryArticles = Array.isArray(category.subcategories)
+          ? category.subcategories.reduce(
+              (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+              0,
+            )
+          : 0
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
       setImportStatus({
         type: "success",
-        message: `Successfully imported ${importedCategories.length} categories and ${importedUsers.length} users!`,
+        message: `Successfully imported ${totalArticles} articles, ${importedCategories.length} categories, and ${importedUsers.length} users!`,
       })
       setImportData("")
     } catch (error) {
@@ -289,9 +356,9 @@ export function DataManagement({
               Download a complete backup of your knowledge base including all articles, categories, users, and audit
               logs.
             </p>
-            <Button onClick={handleExportData} className="w-full">
+            <Button onClick={handleExportData} disabled={isExporting} className="w-full">
               <Download className="h-4 w-4 mr-2" />
-              Export All Data
+              {isExporting ? "Exporting..." : "Export All Data"}
             </Button>
           </CardContent>
         </Card>
@@ -306,7 +373,20 @@ export function DataManagement({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="importData">Backup Data (JSON)</Label>
+              <Label htmlFor="file-upload">Upload Backup File</Label>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mt-1"
+              />
+            </div>
+
+            <div className="text-center text-gray-500">or</div>
+
+            <div>
+              <Label htmlFor="importData">Paste Backup Data (JSON)</Label>
               <Textarea
                 id="importData"
                 value={importData}
