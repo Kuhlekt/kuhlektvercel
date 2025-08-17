@@ -14,10 +14,19 @@ interface DataManagementProps {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  onDataImported: (categories: Category[], users: User[], auditLog: AuditLogEntry[]) => void
+  onCategoriesUpdate: (categories: Category[]) => void
+  onUsersUpdate: (users: User[]) => void
+  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
 }
 
-export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
+export function DataManagement({
+  categories,
+  users,
+  auditLog,
+  onCategoriesUpdate,
+  onUsersUpdate,
+  onAuditLogUpdate,
+}: DataManagementProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
@@ -116,11 +125,13 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
         timestamp: new Date(entry.timestamp),
       }))
 
-      // Import the data
+      // Import the data to storage
       storage.importData(JSON.stringify(data))
 
-      // Update the UI
-      onDataImported(processedCategories, processedUsers, processedAuditLog)
+      // Update the UI state
+      onCategoriesUpdate(processedCategories)
+      onUsersUpdate(processedUsers)
+      onAuditLogUpdate(processedAuditLog)
 
       setMessage({ type: "success", text: "Data imported successfully!" })
     } catch (error) {
@@ -146,7 +157,9 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
 
     try {
       storage.clearAll()
-      onDataImported([], [], [])
+      onCategoriesUpdate([])
+      onUsersUpdate([])
+      onAuditLogUpdate([])
       setMessage({ type: "success", text: "All data cleared successfully!" })
     } catch (error) {
       console.error("Clear error:", error)

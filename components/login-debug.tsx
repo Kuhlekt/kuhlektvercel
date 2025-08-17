@@ -2,90 +2,163 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { User, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react"
 import { storage } from "../utils/storage"
 import { initialUsers } from "../data/initial-users"
-import type { User } from "../types/knowledge-base"
+import type { User as UserType } from "../types/knowledge-base"
 
 interface LoginDebugProps {
-  users: User[]
-  onLogin: (user: User) => void
+  users: UserType[]
+  onLogin: (user: UserType) => void
 }
 
 export function LoginDebug({ users, onLogin }: LoginDebugProps) {
-  const [debugInfo, setDebugInfo] = useState("")
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  const checkUsers = () => {
-    const info = {
-      propsUsers: users || [],
-      storageUsers: storage.getUsers(),
-      initialUsers: initialUsers,
-      storageHealth: storage.checkHealth(),
+  const handleTestLogin = (user: UserType) => {
+    try {
+      const updatedUser = {
+        ...user,
+        lastLogin: new Date(),
+      }
+
+      // Update storage
+      const allUsers = storage.getUsers()
+      const updatedUsers = allUsers.map((u) => (u.id === user.id ? updatedUser : u))
+      storage.saveUsers(updatedUsers)
+
+      onLogin(updatedUser)
+      setMessage({ type: "success", text: `Successfully logged in as ${user.name}` })
+    } catch (error) {
+      console.error("Login error:", error)
+      setMessage({ type: "error", text: "Failed to log in" })
     }
-    setDebugInfo(JSON.stringify(info, null, 2))
-    console.log("User Debug Info:", info)
   }
 
-  const resetUsers = () => {
+  const handleResetUsers = () => {
     try {
       storage.saveUsers(initialUsers)
-      setDebugInfo("Users reset to initial state")
-      console.log("Users reset successfully")
+      setMessage({ type: "success", text: "Users reset to initial state" })
+      // Force a page reload to refresh the users state
+      setTimeout(() => window.location.reload(), 1000)
     } catch (error) {
-      setDebugInfo(`Error resetting users: ${error}`)
-      console.error("Error resetting users:", error)
+      console.error("Reset error:", error)
+      setMessage({ type: "error", text: "Failed to reset users" })
     }
   }
 
-  const testLogin = (user: User) => {
-    console.log("Testing login for:", user.username)
-    onLogin(user)
-  }
+  const storageUsers = storage.getUsers()
 
   return (
-    <Card className="m-4 max-w-2xl">
-      <CardHeader>
-        <CardTitle>Login Debug Panel</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex space-x-2">
-          <Button onClick={checkUsers}>Check Users</Button>
-          <Button onClick={resetUsers} variant="outline">
+    <div className="fixed bottom-4 right-4 w-96 z-50">
+      <Card className="border-2 border-yellow-200 bg-yellow-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center space-x-2">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <span>Login Debug Panel</span>
+          </CardTitle>
+          <CardDescription className="text-xs">Development tool - remove in production</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {message && (
+            <Alert variant={message.type === "error" ? "destructive" : "default"} className="py-2">
+              {message.type === "success" ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+              <AlertDescription className="text-xs">{message.text}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium">Users from Props ({users.length}):</div>
+            {users.length > 0 ? (
+              <div className="space-y-1">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-3 w-3" />
+                      <span>{user.username}</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0">
+                        {user.role}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-xs bg-transparent"
+                      onClick={() => handleTestLogin(user)}
+                    >
+                      Login
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-red-600">No users in props!</div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium">Users from Storage ({storageUsers.length}):</div>
+            {storageUsers.length > 0 ? (
+              <div className="space-y-1">
+                {storageUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-3 w-3" />
+                      <span>{user.username}</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0">
+                        {user.role}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-xs bg-transparent"
+                      onClick={() => handleTestLogin(user)}
+                    >
+                      Login
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-red-600">No users in storage!</div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium">Initial Users ({initialUsers.length}):</div>
+            <div className="space-y-1">
+              {initialUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-3 w-3" />
+                    <span>{user.username}</span>
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      {user.role}
+                    </Badge>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs bg-transparent"
+                    onClick={() => handleTestLogin(user)}
+                  >
+                    Login
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button size="sm" variant="destructive" className="w-full h-7 text-xs" onClick={handleResetUsers}>
+            <RefreshCw className="h-3 w-3 mr-1" />
             Reset Users to Initial State
           </Button>
-        </div>
-
-        {debugInfo && (
-          <Alert>
-            <AlertDescription>
-              <pre className="text-xs overflow-auto max-h-40">{debugInfo}</pre>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div>
-          <h4 className="font-semibold mb-2">Test Login (Props Users):</h4>
-          {users && users.length > 0 ? (
-            users.map((user) => (
-              <Button key={user.id} onClick={() => testLogin(user)} variant="outline" size="sm" className="mr-2 mb-2">
-                {user.username} ({user.role})
-              </Button>
-            ))
-          ) : (
-            <p className="text-red-500">No users in props</p>
-          )}
-        </div>
-
-        <div>
-          <h4 className="font-semibold mb-2">Test Login (Initial Users):</h4>
-          {initialUsers.map((user) => (
-            <Button key={user.id} onClick={() => testLogin(user)} variant="outline" size="sm" className="mr-2 mb-2">
-              {user.username} ({user.role})
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
