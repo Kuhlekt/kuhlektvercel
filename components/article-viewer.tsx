@@ -16,55 +16,60 @@ interface ArticleViewerProps {
   onDelete?: (articleId: string) => void
 }
 
-// Process article content to handle images and formatting
+// Process article content to display clean, readable text with proper formatting
 const processArticleContent = (content: string): string => {
-  console.log("Processing article content:", content.substring(0, 200) + "...")
-
-  // If content already contains HTML img tags and no placeholders, return as is
-  if (
-    content.includes("<img") &&
-    !content.includes("https://images.unsplash.com/") &&
-    !content.includes("data:image/")
-  ) {
-    console.log("Content already has processed images, returning as is")
-    return content
-  }
+  console.log("Processing article content for display...")
 
   let processedContent = content
 
-  // Replace image placeholders with actual images
-  // Handle Unsplash URLs
-  processedContent = processedContent.replace(/https:\/\/images\.unsplash\.com\/[^\s\n]+/g, (match) => {
-    console.log("Converting Unsplash URL to img tag:", match)
-    return `<img src="${match}" alt="Article image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />`
+  // First, handle any existing HTML img tags - preserve them
+  const imgTags: string[] = []
+  processedContent = processedContent.replace(/<img[^>]*>/g, (match) => {
+    const placeholder = `__IMG_PLACEHOLDER_${imgTags.length}__`
+    imgTags.push(match)
+    return placeholder
   })
 
-  // Handle standalone data URLs
-  processedContent = processedContent.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g, (match) => {
-    console.log("Converting data URL to img tag")
-    return `<img src="${match}" alt="Pasted image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />`
+  // Remove any other HTML tags except for basic formatting
+  processedContent = processedContent
+    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Remove scripts
+    .replace(/<style[^>]*>.*?<\/style>/gi, "") // Remove styles
+    .replace(/<[^>]*>/g, "") // Remove all other HTML tags
+    .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
+    .replace(/&amp;/g, "&") // Replace HTML entities
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+
+  // Clean up whitespace
+  processedContent = processedContent
+    .replace(/\s+/g, " ") // Multiple spaces to single space
+    .replace(/\n\s*\n/g, "\n\n") // Multiple newlines to double newline
+    .trim()
+
+  // Convert to proper paragraphs
+  const paragraphs = processedContent.split(/\n\s*\n/).filter((p) => p.trim())
+  processedContent = paragraphs.map((p) => `<p>${p.trim()}</p>`).join("")
+
+  // Restore image tags
+  imgTags.forEach((imgTag, index) => {
+    const placeholder = `__IMG_PLACEHOLDER_${index}__`
+    processedContent = processedContent.replace(placeholder, imgTag)
   })
 
-  // Convert line breaks to HTML if content doesn't already have HTML structure
-  if (!processedContent.includes("<p>") && !processedContent.includes("<div>") && !processedContent.includes("<img")) {
-    processedContent = processedContent.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")
-    processedContent = `<p>${processedContent}</p>`
-  } else if (!processedContent.includes("<p>") && !processedContent.includes("<div>")) {
-    // Has images but no paragraphs, wrap text in paragraphs while preserving images
-    const parts = processedContent.split(/(<img[^>]*>)/g)
-    processedContent = parts
-      .map((part) => {
-        if (part.startsWith("<img")) {
-          return part
-        } else if (part.trim()) {
-          return `<p>${part.replace(/\n/g, "<br>")}</p>`
-        }
-        return part
-      })
-      .join("")
-  }
+  // Handle any remaining image URLs that aren't in img tags
+  processedContent = processedContent.replace(
+    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
+    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />',
+  )
 
-  console.log("Final processed content:", processedContent.substring(0, 200) + "...")
+  // Handle data URLs
+  processedContent = processedContent.replace(
+    /(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g,
+    '<img src="$1" alt="Embedded image" style="max-width: 100%; height: auto; margin: 16px 0; border-radius: 8px;" />',
+  )
+
+  console.log("Content processed for clean display")
   return processedContent
 }
 
@@ -196,7 +201,15 @@ export function ArticleViewer({
         </CardHeader>
 
         <CardContent>
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: processedContent }} />
+          <div
+            className="prose prose-lg max-w-none text-gray-800"
+            style={{
+              lineHeight: "1.7",
+              fontSize: "16px",
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            }}
+            dangerouslySetInnerHTML={{ __html: processedContent }}
+          />
         </CardContent>
       </Card>
 

@@ -12,8 +12,9 @@ interface SearchResultsProps {
   onArticleSelect: (article: Article) => void
 }
 
-// Function to extract clean text content and show actual images
+// Function to extract clean text content for preview
 function extractCleanText(html: string): string {
+  // Create a temporary div to parse HTML
   const tempDiv = document.createElement("div")
   tempDiv.innerHTML = html
 
@@ -21,20 +22,23 @@ function extractCleanText(html: string): string {
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
-  // Get text content but preserve image information
+  // Get text content
   let text = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Clean up and normalize
-  text = text.replace(/\s+/g, " ").trim()
+  // Clean up whitespace and normalize
+  text = text
+    .replace(/\s+/g, " ") // Multiple spaces to single space
+    .replace(/\n+/g, " ") // Newlines to spaces
+    .trim()
 
-  // Split into sentences and filter meaningful ones
-  const sentences = text.split(/[.!?]+/).filter((sentence) => {
-    const cleaned = sentence.trim()
-    return cleaned.length > 15 && cleaned.split(" ").length > 2
-  })
+  // Create a meaningful preview
+  if (text.length > 200) {
+    // Find a good breaking point near 200 characters
+    const breakPoint = text.lastIndexOf(" ", 200)
+    text = text.substring(0, breakPoint > 150 ? breakPoint : 200) + "..."
+  }
 
-  const preview = sentences.slice(0, 3).join(". ").trim()
-  return preview.length > 200 ? preview.substring(0, 200) + "..." : preview
+  return text || "No preview available"
 }
 
 // Function to check if content contains images
