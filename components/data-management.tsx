@@ -280,7 +280,8 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
       }
 
       if (previewData.pageVisits) {
-        storage.setPageVisits(previewData.pageVisits)
+        // Use localStorage directly since storage doesn't have setPageVisits method
+        localStorage.setItem("kuhlekt_kb_page_visits", previewData.pageVisits.toString())
         console.log("Page visits imported:", previewData.pageVisits)
       }
 
@@ -348,7 +349,7 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
         storage.saveCategories(initialCategories)
         storage.saveUsers(initialUsers)
         storage.saveAuditLog(initialAuditLog)
-        storage.setPageVisits(1)
+        localStorage.setItem("kuhlekt_kb_page_visits", "1")
 
         setImportStatus("success")
         setImportMessage("Data reset to initial state successfully!")
@@ -382,7 +383,18 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
 
   const getStorageInfo = () => {
     try {
-      return storage.getStorageInfo()
+      const categories = storage.getCategories()
+      const users = storage.getUsers()
+      const auditLog = storage.getAuditLog()
+      const pageVisits = storage.getPageVisits()
+
+      return {
+        categories: categories.length,
+        users: users.length,
+        auditLog: auditLog.length,
+        pageVisits: pageVisits,
+        totalSize: "Unknown",
+      }
     } catch (error) {
       return {
         categories: 0,
