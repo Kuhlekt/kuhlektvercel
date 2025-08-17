@@ -53,7 +53,14 @@ export default function KnowledgeBase() {
       try {
         console.log("Starting data initialization...")
 
-        // Load existing data
+        // Check storage health first
+        const healthCheck = storage.checkHealth()
+        if (!healthCheck.healthy) {
+          console.error("Storage health issues detected:", healthCheck.issues)
+          // Continue anyway but log the issues
+        }
+
+        // Load existing data with enhanced error handling
         let storedCategories: Category[] = []
         let storedUsers: User[] = []
         let storedAuditLog: AuditLogEntry[] = []
@@ -61,6 +68,19 @@ export default function KnowledgeBase() {
         try {
           storedCategories = storage.getCategories()
           console.log("Loaded categories from storage:", storedCategories?.length || 0, "categories")
+
+          // Count total articles for verification
+          const totalArticles = storedCategories.reduce((total, category) => {
+            const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+            const subcategoryArticles = Array.isArray(category.subcategories)
+              ? category.subcategories.reduce(
+                  (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+                  0,
+                )
+              : 0
+            return total + categoryArticles + subcategoryArticles
+          }, 0)
+          console.log("Total articles in loaded categories:", totalArticles)
         } catch (error) {
           console.error("Error loading categories:", error)
           storedCategories = []
@@ -82,12 +102,12 @@ export default function KnowledgeBase() {
           storedAuditLog = []
         }
 
-        // Check if this is truly a first-time setup (no data exists at all)
-        const isFirstTimeSetup = !storage.hasAnyData()
-        console.log("Is first time setup:", isFirstTimeSetup)
+        // Check if this is truly a first-time setup
+        const hasExistingData = storage.hasAnyData()
+        console.log("Has existing data:", hasExistingData)
 
-        // Handle categories
-        if (isFirstTimeSetup && (!Array.isArray(storedCategories) || storedCategories.length === 0)) {
+        // Handle categories with better logic
+        if (!hasExistingData && (!Array.isArray(storedCategories) || storedCategories.length === 0)) {
           // Only initialize with sample data if this is genuinely the first time
           console.log("First time setup - initializing with sample categories...")
           const categoriesWithDates = initialCategories.map((category) => ({
@@ -110,14 +130,20 @@ export default function KnowledgeBase() {
           }))
 
           setCategories(categoriesWithDates)
-          storage.saveCategories(categoriesWithDates)
-          console.log("Saved initial categories to storage")
+
+          // Save to storage and mark as initialized
+          try {
+            storage.saveCategories(categoriesWithDates)
+            console.log("Saved initial categories to storage")
+          } catch (saveError) {
+            console.error("Failed to save initial categories:", saveError)
+          }
         } else if (Array.isArray(storedCategories) && storedCategories.length > 0) {
           // Use existing production data
           console.log("Loading existing production data...")
           setCategories(storedCategories)
 
-          // Count total articles for verification
+          // Verify the data integrity
           const totalArticles = storedCategories.reduce((total, category) => {
             const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
             const subcategoryArticles = Array.isArray(category.subcategories)
@@ -128,33 +154,49 @@ export default function KnowledgeBase() {
               : 0
             return total + categoryArticles + subcategoryArticles
           }, 0)
-          console.log("Total articles loaded:", totalArticles)
+          console.log("Total articles loaded into state:", totalArticles)
+
+          if (totalArticles === 0) {
+            console.warn("No articles found in loaded categories - this might indicate a data issue")
+          }
         } else {
-          // Data loading failed but not first time - show error instead of overwriting
+          // Data loading failed but not first time - show error
           console.error("Failed to load existing data and not first time setup")
-          setError("Failed to load existing data. Please contact support if this persists.")
+          setError("Failed to load knowledge base data. Please refresh the page or contact support.")
           setCategories([])
         }
 
         // Handle users
-        if (isFirstTimeSetup && (!Array.isArray(storedUsers) || storedUsers.length === 0)) {
+        if (!hasExistingData && (!Array.isArray(storedUsers) || storedUsers.length === 0)) {
           console.log("First time setup - initializing with sample users...")
           setUsers(initialUsers)
-          storage.saveUsers(initialUsers)
+          try {
+            storage.saveUsers(initialUsers)
+          } catch (saveError) {
+            console.error("Failed to save initial users:", saveError)
+          }
         } else if (Array.isArray(storedUsers) && storedUsers.length > 0) {
           setUsers(storedUsers)
         } else {
           // For users, we can safely fall back to initial users if needed
           console.log("No users found, using initial users...")
           setUsers(initialUsers)
-          storage.saveUsers(initialUsers)
+          try {
+            storage.saveUsers(initialUsers)
+          } catch (saveError) {
+            console.error("Failed to save fallback users:", saveError)
+          }
         }
 
         // Handle audit log
-        if (isFirstTimeSetup && (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0)) {
+        if (!hasExistingData && (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0)) {
           console.log("First time setup - initializing with sample audit log...")
           setAuditLog(initialAuditLog)
-          storage.saveAuditLog(initialAuditLog)
+          try {
+            storage.saveAuditLog(initialAuditLog)
+          } catch (saveError) {
+            console.error("Failed to save initial audit log:", saveError)
+          }
         } else if (Array.isArray(storedAuditLog) && storedAuditLog.length > 0) {
           setAuditLog(storedAuditLog)
         } else {
@@ -163,15 +205,20 @@ export default function KnowledgeBase() {
         }
 
         // Increment page visits
-        const newVisitCount = storage.incrementPageVisits()
-        setPageVisits(newVisitCount)
+        try {
+          const newVisitCount = storage.incrementPageVisits()
+          setPageVisits(newVisitCount)
+        } catch (visitError) {
+          console.error("Failed to increment page visits:", visitError)
+          setPageVisits(0)
+        }
 
         console.log("Data initialization completed successfully")
       } catch (error) {
         console.error("Error during initialization:", error)
         setError("Failed to load application data. Please refresh the page or contact support.")
 
-        // Don't set fallback data that might overwrite production data
+        // Set safe fallback data
         setCategories([])
         setUsers([])
         setAuditLog([])
@@ -184,7 +231,7 @@ export default function KnowledgeBase() {
     initializeData()
   }, [])
 
-  // Fixed search function
+  // Search function
   const handleSearch = (query: string) => {
     console.log("Search triggered with query:", query)
     setSearchQuery(query)
@@ -255,7 +302,7 @@ export default function KnowledgeBase() {
     }
   }
 
-  // Fixed category toggle function
+  // Category toggle function
   const handleCategoryToggle = (categoryId: string) => {
     console.log("Category toggle:", categoryId)
     const newSelected = new Set(selectedCategories)
@@ -287,7 +334,7 @@ export default function KnowledgeBase() {
     }
   }
 
-  // Fixed subcategory toggle function
+  // Subcategory toggle function
   const handleSubcategoryToggle = (subcategoryId: string) => {
     console.log("Subcategory toggle:", subcategoryId)
     const newSelected = new Set(selectedSubcategories)
@@ -321,13 +368,9 @@ export default function KnowledgeBase() {
 
   const handleArticleSelect = (article: Article) => {
     console.log("Article selected:", article.title)
-    console.log("Article content:", article.content)
 
     // Get the most current version of the article from categories state
     const currentArticle = getCurrentArticleData(article.id) || article
-
-    // Ensure images are available for viewing
-    console.log("Setting selected article:", currentArticle)
 
     setSelectedArticle(currentArticle)
   }
@@ -402,7 +445,13 @@ export default function KnowledgeBase() {
     })
 
     setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
+
+    try {
+      storage.saveCategories(updatedCategories)
+      console.log("Article added and saved successfully")
+    } catch (error) {
+      console.error("Failed to save new article:", error)
+    }
 
     // Add audit log entry
     storage.addAuditEntry({
@@ -424,7 +473,6 @@ export default function KnowledgeBase() {
 
   const handleEditArticle = (articleData: Omit<Article, "createdAt">) => {
     console.log("handleEditArticle called with:", articleData)
-    console.log("Current editing article:", editingArticle)
 
     const updatedCategories = categories.map((category) => {
       // Remove from current location first
@@ -443,12 +491,6 @@ export default function KnowledgeBase() {
           ...articleData,
           createdAt: editingArticle!.createdAt,
         }
-
-        // Ensure images are preserved in the content
-        console.log("Saving article with content:", updatedArticle.content)
-        console.log("Current images in memory:", (window as any).textareaImages)
-
-        console.log("Adding updated article to category:", updatedArticle)
 
         if (articleData.subcategoryId) {
           return {
@@ -473,10 +515,14 @@ export default function KnowledgeBase() {
       return updatedCategory
     })
 
-    console.log("Updated categories:", updatedCategories)
-
     setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
+
+    try {
+      storage.saveCategories(updatedCategories)
+      console.log("Article updated and saved successfully")
+    } catch (error) {
+      console.error("Failed to save updated article:", error)
+    }
 
     // Add audit log entry
     const updatedAuditLog = [...auditLog]
@@ -506,8 +552,6 @@ export default function KnowledgeBase() {
 
     setCurrentView("browse")
     setEditingArticle(null)
-
-    console.log("Article update completed")
   }
 
   const handleDeleteArticle = (articleId: string) => {
@@ -521,7 +565,13 @@ export default function KnowledgeBase() {
     }))
 
     setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
+
+    try {
+      storage.saveCategories(updatedCategories)
+      console.log("Article deleted and saved successfully")
+    } catch (error) {
+      console.error("Failed to save after article deletion:", error)
+    }
 
     // Add audit log entry
     storage.addAuditEntry({
@@ -536,7 +586,7 @@ export default function KnowledgeBase() {
     setSelectedArticle(null)
   }
 
-  // Add this function after the handleDeleteArticle function
+  // Get current article data helper
   const getCurrentArticleData = (articleId: string): Article | null => {
     for (const category of categories) {
       // Check category articles
@@ -659,7 +709,7 @@ export default function KnowledgeBase() {
                   onChange={(e) => {
                     const newQuery = e.target.value
                     setSearchQuery(newQuery)
-                    handleSearch(newQuery) // Trigger search immediately on input change
+                    handleSearch(newQuery)
                   }}
                   onKeyPress={handleKeyPress}
                   className="pl-10 pr-10 py-3 text-lg"
@@ -725,7 +775,6 @@ export default function KnowledgeBase() {
                     onDelete={currentUser?.role === "admin" ? handleDeleteArticle : undefined}
                   />
                 ) : searchQuery.trim() ? (
-                  // Show search results when there's a search query
                   <SearchResults
                     results={searchResults}
                     categories={categories}
@@ -733,7 +782,6 @@ export default function KnowledgeBase() {
                     onArticleSelect={handleArticleSelect}
                   />
                 ) : (
-                  // Show filtered articles when no search query
                   <SelectedArticles
                     categories={categories}
                     selectedCategories={selectedCategories}
