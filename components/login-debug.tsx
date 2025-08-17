@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Bug, RefreshCw, LogIn } from "lucide-react"
+import { Bug, RefreshCw, LogIn, User, Shield, Eye, Edit, Trash2 } from "lucide-react"
 import { storage } from "../utils/storage"
 import { initialUsers } from "../data/initial-users"
 import type { User as KnowledgeBaseUser } from "../types/knowledge-base"
@@ -15,8 +15,18 @@ interface LoginDebugProps {
   onLogin: (user: KnowledgeBaseUser) => void
 }
 
-export function LoginDebug({ users, onLogin }: LoginDebugProps) {
+export function LoginDebug({ users: propUsers, onLogin }: LoginDebugProps) {
   const [isVisible, setIsVisible] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [storageUsers, setStorageUsers] = useState<any[]>([])
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("kb-current-user")
+    const storedUsers = localStorage.getItem("kb-users")
+
+    setCurrentUser(storedUser ? JSON.parse(storedUser) : null)
+    setStorageUsers(storedUsers ? JSON.parse(storedUsers) : [])
+  }, [])
 
   const handleResetUsers = () => {
     try {
@@ -27,12 +37,63 @@ export function LoginDebug({ users, onLogin }: LoginDebugProps) {
     }
   }
 
-  const handleDirectLogin = (user: KnowledgeBaseUser) => {
-    const updatedUser = { ...user, lastLogin: new Date() }
-    onLogin(updatedUser)
+  const loginAs = (user: any) => {
+    localStorage.setItem("kb-current-user", JSON.stringify(user))
+
+    // Add audit log entry
+    const auditLog = JSON.parse(localStorage.getItem("kb-audit-log") || "[]")
+    auditLog.unshift({
+      id: Date.now().toString(),
+      action: "Debug Login",
+      user: user.name,
+      timestamp: new Date().toISOString(),
+      details: `Debug login as ${user.role}`,
+    })
+    localStorage.setItem("kb-audit-log", JSON.stringify(auditLog))
+
+    loadData()
+    window.location.reload()
   }
 
-  const storageUsers = storage.getUsers()
+  const logout = () => {
+    localStorage.removeItem("kb-current-user")
+    loadData()
+    window.location.reload()
+  }
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-4 w-4" />
+      case "editor":
+        return <Edit className="h-4 w-4" />
+      case "viewer":
+        return <Eye className="h-4 w-4" />
+      default:
+        return <User className="h-4 w-4" />
+    }
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-100 text-red-800"
+      case "editor":
+        return "bg-blue-100 text-blue-800"
+      case "viewer":
+        return "bg-green-100 text-green-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const loadData = () => {
+    const storedUser = localStorage.getItem("kb-current-user")
+    const storedUsers = localStorage.getItem("kb-users")
+
+    setCurrentUser(storedUser ? JSON.parse(storedUser) : null)
+    setStorageUsers(storedUsers ? JSON.parse(storedUsers) : [])
+  }
 
   if (!isVisible) {
     return (
@@ -66,12 +127,72 @@ export function LoginDebug({ users, onLogin }: LoginDebugProps) {
           <CardDescription className="text-yellow-700">Debug login functionality</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current User Status */}
+          {currentUser ? (
+            <Alert>
+              <User className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  Logged in as <strong>{currentUser.name}</strong> ({currentUser.role})
+                </span>
+                <Button variant="outline" size="sm" onClick={logout}>
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Logout
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <AlertDescription>Not logged in</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Quick Login Buttons */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Available Users:</h4>
+              <Button variant="outline" size="sm" onClick={loadData}>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
+            </div>
+
+            {propUsers.length > 0 || storageUsers.length > 0 || initialUsers.length > 0 ? (
+              <div className="grid gap-2">
+                {[...propUsers, ...storageUsers, ...initialUsers].map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-2 border rounded">
+                    <div className="flex items-center gap-2">
+                      {getRoleIcon(user.role)}
+                      <span className="font-medium">{user.username}</span>
+                      <Badge className={getRoleColor(user.role)}>{user.role}</Badge>
+                      <span className="text-sm text-muted-foreground">({user.username})</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => loginAs(user)}
+                      disabled={currentUser?.id === user.id}
+                    >
+                      {currentUser?.id === user.id ? "Current" : "Login"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Alert>
+                <AlertDescription>
+                  No users found. Users will be created automatically when you first access the system.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
           {/* Users from Props */}
           <div>
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">Users from Props ({users.length})</h4>
+            <h4 className="text-sm font-medium text-yellow-800 mb-2">Users from Props ({propUsers.length})</h4>
             <div className="space-y-1">
-              {users.length > 0 ? (
-                users.map((user) => (
+              {propUsers.length > 0 ? (
+                propUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline" className="text-xs">
@@ -79,12 +200,7 @@ export function LoginDebug({ users, onLogin }: LoginDebugProps) {
                       </Badge>
                       <span>{user.username}</span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDirectLogin(user)}
-                      className="h-6 px-2 text-xs"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => loginAs(user)} className="h-6 px-2 text-xs">
                       <LogIn className="h-3 w-3 mr-1" />
                       Login
                     </Button>
@@ -111,12 +227,7 @@ export function LoginDebug({ users, onLogin }: LoginDebugProps) {
                       </Badge>
                       <span>{user.username}</span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDirectLogin(user)}
-                      className="h-6 px-2 text-xs"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => loginAs(user)} className="h-6 px-2 text-xs">
                       <LogIn className="h-3 w-3 mr-1" />
                       Login
                     </Button>
@@ -144,12 +255,7 @@ export function LoginDebug({ users, onLogin }: LoginDebugProps) {
                       {user.username} / {user.password}
                     </span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDirectLogin(user)}
-                    className="h-6 px-2 text-xs"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => loginAs(user)} className="h-6 px-2 text-xs">
                     <LogIn className="h-3 w-3 mr-1" />
                     Login
                   </Button>
