@@ -14,17 +14,18 @@ import { DataManagement } from "./components/data-management"
 import { LoginModal } from "./components/login-modal"
 
 import { storage } from "./utils/storage"
-import type { Category, Article, KnowledgeBaseUser } from "./types/knowledge-base"
+import { initialUsers } from "./data/initial-users"
+import type { Category, Article, User } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
   const [categories, setCategories] = useState<Category[]>([])
-  const [users, setUsers] = useState<KnowledgeBaseUser[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Article[]>([])
   const [activeTab, setActiveTab] = useState("browse")
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [currentUser, setCurrentUser] = useState<KnowledgeBaseUser | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -34,12 +35,27 @@ export default function KnowledgeBase() {
   const loadData = () => {
     try {
       setIsLoading(true)
+
+      // Load categories
       const loadedCategories = storage.getCategories() || []
-      const loadedUsers = storage.getUsers() || []
       setCategories(loadedCategories)
+
+      // Load users - ensure we always have initial users
+      let loadedUsers = storage.getUsers() || []
+      if (loadedUsers.length === 0) {
+        loadedUsers = initialUsers
+        storage.saveUsers(initialUsers)
+      }
       setUsers(loadedUsers)
+
+      console.log("Data loaded:", {
+        categories: loadedCategories.length,
+        users: loadedUsers.length,
+      })
     } catch (error) {
       console.error("Error loading data:", error)
+      // Fallback to initial users
+      setUsers(initialUsers)
     } finally {
       setIsLoading(false)
     }
@@ -86,7 +102,8 @@ export default function KnowledgeBase() {
     setSearchResults(results)
   }
 
-  const handleLogin = (user: KnowledgeBaseUser) => {
+  const handleLogin = (user: User) => {
+    console.log("Login successful:", user.username)
     setCurrentUser(user)
     setShowLoginModal(false)
   }
@@ -133,7 +150,8 @@ export default function KnowledgeBase() {
                 <div className="flex items-center space-x-2">
                   <Badge variant="secondary" className="flex items-center space-x-1">
                     <UserIcon className="h-3 w-3" />
-                    <span>{currentUser.name}</span>
+                    <span>{currentUser.username}</span>
+                    <span className="text-xs">({currentUser.role})</span>
                   </Badge>
                   <Button variant="outline" size="sm" onClick={handleLogout}>
                     Logout
