@@ -42,6 +42,7 @@ export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps)
       name: name.trim(),
       email: email.trim() || `${username}@example.com`,
       role,
+      password: "default123", // Hidden from UI but still stored
     })
 
     // Reset form

@@ -30,7 +30,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       // Get users from localStorage
       const users = JSON.parse(localStorage.getItem("kb-users") || "[]")
 
-      // Find user with matching username (no password required)
+      // Find user with matching username (password still checked internally but not shown)
       const user = users.find((u: any) => u.username === username)
 
       if (user) {
@@ -67,6 +67,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "1",
         name: "Admin User",
         username: "admin",
+        password: "admin123",
         role: "admin",
         email: "admin@example.com",
       },
@@ -74,6 +75,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "2",
         name: "Editor User",
         username: "editor",
+        password: "editor123",
         role: "editor",
         email: "editor@example.com",
       },
@@ -81,6 +83,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         id: "3",
         name: "Viewer User",
         username: "viewer",
+        password: "viewer123",
         role: "viewer",
         email: "viewer@example.com",
       },
