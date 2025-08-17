@@ -190,16 +190,31 @@ class StorageManager {
   // Users management
   getUsers(): User[] {
     try {
+      console.log("Getting users from storage...")
       const data = localStorage.getItem(this.STORAGE_KEYS.USERS)
-      if (!data) return []
+      console.log("Raw users data:", data ? `${data.length} characters` : "null")
+
+      if (!data) {
+        console.log("No users data found")
+        return []
+      }
 
       const parsed = JSON.parse(data)
-      return parsed.map((user: any) => ({
+      console.log("Parsed users:", parsed.length, "users")
+
+      const usersWithDates = parsed.map((user: any) => ({
         ...user,
         createdAt: new Date(user.createdAt),
         lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
       }))
+
+      console.log(
+        "Users processed:",
+        usersWithDates.map((u) => ({ username: u.username, role: u.role })),
+      )
+      return usersWithDates
     } catch (error) {
+      console.error("Error getting users:", error)
       this.lastError = error instanceof Error ? error.message : "Failed to get users"
       return []
     }
@@ -207,9 +222,12 @@ class StorageManager {
 
   saveUsers(users: User[]): void {
     try {
+      console.log("Saving users to storage...", users.length, "users")
       localStorage.setItem(this.STORAGE_KEYS.USERS, JSON.stringify(users))
+      console.log("Users saved successfully")
       this.lastError = null
     } catch (error) {
+      console.error("Error saving users:", error)
       this.lastError = error instanceof Error ? error.message : "Failed to save users"
       throw error
     }
@@ -359,77 +377,3 @@ class StorageManager {
 
 // Create singleton instance
 export const storage = new StorageManager()
-
-// Data manager for backward compatibility
-export const dataManager = {
-  exportData: () => {
-    const data = storage.exportData()
-    const blob = new Blob([data], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  },
-  importData: async (file: File) => {
-    const text = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          resolve(e.target.result as string)
-        } else {
-          reject(new Error("Failed to read file"))
-        }
-      }
-      reader.onerror = () => reject(new Error("File reading failed"))
-      reader.readAsText(file)
-    })
-
-    const data = JSON.parse(text)
-
-    // Process categories with date conversion
-    const processedCategories = data.categories.map((category: any) => ({
-      ...category,
-      articles: (category.articles || []).map((article: any) => ({
-        ...article,
-        createdAt: new Date(article.createdAt),
-        updatedAt: new Date(article.updatedAt),
-        editCount: article.editCount || 0,
-        tags: Array.isArray(article.tags) ? article.tags : [],
-      })),
-      subcategories: (category.subcategories || []).map((subcategory: any) => ({
-        ...subcategory,
-        articles: (subcategory.articles || []).map((article: any) => ({
-          ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt),
-          editCount: article.editCount || 0,
-          tags: Array.isArray(article.tags) ? article.tags : [],
-        })),
-      })),
-    }))
-
-    // Process users with date conversion
-    const processedUsers = data.users.map((user: any) => ({
-      ...user,
-      createdAt: new Date(user.createdAt),
-      lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-    }))
-
-    // Process audit log with date conversion
-    const processedAuditLog = data.auditLog.map((entry: any) => ({
-      ...entry,
-      timestamp: new Date(entry.timestamp),
-    }))
-
-    return {
-      categories: processedCategories,
-      users: processedUsers,
-      auditLog: processedAuditLog,
-      pageVisits: data.pageVisits || 0,
-    }
-  },
-}

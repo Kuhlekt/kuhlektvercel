@@ -31,22 +31,37 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      console.log("Login attempt:", { username, password })
+      console.log("=== LOGIN ATTEMPT ===")
+      console.log("Entered username:", username)
+      console.log("Entered password:", password)
       console.log(
         "Available users:",
-        users.map((u) => ({ username: u.username, role: u.role })),
+        users.map((u) => ({
+          username: u.username,
+          password: u.password,
+          role: u.role,
+        })),
       )
 
-      // Find user by username and password
-      const user = users.find((u) => u.username === username && u.password === password)
+      // Trim whitespace and ensure exact match
+      const trimmedUsername = username.trim()
+      const trimmedPassword = password.trim()
+
+      console.log("Trimmed username:", trimmedUsername)
+      console.log("Trimmed password:", trimmedPassword)
+
+      // Find user by username and password with exact string comparison
+      const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
+
+      console.log("User found:", user ? { username: user.username, role: user.role } : "No user found")
 
       if (!user) {
-        console.log("User not found or password mismatch")
+        console.log("Authentication failed - no matching user")
         setError("Invalid username or password")
         return
       }
 
-      console.log("User found:", { username: user.username, role: user.role })
+      console.log("Authentication successful for:", user.username)
 
       // Update last login
       const updatedUser = {
@@ -76,6 +91,12 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
     setError("")
     setShowPassword(false)
     onClose()
+  }
+
+  // Quick login function for testing
+  const quickLogin = (testUsername: string, testPassword: string) => {
+    setUsername(testUsername)
+    setPassword(testPassword)
   }
 
   return (
@@ -154,18 +175,28 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
         </form>
 
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 mb-2">Demo Credentials:</p>
+          <p className="text-xs text-gray-600 mb-2">Demo Credentials (click to fill):</p>
           <div className="text-xs space-y-1">
-            <div>
+            <div
+              className="cursor-pointer hover:bg-gray-200 p-1 rounded"
+              onClick={() => quickLogin("admin", "admin123")}
+            >
               <strong>Admin:</strong> admin / admin123
             </div>
-            <div>
+            <div
+              className="cursor-pointer hover:bg-gray-200 p-1 rounded"
+              onClick={() => quickLogin("editor", "editor123")}
+            >
               <strong>Editor:</strong> editor / editor123
             </div>
-            <div>
+            <div
+              className="cursor-pointer hover:bg-gray-200 p-1 rounded"
+              onClick={() => quickLogin("viewer", "viewer123")}
+            >
               <strong>Viewer:</strong> viewer / viewer123
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">Debug: {users.length} users loaded</p>
         </div>
       </DialogContent>
     </Dialog>
