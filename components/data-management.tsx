@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,12 +52,10 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
       const exportData = {
         version: "1.0",
         timestamp: new Date().toISOString(),
-        data: {
-          categories,
-          users,
-          auditLog,
-          pageVisits,
-        },
+        categories,
+        users,
+        auditLog,
+        pageVisits,
         stats: {
           totalCategories: categories.length,
           totalUsers: users.length,
@@ -107,29 +104,18 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
       return false
     }
 
-    if (!data.data) {
-      setStatus({ type: "error", message: "Missing data section in backup" })
-      return false
+    // Check for direct format (categories, users, auditLog at root level)
+    if (data.categories && Array.isArray(data.categories)) {
+      return true
     }
 
-    const { categories, users, auditLog } = data.data
-
-    if (!Array.isArray(categories)) {
-      setStatus({ type: "error", message: "Invalid categories data" })
-      return false
+    // Check for nested format (data.categories, data.users, etc.)
+    if (data.data && data.data.categories && Array.isArray(data.data.categories)) {
+      return true
     }
 
-    if (!Array.isArray(users)) {
-      setStatus({ type: "error", message: "Invalid users data" })
-      return false
-    }
-
-    if (!Array.isArray(auditLog)) {
-      setStatus({ type: "error", message: "Invalid audit log data" })
-      return false
-    }
-
-    return true
+    setStatus({ type: "error", message: "Invalid backup format. Missing categories data." })
+    return false
   }
 
   const convertDates = (obj: any): any => {
@@ -178,40 +164,69 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
       setImportProgress(40)
       setStatus({ type: "info", message: "Converting date formats..." })
 
-      const convertedData = convertDates(parsedData.data)
-      setImportProgress(60)
+      // Handle both direct format and nested format
+      let importCategories, importUsers, importAuditLog, importPageVisits
 
+      if (parsedData.data) {
+        // Nested format
+        importCategories = parsedData.data.categories || []
+        importUsers = parsedData.data.users || []
+        importAuditLog = parsedData.data.auditLog || []
+        importPageVisits = parsedData.data.pageVisits || 0
+      } else {
+        // Direct format
+        importCategories = parsedData.categories || []
+        importUsers = parsedData.users || []
+        importAuditLog = parsedData.auditLog || []
+        importPageVisits = parsedData.pageVisits || 0
+      }
+
+      // Convert dates
+      const convertedCategories = convertDates(importCategories)
+      const convertedUsers = convertDates(importUsers)
+      const convertedAuditLog = convertDates(importAuditLog)
+
+      setImportProgress(60)
       setStatus({ type: "info", message: "Saving data to storage..." })
 
       // Save all data
-      storage.saveCategories(convertedData.categories)
-      storage.saveUsers(convertedData.users)
-      storage.saveAuditLog(convertedData.auditLog)
+      storage.saveCategories(convertedCategories)
+      storage.saveUsers(convertedUsers)
+      storage.saveAuditLog(convertedAuditLog)
 
-      if (convertedData.pageVisits) {
-        localStorage.setItem("kb_page_visits", convertedData.pageVisits.toString())
+      if (importPageVisits) {
+        localStorage.setItem("kuhlekt_kb_page_visits", importPageVisits.toString())
       }
 
       setImportProgress(80)
 
+      // Calculate total articles
+      const totalArticles = convertedCategories.reduce((total: number, category: any) => {
+        const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+        const subcategoryArticles = Array.isArray(category.subcategories)
+          ? category.subcategories.reduce(
+              (subTotal: number, sub: any) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+              0,
+            )
+          : 0
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
       // Add import audit entry
       storage.addAuditEntry({
         action: "data_imported",
-        articleId: undefined,
-        articleTitle: undefined,
-        categoryName: undefined,
-        subcategoryName: undefined,
+        entityType: "system",
+        entityId: "backup",
         performedBy: "admin",
         timestamp: new Date(),
-        details: `Imported ${parsedData.stats?.totalArticles || "unknown"} articles`,
+        details: `Imported ${totalArticles} articles, ${convertedCategories.length} categories, ${convertedUsers.length} users`,
       })
 
       setImportProgress(100)
 
-      const totalArticles = parsedData.stats?.totalArticles || 0
       setStatus({
         type: "success",
-        message: `Import completed successfully! Imported ${totalArticles} articles, ${convertedData.users.length} users, and ${convertedData.auditLog.length} audit entries.`,
+        message: `Import completed successfully! Imported ${totalArticles} articles, ${convertedCategories.length} categories, ${convertedUsers.length} users, and ${convertedAuditLog.length} audit entries.`,
       })
 
       setImportData("")
@@ -268,7 +283,7 @@ export function DataManagement({ onDataImported }: DataManagementProps) {
     }
 
     try {
-      storage.clearAllData()
+      storage.clearAll()
       setStatus({
         type: "success",
         message: "All data cleared successfully. The page will reload.",

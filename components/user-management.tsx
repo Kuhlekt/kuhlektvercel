@@ -8,28 +8,41 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Trash2, Edit, Shield, Eye, AlertTriangle, CheckCircle, User } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Users,
+  UserPlus,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  Shield,
+  Eye,
+  PenTool,
+} from "lucide-react"
 import { storage } from "../utils/storage"
-import type { User as UserType } from "../types/knowledge-base"
+import type { User } from "../types/knowledge-base"
 
-export function UserManagement() {
-  const [users, setUsers] = useState<UserType[]>([])
+interface UserManagementProps {
+  currentUser?: User
+}
+
+export function UserManagement({ currentUser }: UserManagementProps) {
+  const [users, setUsers] = useState<User[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<UserType | null>(null)
-  const [formData, setFormData] = useState({
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [newUser, setNewUser] = useState({
     username: "",
-    name: "",
     email: "",
     role: "viewer" as "admin" | "editor" | "viewer",
   })
@@ -38,168 +51,145 @@ export function UserManagement() {
     message: string
   }>({ type: null, message: "" })
 
-  // Load users on component mount
   useEffect(() => {
-    const loadUsers = () => {
-      try {
-        const loadedUsers = storage.getUsers()
-        setUsers(loadedUsers || [])
-      } catch (error) {
-        console.error("Error loading users:", error)
-        setUsers([])
-      }
-    }
-
     loadUsers()
   }, [])
 
-  const resetForm = () => {
-    setFormData({
-      username: "",
-      name: "",
-      email: "",
-      role: "viewer",
-    })
+  const loadUsers = () => {
+    try {
+      const loadedUsers = storage.getUsers()
+      setUsers(loadedUsers)
+    } catch (error) {
+      console.error("Error loading users:", error)
+      setStatus({ type: "error", message: "Failed to load users" })
+    }
   }
 
-  const handleCreateUser = () => {
-    if (!formData.username || !formData.name) {
-      setStatus({
-        type: "error",
-        message: "Username and name are required.",
-      })
+  const handleCreateUser = async () => {
+    if (!newUser.username.trim() || !newUser.email.trim()) {
+      setStatus({ type: "error", message: "Username and email are required" })
       return
     }
 
-    if (users.some((user) => user.username === formData.username)) {
-      setStatus({
-        type: "error",
-        message: "Username already exists.",
+    try {
+      const existingUser = users.find(
+        (u) =>
+          u.username.toLowerCase() === newUser.username.toLowerCase() ||
+          u.email.toLowerCase() === newUser.email.toLowerCase(),
+      )
+
+      if (existingUser) {
+        setStatus({ type: "error", message: "Username or email already exists" })
+        return
+      }
+
+      const user: User = {
+        id: `user-${Date.now()}`,
+        username: newUser.username.trim(),
+        email: newUser.email.trim(),
+        role: newUser.role,
+        isActive: true,
+        createdAt: new Date(),
+        lastLogin: null,
+      }
+
+      const updatedUsers = [...users, user]
+      storage.saveUsers(updatedUsers)
+      setUsers(updatedUsers)
+
+      // Add audit log entry
+      storage.addAuditEntry({
+        action: "user_created",
+        entityType: "user",
+        entityId: user.id,
+        performedBy: currentUser?.username || "system",
+        timestamp: new Date(),
+        details: `Created user ${user.username} with role ${user.role}`,
       })
-      return
+
+      setStatus({ type: "success", message: `User ${user.username} created successfully` })
+      setNewUser({ username: "", email: "", role: "viewer" })
+      setIsCreateDialogOpen(false)
+    } catch (error) {
+      console.error("Error creating user:", error)
+      setStatus({ type: "error", message: "Failed to create user" })
     }
-
-    const newUser: UserType = {
-      id: Date.now().toString(),
-      username: formData.username,
-      name: formData.name,
-      email: formData.email,
-      password: "demo123", // Default password, hidden from UI
-      role: formData.role,
-      createdAt: new Date(),
-      lastLogin: null,
-    }
-
-    const updatedUsers = [...users, newUser]
-    storage.saveUsers(updatedUsers)
-    setUsers(updatedUsers)
-
-    // Add audit entry
-    storage.addAuditEntry({
-      action: "user_created",
-      articleId: undefined,
-      articleTitle: undefined,
-      categoryName: undefined,
-      subcategoryName: undefined,
-      performedBy: "admin",
-      timestamp: new Date(),
-      details: `Created user: ${newUser.username} (${newUser.role})`,
-    })
-
-    setStatus({
-      type: "success",
-      message: `User "${newUser.username}" created successfully.`,
-    })
-    setIsCreateDialogOpen(false)
-    resetForm()
   }
 
-  const handleEditUser = () => {
-    if (!editingUser || !formData.username || !formData.name) {
-      setStatus({
-        type: "error",
-        message: "Username and name are required.",
+  const handleUpdateUser = async () => {
+    if (!editingUser) return
+
+    try {
+      const updatedUsers = users.map((u) => (u.id === editingUser.id ? { ...editingUser } : u))
+      storage.saveUsers(updatedUsers)
+      setUsers(updatedUsers)
+
+      storage.addAuditEntry({
+        action: "user_updated",
+        entityType: "user",
+        entityId: editingUser.id,
+        performedBy: currentUser?.username || "system",
+        timestamp: new Date(),
+        details: `Updated user ${editingUser.username}`,
       })
-      return
+
+      setStatus({ type: "success", message: `User ${editingUser.username} updated successfully` })
+      setEditingUser(null)
+    } catch (error) {
+      console.error("Error updating user:", error)
+      setStatus({ type: "error", message: "Failed to update user" })
     }
-
-    if (users.some((user) => user.username === formData.username && user.id !== editingUser.id)) {
-      setStatus({
-        type: "error",
-        message: "Username already exists.",
-      })
-      return
-    }
-
-    const updatedUser: UserType = {
-      ...editingUser,
-      username: formData.username,
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-    }
-
-    const updatedUsers = users.map((user) => (user.id === editingUser.id ? updatedUser : user))
-    storage.saveUsers(updatedUsers)
-    setUsers(updatedUsers)
-
-    // Add audit entry
-    storage.addAuditEntry({
-      action: "user_updated",
-      articleId: undefined,
-      articleTitle: undefined,
-      categoryName: undefined,
-      subcategoryName: undefined,
-      performedBy: "admin",
-      timestamp: new Date(),
-      details: `Updated user: ${updatedUser.username}`,
-    })
-
-    setStatus({
-      type: "success",
-      message: `User "${updatedUser.username}" updated successfully.`,
-    })
-    setIsEditDialogOpen(false)
-    setEditingUser(null)
-    resetForm()
   }
 
-  const handleDeleteUser = (user: UserType) => {
-    if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) {
+  const handleDeleteUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to delete user ${user.username}?`)) {
       return
     }
 
-    const updatedUsers = users.filter((u) => u.id !== user.id)
-    storage.saveUsers(updatedUsers)
-    setUsers(updatedUsers)
+    try {
+      const updatedUsers = users.filter((u) => u.id !== user.id)
+      storage.saveUsers(updatedUsers)
+      setUsers(updatedUsers)
 
-    // Add audit entry
-    storage.addAuditEntry({
-      action: "user_deleted",
-      articleId: undefined,
-      articleTitle: undefined,
-      categoryName: undefined,
-      subcategoryName: undefined,
-      performedBy: "admin",
-      timestamp: new Date(),
-      details: `Deleted user: ${user.username}`,
-    })
+      storage.addAuditEntry({
+        action: "user_deleted",
+        entityType: "user",
+        entityId: user.id,
+        performedBy: currentUser?.username || "system",
+        timestamp: new Date(),
+        details: `Deleted user ${user.username}`,
+      })
 
-    setStatus({
-      type: "success",
-      message: `User "${user.username}" deleted successfully.`,
-    })
+      setStatus({ type: "success", message: `User ${user.username} deleted successfully` })
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      setStatus({ type: "error", message: "Failed to delete user" })
+    }
   }
 
-  const openEditDialog = (user: UserType) => {
-    setEditingUser(user)
-    setFormData({
-      username: user.username,
-      name: user.name,
-      email: user.email || "",
-      role: user.role,
-    })
-    setIsEditDialogOpen(true)
+  const toggleUserStatus = async (user: User) => {
+    try {
+      const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, isActive: !u.isActive } : u))
+      storage.saveUsers(updatedUsers)
+      setUsers(updatedUsers)
+
+      storage.addAuditEntry({
+        action: user.isActive ? "user_deactivated" : "user_activated",
+        entityType: "user",
+        entityId: user.id,
+        performedBy: currentUser?.username || "system",
+        timestamp: new Date(),
+        details: `${user.isActive ? "Deactivated" : "Activated"} user ${user.username}`,
+      })
+
+      setStatus({
+        type: "success",
+        message: `User ${user.username} ${user.isActive ? "deactivated" : "activated"} successfully`,
+      })
+    } catch (error) {
+      console.error("Error toggling user status:", error)
+      setStatus({ type: "error", message: "Failed to update user status" })
+    }
   }
 
   const getRoleIcon = (role: string) => {
@@ -207,24 +197,24 @@ export function UserManagement() {
       case "admin":
         return <Shield className="h-4 w-4" />
       case "editor":
-        return <Edit className="h-4 w-4" />
+        return <PenTool className="h-4 w-4" />
       case "viewer":
         return <Eye className="h-4 w-4" />
       default:
-        return <User className="h-4 w-4" />
+        return <Users className="h-4 w-4" />
     }
   }
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
-        return "destructive" as const
+        return "destructive"
       case "editor":
-        return "default" as const
+        return "default"
       case "viewer":
-        return "secondary" as const
+        return "secondary"
       default:
-        return "outline" as const
+        return "outline"
     }
   }
 
@@ -233,12 +223,12 @@ export function UserManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">User Management</h2>
-          <p className="text-gray-600">Manage user accounts and permissions</p>
+          <p className="text-gray-600">Manage system users and their permissions</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
               Add User
             </Button>
           </DialogTrigger>
@@ -250,70 +240,58 @@ export function UserManagement() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="create-username">Username</Label>
+              <div className="space-y-2">
+                <Label htmlFor="new-username">Username</Label>
                 <Input
-                  id="create-username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  id="new-username"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                   placeholder="Enter username"
                 />
               </div>
-              <div>
-                <Label htmlFor="create-name">Full Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="new-email">Email</Label>
                 <Input
-                  id="create-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter full name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="create-email">Email (Optional)</Label>
-                <Input
-                  id="create-email"
+                  id="new-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   placeholder="Enter email address"
                 />
               </div>
-              <div>
-                <Label htmlFor="create-role">Role</Label>
+              <div className="space-y-2">
+                <Label htmlFor="new-role">Role</Label>
                 <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                  value={newUser.role}
+                  onValueChange={(value: "admin" | "editor" | "viewer") => setNewUser({ ...newUser, role: value })}
                 >
-                  <SelectTrigger id="create-role">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="viewer">Viewer - Read only access</SelectItem>
+                    <SelectItem value="editor">Editor - Can create and edit articles</SelectItem>
+                    <SelectItem value="admin">Admin - Full system access</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+              <Button onClick={handleCreateUser} className="w-full">
+                Create User
               </Button>
-              <Button onClick={handleCreateUser}>Create User</Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Status Alert */}
       {status.type && (
-        <Alert className={status.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-          {status.type === "success" ? (
-            <CheckCircle className="h-4 w-4 text-green-600" />
+        <Alert className={status.type === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
+          {status.type === "error" ? (
+            <AlertCircle className="h-4 w-4 text-red-600" />
           ) : (
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <CheckCircle className="h-4 w-4 text-green-600" />
           )}
-          <AlertDescription className={status.type === "success" ? "text-green-800" : "text-red-800"}>
+          <AlertDescription className={status.type === "error" ? "text-red-800" : "text-green-800"}>
             {status.message}
           </AlertDescription>
         </Alert>
@@ -322,7 +300,10 @@ export function UserManagement() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Users ({users.length})</CardTitle>
+          <CardTitle className="flex items-center space-x-2">
+            <Users className="h-5 w-5" />
+            <span>Users ({users.length})</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -330,47 +311,77 @@ export function UserManagement() {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-gray-500">@{user.username}</div>
-                      {user.email && <div className="text-sm text-gray-500">{user.email}</div>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1 w-fit">
-                      {getRoleIcon(user.role)}
-                      <span>{user.role}</span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
-                  <TableCell>{user.lastLogin ? user.lastLogin.toLocaleDateString() : "Never"}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {users.length === 0 && (
+              {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                     No users found. Create your first user to get started.
                   </TableCell>
                 </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{user.username}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1 w-fit">
+                        {getRoleIcon(user.role)}
+                        <span className="capitalize">{user.role}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.isActive ? "default" : "secondary"}>
+                        {user.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.lastLogin ? (
+                        <div className="text-sm">
+                          {user.lastLogin.toLocaleDateString()}
+                          <br />
+                          <span className="text-gray-500">{user.lastLogin.toLocaleTimeString()}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">Never</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{user.createdAt.toLocaleDateString()}</div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingUser(user)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleUserStatus(user)}>
+                            {user.isActive ? "Deactivate" : "Activate"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteUser(user)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -378,63 +389,56 @@ export function UserManagement() {
       </Card>
 
       {/* Edit User Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent aria-describedby="edit-user-description">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription id="edit-user-description">Update user information and permissions.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-username">Username</Label>
-              <Input
-                id="edit-username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Enter username"
-              />
+      {editingUser && (
+        <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+          <DialogContent aria-describedby="edit-user-description">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription id="edit-user-description">Update user information and permissions.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-username">Username</Label>
+                <Input
+                  id="edit-username"
+                  value={editingUser.username}
+                  onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select
+                  value={editingUser.role}
+                  onValueChange={(value: "admin" | "editor" | "viewer") =>
+                    setEditingUser({ ...editingUser, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer - Read only access</SelectItem>
+                    <SelectItem value="editor">Editor - Can create and edit articles</SelectItem>
+                    <SelectItem value="admin">Admin - Full system access</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleUpdateUser} className="w-full">
+                Update User
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="edit-name">Full Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter full name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-email">Email (Optional)</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter email address"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-role">Role</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as any })}>
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditUser}>Update User</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

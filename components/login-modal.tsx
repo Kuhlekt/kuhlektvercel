@@ -8,150 +8,191 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { User, Shield, Edit, Eye, AlertTriangle } from "lucide-react"
+import { AlertCircle, User, LogIn } from "lucide-react"
+import { storage } from "../utils/storage"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  users: UserType[]
   onLogin: (user: UserType) => void
 }
 
-export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    if (!username.trim()) {
+      setError("Please enter a username")
+      return
+    }
+
     setIsLoading(true)
+    setError("")
 
     try {
-      if (!username.trim()) {
-        setError("Please enter a username")
-        return
-      }
+      const users = storage.getUsers()
+      const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
 
-      const user = users.find((u) => u.username === username.trim())
       if (!user) {
         setError("User not found")
         return
       }
 
       // Update last login
-      const updatedUser = {
-        ...user,
-        lastLogin: new Date(),
-      }
+      user.lastLogin = new Date()
+      storage.saveUsers(users)
 
-      onLogin(updatedUser)
+      // Add audit log entry
+      storage.addAuditEntry({
+        action: "user_login",
+        entityType: "user",
+        entityId: user.id,
+        performedBy: user.username,
+        timestamp: new Date(),
+        details: `User ${user.username} logged in`,
+      })
+
+      onLogin(user)
+      onClose()
       setUsername("")
-      setError("")
-    } catch (err) {
+    } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDemoLogin = (demoUser: UserType) => {
-    const updatedUser = {
-      ...demoUser,
-      lastLogin: new Date(),
-    }
-    onLogin(updatedUser)
-    setUsername("")
+  const handleDemoLogin = (role: "admin" | "editor" | "viewer") => {
+    setIsLoading(true)
     setError("")
-  }
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Shield className="h-4 w-4" />
-      case "editor":
-        return <Edit className="h-4 w-4" />
-      case "viewer":
-        return <Eye className="h-4 w-4" />
-      default:
-        return <User className="h-4 w-4" />
+    try {
+      const users = storage.getUsers()
+      let demoUser = users.find((u) => u.role === role && u.username.includes("demo"))
+
+      if (!demoUser) {
+        // Create demo user if not exists
+        demoUser = {
+          id: `demo-${role}-${Date.now()}`,
+          username: `demo-${role}`,
+          email: `demo-${role}@example.com`,
+          role,
+          isActive: true,
+          createdAt: new Date(),
+          lastLogin: new Date(),
+        }
+        users.push(demoUser)
+        storage.saveUsers(users)
+      } else {
+        demoUser.lastLogin = new Date()
+        storage.saveUsers(users)
+      }
+
+      storage.addAuditEntry({
+        action: "demo_login",
+        entityType: "user",
+        entityId: demoUser.id,
+        performedBy: demoUser.username,
+        timestamp: new Date(),
+        details: `Demo ${role} login`,
+      })
+
+      onLogin(demoUser)
+      onClose()
+      setUsername("")
+    } catch (error) {
+      console.error("Demo login error:", error)
+      setError("Demo login failed. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "destructive" as const
-      case "editor":
-        return "default" as const
-      case "viewer":
-        return "secondary" as const
-      default:
-        return "outline" as const
-    }
-  }
-
-  if (!isOpen) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle>Login to Knowledge Base</DialogTitle>
+          <DialogTitle className="flex items-center space-x-2">
+            <LogIn className="h-5 w-5" />
+            <span>Login to Knowledge Base</span>
+          </DialogTitle>
           <DialogDescription id="login-description">
             Enter your username to access the knowledge base system.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              disabled={isLoading}
-              autoComplete="username"
-            />
+        <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or try demo accounts</span>
+            </div>
           </div>
 
-          {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
-        </form>
-
-        {/* Demo Login Section */}
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-sm font-medium mb-3">Quick Demo Login:</h4>
-          <div className="space-y-2">
-            {users.slice(0, 3).map((user) => (
-              <Button
-                key={user.id}
-                variant="outline"
-                size="sm"
-                className="w-full justify-start bg-transparent"
-                onClick={() => handleDemoLogin(user)}
-              >
-                <div className="flex items-center space-x-2">
-                  {getRoleIcon(user.role)}
-                  <span>{user.name}</span>
-                  <Badge variant={getRoleBadgeVariant(user.role)} className="ml-auto">
-                    {user.role}
-                  </Badge>
-                </div>
-              </Button>
-            ))}
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDemoLogin("admin")}
+              disabled={isLoading}
+              className="text-xs"
+            >
+              Demo Admin
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDemoLogin("editor")}
+              disabled={isLoading}
+              className="text-xs"
+            >
+              Demo Editor
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDemoLogin("viewer")}
+              disabled={isLoading}
+              className="text-xs"
+            >
+              Demo Viewer
+            </Button>
           </div>
         </div>
       </DialogContent>
