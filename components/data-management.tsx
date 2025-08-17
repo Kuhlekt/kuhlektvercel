@@ -128,7 +128,7 @@ export function DataManagement({
       // Import the data to storage
       storage.importData(JSON.stringify(data))
 
-      // Update the UI state
+      // Update the UI state using the correct prop names
       onCategoriesUpdate(processedCategories)
       onUsersUpdate(processedUsers)
       onAuditLogUpdate(processedAuditLog)
