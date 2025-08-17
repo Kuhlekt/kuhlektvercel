@@ -18,7 +18,7 @@ interface LoginModalProps {
   users: User[]
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin, users = [] }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -34,6 +34,7 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
       console.log("=== LOGIN ATTEMPT ===")
       console.log("Entered username:", username)
       console.log("Entered password:", password)
+      console.log("Users array length:", users.length)
       console.log(
         "Available users:",
         users.map((u) => ({
@@ -42,6 +43,12 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
           role: u.role,
         })),
       )
+
+      if (users.length === 0) {
+        console.error("No users available for login")
+        setError("No users available. Please refresh the page.")
+        return
+      }
 
       // Trim whitespace and ensure exact match
       const trimmedUsername = username.trim()
@@ -101,13 +108,13 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
             <span>Sign In</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="login-description">
             Enter your credentials to access the knowledge base administration features.
           </DialogDescription>
         </DialogHeader>
