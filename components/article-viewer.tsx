@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Trash2, Calendar, User, Tag } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
-import type { JSX } from "react"
 
 interface ArticleViewerProps {
   article: Article
@@ -20,46 +19,60 @@ interface ArticleViewerProps {
 const cleanContent = (htmlContent: string): string => {
   if (!htmlContent) return ""
 
-  // Create a temporary div to parse HTML
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = htmlContent
+  // Remove HTML tags while preserving line breaks
+  let cleanText = htmlContent
+    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Remove scripts
+    .replace(/<style[^>]*>.*?<\/style>/gi, "") // Remove styles
+    .replace(/<br\s*\/?>/gi, "\n") // Convert br tags to newlines
+    .replace(/<\/p>/gi, "\n\n") // Convert closing p tags to double newlines
+    .replace(/<[^>]*>/g, "") // Remove all other HTML tags
+    .replace(/&nbsp;/g, " ") // Replace non-breaking spaces
+    .replace(/&amp;/g, "&") // Replace HTML entities
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
 
-  // Get text content while preserving some structure
-  let cleanText = tempDiv.textContent || tempDiv.innerText || ""
-
-  // Clean up extra whitespace and normalize line breaks
+  // Clean up whitespace
   cleanText = cleanText
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/\n\s*\n/g, "\n\n") // Preserve paragraph breaks
+    .replace(/\n\s*\n\s*\n/g, "\n\n") // Multiple newlines to double newline
+    .replace(/[ \t]+/g, " ") // Multiple spaces/tabs to single space
     .trim()
 
   return cleanText
 }
 
-// Helper function to extract and preserve images from HTML content
+// Helper function to extract images from HTML content
 const extractImages = (htmlContent: string): string[] => {
   if (!htmlContent) return []
 
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = htmlContent
-  const images = tempDiv.querySelectorAll("img")
+  const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi
+  const images: string[] = []
+  let match
 
-  return Array.from(images)
-    .map((img) => img.src)
-    .filter((src) => src && src.trim() !== "")
-}
+  while ((match = imgRegex.exec(htmlContent)) !== null) {
+    if (match[1] && match[1].trim() !== "") {
+      images.push(match[1])
+    }
+  }
 
-// Helper function to format content with proper paragraphs
-const formatContent = (content: string): JSX.Element[] => {
-  if (!content) return []
+  // Also check for standalone URLs that might be images
+  const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi
+  while ((match = urlRegex.exec(htmlContent)) !== null) {
+    if (!images.includes(match[1])) {
+      images.push(match[1])
+    }
+  }
 
-  const paragraphs = content.split("\n\n").filter((p) => p.trim() !== "")
+  // Check for data URLs
+  const dataUrlRegex = /(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/g
+  while ((match = dataUrlRegex.exec(htmlContent)) !== null) {
+    if (!images.includes(match[1])) {
+      images.push(match[1])
+    }
+  }
 
-  return paragraphs.map((paragraph, index) => (
-    <p key={index} className="mb-4 leading-relaxed">
-      {paragraph.trim()}
-    </p>
-  ))
+  return images
 }
 
 export function ArticleViewer({ article, categories, onBack, backButtonText, onEdit, onDelete }: ArticleViewerProps) {
@@ -69,10 +82,9 @@ export function ArticleViewer({ article, categories, onBack, backButtonText, onE
   const category = categories.find((c) => c.id === article.categoryId)
   const subcategory = category?.subcategories.find((s) => s.id === article.subcategoryId)
 
-  // Clean the article content
+  // Clean the article content and extract images
   const cleanedContent = cleanContent(article.content)
   const images = extractImages(article.content)
-  const formattedContent = formatContent(cleanedContent)
 
   const handleDelete = () => {
     if (onDelete) {
@@ -80,6 +92,9 @@ export function ArticleViewer({ article, categories, onBack, backButtonText, onE
       setShowDeleteConfirm(false)
     }
   }
+
+  // Format content into paragraphs
+  const paragraphs = cleanedContent.split("\n\n").filter((p) => p.trim() !== "")
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -206,9 +221,13 @@ export function ArticleViewer({ article, categories, onBack, backButtonText, onE
 
         {/* Article content */}
         <div className="prose prose-lg max-w-none">
-          <div className="text-gray-800 leading-relaxed font-serif">
-            {formattedContent.length > 0 ? (
-              formattedContent
+          <div className="text-gray-800 leading-relaxed">
+            {paragraphs.length > 0 ? (
+              paragraphs.map((paragraph, index) => (
+                <p key={index} className="mb-4 text-base leading-7">
+                  {paragraph.trim()}
+                </p>
+              ))
             ) : (
               <p className="text-gray-500 italic">No content available</p>
             )}

@@ -1,8 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, User, Tag, FileText, ImageIcon } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Search, FileText, ImageIcon, Calendar, User } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface SearchResultsProps {
@@ -16,43 +16,46 @@ interface SearchResultsProps {
 const extractCleanText = (htmlContent: string): string => {
   if (!htmlContent) return ""
 
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = htmlContent
+  // Remove HTML tags and clean up text
+  const cleanText = htmlContent
+    .replace(/<script[^>]*>.*?<\/script>/gi, "")
+    .replace(/<style[^>]*>.*?<\/style>/gi, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
 
-  // Get clean text content
-  let text = tempDiv.textContent || tempDiv.innerText || ""
-
-  // Clean up whitespace
-  text = text.replace(/\s+/g, " ").trim()
-
-  return text
+  return cleanText
 }
 
-// Helper function to create preview text with search highlighting context
+// Helper function to create preview with highlighted search terms
 const createPreview = (content: string, query: string, maxLength = 200): string => {
   const cleanText = extractCleanText(content)
-
   if (!cleanText) return "No content available"
 
-  if (!query.trim()) {
+  const queryLower = query.toLowerCase()
+  const textLower = cleanText.toLowerCase()
+
+  // Find the position of the search term
+  const queryIndex = textLower.indexOf(queryLower)
+
+  if (queryIndex === -1) {
+    // If query not found, return beginning of content
     return cleanText.length > maxLength ? cleanText.substring(0, maxLength) + "..." : cleanText
   }
 
-  const searchTerm = query.toLowerCase()
-  const lowerContent = cleanText.toLowerCase()
-  const index = lowerContent.indexOf(searchTerm)
-
-  if (index === -1) {
-    // Query not found in content, return beginning
-    return cleanText.length > maxLength ? cleanText.substring(0, maxLength) + "..." : cleanText
-  }
-
-  // Show context around the found term
-  const start = Math.max(0, index - 50)
+  // Calculate start position to center the query term
+  const start = Math.max(0, queryIndex - Math.floor(maxLength / 2))
   const end = Math.min(cleanText.length, start + maxLength)
 
   let preview = cleanText.substring(start, end)
 
+  // Add ellipsis if needed
   if (start > 0) preview = "..." + preview
   if (end < cleanText.length) preview = preview + "..."
 
@@ -60,152 +63,108 @@ const createPreview = (content: string, query: string, maxLength = 200): string 
 }
 
 // Helper function to check if content has images
-const hasImages = (htmlContent: string): boolean => {
-  if (!htmlContent) return false
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = htmlContent
-  return tempDiv.querySelectorAll("img").length > 0
-}
+const hasImages = (content: string): boolean => {
+  if (!content) return false
 
-// Helper function to highlight search terms in text
-const highlightSearchTerm = (text: string, query: string): JSX.Element => {
-  if (!query.trim()) {
-    return <span>{text}</span>
-  }
+  const imgRegex = /<img[^>]*>/i
+  const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/i
+  const dataUrlRegex = /data:image\/[^;]+;base64,/i
 
-  const searchTerm = query.toLowerCase()
-  const lowerText = text.toLowerCase()
-  const index = lowerText.indexOf(searchTerm)
-
-  if (index === -1) {
-    return <span>{text}</span>
-  }
-
-  const before = text.substring(0, index)
-  const match = text.substring(index, index + query.length)
-  const after = text.substring(index + query.length)
-
-  return (
-    <span>
-      {before}
-      <mark className="bg-yellow-200 px-1 rounded">{match}</mark>
-      {highlightSearchTerm(after, query)}
-    </span>
-  )
+  return imgRegex.test(content) || urlRegex.test(content) || dataUrlRegex.test(content)
 }
 
 export function SearchResults({ results, categories, query, onArticleSelect }: SearchResultsProps) {
-  // Get category and subcategory info for an article
-  const getArticleLocation = (article: Article) => {
-    const category = categories.find((c) => c.id === article.categoryId)
-    const subcategory = category?.subcategories.find((s) => s.id === article.subcategoryId)
+  // Get category name helper
+  const getCategoryName = (categoryId: string, subcategoryId?: string) => {
+    const category = categories.find((c) => c.id === categoryId)
+    if (!category) return "Unknown Category"
 
-    return {
-      categoryName: category?.name || "Unknown Category",
-      subcategoryName: subcategory?.name,
+    if (subcategoryId) {
+      const subcategory = category.subcategories.find((s) => s.id === subcategoryId)
+      return `${category.name} › ${subcategory?.name || "Unknown Subcategory"}`
     }
+
+    return category.name
   }
 
   if (results.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Results Found</h3>
-        <p className="text-gray-600">
-          No articles found matching "{query}". Try different keywords or check your spelling.
-        </p>
-      </div>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Search className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+          <p className="text-gray-600 text-center">
+            No articles found matching "{query}". Try different keywords or check your spelling.
+          </p>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="border-b border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Search Results for "{query}"</h2>
-        <p className="text-gray-600">
-          Found {results.length} article{results.length !== 1 ? "s" : ""}
-        </p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-gray-900">Search Results for "{query}"</h2>
+        <Badge variant="secondary" className="text-sm">
+          {results.length} result{results.length !== 1 ? "s" : ""}
+        </Badge>
       </div>
 
-      <div className="p-6">
-        <div className="space-y-4">
-          {results.map((article) => {
-            const location = getArticleLocation(article)
-            const preview = createPreview(article.content, query)
-            const articleHasImages = hasImages(article.content)
+      <div className="space-y-4">
+        {results.map((article) => {
+          const preview = createPreview(article.content, query)
+          const categoryName = getCategoryName(article.categoryId, article.subcategoryId)
+          const articleHasImages = hasImages(article.content)
 
-            return (
-              <Card
-                key={article.id}
-                className="cursor-pointer hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500"
-                onClick={() => onArticleSelect(article)}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2 hover:text-blue-600">
-                        {highlightSearchTerm(article.title, query)}
-                      </h3>
-
-                      {/* Article metadata */}
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-3">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{article.updatedAt.toLocaleDateString()}</span>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                          <User className="h-4 w-4" />
-                          <span>{article.createdBy}</span>
-                        </div>
-
-                        {articleHasImages && (
-                          <div className="flex items-center space-x-1 text-blue-600">
-                            <ImageIcon className="h-4 w-4" />
-                            <span>Has images</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Category breadcrumb */}
-                      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-3">
-                        <span>{location.categoryName}</span>
-                        {location.subcategoryName && (
-                          <>
-                            <span>›</span>
-                            <span>{location.subcategoryName}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+          return (
+            <Card
+              key={article.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => onArticleSelect(article)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-lg hover:text-blue-600 transition-colors">{article.title}</CardTitle>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    {articleHasImages && <ImageIcon className="h-4 w-4 text-gray-400" />}
                   </div>
+                </div>
 
-                  {/* Article preview */}
-                  <div className="text-gray-700 mb-4 leading-relaxed">{highlightSearchTerm(preview, query)}</div>
+                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <span className="text-blue-600 font-medium">{categoryName}</span>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-3 w-3" />
+                    <span>{article.createdAt.toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <User className="h-3 w-3" />
+                    <span>{article.createdBy}</span>
+                  </div>
+                </div>
+              </CardHeader>
 
-                  {/* Tags */}
-                  {article.tags && article.tags.length > 0 && (
-                    <div className="flex items-center space-x-2">
-                      <Tag className="h-4 w-4 text-gray-400" />
-                      <div className="flex flex-wrap gap-2">
-                        {article.tags.slice(0, 5).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {highlightSearchTerm(tag, query)}
-                          </Badge>
-                        ))}
-                        {article.tags.length > 5 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{article.tags.length - 5} more
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+              <CardContent className="pt-0">
+                <p className="text-gray-700 text-sm leading-relaxed mb-3">{preview}</p>
+
+                {article.tags && article.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {article.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {article.tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{article.tags.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )
