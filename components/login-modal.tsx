@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertTriangle, LogIn, Lock } from "lucide-react"
-import type { KnowledgeBaseUser } from "../types/knowledge-base"
+import type { User } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
-  users: KnowledgeBaseUser[]
-  onLogin: (user: KnowledgeBaseUser) => void
+  users: User[]
+  onLogin: (user: User) => void
   onClose: () => void
 }
 

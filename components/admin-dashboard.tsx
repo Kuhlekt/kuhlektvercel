@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Users, FileText, Activity, Database, TrendingUp, Clock } from "lucide-react"
 import { ArticleManagement } from "./article-management"
-import { UserManagement } from "./user-management"
+import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
@@ -15,7 +15,6 @@ interface AdminDashboardProps {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  currentUser: User
   onCategoriesUpdate: (categories: Category[]) => void
   onUsersUpdate: (users: User[]) => void
   onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
@@ -25,7 +24,6 @@ export function AdminDashboard({
   categories,
   users,
   auditLog,
-  currentUser,
   onCategoriesUpdate,
   onUsersUpdate,
   onAuditLogUpdate,
@@ -70,7 +68,7 @@ export function AdminDashboard({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {currentUser.name}!</p>
+        <p className="text-gray-600">Manage your knowledge base content and settings</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -199,19 +197,13 @@ export function AdminDashboard({
         <TabsContent value="articles">
           <ArticleManagement
             categories={categories}
-            currentUser={currentUser}
             onCategoriesUpdate={onCategoriesUpdate}
             onAuditLogUpdate={onAuditLogUpdate}
           />
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagement
-            users={users}
-            currentUser={currentUser}
-            onUsersUpdate={onUsersUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
-          />
+          <UserManagementTable users={users} onUsersUpdate={onUsersUpdate} />
         </TabsContent>
 
         <TabsContent value="audit">

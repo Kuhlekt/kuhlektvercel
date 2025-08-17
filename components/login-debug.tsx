@@ -1,130 +1,170 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bug, RefreshCw, LogIn } from "lucide-react"
 import { storage } from "../utils/storage"
 import { initialUsers } from "../data/initial-users"
-import type { KnowledgeBaseUser } from "../types/knowledge-base"
+import type { User as KnowledgeBaseUser } from "../types/knowledge-base"
 
 interface LoginDebugProps {
   users: KnowledgeBaseUser[]
   onLogin: (user: KnowledgeBaseUser) => void
-  onUsersUpdate: (users: KnowledgeBaseUser[]) => void
 }
 
-export function LoginDebug({ users, onLogin, onUsersUpdate }: LoginDebugProps) {
-  const storageUsers = storage.getUsers()
-
-  const handleDirectLogin = (user: KnowledgeBaseUser) => {
-    console.log("Direct login for user:", user.username)
-    onLogin(user)
-  }
+export function LoginDebug({ users, onLogin }: LoginDebugProps) {
+  const [isVisible, setIsVisible] = useState(false)
 
   const handleResetUsers = () => {
-    console.log("Resetting users to initial state")
-    storage.saveUsers(initialUsers)
-    onUsersUpdate(initialUsers)
+    try {
+      storage.saveUsers(initialUsers)
+      window.location.reload()
+    } catch (error) {
+      console.error("Failed to reset users:", error)
+    }
+  }
+
+  const handleDirectLogin = (user: KnowledgeBaseUser) => {
+    const updatedUser = { ...user, lastLogin: new Date() }
+    onLogin(updatedUser)
+  }
+
+  const storageUsers = storage.getUsers()
+
+  if (!isVisible) {
+    return (
+      <div className="fixed bottom-4 right-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsVisible(true)}
+          className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+        >
+          <Bug className="h-4 w-4 mr-2" />
+          Debug Login
+        </Button>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      <Alert>
-        <Bug className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Debug Panel:</strong> This panel helps troubleshoot login issues. Remove this component for
-          production.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Users from Props */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center space-x-2">
+    <div className="fixed bottom-4 right-4 w-96 max-h-96 overflow-y-auto">
+      <Card className="bg-yellow-50 border-yellow-200">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm text-yellow-800 flex items-center space-x-2">
               <Bug className="h-4 w-4" />
-              <span>Users from Props</span>
+              <span>Login Debug Panel</span>
             </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-gray-600">Count: {users.length}</p>
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">{user.username}</div>
-                  <Badge variant="outline" className="text-xs">
-                    {user.role}
-                  </Badge>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)}>
-                  <LogIn className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+            <Button variant="ghost" size="sm" onClick={() => setIsVisible(false)}>
+              ×
+            </Button>
+          </div>
+          <CardDescription className="text-yellow-700">Debug login functionality</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Users from Props */}
+          <div>
+            <h4 className="text-sm font-medium text-yellow-800 mb-2">Users from Props ({users.length})</h4>
+            <div className="space-y-1">
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-xs">
+                        {user.role}
+                      </Badge>
+                      <span>{user.username}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDirectLogin(user)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <LogIn className="h-3 w-3 mr-1" />
+                      Login
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <Alert className="py-2">
+                  <AlertDescription className="text-xs">No users in props</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
 
-        {/* Users from Storage */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center space-x-2">
-              <Bug className="h-4 w-4" />
-              <span>Users from Storage</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-gray-600">Count: {storageUsers.length}</p>
-            {storageUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">{user.username}</div>
-                  <Badge variant="outline" className="text-xs">
-                    {user.role}
-                  </Badge>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)}>
-                  <LogIn className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+          {/* Users from Storage */}
+          <div>
+            <h4 className="text-sm font-medium text-yellow-800 mb-2">Users from Storage ({storageUsers.length})</h4>
+            <div className="space-y-1">
+              {storageUsers.length > 0 ? (
+                storageUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-xs">
+                        {user.role}
+                      </Badge>
+                      <span>{user.username}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDirectLogin(user)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <LogIn className="h-3 w-3 mr-1" />
+                      Login
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <Alert className="py-2">
+                  <AlertDescription className="text-xs">No users in storage</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
 
-        {/* Initial Users */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center space-x-2">
-              <Bug className="h-4 w-4" />
-              <span>Initial Users</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-gray-600">Count: {initialUsers.length}</p>
-            {initialUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">{user.username}</div>
-                  <Badge variant="outline" className="text-xs">
-                    {user.role}
-                  </Badge>
+          {/* Initial Users */}
+          <div>
+            <h4 className="text-sm font-medium text-yellow-800 mb-2">Initial Users ({initialUsers.length})</h4>
+            <div className="space-y-1">
+              {initialUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-xs">
+                      {user.role}
+                    </Badge>
+                    <span>
+                      {user.username} / {user.password}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDirectLogin(user)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <LogIn className="h-3 w-3 mr-1" />
+                    Login
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => handleDirectLogin(user)}>
-                  <LogIn className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </div>
+          </div>
 
-      <div className="flex justify-center">
-        <Button onClick={handleResetUsers} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Reset Users to Initial State
-        </Button>
-      </div>
+          {/* Reset Button */}
+          <Button variant="destructive" size="sm" onClick={handleResetUsers} className="w-full">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset Users to Initial State
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
