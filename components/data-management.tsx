@@ -48,7 +48,7 @@ interface ImportStats {
   pageVisits: number
 }
 
-export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
+export function DataManagement({ categories = [], users = [], auditLog = [], onDataImported }: DataManagementProps) {
   const [importData, setImportData] = useState("")
   const [importProgress, setImportProgress] = useState(0)
   const [importStatus, setImportStatus] = useState<"idle" | "importing" | "success" | "error">("idle")
@@ -59,19 +59,18 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const calculateStats = (data: ImportData): ImportStats => {
-    const categoriesCount = Array.isArray(data.categories) ? data.categories.length : 0
-    const articlesCount = Array.isArray(data.categories)
-      ? data.categories.reduce((total, category) => {
-          const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-          const subcategoryArticles = Array.isArray(category.subcategories)
-            ? category.subcategories.reduce(
-                (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-                0,
-              )
-            : 0
-          return total + categoryArticles + subcategoryArticles
-        }, 0)
-      : 0
+    const categoriesArray = Array.isArray(data.categories) ? data.categories : []
+    const categoriesCount = categoriesArray.length
+    const articlesCount = categoriesArray.reduce((total, category) => {
+      const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
+      const subcategoryArticles = Array.isArray(category.subcategories)
+        ? category.subcategories.reduce(
+            (subTotal, sub) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+            0,
+          )
+        : 0
+      return total + categoryArticles + subcategoryArticles
+    }, 0)
 
     return {
       categories: categoriesCount,
@@ -300,7 +299,8 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
   }
 
   const getCurrentStats = () => {
-    const totalArticles = categories.reduce((total, category) => {
+    const categoriesArray = Array.isArray(categories) ? categories : []
+    const totalArticles = categoriesArray.reduce((total, category) => {
       const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
       const subcategoryArticles = Array.isArray(category.subcategories)
         ? category.subcategories.reduce(
@@ -312,10 +312,10 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     }, 0)
 
     return {
-      categories: categories.length,
+      categories: categoriesArray.length,
       articles: totalArticles,
-      users: users.length,
-      auditEntries: auditLog.length,
+      users: Array.isArray(users) ? users.length : 0,
+      auditEntries: Array.isArray(auditLog) ? auditLog.length : 0,
       pageVisits: storage.getPageVisits(),
     }
   }
