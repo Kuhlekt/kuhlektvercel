@@ -31,19 +31,22 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      // Find user by username
-      const user = users.find((u) => u.username === username)
+      console.log("Login attempt:", { username, password })
+      console.log(
+        "Available users:",
+        users.map((u) => ({ username: u.username, password: u.password })),
+      )
+
+      // Find user by username and password
+      const user = users.find((u) => u.username === username && u.password === password)
 
       if (!user) {
+        console.log("User not found or password mismatch")
         setError("Invalid username or password")
         return
       }
 
-      // Check password
-      if (user.password !== password) {
-        setError("Invalid username or password")
-        return
-      }
+      console.log("User found:", user)
 
       // Update last login
       const updatedUser = {
@@ -53,10 +56,14 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
 
       onLogin(updatedUser)
       onClose()
+
+      // Reset form
       setUsername("")
       setPassword("")
       setError("")
+      setShowPassword(false)
     } catch (err) {
+      console.error("Login error:", err)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -73,13 +80,13 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
             <span>Sign In</span>
           </DialogTitle>
-          <DialogDescription id="login-description">
+          <DialogDescription>
             Enter your credentials to access the knowledge base administration features.
           </DialogDescription>
         </DialogHeader>
