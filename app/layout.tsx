@@ -1,14 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import Script from "next/script"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
-import { GoogleAnalytics } from "@/components/google-analytics"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
@@ -42,19 +40,19 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.gif" type="image/gif" />
         <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
         <link rel="apple-touch-icon" href="/favicon.gif" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-942617128');
+            `,
+          }}
+        />
       </head>
       <body className={inter.className}>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=AW-942617128" strategy="afterInteractive" />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'AW-942617128');
-            console.log('[v0] Google Analytics initialized');
-          `}
-        </Script>
-
         <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Suspense fallback={null}>
@@ -64,7 +62,6 @@ export default function RootLayout({
               <Footer />
             </div>
             <VisitorTracker />
-            <GoogleAnalytics />
           </Suspense>
         </ThemeProvider>
       </body>
