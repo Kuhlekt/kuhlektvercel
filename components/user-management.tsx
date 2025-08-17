@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,23 +20,17 @@ import {
 } from "@/components/ui/dialog"
 import { Plus, Trash2, Edit, Shield, Eye, AlertTriangle, CheckCircle, User } from "lucide-react"
 import { storage } from "../utils/storage"
+import type { User as UserType } from "../types/knowledge-base"
 
-interface UserManagementProps {
-  users: any[]
-  currentUser: any
-  onUsersUpdate: (users: any[]) => void
-  onAuditLogUpdate: (auditLog: any[]) => void
-}
-
-export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUpdate }: UserManagementProps) {
+export function UserManagement() {
+  const [users, setUsers] = useState<UserType[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
+  const [editingUser, setEditingUser] = useState<UserType | null>(null)
   const [formData, setFormData] = useState({
     username: "",
     name: "",
     email: "",
-    password: "",
     role: "viewer" as "admin" | "editor" | "viewer",
   })
   const [status, setStatus] = useState<{
@@ -44,21 +38,35 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
     message: string
   }>({ type: null, message: "" })
 
+  // Load users on component mount
+  useEffect(() => {
+    const loadUsers = () => {
+      try {
+        const loadedUsers = storage.getUsers()
+        setUsers(loadedUsers || [])
+      } catch (error) {
+        console.error("Error loading users:", error)
+        setUsers([])
+      }
+    }
+
+    loadUsers()
+  }, [])
+
   const resetForm = () => {
     setFormData({
       username: "",
       name: "",
       email: "",
-      password: "",
       role: "viewer",
     })
   }
 
   const handleCreateUser = () => {
-    if (!formData.username || !formData.name || !formData.password) {
+    if (!formData.username || !formData.name) {
       setStatus({
         type: "error",
-        message: "Username, name, and password are required.",
+        message: "Username and name are required.",
       })
       return
     }
@@ -71,12 +79,12 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
       return
     }
 
-    const newUser = {
+    const newUser: UserType = {
       id: Date.now().toString(),
       username: formData.username,
       name: formData.name,
       email: formData.email,
-      password: formData.password,
+      password: "demo123", // Default password, hidden from UI
       role: formData.role,
       createdAt: new Date(),
       lastLogin: null,
@@ -84,26 +92,19 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
 
     const updatedUsers = [...users, newUser]
     storage.saveUsers(updatedUsers)
-    onUsersUpdate(updatedUsers)
+    setUsers(updatedUsers)
 
     // Add audit entry
-    const auditEntry = {
-      id: Date.now().toString(),
-      action: "create_user",
-      entityType: "user",
-      entityId: newUser.id,
-      timestamp: new Date(),
-      performedBy: currentUser.username,
-      details: `Created user: ${newUser.username} (${newUser.role})`,
+    storage.addAuditEntry({
+      action: "user_created",
+      articleId: undefined,
       articleTitle: undefined,
       categoryName: undefined,
       subcategoryName: undefined,
-    }
-
-    const currentAuditLog = storage.getAuditLog()
-    const updatedAuditLog = [auditEntry, ...currentAuditLog]
-    storage.saveAuditLog(updatedAuditLog)
-    onAuditLogUpdate(updatedAuditLog)
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Created user: ${newUser.username} (${newUser.role})`,
+    })
 
     setStatus({
       type: "success",
@@ -130,37 +131,29 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
       return
     }
 
-    const updatedUser = {
+    const updatedUser: UserType = {
       ...editingUser,
       username: formData.username,
       name: formData.name,
       email: formData.email,
       role: formData.role,
-      ...(formData.password && { password: formData.password }),
     }
 
     const updatedUsers = users.map((user) => (user.id === editingUser.id ? updatedUser : user))
     storage.saveUsers(updatedUsers)
-    onUsersUpdate(updatedUsers)
+    setUsers(updatedUsers)
 
     // Add audit entry
-    const auditEntry = {
-      id: Date.now().toString(),
-      action: "update_user",
-      entityType: "user",
-      entityId: updatedUser.id,
-      timestamp: new Date(),
-      performedBy: currentUser.username,
-      details: `Updated user: ${updatedUser.username}`,
+    storage.addAuditEntry({
+      action: "user_updated",
+      articleId: undefined,
       articleTitle: undefined,
       categoryName: undefined,
       subcategoryName: undefined,
-    }
-
-    const currentAuditLog = storage.getAuditLog()
-    const updatedAuditLog = [auditEntry, ...currentAuditLog]
-    storage.saveAuditLog(updatedAuditLog)
-    onAuditLogUpdate(updatedAuditLog)
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Updated user: ${updatedUser.username}`,
+    })
 
     setStatus({
       type: "success",
@@ -171,41 +164,26 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
     resetForm()
   }
 
-  const handleDeleteUser = (user) => {
-    if (user.id === currentUser.id) {
-      setStatus({
-        type: "error",
-        message: "You cannot delete your own account.",
-      })
-      return
-    }
-
+  const handleDeleteUser = (user: UserType) => {
     if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) {
       return
     }
 
     const updatedUsers = users.filter((u) => u.id !== user.id)
     storage.saveUsers(updatedUsers)
-    onUsersUpdate(updatedUsers)
+    setUsers(updatedUsers)
 
     // Add audit entry
-    const auditEntry = {
-      id: Date.now().toString(),
-      action: "delete_user",
-      entityType: "user",
-      entityId: user.id,
-      timestamp: new Date(),
-      performedBy: currentUser.username,
-      details: `Deleted user: ${user.username}`,
+    storage.addAuditEntry({
+      action: "user_deleted",
+      articleId: undefined,
       articleTitle: undefined,
       categoryName: undefined,
       subcategoryName: undefined,
-    }
-
-    const currentAuditLog = storage.getAuditLog()
-    const updatedAuditLog = [auditEntry, ...currentAuditLog]
-    storage.saveAuditLog(updatedAuditLog)
-    onAuditLogUpdate(updatedAuditLog)
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Deleted user: ${user.username}`,
+    })
 
     setStatus({
       type: "success",
@@ -213,19 +191,18 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
     })
   }
 
-  const openEditDialog = (user) => {
+  const openEditDialog = (user: UserType) => {
     setEditingUser(user)
     setFormData({
       username: user.username,
       name: user.name,
       email: user.email || "",
-      password: "",
       role: user.role,
     })
     setIsEditDialogOpen(true)
   }
 
-  const getRoleIcon = (role) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
         return <Shield className="h-4 w-4" />
@@ -238,16 +215,16 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
     }
   }
 
-  const getRoleBadgeVariant = (role) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
-        return "destructive"
+        return "destructive" as const
       case "editor":
-        return "default"
+        return "default" as const
       case "viewer":
-        return "secondary"
+        return "secondary" as const
       default:
-        return "outline"
+        return "outline" as const
     }
   }
 
@@ -302,18 +279,11 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
                 />
               </div>
               <div>
-                <Label htmlFor="create-password">Password</Label>
-                <Input
-                  id="create-password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter password"
-                />
-              </div>
-              <div>
                 <Label htmlFor="create-role">Role</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                >
                   <SelectTrigger id="create-role">
                     <SelectValue />
                   </SelectTrigger>
@@ -388,15 +358,20 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {user.id !== currentUser.id && (
-                        <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    No users found. Create your first user to get started.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -439,18 +414,8 @@ export function UserManagement({ users, currentUser, onUsersUpdate, onAuditLogUp
               />
             </div>
             <div>
-              <Label htmlFor="edit-password">New Password (Leave blank to keep current)</Label>
-              <Input
-                id="edit-password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter new password"
-              />
-            </div>
-            <div>
               <Label htmlFor="edit-role">Role</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as any })}>
                 <SelectTrigger id="edit-role">
                   <SelectValue />
                 </SelectTrigger>

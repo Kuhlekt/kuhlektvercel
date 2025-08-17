@@ -6,17 +6,20 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertCircle, LogIn } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { User, Shield, Edit, Eye, AlertTriangle } from "lucide-react"
+import type { User as UserType } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onLogin: (user: any) => void
+  users: UserType[]
+  onLogin: (user: UserType) => void
 }
 
-export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -27,96 +30,78 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setIsLoading(true)
 
     try {
-      // Get users from localStorage
-      const users = JSON.parse(localStorage.getItem("kb-users") || "[]")
-
-      // Find user with matching username (password still checked internally but not shown)
-      const user = users.find((u: any) => u.username === username)
-
-      if (user) {
-        // Store current user
-        localStorage.setItem("kb-current-user", JSON.stringify(user))
-
-        // Add audit log entry
-        const auditLog = JSON.parse(localStorage.getItem("kb-audit-log") || "[]")
-        auditLog.unshift({
-          id: Date.now().toString(),
-          action: "User Login",
-          user: user.name,
-          timestamp: new Date().toISOString(),
-          details: `User ${user.name} logged in successfully`,
-        })
-        localStorage.setItem("kb-audit-log", JSON.stringify(auditLog))
-
-        onLogin(user)
-        onClose()
-        setUsername("")
-      } else {
-        setError("Username not found")
+      if (!username.trim()) {
+        setError("Please enter a username")
+        return
       }
-    } catch (error) {
+
+      const user = users.find((u) => u.username === username.trim())
+      if (!user) {
+        setError("User not found")
+        return
+      }
+
+      // Update last login
+      const updatedUser = {
+        ...user,
+        lastLogin: new Date(),
+      }
+
+      onLogin(updatedUser)
+      setUsername("")
+      setError("")
+    } catch (err) {
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDemoLogin = (role: "admin" | "editor" | "viewer") => {
-    const demoUsers = {
-      admin: {
-        id: "1",
-        name: "Admin User",
-        username: "admin",
-        password: "admin123",
-        role: "admin",
-        email: "admin@example.com",
-      },
-      editor: {
-        id: "2",
-        name: "Editor User",
-        username: "editor",
-        password: "editor123",
-        role: "editor",
-        email: "editor@example.com",
-      },
-      viewer: {
-        id: "3",
-        name: "Viewer User",
-        username: "viewer",
-        password: "viewer123",
-        role: "viewer",
-        email: "viewer@example.com",
-      },
+  const handleDemoLogin = (demoUser: UserType) => {
+    const updatedUser = {
+      ...demoUser,
+      lastLogin: new Date(),
     }
-
-    const user = demoUsers[role]
-    localStorage.setItem("kb-current-user", JSON.stringify(user))
-
-    // Add audit log entry
-    const auditLog = JSON.parse(localStorage.getItem("kb-audit-log") || "[]")
-    auditLog.unshift({
-      id: Date.now().toString(),
-      action: "Demo Login",
-      user: user.name,
-      timestamp: new Date().toISOString(),
-      details: `Demo login as ${role}`,
-    })
-    localStorage.setItem("kb-audit-log", JSON.stringify(auditLog))
-
-    onLogin(user)
-    onClose()
+    onLogin(updatedUser)
+    setUsername("")
+    setError("")
   }
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-4 w-4" />
+      case "editor":
+        return <Edit className="h-4 w-4" />
+      case "viewer":
+        return <Eye className="h-4 w-4" />
+      default:
+        return <User className="h-4 w-4" />
+    }
+  }
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "destructive" as const
+      case "editor":
+        return "default" as const
+      case "viewer":
+        return "secondary" as const
+      default:
+        return "outline" as const
+    }
+  }
+
+  if (!isOpen) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <LogIn className="h-5 w-5" />
-            <span>Login to Knowledge Base</span>
-          </DialogTitle>
+          <DialogTitle>Login to Knowledge Base</DialogTitle>
           <DialogDescription id="login-description">
-            Enter your username to access the admin dashboard
+            Enter your username to access the knowledge base system.
           </DialogDescription>
         </DialogHeader>
 
@@ -128,16 +113,16 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              required
+              placeholder="Enter your username"
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">{error}</AlertDescription>
             </Alert>
           )}
 
@@ -146,33 +131,27 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </Button>
         </form>
 
-        <div className="mt-4 pt-4 border-t">
-          <p className="text-sm text-muted-foreground mb-2">Quick Login:</p>
+        {/* Demo Login Section */}
+        <div className="mt-6 pt-4 border-t">
+          <h4 className="text-sm font-medium mb-3">Quick Demo Login:</h4>
           <div className="space-y-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDemoLogin("admin")}
-              className="w-full text-left justify-start"
-            >
-              Login as Admin
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDemoLogin("editor")}
-              className="w-full text-left justify-start"
-            >
-              Login as Editor
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDemoLogin("viewer")}
-              className="w-full text-left justify-start"
-            >
-              Login as Viewer
-            </Button>
+            {users.slice(0, 3).map((user) => (
+              <Button
+                key={user.id}
+                variant="outline"
+                size="sm"
+                className="w-full justify-start bg-transparent"
+                onClick={() => handleDemoLogin(user)}
+              >
+                <div className="flex items-center space-x-2">
+                  {getRoleIcon(user.role)}
+                  <span>{user.name}</span>
+                  <Badge variant={getRoleBadgeVariant(user.role)} className="ml-auto">
+                    {user.role}
+                  </Badge>
+                </div>
+              </Button>
+            ))}
           </div>
         </div>
       </DialogContent>

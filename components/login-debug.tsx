@@ -1,114 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Shield, Eye, Edit, RefreshCw } from "lucide-react"
+import { Shield, Edit, Eye, User, ChevronDown, ChevronUp } from "lucide-react"
+import type { User as UserType } from "../types/knowledge-base"
 
 interface LoginDebugProps {
-  onLogin: (user: any) => void
+  users: UserType[]
+  onLogin: (user: UserType) => void
 }
 
-export function LoginDebug({ onLogin }: LoginDebugProps) {
-  const [users, setUsers] = useState<any[]>([])
-  const [currentUser, setCurrentUser] = useState<any>(null)
-
-  useEffect(() => {
-    loadUsers()
-    loadCurrentUser()
-  }, [])
-
-  const loadUsers = () => {
-    try {
-      const storedUsers = localStorage.getItem("kb-users")
-      if (storedUsers) {
-        setUsers(JSON.parse(storedUsers))
-      } else {
-        // Initialize with default users
-        const defaultUsers = [
-          {
-            id: "1",
-            name: "Admin User",
-            username: "admin",
-            password: "admin123",
-            role: "admin",
-            email: "admin@example.com",
-            createdAt: new Date().toISOString(),
-            lastLogin: null,
-          },
-          {
-            id: "2",
-            name: "Editor User",
-            username: "editor",
-            password: "editor123",
-            role: "editor",
-            email: "editor@example.com",
-            createdAt: new Date().toISOString(),
-            lastLogin: null,
-          },
-          {
-            id: "3",
-            name: "Viewer User",
-            username: "viewer",
-            password: "viewer123",
-            role: "viewer",
-            email: "viewer@example.com",
-            createdAt: new Date().toISOString(),
-            lastLogin: null,
-          },
-        ]
-        localStorage.setItem("kb-users", JSON.stringify(defaultUsers))
-        setUsers(defaultUsers)
-      }
-    } catch (error) {
-      console.error("Error loading users:", error)
-    }
-  }
-
-  const loadCurrentUser = () => {
-    try {
-      const storedUser = localStorage.getItem("kb-current-user")
-      if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser))
-      }
-    } catch (error) {
-      console.error("Error loading current user:", error)
-    }
-  }
-
-  const handleLogin = (user: any) => {
-    // Update last login
-    const updatedUser = { ...user, lastLogin: new Date().toISOString() }
-
-    // Update users array
-    const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
-    localStorage.setItem("kb-users", JSON.stringify(updatedUsers))
-    setUsers(updatedUsers)
-
-    // Set current user
-    localStorage.setItem("kb-current-user", JSON.stringify(updatedUser))
-    setCurrentUser(updatedUser)
-
-    // Add audit log
-    const auditLog = JSON.parse(localStorage.getItem("kb-audit-log") || "[]")
-    auditLog.unshift({
-      id: Date.now().toString(),
-      action: "Debug Login",
-      user: user.name,
-      timestamp: new Date().toISOString(),
-      details: `Debug login as ${user.role}`,
-    })
-    localStorage.setItem("kb-audit-log", JSON.stringify(auditLog))
-
-    onLogin(updatedUser)
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem("kb-current-user")
-    setCurrentUser(null)
-  }
+export function LoginDebug({ users, onLogin }: LoginDebugProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -123,86 +28,73 @@ export function LoginDebug({ onLogin }: LoginDebugProps) {
     }
   }
 
-  const getRoleColor = (role: string) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
-        return "destructive"
+        return "destructive" as const
       case "editor":
-        return "default"
+        return "default" as const
       case "viewer":
-        return "secondary"
+        return "secondary" as const
       default:
-        return "outline"
+        return "outline" as const
     }
   }
 
+  const handleLogin = (user: UserType) => {
+    const updatedUser = {
+      ...user,
+      lastLogin: new Date(),
+    }
+    onLogin(updatedUser)
+  }
+
+  if (users.length === 0) {
+    return null
+  }
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <User className="h-5 w-5" />
-          <span>Login Debug Panel</span>
-          <Button variant="outline" size="sm" onClick={loadUsers}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {currentUser && (
-          <Alert>
-            <User className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>
-                Currently logged in as: <strong>{currentUser.name}</strong> ({currentUser.role})
-              </span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Logout
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Available Users ({users.length}):</h4>
-          {users.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No users found. Click refresh to load default users.</p>
-          ) : (
-            <div className="grid gap-2">
-              {users.map((user) => (
-                <div
+    <div className="fixed bottom-4 right-4 z-50">
+      <Card className="w-80 shadow-lg border-2 border-blue-200">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-blue-700">Debug Login Panel</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="h-6 w-6 p-0">
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        {isExpanded && (
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              <p className="text-xs text-gray-600 mb-3">Quick login for testing:</p>
+              {users.slice(0, 4).map((user) => (
+                <Button
                   key={user.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-left bg-transparent"
+                  onClick={() => handleLogin(user)}
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 w-full">
                     {getRoleIcon(user.role)}
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium">{user.name}</span>
-                        <Badge variant={getRoleColor(user.role) as any}>{user.role}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{user.name}</div>
+                      <div className="text-xs text-gray-500 truncate">@{user.username}</div>
                     </div>
+                    <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs">
+                      {user.role}
+                    </Badge>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleLogin(user)}
-                    disabled={currentUser?.id === user.id}
-                  >
-                    {currentUser?.id === user.id ? "Current" : "Login"}
-                  </Button>
-                </div>
+                </Button>
               ))}
+              <div className="pt-2 border-t">
+                <p className="text-xs text-gray-500">Users loaded: {users.length} | Click to login instantly</p>
+              </div>
             </div>
-          )}
-        </div>
-
-        <div className="pt-4 border-t">
-          <p className="text-xs text-muted-foreground">
-            This debug panel allows quick user switching for testing. Users are stored in localStorage.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        )}
+      </Card>
+    </div>
   )
 }
