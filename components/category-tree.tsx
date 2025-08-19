@@ -1,6 +1,4 @@
 "use client"
-
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Folder, FileText } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
@@ -22,49 +20,58 @@ export function CategoryTree({
   onCategorySelect,
   onArticleSelect,
 }: CategoryTreeProps) {
-  const getArticlesForCategory = (categoryId: string) => {
+  const getArticleCount = (categoryId: string) => {
+    return articles.filter((article) => article.categoryId === categoryId && article.status === "published").length
+  }
+
+  const getCategoryArticles = (categoryId: string) => {
     return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
   }
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
+    <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Categories</h2>
         <div className="space-y-2">
           {categories.map((category) => {
-            const categoryArticles = getArticlesForCategory(category.id)
+            const articleCount = getArticleCount(category.id)
+            const categoryArticles = getCategoryArticles(category.id)
             const isSelected = selectedCategoryId === category.id
 
             return (
               <div key={category.id} className="space-y-1">
-                <Button
-                  variant={isSelected ? "secondary" : "ghost"}
-                  className="w-full justify-start text-left h-auto p-2"
+                <div
                   onClick={() => onCategorySelect(category.id)}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"
+                  }`}
                 >
-                  <div className="flex items-center space-x-2 w-full">
-                    <Folder className="h-4 w-4 text-blue-600" />
-                    <span className="flex-1 truncate">{category.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {categoryArticles.length}
-                    </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Folder className={`h-4 w-4 ${isSelected ? "text-blue-600" : "text-gray-500"}`} />
+                    <span className={`font-medium ${isSelected ? "text-blue-900" : "text-gray-900"}`}>
+                      {category.name}
+                    </span>
                   </div>
-                </Button>
+                  <Badge variant="secondary" className="text-xs">
+                    {articleCount}
+                  </Badge>
+                </div>
 
                 {isSelected && categoryArticles.length > 0 && (
                   <div className="ml-6 space-y-1">
                     {categoryArticles.map((article) => (
-                      <Button
+                      <div
                         key={article.id}
-                        variant={selectedArticleId === article.id ? "secondary" : "ghost"}
-                        className="w-full justify-start text-left h-auto p-2 text-sm"
                         onClick={() => onArticleSelect(article.id)}
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
+                          selectedArticleId === article.id
+                            ? "bg-blue-100 text-blue-900"
+                            : "hover:bg-gray-50 text-gray-700"
+                        }`}
                       >
-                        <div className="flex items-center space-x-2 w-full">
-                          <FileText className="h-3 w-3 text-gray-500" />
-                          <span className="flex-1 truncate">{article.title}</span>
-                        </div>
-                      </Button>
+                        <FileText className="h-3 w-3" />
+                        <span className="text-sm truncate">{article.title}</span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -73,6 +80,6 @@ export function CategoryTree({
           })}
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

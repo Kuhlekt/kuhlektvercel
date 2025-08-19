@@ -51,14 +51,16 @@ export default function KnowledgeBase() {
   }
 
   const handleLogout = () => {
+    if (currentUser) {
+      storage.addAuditEntry({
+        userId: currentUser.id,
+        action: "LOGOUT",
+        details: `User ${currentUser.username} logged out`,
+      })
+      setAuditLog(storage.getAuditLog())
+    }
     storage.setCurrentUser(null)
     setCurrentUser(null)
-    storage.addAuditEntry({
-      userId: currentUser?.id || "",
-      action: "LOGOUT",
-      details: `User ${currentUser?.username} logged out`,
-    })
-    setAuditLog(storage.getAuditLog())
   }
 
   const handleAddArticle = (articleData: {
@@ -107,13 +109,15 @@ export default function KnowledgeBase() {
   }
 
   // Filter articles based on search term
-  const filteredArticles = articles.filter(
-    (article) =>
-      article.status === "published" &&
-      (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))),
-  )
+  const filteredArticles = searchTerm
+    ? articles.filter(
+        (article) =>
+          article.status === "published" &&
+          (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))),
+      )
+    : articles
 
   // Get current article and related data
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
@@ -122,9 +126,7 @@ export default function KnowledgeBase() {
 
   // Get articles for selected category (filtered by search if applicable)
   const categoryArticles = selectedCategoryId
-    ? searchTerm
-      ? filteredArticles.filter((a) => a.categoryId === selectedCategoryId)
-      : articles.filter((a) => a.categoryId === selectedCategoryId && a.status === "published")
+    ? filteredArticles.filter((a) => a.categoryId === selectedCategoryId && a.status === "published")
     : []
 
   return (
@@ -142,7 +144,7 @@ export default function KnowledgeBase() {
       <div className="flex h-[calc(100vh-4rem)]">
         <CategoryTree
           categories={categories}
-          articles={searchTerm ? filteredArticles : articles}
+          articles={filteredArticles}
           selectedCategoryId={selectedCategoryId}
           selectedArticleId={selectedArticleId}
           onCategorySelect={(categoryId) => {

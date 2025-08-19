@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, FileText, FolderOpen, Activity } from "lucide-react"
+import { Users, FileText, Folder, Activity } from "lucide-react"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
@@ -46,12 +46,12 @@ export function AdminDashboard({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Admin Dashboard</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
@@ -74,7 +74,7 @@ export function AdminDashboard({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                  <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                  <Folder className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalCategories}</div>
@@ -128,18 +128,18 @@ export function AdminDashboard({
                 <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded">
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
                         <div className="font-medium">{user.username}</div>
                         <div className="text-sm text-gray-600">{user.email}</div>
-                        <div className="text-xs text-gray-500">
-                          Created: {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                        <span className="text-xs text-gray-500">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -154,18 +154,19 @@ export function AdminDashboard({
                 <CardTitle>Category Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {categories.map((category) => (
-                    <div key={category.id} className="flex items-center justify-between p-4 border rounded">
-                      <div>
-                        <div className="font-medium">{category.name}</div>
-                        <div className="text-sm text-gray-600">{category.description}</div>
-                        <div className="text-xs text-gray-500">
-                          Articles: {articles.filter((a) => a.categoryId === category.id).length}
+                <div className="space-y-2">
+                  {categories.map((category) => {
+                    const articleCount = articles.filter((a) => a.categoryId === category.id).length
+                    return (
+                      <div key={category.id} className="flex items-center justify-between p-3 border rounded">
+                        <div>
+                          <div className="font-medium">{category.name}</div>
+                          {category.description && <div className="text-sm text-gray-600">{category.description}</div>}
                         </div>
+                        <Badge variant="outline">{articleCount} articles</Badge>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -179,15 +180,17 @@ export function AdminDashboard({
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {auditLog.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div key={entry.id} className="flex items-start justify-between p-3 border rounded">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <Activity className="h-4 w-4 text-gray-500" />
+                          <Activity className="h-4 w-4 text-blue-600" />
                           <span className="font-medium">{entry.action}</span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{entry.details}</p>
                       </div>
-                      <div className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</div>
+                      <span className="text-xs text-gray-500 whitespace-nowrap ml-4">
+                        {new Date(entry.timestamp).toLocaleString()}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -196,7 +199,7 @@ export function AdminDashboard({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-4">
           <Button onClick={onClose}>Close</Button>
         </div>
       </DialogContent>
