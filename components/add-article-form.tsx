@@ -28,7 +28,8 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [newTag, setNewTag] = useState("")
   const [author, setAuthor] = useState("")
 
-  const selectedCategory = categories.find((cat) => cat.id === categoryId)
+  const selectedCategory = categories.find((c) => c.id === categoryId)
+  const availableSubcategories = selectedCategory?.subcategories || []
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -119,52 +120,35 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="subcategory">Subcategory</Label>
-              <Select
-                value={subcategoryId}
-                onValueChange={setSubcategoryId}
-                disabled={!selectedCategory || !selectedCategory.subcategories?.length}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a subcategory (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedCategory?.subcategories?.map((subcategory) => (
-                    <SelectItem key={subcategory.id} value={subcategory.id}>
-                      {subcategory.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {availableSubcategories.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="subcategory">Subcategory</Label>
+                <Select value={subcategoryId || "none"} onValueChange={setSubcategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a subcategory (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {availableSubcategories.map((subcategory) => (
+                      <SelectItem key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter article content"
-              className="min-h-[200px]"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tags</Label>
+            <Label htmlFor="tags">Tags</Label>
             <div className="flex space-x-2">
               <Input
+                id="tags"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 placeholder="Add a tag"
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    handleAddTag()
-                  }
-                }}
+                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
               />
               <Button type="button" onClick={handleAddTag} size="sm">
                 <Plus className="h-4 w-4" />
@@ -182,6 +166,22 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="content">Content *</Label>
+            <Textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Enter article content..."
+              rows={12}
+              required
+              className="resize-none"
+            />
+            <p className="text-sm text-gray-500">
+              You can use basic markdown formatting (# for headers, ** for bold, - for lists)
+            </p>
           </div>
 
           <div className="flex justify-end space-x-2">

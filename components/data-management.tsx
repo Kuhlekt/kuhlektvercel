@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Download, Upload, Trash2, AlertCircle, CheckCircle } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Download, Upload, AlertCircle, CheckCircle, Trash2 } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -19,64 +20,70 @@ interface DataManagementProps {
 export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
   const [importData, setImportData] = useState("")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleExport = () => {
-    const data = {
-      categories,
-      users,
-      auditLog,
-      exportedAt: new Date().toISOString(),
+    try {
+      const exportData = {
+        categories,
+        users,
+        auditLog,
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
+      }
+
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: "application/json" })
+      const url = URL.createObjectURL(dataBlob)
+
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      setMessage({ type: "success", text: "Data exported successfully!" })
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to export data. Please try again." })
     }
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    setMessage({ type: "success", text: "Data exported successfully!" })
-    setTimeout(() => setMessage(null), 3000)
   }
 
-  const handleImport = () => {
+  const handleImport = async () => {
+    if (!importData.trim()) {
+      setMessage({ type: "error", text: "Please paste the import data first." })
+      return
+    }
+
+    setIsLoading(true)
     try {
-      if (!importData.trim()) {
-        setMessage({ type: "error", text: "Please paste the JSON data to import." })
-        return
-      }
+      const parsedData = JSON.parse(importData)
 
-      const data = JSON.parse(importData)
-
-      if (!data.categories || !Array.isArray(data.categories)) {
+      // Validate the data structure
+      if (!parsedData.categories || !Array.isArray(parsedData.categories)) {
         throw new Error("Invalid data format: categories array is required")
       }
-
-      if (!data.users || !Array.isArray(data.users)) {
+      if (!parsedData.users || !Array.isArray(parsedData.users)) {
         throw new Error("Invalid data format: users array is required")
       }
 
-      // Save imported data
-      storage.saveCategories(data.categories)
-      storage.saveUsers(data.users)
-      if (data.auditLog && Array.isArray(data.auditLog)) {
-        storage.saveAuditLog(data.auditLog)
+      // Save the imported data
+      storage.saveCategories(parsedData.categories)
+      storage.saveUsers(parsedData.users)
+
+      if (parsedData.auditLog && Array.isArray(parsedData.auditLog)) {
+        storage.saveAuditLog(parsedData.auditLog)
       }
 
-      setImportData("")
       setMessage({ type: "success", text: "Data imported successfully!" })
-      setTimeout(() => setMessage(null), 3000)
-
-      // Notify parent component to reload data
+      setImportData("")
       onDataImported()
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: `Import failed: ${error instanceof Error ? error.message : "Invalid JSON format"}`,
-      })
+      const errorMessage = error instanceof Error ? error.message : "Invalid JSON format"
+      setMessage({ type: "error", text: `Import failed: ${errorMessage}` })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -84,7 +91,6 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     if (window.confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
       storage.clearAll()
       setMessage({ type: "success", text: "All data cleared successfully!" })
-      setTimeout(() => setMessage(null), 3000)
       onDataImported()
     }
   }
@@ -153,7 +159,7 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
-              Export all knowledge base data including categories, articles, users, and audit logs as a JSON file.
+              Export all your knowledge base data including categories, articles, users, and audit logs.
             </p>
             <Button onClick={handleExport} className="w-full">
               <Download className="h-4 w-4 mr-2" />
@@ -170,19 +176,22 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Import knowledge base data from a previously exported JSON file. This will replace all existing data.
-            </p>
-            <Textarea
-              placeholder="Paste your JSON data here..."
-              value={importData}
-              onChange={(e) => setImportData(e.target.value)}
-              className="min-h-[100px]"
-            />
-            <Button onClick={handleImport} className="w-full" disabled={!importData.trim()}>
+            <div className="space-y-2">
+              <Label htmlFor="import-data">Paste exported JSON data:</Label>
+              <Textarea
+                id="import-data"
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                placeholder="Paste your exported JSON data here..."
+                rows={6}
+                className="resize-none font-mono text-sm"
+              />
+            </div>
+            <Button onClick={handleImport} disabled={!importData.trim() || isLoading} className="w-full">
               <Upload className="h-4 w-4 mr-2" />
-              Import Data
+              {isLoading ? "Importing..." : "Import Data"}
             </Button>
+            <p className="text-xs text-gray-500">Warning: This will replace all existing data.</p>
           </CardContent>
         </Card>
       </div>
@@ -196,7 +205,7 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">Clear all data from the knowledge base. This action cannot be undone.</p>
-          <Button onClick={handleClearAll} variant="destructive">
+          <Button variant="destructive" onClick={handleClearAll}>
             <Trash2 className="h-4 w-4 mr-2" />
             Clear All Data
           </Button>

@@ -1,98 +1,70 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Activity, Search, Trash2 } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Activity, Search } from "lucide-react"
 import type { AuditLogEntry } from "../types/knowledge-base"
 
 interface AuditLogProps {
   auditLog: AuditLogEntry[]
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
 }
 
-export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
+export function AuditLog({ auditLog }: AuditLogProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterAction, setFilterAction] = useState("all")
-  const [filterUser, setFilterUser] = useState("all")
+  const [filterEntityType, setFilterEntityType] = useState("all")
+
+  const filteredLog = auditLog.filter((entry) => {
+    const matchesSearch =
+      entry.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.performedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.action.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesAction = filterAction === "all" || entry.action === filterAction
+    const matchesEntityType = filterEntityType === "all" || entry.entityType === filterEntityType
+
+    return matchesSearch && matchesAction && matchesEntityType
+  })
 
   const getActionBadgeVariant = (action: string) => {
-    switch (action) {
-      case "user_login":
-      case "user_logout":
-        return "secondary"
-      case "article_created":
-      case "article_updated":
-        return "default"
-      case "article_deleted":
-      case "user_deleted":
-        return "destructive"
-      default:
-        return "outline"
-    }
+    if (action.includes("created")) return "default"
+    if (action.includes("updated")) return "secondary"
+    if (action.includes("deleted")) return "destructive"
+    if (action.includes("login")) return "outline"
+    return "secondary"
   }
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
+  const formatTimestamp = (timestamp: Date) => {
+    return new Date(timestamp).toLocaleString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     })
   }
 
-  const getUniqueActions = () => {
-    const actions = new Set(auditLog.map((entry) => entry.action))
-    return Array.from(actions).sort()
-  }
-
-  const getUniqueUsers = () => {
-    const users = new Set(auditLog.map((entry) => entry.performedBy))
-    return Array.from(users).sort()
-  }
-
-  const filteredAuditLog = auditLog.filter((entry) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      entry.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.performedBy.toLowerCase().includes(searchQuery.toLowerCase())
-
-    const matchesAction = filterAction === "all" || entry.action === filterAction
-    const matchesUser = filterUser === "all" || entry.performedBy === filterUser
-
-    return matchesSearch && matchesAction && matchesUser
-  })
-
-  const handleClearLog = () => {
-    if (window.confirm("Are you sure you want to clear the entire audit log? This action cannot be undone.")) {
-      onAuditLogUpdate([])
-    }
-  }
+  const uniqueActions = [...new Set(auditLog.map((entry) => entry.action))].sort()
+  const uniqueEntityTypes = [...new Set(auditLog.map((entry) => entry.entityType))].sort()
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>
-                Audit Log ({filteredAuditLog.length} of {auditLog.length})
-              </span>
-            </CardTitle>
-            <Button variant="destructive" onClick={handleClearLog} disabled={auditLog.length === 0}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Log
-            </Button>
-          </div>
+          <CardTitle className="flex items-center space-x-2">
+            <Activity className="h-5 w-5" />
+            <span>
+              Audit Log ({filteredLog.length} of {auditLog.length})
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -103,65 +75,67 @@ export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
               />
             </div>
             <Select value={filterAction} onValueChange={setFilterAction}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by action" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Actions</SelectItem>
-                {getUniqueActions().map((action) => (
+                {uniqueActions.map((action) => (
                   <SelectItem key={action} value={action}>
                     {action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterUser} onValueChange={setFilterUser}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by user" />
+            <Select value={filterEntityType} onValueChange={setFilterEntityType}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {getUniqueUsers().map((user) => (
-                  <SelectItem key={user} value={user}>
-                    {user}
+                <SelectItem value="all">All Types</SelectItem>
+                {uniqueEntityTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAuditLog.length > 0 ? (
-                filteredAuditLog.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-mono text-sm">{formatDate(entry.timestamp)}</TableCell>
-                    <TableCell>
-                      <Badge variant={getActionBadgeVariant(entry.action)}>
-                        {entry.action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{entry.performedBy}</TableCell>
-                    <TableCell>{entry.details}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          {filteredLog.length > 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                    {auditLog.length === 0 ? "No audit log entries" : "No entries match your filters"}
-                  </TableCell>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Performed By</TableHead>
+                  <TableHead>Details</TableHead>
                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLog.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="font-mono text-sm">{formatTimestamp(entry.timestamp)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getActionBadgeVariant(entry.action)}>{entry.action.replace(/_/g, " ")}</Badge>
+                    </TableCell>
+                    <TableCell className="capitalize">{entry.entityType}</TableCell>
+                    <TableCell>{entry.performedBy}</TableCell>
+                    <TableCell className="max-w-md truncate">{entry.details}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No audit log entries found</p>
+              {(searchQuery || filterAction !== "all" || filterEntityType !== "all") && (
+                <p className="text-sm mt-2">Try adjusting your search or filters</p>
               )}
-            </TableBody>
-          </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import type { Category, Article, Subcategory } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -12,7 +11,7 @@ interface CategoryTreeProps {
 }
 
 export function CategoryTree({ categories, onSelectArticle, selectedArticle }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["1"]))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set())
 
   const toggleCategory = (categoryId: string) => {
@@ -38,14 +37,14 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
   const renderArticle = (article: Article, level = 0) => (
     <div
       key={article.id}
-      className={`flex items-center space-x-2 py-1 px-2 hover:bg-gray-50 cursor-pointer rounded text-sm ${
-        selectedArticle?.id === article.id ? "bg-blue-50 text-blue-700" : ""
+      className={`flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded ${
+        selectedArticle?.id === article.id ? "bg-blue-50 border-l-4 border-blue-500" : ""
       }`}
-      style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }}
+      style={{ paddingLeft: `${(level + 1) * 16}px` }}
       onClick={() => onSelectArticle(article)}
     >
-      <FileText className="h-4 w-4 flex-shrink-0" />
-      <span className="truncate">{article.title}</span>
+      <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+      <span className="text-sm truncate">{article.title}</span>
     </div>
   )
 
@@ -55,30 +54,28 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
 
     return (
       <div key={subcategory.id}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start h-auto py-1 px-2 font-normal text-sm"
+        <div
+          className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded"
           style={{ paddingLeft: "32px" }}
           onClick={() => hasArticles && toggleSubcategory(subcategory.id)}
         >
           {hasArticles ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 mr-2 flex-shrink-0" />
+              <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
             ) : (
-              <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
             )
           ) : (
-            <div className="w-4 h-4 mr-2 flex-shrink-0" />
+            <div className="h-4 w-4 flex-shrink-0" />
           )}
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 mr-2 flex-shrink-0" />
+            <FolderOpen className="h-4 w-4 text-blue-500 flex-shrink-0" />
           ) : (
-            <Folder className="h-4 w-4 mr-2 flex-shrink-0" />
+            <Folder className="h-4 w-4 text-blue-500 flex-shrink-0" />
           )}
-          <span className="truncate">{subcategory.name}</span>
-          {hasArticles && <span className="ml-auto text-xs text-gray-500">({subcategory.articles.length})</span>}
-        </Button>
+          <span className="text-sm font-medium">{subcategory.name}</span>
+          {hasArticles && <span className="text-xs text-gray-500 ml-auto">({subcategory.articles.length})</span>}
+        </div>
 
         {isExpanded && hasArticles && (
           <div className="space-y-1">{subcategory.articles.map((article) => renderArticle(article, 2))}</div>
@@ -89,36 +86,46 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
 
   const renderCategory = (category: Category) => {
     const isExpanded = expandedCategories.has(category.id)
+    const hasContent =
+      (category.articles && category.articles.length > 0) ||
+      (category.subcategories && category.subcategories.length > 0)
+
     const totalArticles =
       (category.articles?.length || 0) +
       (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0)
 
     return (
-      <div key={category.id} className="space-y-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start h-auto py-2 px-2 font-medium"
-          onClick={() => toggleCategory(category.id)}
+      <div key={category.id} className="mb-2">
+        <div
+          className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded font-medium"
+          onClick={() => hasContent && toggleCategory(category.id)}
         >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 mr-2 flex-shrink-0" />
+          {hasContent ? (
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            )
           ) : (
-            <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0" />
+            <div className="h-4 w-4 flex-shrink-0" />
           )}
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 mr-2 flex-shrink-0" />
+            <FolderOpen className="h-4 w-4 text-blue-600 flex-shrink-0" />
           ) : (
-            <Folder className="h-4 w-4 mr-2 flex-shrink-0" />
+            <Folder className="h-4 w-4 text-blue-600 flex-shrink-0" />
           )}
-          <span className="truncate">{category.name}</span>
-          <span className="ml-auto text-xs text-gray-500">({totalArticles})</span>
-        </Button>
+          <span className="text-sm">{category.name}</span>
+          {totalArticles > 0 && <span className="text-xs text-gray-500 ml-auto">({totalArticles})</span>}
+        </div>
 
         {isExpanded && (
-          <div className="space-y-1">
-            {category.articles?.map((article) => renderArticle(article, 1))}
-            {category.subcategories?.map((subcategory) => renderSubcategory(subcategory, category.id))}
+          <div className="space-y-1 mt-1">
+            {/* Render category articles */}
+            {category.articles && category.articles.map((article) => renderArticle(article, 1))}
+
+            {/* Render subcategories */}
+            {category.subcategories &&
+              category.subcategories.map((subcategory) => renderSubcategory(subcategory, category.id))}
           </div>
         )}
       </div>
@@ -134,5 +141,5 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
     )
   }
 
-  return <div className="space-y-2">{categories.map(renderCategory)}</div>
+  return <div className="space-y-1">{categories.map(renderCategory)}</div>
 }
