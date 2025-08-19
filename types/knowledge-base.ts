@@ -9,6 +9,8 @@ export interface Article {
   updatedAt: Date
   author?: string
   status: "draft" | "published" | "archived"
+  priority: "low" | "medium" | "high"
+  attachments?: string[]
 }
 
 export interface Subcategory {
@@ -39,7 +41,7 @@ export interface User {
 export interface AuditLogEntry {
   id: string
   action: string
-  entityType: "article" | "category" | "user"
+  entityType: string
   entityId: string
   performedBy: string
   timestamp: Date

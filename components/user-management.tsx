@@ -1,11 +1,13 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -14,15 +16,15 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash2, AlertCircle, CheckCircle } from "lucide-react"
-import type { User, AuditLogEntry } from "../types/knowledge-base"
+import { Plus, Edit, Trash2, AlertCircle } from "lucide-react"
+import type { User as UserType, AuditLogEntry } from "../types/knowledge-base"
 
 interface UserManagementProps {
-  users: User[]
-  onUsersUpdate: (users: User[]) => void
+  users: UserType[]
+  onUsersUpdate: (users: UserType[]) => void
   onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
   auditLog: AuditLogEntry[]
 }
@@ -30,14 +32,14 @@ interface UserManagementProps {
 export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLog }: UserManagementProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState<UserType | null>(null)
   const [formData, setFormData] = useState({
     username: "",
     password: "",
     email: "",
-    role: "viewer" as User["role"],
+    role: "viewer" as "admin" | "editor" | "viewer",
   })
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [error, setError] = useState("")
 
   const resetForm = () => {
     setFormData({
@@ -46,33 +48,29 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
       email: "",
       role: "viewer",
     })
+    setError("")
   }
 
-  const addAuditEntry = (action: string, entityId: string, details: string) => {
-    const auditEntry: AuditLogEntry = {
-      id: Date.now().toString(),
-      action,
-      entityType: "user",
-      entityId,
-      performedBy: "admin",
-      timestamp: new Date(),
-      details,
-    }
-    onAuditLogUpdate([auditEntry, ...auditLog])
-  }
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
 
-  const handleAddUser = () => {
     if (!formData.username.trim() || !formData.password.trim() || !formData.email.trim()) {
-      setMessage({ type: "error", text: "All fields are required" })
+      setError("All fields are required")
       return
     }
 
     if (users.some((u) => u.username === formData.username.trim())) {
-      setMessage({ type: "error", text: "Username already exists" })
+      setError("Username already exists")
       return
     }
 
-    const newUser: User = {
+    if (users.some((u) => u.email === formData.email.trim())) {
+      setError("Email already exists")
+      return
+    }
+
+    const newUser: UserType = {
       id: Date.now().toString(),
       username: formData.username.trim(),
       password: formData.password.trim(),
@@ -83,25 +81,43 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
 
     const updatedUsers = [...users, newUser]
     onUsersUpdate(updatedUsers)
-    addAuditEntry("user_created", newUser.id, `Created user: ${newUser.username}`)
 
-    setMessage({ type: "success", text: "User added successfully" })
-    setIsAddDialogOpen(false)
+    // Add audit log entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "user_created",
+      entityType: "user",
+      entityId: newUser.id,
+      performedBy: "admin", // In a real app, this would be the current user
+      timestamp: new Date(),
+      details: `Created user: ${newUser.username} (${newUser.role})`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
     resetForm()
+    setIsAddDialogOpen(false)
   }
 
-  const handleEditUser = () => {
+  const handleEditUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
     if (!editingUser || !formData.username.trim() || !formData.email.trim()) {
-      setMessage({ type: "error", text: "Username and email are required" })
+      setError("Username and email are required")
       return
     }
 
     if (users.some((u) => u.id !== editingUser.id && u.username === formData.username.trim())) {
-      setMessage({ type: "error", text: "Username already exists" })
+      setError("Username already exists")
       return
     }
 
-    const updatedUser: User = {
+    if (users.some((u) => u.id !== editingUser.id && u.email === formData.email.trim())) {
+      setError("Email already exists")
+      return
+    }
+
+    const updatedUser: UserType = {
       ...editingUser,
       username: formData.username.trim(),
       email: formData.email.trim(),
@@ -111,24 +127,44 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
 
     const updatedUsers = users.map((u) => (u.id === editingUser.id ? updatedUser : u))
     onUsersUpdate(updatedUsers)
-    addAuditEntry("user_updated", updatedUser.id, `Updated user: ${updatedUser.username}`)
 
-    setMessage({ type: "success", text: "User updated successfully" })
+    // Add audit log entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "user_updated",
+      entityType: "user",
+      entityId: editingUser.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Updated user: ${updatedUser.username}`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    resetForm()
     setIsEditDialogOpen(false)
     setEditingUser(null)
-    resetForm()
   }
 
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = (user: UserType) => {
     if (window.confirm(`Are you sure you want to delete user "${user.username}"?`)) {
       const updatedUsers = users.filter((u) => u.id !== user.id)
       onUsersUpdate(updatedUsers)
-      addAuditEntry("user_deleted", user.id, `Deleted user: ${user.username}`)
-      setMessage({ type: "success", text: "User deleted successfully" })
+
+      // Add audit log entry
+      const auditEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        action: "user_deleted",
+        entityType: "user",
+        entityId: user.id,
+        performedBy: "admin",
+        timestamp: new Date(),
+        details: `Deleted user: ${user.username}`,
+      }
+      onAuditLogUpdate([auditEntry, ...auditLog])
     }
   }
 
-  const openEditDialog = (user: User) => {
+  const openEditDialog = (user: UserType) => {
     setEditingUser(user)
     setFormData({
       username: user.username,
@@ -136,10 +172,11 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
       email: user.email,
       role: user.role,
     })
+    setError("")
     setIsEditDialogOpen(true)
   }
 
-  const getRoleBadgeVariant = (role: User["role"]) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
         return "destructive"
@@ -148,29 +185,17 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
       case "viewer":
         return "secondary"
       default:
-        return "secondary"
+        return "outline"
     }
   }
 
   return (
     <div className="space-y-6">
-      {message && (
-        <Alert variant={message.type === "error" ? "destructive" : "default"}>
-          {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">User Management</h3>
+        <h3 className="text-lg font-medium">User Management</h3>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                resetForm()
-                setMessage(null)
-              }}
-            >
+            <Button onClick={resetForm}>
               <Plus className="h-4 w-4 mr-2" />
               Add User
             </Button>
@@ -179,10 +204,17 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
               <DialogDescription id="add-user-description">
-                Create a new user account with the specified role and permissions.
+                Create a new user account with specified role and permissions.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <form onSubmit={handleAddUser} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="add-username">Username</Label>
                 <Input
@@ -190,8 +222,10 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="Enter username"
+                  required
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="add-password">Password</Label>
                 <Input
@@ -200,8 +234,10 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Enter password"
+                  required
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="add-email">Email</Label>
                 <Input
@@ -210,31 +246,34 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter email"
+                  required
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="add-role">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: User["role"]) => setFormData({ ...formData, role: value })}
+                  onValueChange={(value: "admin" | "editor" | "viewer") => setFormData({ ...formData, role: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddUser}>Add User</Button>
+                <Button type="submit">Add User</Button>
               </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -272,7 +311,12 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                       <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={user.role === "admin" && users.filter((u) => u.role === "admin").length === 1}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -284,15 +328,23 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
         </CardContent>
       </Card>
 
+      {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent aria-describedby="edit-user-description">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription id="edit-user-description">
-              Update user account information and permissions.
+              Update user information and permissions. Leave password blank to keep current password.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={handleEditUser} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="edit-username">Username</Label>
               <Input
@@ -300,8 +352,10 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 placeholder="Enter username"
+                required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
               <Input
@@ -312,6 +366,7 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                 placeholder="Enter new password"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email</Label>
               <Input
@@ -320,31 +375,34 @@ export function UserManagement({ users, onUsersUpdate, onAuditLogUpdate, auditLo
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Enter email"
+                required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-role">Role</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value: User["role"]) => setFormData({ ...formData, role: value })}
+                onValueChange={(value: "admin" | "editor" | "viewer") => setFormData({ ...formData, role: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
                   <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="editor">Editor</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleEditUser}>Update User</Button>
+              <Button type="submit">Update User</Button>
             </div>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

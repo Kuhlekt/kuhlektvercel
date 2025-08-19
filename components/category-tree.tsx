@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Category, Article } from "../types/knowledge-base"
+import { Badge } from "@/components/ui/badge"
+import type { Category, Article, Subcategory } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
   categories: Category[]
@@ -12,7 +13,7 @@ interface CategoryTreeProps {
 }
 
 export function CategoryTree({ categories, onSelectArticle, selectedArticle }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["1"]))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set())
 
   const toggleCategory = (categoryId: string) => {
@@ -35,6 +36,129 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
     setExpandedSubcategories(newExpanded)
   }
 
+  const renderArticle = (article: Article, level = 0) => {
+    const isSelected = selectedArticle?.id === article.id
+    const paddingLeft = `${(level + 1) * 1.5}rem`
+
+    return (
+      <div
+        key={article.id}
+        className={`flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded text-sm ${
+          isSelected ? "bg-blue-50 border-l-2 border-blue-500" : ""
+        }`}
+        style={{ paddingLeft }}
+        onClick={() => onSelectArticle(article)}
+      >
+        <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+        <span className="flex-1 truncate">{article.title}</span>
+        {article.priority === "high" && (
+          <Badge variant="destructive" className="text-xs">
+            High
+          </Badge>
+        )}
+        {article.status === "draft" && (
+          <Badge variant="secondary" className="text-xs">
+            Draft
+          </Badge>
+        )}
+      </div>
+    )
+  }
+
+  const renderSubcategory = (subcategory: Subcategory, categoryId: string) => {
+    const isExpanded = expandedSubcategories.has(subcategory.id)
+    const hasArticles = subcategory.articles && subcategory.articles.length > 0
+
+    return (
+      <div key={subcategory.id} className="ml-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start p-2 h-auto text-sm"
+          onClick={() => toggleSubcategory(subcategory.id)}
+        >
+          {hasArticles ? (
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 mr-2" />
+            ) : (
+              <ChevronRight className="h-4 w-4 mr-2" />
+            )
+          ) : (
+            <div className="w-4 mr-2" />
+          )}
+          {isExpanded ? (
+            <FolderOpen className="h-4 w-4 mr-2 text-blue-500" />
+          ) : (
+            <Folder className="h-4 w-4 mr-2 text-gray-500" />
+          )}
+          <span className="flex-1 text-left truncate">{subcategory.name}</span>
+          {hasArticles && (
+            <Badge variant="outline" className="text-xs ml-2">
+              {subcategory.articles.length}
+            </Badge>
+          )}
+        </Button>
+
+        {isExpanded && hasArticles && (
+          <div className="ml-2 space-y-1">{subcategory.articles.map((article) => renderArticle(article, 1))}</div>
+        )}
+      </div>
+    )
+  }
+
+  const renderCategory = (category: Category) => {
+    const isExpanded = expandedCategories.has(category.id)
+    const hasContent =
+      (category.articles && category.articles.length > 0) ||
+      (category.subcategories && category.subcategories.length > 0)
+    const totalArticles =
+      (category.articles?.length || 0) +
+      (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0)
+
+    return (
+      <div key={category.id} className="mb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start p-2 h-auto font-medium"
+          onClick={() => toggleCategory(category.id)}
+        >
+          {hasContent ? (
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 mr-2" />
+            ) : (
+              <ChevronRight className="h-4 w-4 mr-2" />
+            )
+          ) : (
+            <div className="w-4 mr-2" />
+          )}
+          {isExpanded ? (
+            <FolderOpen className="h-4 w-4 mr-2 text-blue-500" />
+          ) : (
+            <Folder className="h-4 w-4 mr-2 text-gray-600" />
+          )}
+          <span className="flex-1 text-left truncate">{category.name}</span>
+          {totalArticles > 0 && (
+            <Badge variant="outline" className="text-xs ml-2">
+              {totalArticles}
+            </Badge>
+          )}
+        </Button>
+
+        {isExpanded && (
+          <div className="ml-2 space-y-1">
+            {/* Render category articles first */}
+            {category.articles && category.articles.map((article) => renderArticle(article, 0))}
+
+            {/* Then render subcategories */}
+            {category.subcategories &&
+              category.subcategories.map((subcategory) => renderSubcategory(subcategory, category.id))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!categories || categories.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -44,115 +168,5 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
     )
   }
 
-  return (
-    <div className="space-y-1">
-      {categories.map((category) => (
-        <div key={category.id}>
-          <Button
-            variant="ghost"
-            className="w-full justify-start h-auto p-2 font-normal"
-            onClick={() => toggleCategory(category.id)}
-          >
-            <div className="flex items-center space-x-2 w-full">
-              {expandedCategories.has(category.id) ? (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
-              )}
-              {expandedCategories.has(category.id) ? (
-                <FolderOpen className="h-4 w-4 text-blue-500" />
-              ) : (
-                <Folder className="h-4 w-4 text-blue-500" />
-              )}
-              <div className="flex-1 text-left">
-                <div className="font-medium text-sm">{category.name}</div>
-                {category.description && <div className="text-xs text-gray-500">{category.description}</div>}
-              </div>
-            </div>
-          </Button>
-
-          {expandedCategories.has(category.id) && (
-            <div className="ml-4 space-y-1">
-              {/* Category Articles */}
-              {Array.isArray(category.articles) &&
-                category.articles.map((article) => (
-                  <Button
-                    key={article.id}
-                    variant="ghost"
-                    className={`w-full justify-start h-auto p-2 font-normal ${
-                      selectedArticle?.id === article.id ? "bg-blue-50 text-blue-700" : ""
-                    }`}
-                    onClick={() => onSelectArticle(article)}
-                  >
-                    <div className="flex items-center space-x-2 w-full">
-                      <div className="w-4" />
-                      <FileText className="h-4 w-4 text-gray-400" />
-                      <div className="flex-1 text-left">
-                        <div className="text-sm">{article.title}</div>
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-
-              {/* Subcategories */}
-              {Array.isArray(category.subcategories) &&
-                category.subcategories.map((subcategory) => (
-                  <div key={subcategory.id}>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start h-auto p-2 font-normal"
-                      onClick={() => toggleSubcategory(subcategory.id)}
-                    >
-                      <div className="flex items-center space-x-2 w-full">
-                        <div className="w-4" />
-                        {expandedSubcategories.has(subcategory.id) ? (
-                          <ChevronDown className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
-                        )}
-                        {expandedSubcategories.has(subcategory.id) ? (
-                          <FolderOpen className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Folder className="h-4 w-4 text-green-500" />
-                        )}
-                        <div className="flex-1 text-left">
-                          <div className="text-sm">{subcategory.name}</div>
-                          {subcategory.description && (
-                            <div className="text-xs text-gray-500">{subcategory.description}</div>
-                          )}
-                        </div>
-                      </div>
-                    </Button>
-
-                    {expandedSubcategories.has(subcategory.id) && (
-                      <div className="ml-4 space-y-1">
-                        {Array.isArray(subcategory.articles) &&
-                          subcategory.articles.map((article) => (
-                            <Button
-                              key={article.id}
-                              variant="ghost"
-                              className={`w-full justify-start h-auto p-2 font-normal ${
-                                selectedArticle?.id === article.id ? "bg-blue-50 text-blue-700" : ""
-                              }`}
-                              onClick={() => onSelectArticle(article)}
-                            >
-                              <div className="flex items-center space-x-2 w-full">
-                                <div className="w-8" />
-                                <FileText className="h-4 w-4 text-gray-400" />
-                                <div className="flex-1 text-left">
-                                  <div className="text-sm">{article.title}</div>
-                                </div>
-                              </div>
-                            </Button>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
+  return <div className="space-y-1">{categories.map(renderCategory)}</div>
 }
