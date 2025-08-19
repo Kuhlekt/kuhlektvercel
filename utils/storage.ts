@@ -1,21 +1,5 @@
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
-interface StorageHealth {
-  isAvailable: boolean
-  hasData: boolean
-  lastError: string | null
-  dataIntegrity: boolean
-}
-
-interface StorageInfo {
-  totalSize: number
-  categoriesSize: number
-  usersSize: number
-  auditLogSize: number
-  pageVisitsSize: number
-  availableSpace: number
-}
-
 const STORAGE_KEYS = {
   CATEGORIES: "kb_categories",
   USERS: "kb_users",
@@ -27,6 +11,7 @@ export const storage = {
   // Categories
   getCategories: (): Category[] => {
     try {
+      if (typeof window === "undefined") return []
       const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
       return data ? JSON.parse(data) : []
     } catch (error) {
@@ -37,6 +22,7 @@ export const storage = {
 
   saveCategories: (categories: Category[]): void => {
     try {
+      if (typeof window === "undefined") return
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
     } catch (error) {
       console.error("Error saving categories:", error)
@@ -46,6 +32,7 @@ export const storage = {
   // Users
   getUsers: (): User[] => {
     try {
+      if (typeof window === "undefined") return []
       const data = localStorage.getItem(STORAGE_KEYS.USERS)
       return data ? JSON.parse(data) : []
     } catch (error) {
@@ -56,6 +43,7 @@ export const storage = {
 
   saveUsers: (users: User[]): void => {
     try {
+      if (typeof window === "undefined") return
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
     } catch (error) {
       console.error("Error saving users:", error)
@@ -65,6 +53,7 @@ export const storage = {
   // Audit Log
   getAuditLog: (): AuditLogEntry[] => {
     try {
+      if (typeof window === "undefined") return []
       const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
       return data ? JSON.parse(data) : []
     } catch (error) {
@@ -75,6 +64,7 @@ export const storage = {
 
   saveAuditLog: (auditLog: AuditLogEntry[]): void => {
     try {
+      if (typeof window === "undefined") return
       localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
     } catch (error) {
       console.error("Error saving audit log:", error)
@@ -84,6 +74,7 @@ export const storage = {
   // Page Visits
   getPageVisits: (): number => {
     try {
+      if (typeof window === "undefined") return 0
       const data = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
       return data ? Number.parseInt(data, 10) : 0
     } catch (error) {
@@ -94,6 +85,7 @@ export const storage = {
 
   savePageVisits: (visits: number): void => {
     try {
+      if (typeof window === "undefined") return
       localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, visits.toString())
     } catch (error) {
       console.error("Error saving page visits:", error)
@@ -103,6 +95,7 @@ export const storage = {
   // Clear all data
   clearAll: (): void => {
     try {
+      if (typeof window === "undefined") return
       Object.values(STORAGE_KEYS).forEach((key) => {
         localStorage.removeItem(key)
       })

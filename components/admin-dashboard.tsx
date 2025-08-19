@@ -198,23 +198,23 @@ export function AdminDashboard({
         <TabsContent value="users" className="mt-6">
           <UserManagement
             users={users}
+            auditLog={auditLog}
             onUsersUpdate={onUsersUpdate}
             onAuditLogUpdate={onAuditLogUpdate}
-            auditLog={auditLog}
           />
         </TabsContent>
 
         <TabsContent value="categories" className="mt-6">
           <CategoryManagement
             categories={categories}
+            auditLog={auditLog}
             onCategoriesUpdate={onCategoriesUpdate}
             onAuditLogUpdate={onAuditLogUpdate}
-            auditLog={auditLog}
           />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-6">
-          <AuditLog auditLog={auditLog} onAuditLogUpdate={onAuditLogUpdate} />
+          <AuditLog auditLog={auditLog} />
         </TabsContent>
       </Tabs>
     </div>

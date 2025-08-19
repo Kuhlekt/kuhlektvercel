@@ -4,275 +4,309 @@ export const initialCategories: Category[] = [
   {
     id: "1",
     name: "Getting Started",
-    description: "Basic information to get you started",
+    description: "Essential information for new users",
     articles: [
       {
         id: "1",
-        title: "Welcome to the Knowledge Base",
-        content:
-          "This is your comprehensive knowledge base system. Here you can browse articles, search for information, and if you have the right permissions, add and manage content.",
+        title: "Welcome to Kuhlekt Knowledge Base",
+        content: `# Welcome to Kuhlekt Knowledge Base
+
+This knowledge base contains comprehensive documentation and guides for using our platform effectively.
+
+## What you'll find here:
+- Getting started guides
+- Technical documentation
+- Best practices
+- Troubleshooting guides
+- API references
+
+## How to navigate:
+1. Browse categories on the left sidebar
+2. Use the search function to find specific topics
+3. Click on articles to view detailed content
+4. Use tags to find related articles
+
+## Need help?
+If you can't find what you're looking for, please contact our support team.`,
+        summary: "Introduction to the knowledge base and how to use it effectively",
+        tags: ["welcome", "introduction", "getting-started"],
         categoryId: "1",
-        tags: ["welcome", "introduction"],
-        createdAt: new Date("2024-01-01"),
-        updatedAt: new Date("2024-01-01"),
+        author: "Kuhlekt Team",
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+        isPublished: true,
+        viewCount: 0,
+      },
+      {
+        id: "2",
+        title: "Account Setup",
+        content: `# Account Setup Guide
+
+Setting up your account is the first step to accessing all features of our platform.
+
+## Steps to set up your account:
+
+1. **Registration**
+   - Visit the registration page
+   - Fill in your details
+   - Verify your email address
+
+2. **Profile Configuration**
+   - Add your profile picture
+   - Set your preferences
+   - Configure notification settings
+
+3. **Security Settings**
+   - Enable two-factor authentication
+   - Set a strong password
+   - Review privacy settings
+
+## Important Notes:
+- Keep your login credentials secure
+- Regularly update your password
+- Contact support if you encounter issues`,
+        summary: "Complete guide for setting up your account",
+        tags: ["account", "setup", "registration"],
+        categoryId: "1",
+        author: "Support Team",
+        createdAt: new Date("2024-01-02T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-02T00:00:00.000Z"),
+        isPublished: true,
+        viewCount: 0,
       },
     ],
-    subcategories: [],
+    subcategories: [
+      {
+        id: "1-1",
+        name: "Quick Start",
+        description: "Get up and running quickly",
+        parentId: "1",
+        articles: [
+          {
+            id: "3",
+            title: "5-Minute Quick Start",
+            content: `# 5-Minute Quick Start
+
+Get up and running with our platform in just 5 minutes!
+
+## Step 1: Create Account (1 minute)
+- Click "Sign Up"
+- Enter your email and password
+- Verify your email
+
+## Step 2: Complete Profile (2 minutes)
+- Add your name and company
+- Upload a profile picture
+- Set your timezone
+
+## Step 3: Explore Dashboard (2 minutes)
+- Take the guided tour
+- Check out the main features
+- Customize your dashboard
+
+You're all set! Start exploring the platform.`,
+            summary: "Get started with our platform in just 5 minutes",
+            tags: ["quick-start", "tutorial", "beginner"],
+            categoryId: "1",
+            subcategoryId: "1-1",
+            author: "Product Team",
+            createdAt: new Date("2024-01-03T00:00:00.000Z"),
+            updatedAt: new Date("2024-01-03T00:00:00.000Z"),
+            isPublished: true,
+            viewCount: 0,
+          },
+        ],
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+      },
+    ],
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
   },
   {
     id: "2",
     name: "Technical Documentation",
-    description: "Technical guides and documentation",
-    articles: [],
+    description: "Detailed technical guides and API documentation",
+    articles: [
+      {
+        id: "4",
+        title: "API Overview",
+        content: `# API Overview
+
+Our REST API provides programmatic access to all platform features.
+
+## Base URL
+\`\`\`
+https://api.kuhlekt.com/v1
+\`\`\`
+
+## Authentication
+All API requests require authentication using API keys:
+
+\`\`\`bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \\
+     https://api.kuhlekt.com/v1/endpoint
+\`\`\`
+
+## Rate Limits
+- 1000 requests per hour for free accounts
+- 10000 requests per hour for premium accounts
+
+## Response Format
+All responses are in JSON format:
+
+\`\`\`json
+{
+  "success": true,
+  "data": {},
+  "message": "Success"
+}
+\`\`\`
+
+## Error Handling
+Errors return appropriate HTTP status codes with detailed messages.`,
+        summary: "Complete overview of our REST API",
+        tags: ["api", "documentation", "rest", "authentication"],
+        categoryId: "2",
+        author: "Engineering Team",
+        createdAt: new Date("2024-01-04T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-04T00:00:00.000Z"),
+        isPublished: true,
+        viewCount: 0,
+      },
+    ],
     subcategories: [
       {
         id: "2-1",
-        name: "API Documentation",
-        description: "API guides and references",
+        name: "API Endpoints",
+        description: "Detailed API endpoint documentation",
+        parentId: "2",
         articles: [
           {
-            id: "2",
-            title: "REST API Overview",
-            content:
-              "Our REST API provides programmatic access to all knowledge base functionality. This guide covers authentication, endpoints, and common usage patterns.",
+            id: "5",
+            title: "User Management API",
+            content: `# User Management API
+
+Manage users programmatically through our API.
+
+## List Users
+\`\`\`http
+GET /api/users
+\`\`\`
+
+### Response
+\`\`\`json
+{
+  "users": [
+    {
+      "id": "123",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+\`\`\`
+
+## Create User
+\`\`\`http
+POST /api/users
+Content-Type: application/json
+
+{
+  "email": "new@example.com",
+  "name": "New User",
+  "password": "secure_password"
+}
+\`\`\`
+
+## Update User
+\`\`\`http
+PUT /api/users/:id
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+\`\`\`
+
+## Delete User
+\`\`\`http
+DELETE /api/users/:id
+\`\`\``,
+            summary: "API endpoints for user management operations",
+            tags: ["api", "users", "endpoints", "crud"],
             categoryId: "2",
             subcategoryId: "2-1",
-            tags: ["api", "rest", "documentation"],
-            createdAt: new Date("2024-01-02"),
-            updatedAt: new Date("2024-01-02"),
+            author: "API Team",
+            createdAt: new Date("2024-01-05T00:00:00.000Z"),
+            updatedAt: new Date("2024-01-05T00:00:00.000Z"),
+            isPublished: true,
+            viewCount: 0,
           },
         ],
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
       },
     ],
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
   },
   {
-    id: "account-menu",
-    name: "Account Menu",
-    expanded: false,
+    id: "3",
+    name: "Troubleshooting",
+    description: "Common issues and their solutions",
     articles: [
       {
-        id: "acc-1",
-        title: "How to Access Account Menu",
-        content:
-          "The Account Menu provides access to all account-related functions. To access the Account Menu, navigate to the top-right corner of the application and click on your profile icon.\n\nhttps://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&h=400&fit=crop\n\nFrom here, you can manage your account settings, view account information, and access various account-related features. The interface is designed to be intuitive and user-friendly.",
-        categoryId: "account-menu",
-        tags: ["navigation", "account", "menu"],
-        createdAt: new Date("2024-01-15T00:00:00.000Z"),
-        updatedAt: new Date("2024-01-15T00:00:00.000Z"),
-        createdBy: "admin",
-        editCount: 0,
-      },
-    ],
-    subcategories: [
-      {
-        id: "accounts-credit-monitoring",
-        name: "Accounts Credit Monitoring",
-        articles: [
-          {
-            id: "acm-1",
-            title: "Setting Up Credit Monitoring",
-            content:
-              "Credit monitoring helps you track changes to your credit report and score. To set up credit monitoring, go to Account Menu > Credit Monitoring and follow the setup wizard.\n\nhttps://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&h=400&fit=crop\n\nYou'll need to provide basic information and verify your identity. The system will then begin monitoring your credit profile for any changes or suspicious activity.\n\nKey features include:\n• Real-time alerts\n• Monthly credit score updates\n• Identity theft protection\n• Detailed credit report analysis",
-            categoryId: "account-menu",
-            subcategoryId: "accounts-credit-monitoring",
-            tags: ["credit", "monitoring", "setup"],
-            createdAt: new Date("2024-01-20T00:00:00.000Z"),
-            updatedAt: new Date("2024-01-20T00:00:00.000Z"),
-            createdBy: "admin",
-            editCount: 0,
-          },
-        ],
-      },
-      {
-        id: "accounts-credit-reports",
-        name: "Accounts Credit Reports",
-        articles: [
-          {
-            id: "acr-1",
-            title: "Understanding Your Credit Report",
-            content:
-              "Your credit report contains detailed information about your credit history, including payment history, credit accounts, and public records.\n\nhttps://images.unsplash.com/photo-1554224154-26032fced8bd?w=600&h=400&fit=crop\n\nLearn how to read and interpret the different sections of your credit report to better understand your financial standing. Each section provides valuable insights into your creditworthiness and financial behavior.",
-            categoryId: "account-menu",
-            subcategoryId: "accounts-credit-reports",
-            tags: ["credit report", "understanding", "financial"],
-            createdAt: new Date("2024-01-18T00:00:00.000Z"),
-            updatedAt: new Date("2024-01-18T00:00:00.000Z"),
-            createdBy: "editor",
-            editCount: 0,
-          },
-        ],
-      },
-      {
-        id: "accounts-details",
-        name: "Accounts Details",
-        articles: [],
-      },
-      {
-        id: "accounts-timeline",
-        name: "Accounts Timeline",
-        articles: [],
-      },
-    ],
-  },
-  {
-    id: "batch-jobs",
-    name: "Batch Jobs",
-    expanded: false,
-    articles: [
-      {
-        id: "bj-1",
-        title: "Understanding Batch Job Processing",
-        content:
-          "Batch jobs are automated processes that run at scheduled intervals to perform bulk operations. These jobs handle large volumes of data processing, report generation, and system maintenance tasks.\n\nhttps://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&h=400&fit=crop\n\nLearn how to monitor and manage batch job execution. The system provides comprehensive logging and monitoring capabilities to ensure all batch processes complete successfully.",
-        categoryId: "batch-jobs",
-        tags: ["batch", "automation", "processing"],
-        createdAt: new Date("2024-01-22T00:00:00.000Z"),
-        updatedAt: new Date("2024-01-22T00:00:00.000Z"),
-        createdBy: "admin",
-        editCount: 0,
+        id: "6",
+        title: "Common Login Issues",
+        content: `# Common Login Issues
+
+Having trouble logging in? Here are the most common issues and solutions.
+
+## Issue 1: Forgot Password
+**Solution:**
+1. Click "Forgot Password" on the login page
+2. Enter your email address
+3. Check your email for reset instructions
+4. Follow the link to create a new password
+
+## Issue 2: Account Locked
+**Solution:**
+- Wait 15 minutes and try again
+- Contact support if the issue persists
+
+## Issue 3: Two-Factor Authentication Problems
+**Solutions:**
+- Ensure your device's time is correct
+- Try generating a new code
+- Use backup codes if available
+- Contact support to disable 2FA temporarily
+
+## Issue 4: Browser Issues
+**Solutions:**
+- Clear browser cache and cookies
+- Try an incognito/private window
+- Update your browser
+- Try a different browser
+
+## Still Having Issues?
+Contact our support team with:
+- Your email address
+- Error messages you're seeing
+- Steps you've already tried`,
+        summary: "Solutions for common login and authentication issues",
+        tags: ["troubleshooting", "login", "authentication", "support"],
+        categoryId: "3",
+        author: "Support Team",
+        createdAt: new Date("2024-01-06T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-06T00:00:00.000Z"),
+        isPublished: true,
+        viewCount: 0,
       },
     ],
     subcategories: [],
-  },
-  {
-    id: "communications",
-    name: "Communications",
-    expanded: true,
-    articles: [],
-    subcategories: [
-      {
-        id: "comms-bulk-activities",
-        name: "Comms Bulk Activities",
-        articles: [
-          {
-            id: "cba-1",
-            title: "Managing Bulk Communication Activities",
-            content:
-              "Bulk communication activities allow you to send messages to multiple recipients simultaneously. This feature is useful for announcements, notifications, and marketing campaigns.\n\nhttps://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=400&fit=crop\n\nLearn how to create, schedule, and monitor bulk communication activities. The system supports various message types including email, SMS, and push notifications.",
-            categoryId: "communications",
-            subcategoryId: "comms-bulk-activities",
-            tags: ["bulk", "communication", "messaging"],
-            createdAt: new Date("2024-01-25T00:00:00.000Z"),
-            updatedAt: new Date("2024-01-25T00:00:00.000Z"),
-            createdBy: "editor",
-            editCount: 0,
-          },
-        ],
-      },
-      {
-        id: "comms-dunning",
-        name: "Comms Dunning",
-        articles: [],
-      },
-      {
-        id: "comms-statements",
-        name: "Comms Statements",
-        articles: [],
-      },
-    ],
-  },
-  {
-    id: "data-load",
-    name: "Data Load",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "disputes",
-    name: "Disputes",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "kuhlekt",
-    name: "Kuhlekt",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "metrics",
-    name: "Metrics",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "regions",
-    name: "Regions",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "reports",
-    name: "Reports",
-    expanded: false,
-    articles: [],
-    subcategories: [
-      {
-        id: "reports-activities",
-        name: "Reports - Activities",
-        articles: [],
-      },
-      {
-        id: "reports-open-items",
-        name: "Reports - Open Items",
-        articles: [],
-      },
-      {
-        id: "reports-payments",
-        name: "Reports - Payments",
-        articles: [],
-      },
-      {
-        id: "reports-provisioning",
-        name: "Reports - Provisioning",
-        articles: [],
-      },
-    ],
-  },
-  {
-    id: "system",
-    name: "System",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "system-audit-logs",
-    name: "System Audit Logs",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "tables",
-    name: "Tables",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "to-do",
-    name: "To-Do",
-    expanded: false,
-    articles: [],
-    subcategories: [],
-  },
-  {
-    id: "users",
-    name: "Users",
-    expanded: false,
-    articles: [],
-    subcategories: [
-      {
-        id: "user-set-up",
-        name: "User Set Up",
-        articles: [],
-      },
-    ],
+    createdAt: new Date("2024-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2024-01-01T00:00:00.000Z"),
   },
 ]

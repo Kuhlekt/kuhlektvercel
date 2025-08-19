@@ -16,6 +16,8 @@ import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
 
 import { storage } from "./utils/storage"
+import { initialCategories } from "./data/initial-data"
+import { initialUsers } from "./data/initial-users"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
@@ -39,23 +41,18 @@ export default function KnowledgeBase() {
     try {
       setIsLoading(true)
 
-      // Load categories
-      const loadedCategories = storage.getCategories() || []
+      // Load categories with fallback to initial data
+      let loadedCategories = storage.getCategories()
+      if (!loadedCategories || loadedCategories.length === 0) {
+        loadedCategories = initialCategories
+        storage.saveCategories(loadedCategories)
+      }
       setCategories(loadedCategories)
 
-      // Load users - ensure we always have initial users
-      let loadedUsers = storage.getUsers() || []
-      if (loadedUsers.length === 0) {
-        loadedUsers = [
-          {
-            id: "1",
-            username: "admin",
-            password: "admin123",
-            email: "admin@kuhlekt.com",
-            role: "admin" as const,
-            createdAt: new Date(),
-          },
-        ]
+      // Load users with fallback to initial users
+      let loadedUsers = storage.getUsers()
+      if (!loadedUsers || loadedUsers.length === 0) {
+        loadedUsers = initialUsers
         storage.saveUsers(loadedUsers)
       }
       setUsers(loadedUsers)
@@ -64,31 +61,25 @@ export default function KnowledgeBase() {
       const loadedAuditLog = storage.getAuditLog() || []
       setAuditLog(loadedAuditLog)
 
-      // Load page visits
+      // Load and increment page visits
       const visits = storage.getPageVisits() || 0
-      setPageVisits(visits)
+      const newVisits = visits + 1
+      setPageVisits(newVisits)
+      storage.savePageVisits(newVisits)
 
-      console.log("Data loaded:", {
+      console.log("Data loaded successfully:", {
         categories: loadedCategories.length,
         users: loadedUsers.length,
         auditLog: loadedAuditLog.length,
-        pageVisits: visits,
+        pageVisits: newVisits,
       })
     } catch (error) {
       console.error("Error loading data:", error)
-      // Fallback to initial users
-      setUsers([
-        {
-          id: "1",
-          username: "admin",
-          password: "admin123",
-          email: "admin@kuhlekt.com",
-          role: "admin",
-          createdAt: new Date(),
-        },
-      ])
+      // Fallback to initial data
+      setCategories(initialCategories)
+      setUsers(initialUsers)
       setAuditLog([])
-      setPageVisits(0)
+      setPageVisits(1)
     } finally {
       setIsLoading(false)
     }

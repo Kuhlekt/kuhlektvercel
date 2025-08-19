@@ -33,6 +33,12 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
       const trimmedUsername = username.trim()
       const trimmedPassword = password.trim()
 
+      console.log("Login attempt:", { username: trimmedUsername, password: trimmedPassword })
+      console.log(
+        "Available users:",
+        users.map((u) => ({ username: u.username, password: u.password })),
+      )
+
       if (!trimmedUsername || !trimmedPassword) {
         setError("Please enter both username and password")
         setIsLoading(false)
@@ -43,15 +49,18 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
       const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
 
       if (user) {
+        console.log("Login successful for user:", user.username)
         onLogin(user)
         setUsername("")
         setPassword("")
         setError("")
         onClose()
       } else {
+        console.log("Login failed - no matching user found")
         setError("Invalid username or password")
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -68,13 +77,13 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
             <span>Login to Knowledge Base</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="login-description">
             Enter your credentials to access admin features. Default: admin/admin123
           </DialogDescription>
         </DialogHeader>
