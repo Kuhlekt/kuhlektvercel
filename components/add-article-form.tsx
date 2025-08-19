@@ -33,7 +33,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [categoryId, setCategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
-  const [status, setStatus] = useState<"draft" | "published">("published")
+  const [status, setStatus] = useState<"draft" | "published">("draft")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,7 +53,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setCategoryId("")
     setTags([])
     setTagInput("")
-    setStatus("published")
+    setStatus("draft")
   }
 
   const handleAddTag = () => {
@@ -81,7 +81,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setCategoryId("")
     setTags([])
     setTagInput("")
-    setStatus("published")
+    setStatus("draft")
     onClose()
   }
 
@@ -92,7 +92,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -133,14 +133,13 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+            <Label>Tags</Label>
             <div className="flex space-x-2">
               <Input
-                id="tags"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={handleTagInputKeyPress}
-                placeholder="Add tags (press Enter)"
+                placeholder="Add a tag"
               />
               <Button type="button" onClick={handleAddTag} variant="outline">
                 Add
@@ -151,7 +150,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-600">
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -161,7 +160,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+            <Label>Status</Label>
             <Select value={status} onValueChange={(value: "draft" | "published") => setStatus(value)}>
               <SelectTrigger>
                 <SelectValue />
@@ -173,7 +172,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>

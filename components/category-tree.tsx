@@ -1,9 +1,8 @@
 "use client"
 
-import { Folder, FileText, ChevronRight, ChevronDown } from "lucide-react"
+import { ChevronRight, ChevronDown, Folder, FileText } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -30,7 +29,7 @@ export function CategoryTree({
   return (
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-gray-900">Categories</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
       </div>
 
       <ScrollArea className="flex-1">
@@ -44,21 +43,18 @@ export function CategoryTree({
               <div key={category.id} className="mb-2">
                 <button
                   onClick={() => onCategorySelect(category.id)}
-                  className={cn(
-                    "w-full flex items-center justify-between p-2 rounded-lg text-left hover:bg-gray-100 transition-colors",
-                    isSelected && "bg-blue-50 text-blue-700",
-                  )}
+                  className={`w-full flex items-center justify-between p-2 rounded-lg text-left hover:bg-gray-50 transition-colors ${
+                    isSelected ? "bg-blue-50 text-blue-700" : "text-gray-700"
+                  }`}
                 >
-                  <div className="flex items-center space-x-2 flex-1">
+                  <div className="flex items-center space-x-2">
                     {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <Folder className="h-4 w-4" />
-                    <span className="font-medium truncate">{category.name}</span>
+                    <span className="font-medium">{category.name}</span>
                   </div>
-                  {categoryArticles.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {categoryArticles.length}
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryArticles.length}
+                  </Badge>
                 </button>
 
                 {isExpanded && categoryArticles.length > 0 && (
@@ -67,20 +63,15 @@ export function CategoryTree({
                       <button
                         key={article.id}
                         onClick={() => onArticleSelect(article.id)}
-                        className={cn(
-                          "w-full flex items-center space-x-2 p-2 rounded-md text-left hover:bg-gray-100 transition-colors text-sm",
-                          selectedArticleId === article.id && "bg-blue-50 text-blue-700",
-                        )}
+                        className={`w-full flex items-center space-x-2 p-2 rounded-md text-left text-sm hover:bg-gray-50 transition-colors ${
+                          selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : "text-gray-600"
+                        }`}
                       >
                         <FileText className="h-3 w-3" />
                         <span className="truncate">{article.title}</span>
                       </button>
                     ))}
                   </div>
-                )}
-
-                {isExpanded && categoryArticles.length === 0 && (
-                  <div className="ml-6 mt-1 p-2 text-sm text-gray-500 italic">No articles in this category</div>
                 )}
               </div>
             )

@@ -16,66 +16,46 @@ interface ArticleViewerProps {
 }
 
 export function ArticleViewer({ article, category, author, currentUser, onEdit, onBack }: ArticleViewerProps) {
-  const canEdit =
-    currentUser &&
-    (currentUser.role === "admin" || (currentUser.role === "editor" && currentUser.id === article.authorId))
+  const canEdit = currentUser && (currentUser.role === "admin" || currentUser.id === article.authorId)
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <Button onClick={onBack} variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          {canEdit && (
-            <Button onClick={onEdit} size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
+    <div className="flex flex-col h-full bg-white">
+      <div className="border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button onClick={onBack} variant="ghost" size="sm" className="flex items-center space-x-1">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
             </Button>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{article.title}</h1>
-            {category && (
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span>in</span>
-                <Badge variant="outline">{category.name}</Badge>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-6 text-sm text-gray-600">
-            {author && (
-              <div className="flex items-center space-x-1">
-                <User className="h-4 w-4" />
-                <span>{author.username}</span>
-              </div>
-            )}
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>{article.createdAt.toLocaleDateString()}</span>
-            </div>
-            {article.tags.length > 0 && (
-              <div className="flex items-center space-x-1">
-                <Tag className="h-4 w-4" />
-                <div className="flex space-x-1">
-                  {article.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {article.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{article.tags.length - 3}
-                    </Badge>
-                  )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{article.title}</h1>
+              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                {category && (
+                  <div className="flex items-center space-x-1">
+                    <Tag className="h-3 w-3" />
+                    <span>{category.name}</span>
+                  </div>
+                )}
+                {author && (
+                  <div className="flex items-center space-x-1">
+                    <User className="h-3 w-3" />
+                    <span>{author.username}</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>{article.createdAt.toLocaleDateString()}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
+
+          {canEdit && (
+            <Button onClick={onEdit} variant="outline" size="sm" className="flex items-center space-x-1 bg-transparent">
+              <Edit className="h-4 w-4" />
+              <span>Edit</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -84,6 +64,19 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
           <div className="prose max-w-none">
             <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{article.content}</div>
           </div>
+
+          {article.tags.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900 mb-2">Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {article.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

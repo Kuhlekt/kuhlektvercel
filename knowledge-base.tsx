@@ -98,19 +98,6 @@ export default function KnowledgeBase() {
     console.log("📝 Article created:", newArticle)
   }
 
-  const getFilteredArticles = () => {
-    if (!searchTerm.trim()) return articles
-
-    const query = searchTerm.toLowerCase()
-    return articles.filter(
-      (article) =>
-        article.status === "published" &&
-        (article.title.toLowerCase().includes(query) ||
-          article.content.toLowerCase().includes(query) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query))),
-    )
-  }
-
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
   const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
   const selectedAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : undefined

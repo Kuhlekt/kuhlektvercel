@@ -26,7 +26,7 @@ export function Navigation({
   onLogout,
 }: NavigationProps) {
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-4">
+    <nav className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -50,42 +50,42 @@ export function Navigation({
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           {currentUser ? (
             <>
               {(currentUser.role === "admin" || currentUser.role === "editor") && (
-                <Button onClick={onAddArticle} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Article
+                <Button onClick={onAddArticle} size="sm" className="flex items-center space-x-1">
+                  <Plus className="h-4 w-4" />
+                  <span>Add Article</span>
                 </Button>
               )}
 
               {currentUser.role === "admin" && (
-                <Button onClick={onAdminPanel} variant="outline" size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
+                <Button
+                  onClick={onAdminPanel}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-1 bg-transparent"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Admin</span>
                 </Button>
               )}
 
               <div className="flex items-center space-x-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>{currentUser.username.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="text-xs">{currentUser.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{currentUser.username}</p>
-                  <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
-                </div>
+                <span className="text-sm text-gray-700">{currentUser.username}</span>
+                <Button onClick={onLogout} variant="ghost" size="sm">
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
-
-              <Button onClick={onLogout} variant="outline" size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
             </>
           ) : (
-            <Button onClick={onLogin} size="sm">
-              <LogIn className="h-4 w-4 mr-2" />
-              Login
+            <Button onClick={onLogin} size="sm" className="flex items-center space-x-1">
+              <LogIn className="h-4 w-4" />
+              <span>Login</span>
             </Button>
           )}
         </div>
