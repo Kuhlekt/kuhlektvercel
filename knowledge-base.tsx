@@ -25,13 +25,7 @@ export default function KnowledgeBase() {
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
-  useEffect(() => {
-    console.log("🚀 Initializing Knowledge Base...")
-
-    // Initialize storage
-    storage.init()
-
-    // Load all data
+  const loadAllData = () => {
     const loadedUsers = storage.getUsers()
     const loadedCategories = storage.getCategories()
     const loadedArticles = storage.getArticles()
@@ -41,6 +35,16 @@ export default function KnowledgeBase() {
     setCategories(loadedCategories)
     setArticles(loadedArticles)
     setAuditLog(loadedAuditLog)
+  }
+
+  useEffect(() => {
+    console.log("🚀 Initializing Knowledge Base...")
+
+    // Initialize storage
+    storage.init()
+
+    // Load all data
+    loadAllData()
 
     // Check for existing user session
     const existingUser = storage.getCurrentUser()
@@ -110,6 +114,15 @@ export default function KnowledgeBase() {
 
     setIsAddArticleModalOpen(false)
     console.log("📝 Article created:", newArticle.title)
+  }
+
+  const handleDataRestored = () => {
+    console.log("🔄 Data restored, reloading all data...")
+    loadAllData()
+
+    // Update current user from storage
+    const restoredUser = storage.getCurrentUser()
+    setCurrentUser(restoredUser)
   }
 
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
@@ -202,6 +215,7 @@ export default function KnowledgeBase() {
           onUpdateUsers={setUsers}
           onUpdateCategories={setCategories}
           onUpdateArticles={setArticles}
+          onDataRestored={handleDataRestored}
         />
       )}
 

@@ -6,6 +6,7 @@ import { UserManagement } from "./user-management"
 import { CategoryManagement } from "./category-management"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
+import { BackupRestore } from "./backup-restore"
 import type { User, Category, Article, AuditLog as AuditLogType } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
@@ -19,6 +20,7 @@ interface AdminDashboardProps {
   onUpdateUsers: (users: User[]) => void
   onUpdateCategories: (categories: Category[]) => void
   onUpdateArticles: (articles: Article[]) => void
+  onDataRestored: () => void
 }
 
 export function AdminDashboard({
@@ -32,6 +34,7 @@ export function AdminDashboard({
   onUpdateUsers,
   onUpdateCategories,
   onUpdateArticles,
+  onDataRestored,
 }: AdminDashboardProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -41,9 +44,10 @@ export function AdminDashboard({
         </DialogHeader>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
             <TabsTrigger value="data">Data Management</TabsTrigger>
           </TabsList>
@@ -57,6 +61,17 @@ export function AdminDashboard({
               categories={categories}
               currentUser={currentUser}
               onUpdateCategories={onUpdateCategories}
+            />
+          </TabsContent>
+
+          <TabsContent value="backup" className="mt-6">
+            <BackupRestore
+              users={users}
+              categories={categories}
+              articles={articles}
+              auditLog={auditLog}
+              currentUser={currentUser}
+              onDataRestored={onDataRestored}
             />
           </TabsContent>
 
