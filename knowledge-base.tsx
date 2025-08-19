@@ -23,7 +23,7 @@ interface KnowledgeBaseProps {
   initialAuditLog: AuditLog[]
 }
 
-export function KnowledgeBase({
+export default function KnowledgeBase({
   initialUsers,
   initialCategories,
   initialArticles,
