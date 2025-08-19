@@ -3,15 +3,12 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  subcategoryId?: string
   authorId: string
   createdBy: string
+  tags: string[]
+  status: "draft" | "published"
   createdAt: Date
   updatedAt: Date
-  status: "draft" | "published"
-  tags: string[]
-  editCount?: number
-  lastEditedBy?: string
 }
 
 export interface Subcategory {
@@ -29,22 +26,19 @@ export interface Category {
   parentId?: string
   createdAt: Date
   createdBy: string
-  subcategories: Category[]
-  articles: Article[]
 }
 
 export interface User {
   id: string
   username: string
-  name: string
   email: string
+  password: string
   role: "admin" | "editor" | "viewer"
   createdAt: Date
   lastLogin?: Date
-  isActive: boolean
 }
 
-export interface AuditLog {
+export interface AuditLogEntry {
   id: string
   performedBy: string
   action: string
@@ -52,18 +46,11 @@ export interface AuditLog {
   timestamp: Date
 }
 
+export type AuditLog = AuditLogEntry
+
 export interface UserManagementProps {
   users: User[]
   onUsersUpdate: (users: User[]) => void
-  onAuditLogUpdate: (auditLog: AuditLog[]) => void
-  auditLog: AuditLog[]
-}
-
-export interface SearchResult {
-  type: "article" | "category"
-  id: string
-  title: string
-  content?: string
-  categoryName?: string
-  relevance: number
+  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
+  auditLog: AuditLogEntry[]
 }

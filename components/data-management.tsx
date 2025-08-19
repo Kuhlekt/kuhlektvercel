@@ -5,38 +5,31 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Download, Upload, Trash2, AlertTriangle } from "lucide-react"
+import { Download, Upload, Trash2, Database } from "lucide-react"
 import { storage } from "../utils/storage"
+import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
-export function DataManagement() {
-  const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState<"success" | "error" | "">("")
+interface DataManagementProps {
+  users: User[]
+  categories: Category[]
+  articles: Article[]
+  auditLog: AuditLog[]
+}
 
-  const showMessage = (msg: string, type: "success" | "error") => {
-    setMessage(msg)
-    setMessageType(type)
-    setTimeout(() => {
-      setMessage("")
-      setMessageType("")
-    }, 3000)
-  }
+export function DataManagement({ users, categories, articles, auditLog }: DataManagementProps) {
+  const [importStatus, setImportStatus] = useState<string>("")
 
   const handleExport = () => {
-    try {
-      const data = storage.exportData()
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      showMessage("Data exported successfully!", "success")
-    } catch (error) {
-      showMessage("Failed to export data", "error")
-    }
+    const data = storage.exportData()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,88 +41,88 @@ export function DataManagement() {
       try {
         const data = JSON.parse(e.target?.result as string)
         storage.importData(data)
-        showMessage("Data imported successfully! Please refresh the page.", "success")
+        setImportStatus("Data imported successfully! Please refresh the page to see changes.")
       } catch (error) {
-        showMessage("Failed to import data. Please check the file format.", "error")
+        setImportStatus("Error importing data. Please check the file format.")
       }
     }
     reader.readAsText(file)
   }
 
   const handleClearAll = () => {
-    if (
-      confirm(
-        "Are you sure you want to clear all data? This will delete all users, categories, articles, and audit logs. This action cannot be undone!",
-      )
-    ) {
-      storage.clearAll()
-      showMessage("All data cleared! Please refresh the page.", "success")
+    if (confirm("Are you sure you want to clear ALL data? This action cannot be undone!")) {
+      if (confirm("This will delete all users, categories, articles, and audit logs. Are you absolutely sure?")) {
+        storage.clearAll()
+        setImportStatus("All data cleared! Please refresh the page.")
+      }
     }
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Data Management</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Export your data for backup purposes or import data from a previous backup.
-        </p>
+      <div className="flex items-center space-x-2">
+        <Database className="h-5 w-5" />
+        <h3 className="text-lg font-semibold">Data Management</h3>
       </div>
 
-      {message && (
-        <Alert variant={messageType === "error" ? "destructive" : "default"}>
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Download className="h-5 w-5 text-blue-600" />
-            <h4 className="font-semibold">Export Data</h4>
-          </div>
-          <p className="text-sm text-gray-600 mb-3">Download all your data as a JSON file for backup purposes.</p>
-          <Button onClick={handleExport} className="w-full">
-            Export All Data
-          </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 border rounded-lg text-center">
+          <div className="text-2xl font-bold text-blue-600">{users.length}</div>
+          <div className="text-sm text-gray-600">Users</div>
         </div>
+        <div className="p-4 border rounded-lg text-center">
+          <div className="text-2xl font-bold text-green-600">{categories.length}</div>
+          <div className="text-sm text-gray-600">Categories</div>
+        </div>
+        <div className="p-4 border rounded-lg text-center">
+          <div className="text-2xl font-bold text-purple-600">{articles.length}</div>
+          <div className="text-sm text-gray-600">Articles</div>
+        </div>
+        <div className="p-4 border rounded-lg text-center">
+          <div className="text-2xl font-bold text-orange-600">{auditLog.length}</div>
+          <div className="text-sm text-gray-600">Audit Entries</div>
+        </div>
+      </div>
 
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Upload className="h-5 w-5 text-green-600" />
-            <h4 className="font-semibold">Import Data</h4>
-          </div>
-          <p className="text-sm text-gray-600 mb-3">Import data from a previously exported JSON file.</p>
-          <div>
+      <div className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <Button onClick={handleExport} className="flex items-center space-x-2">
+            <Download className="h-4 w-4" />
+            <span>Export Data</span>
+          </Button>
+
+          <div className="flex items-center space-x-2">
             <input type="file" accept=".json" onChange={handleImport} className="hidden" id="import-file" />
-            <Button asChild className="w-full">
-              <label htmlFor="import-file" className="cursor-pointer">
-                Import Data
+            <Button asChild variant="outline">
+              <label htmlFor="import-file" className="flex items-center space-x-2 cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span>Import Data</span>
               </label>
             </Button>
           </div>
-        </div>
 
-        <div className="border rounded-lg p-4 border-red-200">
-          <div className="flex items-center space-x-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <h4 className="font-semibold text-red-700">Clear All Data</h4>
-          </div>
-          <p className="text-sm text-gray-600 mb-3">Permanently delete all data. This action cannot be undone!</p>
-          <Button onClick={handleClearAll} variant="destructive" className="w-full">
-            <Trash2 className="h-4 w-4 mr-1" />
-            Clear All Data
+          <Button onClick={handleClearAll} variant="destructive" className="flex items-center space-x-2">
+            <Trash2 className="h-4 w-4" />
+            <span>Clear All Data</span>
           </Button>
         </div>
-      </div>
 
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="font-semibold mb-2">Data Storage Information</h4>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>• All data is stored locally in your browser's localStorage</p>
-          <p>• Data persists across browser sessions but is device-specific</p>
-          <p>• Regular exports are recommended for backup purposes</p>
-          <p>• Clearing browser data will remove all knowledge base content</p>
+        {importStatus && (
+          <Alert>
+            <AlertDescription>{importStatus}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="text-sm text-gray-600 space-y-2">
+          <p>
+            <strong>Export:</strong> Download all system data as a JSON file for backup purposes.
+          </p>
+          <p>
+            <strong>Import:</strong> Upload a previously exported JSON file to restore data.
+          </p>
+          <p>
+            <strong>Clear All:</strong> Remove all data from the system (use with extreme caution).
+          </p>
         </div>
       </div>
     </div>

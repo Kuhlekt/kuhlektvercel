@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Lock } from "lucide-react"
+import { User, Lock, AlertCircle } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { User as UserType } from "../types/knowledge-base"
 
@@ -26,23 +26,31 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username.trim() || !password.trim()) return
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password")
+      return
+    }
 
     setLoading(true)
     setError("")
 
     try {
-      const user = storage.authenticateUser(username, password)
+      console.log("🔐 Attempting login with:", username)
+      const user = storage.authenticateUser(username.trim(), password)
+
       if (user) {
+        console.log("✅ Login successful:", user)
         onLogin(user)
         setUsername("")
         setPassword("")
         setError("")
       } else {
+        console.log("❌ Login failed")
         setError("Invalid username or password")
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      console.error("Login error:", err)
+      setError("An error occurred during login")
     } finally {
       setLoading(false)
     }
@@ -59,17 +67,18 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Login to Knowledge Base</DialogTitle>
+          <DialogTitle className="text-center">Login to Knowledge Base</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="modal-username">Username</Label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -81,12 +90,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                 placeholder="Enter username"
                 className="pl-10"
                 autoFocus
-                required
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="modal-password">Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -97,13 +106,19 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
                 className="pl-10"
-                required
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} className="flex-1 bg-transparent">
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1 bg-transparent"
+              disabled={loading}
+            >
               Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={loading}>
@@ -112,19 +127,9 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </div>
         </form>
 
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-          <div className="text-xs space-y-1">
-            <div>
-              <strong>Admin:</strong> admin / admin123
-            </div>
-            <div>
-              <strong>Editor:</strong> editor / editor123
-            </div>
-            <div>
-              <strong>Viewer:</strong> viewer / viewer123
-            </div>
-          </div>
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border">
+          <p className="text-sm text-blue-800 font-medium">Default Admin Account:</p>
+          <p className="text-xs text-blue-700 mt-1">Username: admin | Password: admin123</p>
         </div>
       </DialogContent>
     </Dialog>

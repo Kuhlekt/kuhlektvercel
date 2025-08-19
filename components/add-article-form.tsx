@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { X } from "lucide-react"
 import type { Category, User } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: {
+  onSubmit: (article: {
     title: string
     content: string
     categoryId: string
@@ -29,49 +31,57 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [tags, setTags] = useState("")
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("draft")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim() || !categoryId) return
-
-    onSubmit({
-      title: title.trim(),
-      content: content.trim(),
-      categoryId,
-      tags: tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      status,
-    })
-
-    // Reset form
-    setTitle("")
-    setContent("")
-    setCategoryId("")
-    setTags("")
-    setStatus("draft")
+    if (title.trim() && content.trim() && categoryId) {
+      onSubmit({
+        title: title.trim(),
+        content: content.trim(),
+        categoryId,
+        tags,
+        status,
+      })
+      // Reset form
+      setTitle("")
+      setContent("")
+      setCategoryId("")
+      setTags([])
+      setTagInput("")
+      setStatus("draft")
+    }
   }
 
-  const handleClose = () => {
-    setTitle("")
-    setContent("")
-    setCategoryId("")
-    setTags("")
-    setStatus("draft")
-    onClose()
+  const addTag = () => {
+    const tag = tagInput.trim().toLowerCase()
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag])
+      setTagInput("")
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      addTag()
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="title">Title</Label>
             <Input
@@ -100,13 +110,45 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           </div>
 
           <div>
-            <Label htmlFor="tags">Tags</Label>
-            <Input
-              id="tags"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="Enter tags separated by commas"
+            <Label htmlFor="content">Content</Label>
+            <Textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write your article content here..."
+              className="min-h-[300px]"
+              required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="tags">Tags</Label>
+            <div className="flex space-x-2 mb-2">
+              <Input
+                id="tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={handleTagInputKeyPress}
+                placeholder="Add tags (press Enter)"
+              />
+              <Button type="button" onClick={addTag} variant="outline">
+                Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -122,25 +164,11 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your article content here... (Markdown supported)"
-              className="min-h-[300px]"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={handleClose} className="flex-1 bg-transparent">
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Create Article
-            </Button>
+            <Button type="submit">Create Article</Button>
           </div>
         </form>
       </DialogContent>

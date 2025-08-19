@@ -9,148 +9,140 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2 } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Plus, Edit, Trash2, User } from "lucide-react"
 import { storage } from "../utils/storage"
-import type { User } from "../types/knowledge-base"
+import type { User as UserType } from "../types/knowledge-base"
 
 interface UserManagementProps {
-  users: User[]
-  currentUser: User
-  onUpdateUsers: (users: User[]) => void
+  users: UserType[]
+  currentUser: UserType
+  onUpdateUsers: (users: UserType[]) => void
 }
 
 export function UserManagement({ users, currentUser, onUpdateUsers }: UserManagementProps) {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState<UserType | null>(null)
   const [formData, setFormData] = useState({
     username: "",
-    name: "",
     email: "",
+    password: "",
     role: "viewer" as "admin" | "editor" | "viewer",
   })
 
+  const resetForm = () => {
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      role: "viewer",
+    })
+  }
+
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.username.trim() || !formData.name.trim() || !formData.email.trim()) return
+    if (formData.username.trim() && formData.email.trim() && formData.password.trim()) {
+      const newUser: UserType = {
+        id: Date.now().toString(),
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        role: formData.role,
+        createdAt: new Date(),
+      }
 
-    const newUser: User = {
-      id: Date.now().toString(),
-      username: formData.username.trim(),
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      role: formData.role,
-      createdAt: new Date(),
-      isActive: true,
+      const updatedUsers = [...users, newUser]
+      onUpdateUsers(updatedUsers)
+      storage.saveUsers(updatedUsers)
+      storage.addAuditEntry({
+        performedBy: currentUser.id,
+        action: "CREATE_USER",
+        details: `Created user ${newUser.username} with role ${newUser.role}`,
+      })
+
+      resetForm()
+      setIsAddUserOpen(false)
     }
-
-    const updatedUsers = [...users, newUser]
-    onUpdateUsers(updatedUsers)
-    storage.saveUsers(updatedUsers)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "CREATE_USER",
-      details: `Created user "${newUser.username}" with role ${newUser.role}`,
-    })
-
-    setFormData({ username: "", name: "", email: "", role: "viewer" })
-    setIsAddUserOpen(false)
   }
 
   const handleEditUser = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingUser || !formData.username.trim() || !formData.name.trim() || !formData.email.trim()) return
+    if (editingUser && formData.username.trim() && formData.email.trim()) {
+      const updatedUser: UserType = {
+        ...editingUser,
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password || editingUser.password,
+        role: formData.role,
+      }
 
-    const updatedUser: User = {
-      ...editingUser,
-      username: formData.username.trim(),
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      role: formData.role,
+      const updatedUsers = users.map((u) => (u.id === editingUser.id ? updatedUser : u))
+      onUpdateUsers(updatedUsers)
+      storage.saveUsers(updatedUsers)
+      storage.addAuditEntry({
+        performedBy: currentUser.id,
+        action: "UPDATE_USER",
+        details: `Updated user ${updatedUser.username}`,
+      })
+
+      resetForm()
+      setEditingUser(null)
     }
-
-    const updatedUsers = users.map((u) => (u.id === editingUser.id ? updatedUser : u))
-    onUpdateUsers(updatedUsers)
-    storage.saveUsers(updatedUsers)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "UPDATE_USER",
-      details: `Updated user "${updatedUser.username}"`,
-    })
-
-    setEditingUser(null)
-    setFormData({ username: "", name: "", email: "", role: "viewer" })
   }
 
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = (user: UserType) => {
     if (user.id === currentUser.id) {
-      alert("You cannot delete your own account.")
+      alert("You cannot delete your own account")
       return
     }
 
-    if (confirm(`Are you sure you want to delete user "${user.username}"?`)) {
+    if (confirm(`Are you sure you want to delete user ${user.username}?`)) {
       const updatedUsers = users.filter((u) => u.id !== user.id)
       onUpdateUsers(updatedUsers)
       storage.saveUsers(updatedUsers)
-
       storage.addAuditEntry({
         performedBy: currentUser.id,
         action: "DELETE_USER",
-        details: `Deleted user "${user.username}"`,
+        details: `Deleted user ${user.username}`,
       })
     }
   }
 
-  const toggleUserStatus = (user: User) => {
-    if (user.id === currentUser.id) {
-      alert("You cannot deactivate your own account.")
-      return
-    }
-
-    const updatedUser = { ...user, isActive: !user.isActive }
-    const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
-    onUpdateUsers(updatedUsers)
-    storage.saveUsers(updatedUsers)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "UPDATE_USER",
-      details: `${updatedUser.isActive ? "Activated" : "Deactivated"} user "${user.username}"`,
-    })
-  }
-
-  const startEdit = (user: User) => {
+  const startEdit = (user: UserType) => {
     setEditingUser(user)
     setFormData({
       username: user.username,
-      name: user.name,
       email: user.email,
+      password: "",
       role: user.role,
     })
   }
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-100 text-red-800"
+        return "default"
       case "editor":
-        return "bg-blue-100 text-blue-800"
+        return "secondary"
       case "viewer":
-        return "bg-gray-100 text-gray-800"
+        return "outline"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "outline"
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">User Management</h3>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <User className="h-5 w-5" />
+          <h3 className="text-lg font-semibold">User Management</h3>
+          <Badge variant="outline">{users.length} users</Badge>
+        </div>
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-4 w-4 mr-2" />
               Add User
             </Button>
           </DialogTrigger>
@@ -169,21 +161,22 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
                 />
               </div>
               <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                 />
               </div>
@@ -197,69 +190,57 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsAddUserOpen(false)} className="flex-1">
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsAddUserOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1">
-                  Create User
-                </Button>
+                <Button type="submit">Create User</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="border rounded-lg">
-        <div className="grid grid-cols-6 gap-4 p-4 font-semibold border-b bg-gray-50">
-          <div>Username</div>
-          <div>Name</div>
-          <div>Email</div>
-          <div>Role</div>
-          <div>Status</div>
-          <div>Actions</div>
+      <ScrollArea className="h-96">
+        <div className="space-y-2">
+          {users.map((user) => (
+            <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3">
+                  <h4 className="font-medium">{user.username}</h4>
+                  <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                  {user.id === currentUser.id && (
+                    <Badge variant="outline" className="text-xs">
+                      You
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">{user.email}</p>
+                <p className="text-xs text-gray-500">
+                  Created: {user.createdAt.toLocaleDateString()}
+                  {user.lastLogin && ` • Last login: ${user.lastLogin.toLocaleDateString()}`}
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={() => startEdit(user)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                {user.id !== currentUser.id && (
+                  <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-        {users.map((user) => (
-          <div key={user.id} className="grid grid-cols-6 gap-4 p-4 border-b last:border-b-0">
-            <div className="font-medium">{user.username}</div>
-            <div>{user.name}</div>
-            <div className="text-sm text-gray-600">{user.email}</div>
-            <div>
-              <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
-            </div>
-            <div>
-              <Badge variant={user.isActive ? "default" : "secondary"}>{user.isActive ? "Active" : "Inactive"}</Badge>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => startEdit(user)}>
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleUserStatus(user)}
-                disabled={user.id === currentUser.id}
-              >
-                {user.isActive ? "Deactivate" : "Activate"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleDeleteUser(user)}
-                disabled={user.id === currentUser.id}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+      </ScrollArea>
 
       {editingUser && (
         <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
@@ -278,15 +259,6 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
                 />
               </div>
               <div>
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
                 <Label htmlFor="edit-email">Email</Label>
                 <Input
                   id="edit-email"
@@ -294,6 +266,16 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
+                <Input
+                  id="edit-password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
               <div>
@@ -306,19 +288,17 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="flex-1">
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1">
-                  Update User
-                </Button>
+                <Button type="submit">Update User</Button>
               </div>
             </form>
           </DialogContent>

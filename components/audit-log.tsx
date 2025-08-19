@@ -3,39 +3,33 @@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, User, Activity } from "lucide-react"
-import type { AuditLog as AuditLogType, User as UserType } from "../types/knowledge-base"
+import type { AuditLogEntry } from "../types/knowledge-base"
 
 interface AuditLogProps {
-  auditLog: AuditLogType[]
-  users: UserType[]
+  auditLog: AuditLogEntry[]
 }
 
-export function AuditLog({ auditLog, users }: AuditLogProps) {
-  const getUserName = (userId: string) => {
-    const user = users.find((u) => u.id === userId)
-    return user ? user.username : "Unknown User"
-  }
-
-  const getActionColor = (action: string) => {
+export function AuditLog({ auditLog }: AuditLogProps) {
+  const getActionBadgeVariant = (action: string) => {
     switch (action) {
       case "LOGIN":
-        return "bg-green-100 text-green-800"
+        return "default"
       case "LOGOUT":
-        return "bg-gray-100 text-gray-800"
+        return "secondary"
       case "CREATE_ARTICLE":
       case "CREATE_USER":
       case "CREATE_CATEGORY":
-        return "bg-blue-100 text-blue-800"
+        return "default"
       case "UPDATE_ARTICLE":
       case "UPDATE_USER":
       case "UPDATE_CATEGORY":
-        return "bg-yellow-100 text-yellow-800"
+        return "outline"
       case "DELETE_ARTICLE":
       case "DELETE_USER":
       case "DELETE_CATEGORY":
-        return "bg-red-100 text-red-800"
+        return "destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "secondary"
     }
   }
 
@@ -43,42 +37,42 @@ export function AuditLog({ auditLog, users }: AuditLogProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <Activity className="h-5 w-5" />
         <h3 className="text-lg font-semibold">Audit Log</h3>
-        <div className="text-sm text-gray-500">{auditLog.length} total entries</div>
+        <Badge variant="outline">{auditLog.length} entries</Badge>
       </div>
 
-      <ScrollArea className="h-96 border rounded-lg">
-        {sortedLog.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No audit entries yet</p>
-            <p className="text-sm">User activities will appear here</p>
-          </div>
-        ) : (
-          <div className="p-4 space-y-3">
-            {sortedLog.map((entry) => (
-              <div key={entry.id} className="border rounded-lg p-3 bg-white">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Badge className={getActionColor(entry.action)}>{entry.action}</Badge>
-                      <div className="flex items-center space-x-1 text-sm text-gray-500">
-                        <User className="h-3 w-3" />
-                        <span>{getUserName(entry.performedBy)}</span>
-                      </div>
+      <ScrollArea className="h-96">
+        <div className="space-y-2">
+          {sortedLog.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No audit log entries yet</p>
+            </div>
+          ) : (
+            sortedLog.map((entry) => (
+              <div key={entry.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                <div className="flex-shrink-0 mt-1">
+                  <Badge variant={getActionBadgeVariant(entry.action)}>{entry.action}</Badge>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{entry.details}</p>
+                  <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-3 w-3" />
+                      <span>User ID: {entry.performedBy}</span>
                     </div>
-                    <p className="text-sm text-gray-700">{entry.details}</p>
-                  </div>
-                  <div className="flex items-center space-x-1 text-xs text-gray-500">
-                    <Calendar className="h-3 w-3" />
-                    <span>{entry.timestamp.toLocaleString()}</span>
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{entry.timestamp.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </ScrollArea>
     </div>
   )

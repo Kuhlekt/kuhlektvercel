@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Lock } from "lucide-react"
+import { User, Lock, AlertCircle } from "lucide-react"
 
 interface LoginFormProps {
   onLogin: (username: string, password: string) => void
@@ -22,7 +22,7 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (username.trim() && password.trim()) {
-      onLogin(username, password)
+      onLogin(username.trim(), password)
     }
   }
 
@@ -40,6 +40,7 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -57,6 +58,7 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
                   className="pl-10"
                   autoFocus
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -73,6 +75,7 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
                   placeholder="Enter password"
                   className="pl-10"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -82,18 +85,12 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
             </Button>
           </form>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-            <div className="text-xs space-y-1">
-              <div>
-                <strong>Admin:</strong> admin / admin123
-              </div>
-              <div>
-                <strong>Editor:</strong> editor / editor123
-              </div>
-              <div>
-                <strong>Viewer:</strong> viewer / viewer123
-              </div>
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium">Default Admin Account:</p>
+            <div className="text-xs text-blue-700 mt-1">
+              <strong>Username:</strong> admin
+              <br />
+              <strong>Password:</strong> admin123
             </div>
           </div>
         </CardContent>

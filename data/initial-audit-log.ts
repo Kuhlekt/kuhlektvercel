@@ -1,11 +1,13 @@
-import type { AuditLog } from "../types/knowledge-base"
+import type { AuditLogEntry } from "../types/knowledge-base"
 
-export const initialAuditLog: AuditLog[] = [
+export const initialAuditLog: AuditLogEntry[] = [
   {
     id: "1",
-    performedBy: "1",
-    action: "SYSTEM_INIT",
-    details: "Knowledge Base system initialized",
-    timestamp: new Date(),
+    action: "system_initialized",
+    entityType: "system",
+    entityId: "system",
+    performedBy: "system",
+    timestamp: new Date("2024-01-01T00:00:00.000Z"),
+    details: "Knowledge base system initialized",
   },
 ]
