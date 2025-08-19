@@ -191,15 +191,15 @@ export function AdminDashboard({
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
-            <span>Users</span>
+            <span>Users ({users.length})</span>
           </TabsTrigger>
           <TabsTrigger value="categories" className="flex items-center space-x-2">
             <FolderTree className="h-4 w-4" />
-            <span>Categories</span>
+            <span>Categories ({categories.length})</span>
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
-            <span>Audit Log</span>
+            <span>Audit Log ({auditLog.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -212,7 +212,7 @@ export function AdminDashboard({
         </TabsContent>
 
         <TabsContent value="audit" className="mt-6">
-          <AuditLog auditLog={auditLog} />
+          <AuditLog auditLog={auditLog} onAuditLogUpdate={onAuditLogUpdate} />
         </TabsContent>
       </Tabs>
     </div>

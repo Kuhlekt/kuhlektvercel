@@ -277,7 +277,7 @@ export default function KnowledgeBase() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
+              <img src="/placeholder.svg?height=32&width=32&text=KB" alt="Kuhlekt" className="h-8 w-auto" />
               <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
               <Badge variant="outline" className="text-xs flex items-center space-x-1">
                 <Eye className="h-3 w-3" />

@@ -1,13 +1,14 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
@@ -27,7 +28,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [newTag, setNewTag] = useState("")
   const [author, setAuthor] = useState("")
 
-  const selectedCategory = categories.find((c) => c.id === categoryId)
+  const selectedCategory = categories.find((cat) => cat.id === categoryId)
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -42,7 +43,8 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim() || !categoryId || !author.trim()) {
+
+    if (!title.trim() || !content.trim() || !categoryId) {
       return
     }
 
@@ -52,7 +54,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
       categoryId,
       subcategoryId: subcategoryId || undefined,
       tags,
-      author: author.trim(),
+      author: author.trim() || undefined,
     })
 
     // Reset form
@@ -61,7 +63,13 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
     setCategoryId("")
     setSubcategoryId("")
     setTags([])
+    setNewTag("")
     setAuthor("")
+  }
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value)
+    setSubcategoryId("") // Reset subcategory when category changes
   }
 
   return (
@@ -84,13 +92,12 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="author">Author *</Label>
+              <Label htmlFor="author">Author</Label>
               <Input
                 id="author"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="Enter author name"
-                required
               />
             </div>
           </div>
@@ -98,13 +105,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select
-                value={categoryId}
-                onValueChange={(value) => {
-                  setCategoryId(value)
-                  setSubcategoryId("")
-                }}
-              >
+              <Select value={categoryId} onValueChange={handleCategoryChange} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -118,24 +119,25 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </Select>
             </div>
 
-            {selectedCategory && selectedCategory.subcategories.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategory</Label>
-                <Select value={subcategoryId} onValueChange={setSubcategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subcategory (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {selectedCategory.subcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">Subcategory</Label>
+              <Select
+                value={subcategoryId}
+                onValueChange={setSubcategoryId}
+                disabled={!selectedCategory || !selectedCategory.subcategories?.length}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subcategory (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedCategory?.subcategories?.map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -145,7 +147,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Enter article content"
-              rows={10}
+              className="min-h-[200px]"
               required
             />
           </div>
@@ -170,8 +172,8 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                {tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
                     <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
                       <X className="h-3 w-3" />
@@ -186,7 +188,9 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit">Add Article</Button>
+            <Button type="submit" disabled={!title.trim() || !content.trim() || !categoryId}>
+              Add Article
+            </Button>
           </div>
         </form>
       </CardContent>

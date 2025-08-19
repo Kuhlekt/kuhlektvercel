@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,16 +31,12 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      const trimmedUsername = username.trim()
-      const trimmedPassword = password.trim()
-
-      if (!trimmedUsername || !trimmedPassword) {
+      if (!username.trim() || !password.trim()) {
         setError("Please enter both username and password")
-        setIsLoading(false)
         return
       }
 
-      const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
+      const user = users.find((u) => u.username === username.trim() && u.password === password.trim())
 
       if (user) {
         onLogin(user)

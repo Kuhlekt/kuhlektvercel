@@ -12,25 +12,25 @@ export interface Article {
   id: string
   title: string
   content: string
+  tags: string[]
   categoryId: string
   subcategoryId?: string
-  tags: string[]
-  author: string
   createdAt: Date
   updatedAt: Date
+  author?: string
 }
 
 export interface Subcategory {
   id: string
   name: string
-  description: string
+  description?: string
   articles: Article[]
 }
 
 export interface Category {
   id: string
   name: string
-  description: string
+  description?: string
   articles: Article[]
   subcategories: Subcategory[]
 }

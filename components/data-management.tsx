@@ -1,14 +1,12 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Download, Upload, Trash2, AlertCircle, CheckCircle } from "lucide-react"
 import { storage } from "../utils/storage"
-import { initialCategories } from "../data/initial-data"
-import { initialUsers } from "../data/initial-users"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface DataManagementProps {
@@ -19,77 +17,83 @@ interface DataManagementProps {
 }
 
 export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
+  const [importData, setImportData] = useState("")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const handleExport = () => {
+    const data = {
+      categories,
+      users,
+      auditLog,
+      exportedAt: new Date().toISOString(),
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    setMessage({ type: "success", text: "Data exported successfully!" })
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  const handleImport = () => {
     try {
-      const data = {
-        categories,
-        users,
-        auditLog,
-        exportDate: new Date().toISOString(),
-        version: "1.0",
+      if (!importData.trim()) {
+        setMessage({ type: "error", text: "Please paste the JSON data to import." })
+        return
       }
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const data = JSON.parse(importData)
 
-      setMessage({ type: "success", text: "Data exported successfully!" })
+      if (!data.categories || !Array.isArray(data.categories)) {
+        throw new Error("Invalid data format: categories array is required")
+      }
+
+      if (!data.users || !Array.isArray(data.users)) {
+        throw new Error("Invalid data format: users array is required")
+      }
+
+      // Save imported data
+      storage.saveCategories(data.categories)
+      storage.saveUsers(data.users)
+      if (data.auditLog && Array.isArray(data.auditLog)) {
+        storage.saveAuditLog(data.auditLog)
+      }
+
+      setImportData("")
+      setMessage({ type: "success", text: "Data imported successfully!" })
+      setTimeout(() => setMessage(null), 3000)
+
+      // Notify parent component to reload data
+      onDataImported()
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to export data" })
+      setMessage({
+        type: "error",
+        text: `Import failed: ${error instanceof Error ? error.message : "Invalid JSON format"}`,
+      })
     }
   }
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string)
-
-        if (data.categories) {
-          storage.saveCategories(data.categories)
-        }
-        if (data.users) {
-          storage.saveUsers(data.users)
-        }
-        if (data.auditLog) {
-          storage.saveAuditLog(data.auditLog)
-        }
-
-        setMessage({ type: "success", text: "Data imported successfully!" })
-        onDataImported()
-      } catch (error) {
-        setMessage({ type: "error", text: "Failed to import data. Please check the file format." })
-      }
-    }
-    reader.readAsText(file)
-    event.target.value = ""
-  }
-
-  const handleReset = () => {
-    if (confirm("Are you sure you want to reset all data? This action cannot be undone.")) {
+  const handleClearAll = () => {
+    if (window.confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
       storage.clearAll()
-      storage.saveCategories(initialCategories)
-      storage.saveUsers(initialUsers)
-      setMessage({ type: "success", text: "Data reset to initial state!" })
+      setMessage({ type: "success", text: "All data cleared successfully!" })
+      setTimeout(() => setMessage(null), 3000)
       onDataImported()
     }
   }
 
-  const getDataSize = () => {
+  const getDataStats = () => {
     const totalArticles = categories.reduce((total, category) => {
-      const categoryArticles = category.articles.length
-      const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+      const categoryArticles = category.articles?.length || 0
+      const subcategoryArticles =
+        category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
       return total + categoryArticles + subcategoryArticles
     }, 0)
 
@@ -101,36 +105,10 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     }
   }
 
-  const dataSize = getDataSize()
+  const stats = getDataStats()
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{dataSize.categories}</div>
-              <div className="text-sm text-gray-600">Categories</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{dataSize.articles}</div>
-              <div className="text-sm text-gray-600">Articles</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{dataSize.users}</div>
-              <div className="text-sm text-gray-600">Users</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{dataSize.auditEntries}</div>
-              <div className="text-sm text-gray-600">Audit Entries</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {message && (
         <Alert variant={message.type === "error" ? "destructive" : "default"}>
           {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
@@ -138,7 +116,34 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{stats.categories}</div>
+            <div className="text-sm text-gray-500">Categories</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{stats.articles}</div>
+            <div className="text-sm text-gray-500">Articles</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{stats.users}</div>
+            <div className="text-sm text-gray-500">Users</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{stats.auditEntries}</div>
+            <div className="text-sm text-gray-500">Audit Entries</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -146,9 +151,9 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
               <span>Export Data</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Download all your knowledge base data as a JSON file for backup or migration.
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Export all knowledge base data including categories, articles, users, and audit logs as a JSON file.
             </p>
             <Button onClick={handleExport} className="w-full">
               <Download className="h-4 w-4 mr-2" />
@@ -164,38 +169,39 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
               <span>Import Data</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Import data from a previously exported JSON file. This will replace existing data.
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Import knowledge base data from a previously exported JSON file. This will replace all existing data.
             </p>
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" id="import-file" />
-            <Button asChild className="w-full">
-              <label htmlFor="import-file" className="cursor-pointer">
-                <Upload className="h-4 w-4 mr-2" />
-                Import Data
-              </label>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Trash2 className="h-5 w-5" />
-              <span>Reset Data</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Reset all data to the initial state. This will permanently delete all custom content.
-            </p>
-            <Button onClick={handleReset} variant="destructive" className="w-full">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Reset to Default
+            <Textarea
+              placeholder="Paste your JSON data here..."
+              value={importData}
+              onChange={(e) => setImportData(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <Button onClick={handleImport} className="w-full" disabled={!importData.trim()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import Data
             </Button>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-600">
+            <Trash2 className="h-5 w-5" />
+            <span>Danger Zone</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">Clear all data from the knowledge base. This action cannot be undone.</p>
+          <Button onClick={handleClearAll} variant="destructive">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All Data
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
