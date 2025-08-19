@@ -359,7 +359,7 @@ export default function KnowledgeBase() {
               <img
                 src="/images/kuhlekt-logo.jpg"
                 alt="Kuhlekt Logo"
-                className="h-20 w-20 mx-auto mb-4 object-contain"
+                className="h-32 w-32 mx-auto mb-4 object-contain"
               />
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
               <p className="text-gray-600">Find answers, guides, and documentation</p>
