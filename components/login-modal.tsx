@@ -33,34 +33,24 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
       const trimmedUsername = username.trim()
       const trimmedPassword = password.trim()
 
-      console.log("Login attempt:", { username: trimmedUsername, password: trimmedPassword })
-      console.log(
-        "Available users:",
-        users.map((u) => ({ username: u.username, password: u.password })),
-      )
-
       if (!trimmedUsername || !trimmedPassword) {
         setError("Please enter both username and password")
         setIsLoading(false)
         return
       }
 
-      // Find user with exact match
       const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
 
       if (user) {
-        console.log("Login successful for user:", user.username)
         onLogin(user)
         setUsername("")
         setPassword("")
         setError("")
         onClose()
       } else {
-        console.log("Login failed - no matching user found")
         setError("Invalid username or password")
       }
     } catch (error) {
-      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)

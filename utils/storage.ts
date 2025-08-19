@@ -8,7 +8,6 @@ const STORAGE_KEYS = {
 } as const
 
 export const storage = {
-  // Categories
   getCategories: (): Category[] => {
     try {
       if (typeof window === "undefined") return []
@@ -29,7 +28,6 @@ export const storage = {
     }
   },
 
-  // Users
   getUsers: (): User[] => {
     try {
       if (typeof window === "undefined") return []
@@ -50,7 +48,6 @@ export const storage = {
     }
   },
 
-  // Audit Log
   getAuditLog: (): AuditLogEntry[] => {
     try {
       if (typeof window === "undefined") return []
@@ -71,7 +68,6 @@ export const storage = {
     }
   },
 
-  // Page Visits
   getPageVisits: (): number => {
     try {
       if (typeof window === "undefined") return 0
@@ -92,7 +88,6 @@ export const storage = {
     }
   },
 
-  // Clear all data
   clearAll: (): void => {
     try {
       if (typeof window === "undefined") return

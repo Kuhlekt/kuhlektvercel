@@ -1,9 +1,8 @@
 "use client"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Users, FileText, Folder, Activity, Shield, Calendar, TrendingUp } from "lucide-react"
+import { Users, FolderTree, Activity } from "lucide-react"
 import { UserManagement } from "./user-management"
 import { CategoryManagement } from "./category-management"
 import { AuditLog } from "./audit-log"
@@ -61,7 +60,7 @@ export function AdminDashboard({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="flex items-center p-6">
-            <FileText className="h-8 w-8 text-blue-500 mr-4" />
+            <FolderTree className="h-8 w-8 text-blue-500 mr-4" />
             <div>
               <div className="text-2xl font-bold">{getTotalArticles()}</div>
               <div className="text-sm text-gray-600">Total Articles</div>
@@ -71,7 +70,7 @@ export function AdminDashboard({
 
         <Card>
           <CardContent className="flex items-center p-6">
-            <Folder className="h-8 w-8 text-green-500 mr-4" />
+            <FolderTree className="h-8 w-8 text-green-500 mr-4" />
             <div>
               <div className="text-2xl font-bold">{categories.length}</div>
               <div className="text-sm text-gray-600">Categories</div>
@@ -105,7 +104,7 @@ export function AdminDashboard({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5" />
+              <FolderTree className="h-5 w-5" />
               <span>User Roles</span>
             </CardTitle>
           </CardHeader>
@@ -130,7 +129,7 @@ export function AdminDashboard({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
+              <FolderTree className="h-5 w-5" />
               <span>Content Overview</span>
             </CardTitle>
           </CardHeader>
@@ -157,7 +156,7 @@ export function AdminDashboard({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
+            <Activity className="h-5 w-5" />
             <span>Recent Activity</span>
           </CardTitle>
         </CardHeader>
@@ -190,27 +189,26 @@ export function AdminDashboard({
       {/* Management Tabs */}
       <Tabs defaultValue="users" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Users</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center space-x-2">
+            <FolderTree className="h-4 w-4" />
+            <span>Categories</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center space-x-2">
+            <Activity className="h-4 w-4" />
+            <span>Audit Log</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-6">
-          <UserManagement
-            users={users}
-            auditLog={auditLog}
-            onUsersUpdate={onUsersUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
-          />
+          <UserManagement users={users} onUsersUpdate={onUsersUpdate} />
         </TabsContent>
 
         <TabsContent value="categories" className="mt-6">
-          <CategoryManagement
-            categories={categories}
-            auditLog={auditLog}
-            onCategoriesUpdate={onCategoriesUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
-          />
+          <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-6">
