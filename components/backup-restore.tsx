@@ -316,20 +316,38 @@ Are you sure you want to continue?`
         updatedAt: new Date(article.updatedAt),
       }))
 
-      // Restore audit log with proper date parsing
-      const restoredAuditLog = backupPreview.data.auditLog.map((entry) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      }))
+      // Add restore entry to the backup's audit log before importing
+      const restoreEntry: AuditLog = {
+        id: `restore-${Date.now()}`,
+        performedBy: currentUser.id,
+        action: "RESTORE_BACKUP",
+        details: `Restored backup from ${new Date(backupPreview.timestamp || new Date()).toLocaleString()}${
+          backupPreview.metadata?.description ? ` - ${backupPreview.metadata.description}` : ""
+        }`,
+        timestamp: new Date(),
+      }
 
-      console.log("💾 Saving restored data to localStorage...")
-      console.log("- Users:", restoredUsers.length)
-      console.log("- Categories:", restoredCategories.length)
-      console.log("- Articles:", restoredArticles.length)
-      console.log("- Audit entries:", restoredAuditLog.length)
+      const restoredAuditLog = [
+        ...backupPreview.data.auditLog.map((entry) => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp),
+        })),
+        restoreEntry,
+      ]
 
-      // Log articles before import
-      console.log("Articles before import:", storage.getArticles().length)
+      console.log("💾 Final verification before saving:")
+      console.log("- Users to save:", restoredUsers.length)
+      console.log("- Categories to save:", restoredCategories.length)
+      console.log("- Articles to save:", restoredArticles.length)
+      console.log("- Audit entries to save:", restoredAuditLog.length)
+
+      // Log some article details for verification
+      if (restoredArticles.length > 0) {
+        console.log("📝 Articles being restored:")
+        restoredArticles.forEach((article, index) => {
+          console.log(`  ${index + 1}. "${article.title}" (ID: ${article.id}, Status: ${article.status})`)
+        })
+      }
 
       // Use the storage import method for proper handling
       storage.importData({
@@ -337,22 +355,6 @@ Are you sure you want to continue?`
         categories: restoredCategories,
         articles: restoredArticles,
         auditLog: restoredAuditLog,
-      })
-
-      // Log articles after import
-      console.log("Articles after import:", storage.getArticles().length)
-
-      // Verify articles in localStorage
-      const storedArticles = localStorage.getItem("kb_articles")
-      console.log("Articles in localStorage:", storedArticles ? JSON.parse(storedArticles).length : 0)
-
-      // Add restore entry to audit log
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "RESTORE_BACKUP",
-        details: `Restored backup from ${new Date(backupPreview.timestamp || new Date()).toLocaleString()}${
-          backupPreview.metadata?.description ? ` - ${backupPreview.metadata.description}` : ""
-        }`,
       })
 
       setRestoreStatus({
