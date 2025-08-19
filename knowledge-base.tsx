@@ -7,7 +7,6 @@ import { ArticleViewer } from "./components/article-viewer"
 import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
-import { Card, CardContent } from "@/components/ui/card"
 import { FileText } from "lucide-react"
 import { storage } from "./utils/storage"
 import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
@@ -182,43 +181,39 @@ export default function KnowledgeBase() {
               {categoryArticles.length > 0 ? (
                 <div className="grid gap-4">
                   {categoryArticles.map((article) => (
-                    <Card
+                    <div
                       key={article.id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => setSelectedArticleId(article.id)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start space-x-3">
-                          <FileText className="h-5 w-5 text-blue-600 mt-1" />
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
-                            <p className="text-gray-600 text-sm line-clamp-2">{article.content.substring(0, 150)}...</p>
-                            <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                              <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-                              {article.tags.length > 0 && <span>Tags: {article.tags.slice(0, 3).join(", ")}</span>}
-                            </div>
+                      <div className="flex items-start space-x-3">
+                        <FileText className="h-5 w-5 text-blue-600 mt-1" />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
+                          <p className="text-gray-600 text-sm line-clamp-2">{article.content.substring(0, 150)}...</p>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                            <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                            {article.tags.length > 0 && <span>Tags: {article.tags.slice(0, 3).join(", ")}</span>}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <Card>
-                  <CardContent className="flex items-center justify-center h-96">
-                    <div className="text-center text-gray-500">
-                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium mb-2">
-                        {searchTerm ? "No articles found" : "No articles in this category"}
-                      </h3>
-                      <p>
-                        {searchTerm
-                          ? `No articles match "${searchTerm}"`
-                          : "Select a category to view articles or add new content."}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-white rounded-lg border border-gray-200 flex items-center justify-center h-96">
+                  <div className="text-center text-gray-500">
+                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">
+                      {searchTerm ? "No articles found" : "No articles in this category"}
+                    </h3>
+                    <p>
+                      {searchTerm
+                        ? `No articles match "${searchTerm}"`
+                        : "Select a category to view articles or add new content."}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           )}

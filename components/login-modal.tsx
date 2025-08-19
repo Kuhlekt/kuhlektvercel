@@ -1,11 +1,12 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
@@ -24,44 +25,28 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError("")
+    setIsLoading(true)
+
+    console.log("Login attempt:", { username, password: "***" })
 
     try {
-      console.log("Login attempt:", { username, password })
-
-      const users = storage.getUsers()
-      console.log(
-        "Available users:",
-        users.map((u) => ({ username: u.username, password: u.password })),
-      )
-
-      const user = users.find((u) => u.username.trim() === username.trim() && u.password === password)
-      console.log("Found user:", user)
+      const user = storage.authenticateUser(username, password)
 
       if (user) {
-        // Update last login
-        const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date().toISOString() } : u))
-        storage.saveUsers(updatedUsers)
+        console.log("Login successful:", user)
         storage.setCurrentUser(user)
-        storage.addAuditEntry({
-          userId: user.id,
-          action: "LOGIN",
-          details: `User ${user.username} logged in`,
-        })
-
-        console.log("Login successful")
         onLogin(user)
         onClose()
         setUsername("")
         setPassword("")
       } else {
-        console.log("Login failed - invalid credentials")
+        console.log("Login failed: Invalid credentials")
         setError("Invalid username or password")
       }
     } catch (err) {
       console.error("Login error:", err)
-      setError("Login failed. Please try again.")
+      setError("An error occurred during login")
     } finally {
       setIsLoading(false)
     }
@@ -80,6 +65,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
@@ -88,11 +74,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              placeholder="Enter your username"
               required
-              autoComplete="username"
+              disabled={isLoading}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -100,32 +87,36 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder="Enter your password"
               required
-              autoComplete="current-password"
+              disabled={isLoading}
             />
           </div>
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-            <strong>Default credentials:</strong>
-            <br />
-            Username: admin
-            <br />
-            Password: admin123
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </div>
         </form>
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm">
+          <p className="font-medium mb-2">Demo Credentials:</p>
+          <div className="space-y-1 text-gray-600">
+            <p>Admin: admin / admin123</p>
+            <p>Editor: editor / editor123</p>
+            <p>Viewer: viewer / viewer123</p>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

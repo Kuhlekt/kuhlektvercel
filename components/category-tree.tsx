@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { Folder, FileText, ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ChevronRight, ChevronDown, Folder, FileText } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -24,84 +23,56 @@ export function CategoryTree({
   onCategorySelect,
   onArticleSelect,
 }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
-
-  const toggleCategory = (categoryId: string) => {
-    const newExpanded = new Set(expandedCategories)
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId)
-    } else {
-      newExpanded.add(categoryId)
-    }
-    setExpandedCategories(newExpanded)
-  }
-
   const getCategoryArticles = (categoryId: string) => {
     return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
   }
 
   return (
-    <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-      <Card className="m-4">
-        <CardHeader>
-          <CardTitle className="text-lg">Categories</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+    <div className="w-80 bg-white border-r border-gray-200">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="font-semibold text-gray-900">Categories</h2>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-8rem)]">
+        <div className="p-2">
           {categories.map((category) => {
             const categoryArticles = getCategoryArticles(category.id)
-            const isExpanded = expandedCategories.has(category.id)
             const isSelected = selectedCategoryId === category.id
 
             return (
-              <div key={category.id} className="space-y-1">
+              <div key={category.id} className="mb-2">
                 <Button
-                  variant={isSelected ? "secondary" : "ghost"}
-                  className="w-full justify-start text-left h-auto p-2"
-                  onClick={() => {
-                    onCategorySelect(category.id)
-                    if (categoryArticles.length > 0) {
-                      toggleCategory(category.id)
-                    }
-                  }}
+                  variant="ghost"
+                  className={cn("w-full justify-start p-2 h-auto", isSelected && "bg-blue-50 text-blue-700")}
+                  onClick={() => onCategorySelect(category.id)}
                 >
                   <div className="flex items-center space-x-2 w-full">
-                    {categoryArticles.length > 0 ? (
-                      isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )
-                    ) : (
-                      <div className="w-4" />
-                    )}
-                    <Folder className="h-4 w-4 text-blue-600" />
-                    <div className="flex-1">
+                    {isSelected ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <Folder className="h-4 w-4" />
+                    <div className="flex-1 text-left">
                       <div className="font-medium">{category.name}</div>
-                      {category.description && <div className="text-xs text-gray-500">{category.description}</div>}
+                      <div className="text-xs text-gray-500">
+                        {categoryArticles.length} article{categoryArticles.length !== 1 ? "s" : ""}
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {categoryArticles.length}
-                    </Badge>
                   </div>
                 </Button>
 
-                {isExpanded && categoryArticles.length > 0 && (
-                  <div className="ml-6 space-y-1">
+                {isSelected && categoryArticles.length > 0 && (
+                  <div className="ml-6 mt-1 space-y-1">
                     {categoryArticles.map((article) => (
                       <Button
                         key={article.id}
-                        variant={selectedArticleId === article.id ? "secondary" : "ghost"}
-                        className="w-full justify-start text-left h-auto p-2"
+                        variant="ghost"
+                        className={cn(
+                          "w-full justify-start p-2 h-auto text-sm",
+                          selectedArticleId === article.id && "bg-blue-100 text-blue-800",
+                        )}
                         onClick={() => onArticleSelect(article.id)}
                       >
                         <div className="flex items-center space-x-2 w-full">
-                          <FileText className="h-4 w-4 text-green-600" />
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">{article.title}</div>
-                            <div className="text-xs text-gray-500">
-                              {new Date(article.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
+                          <FileText className="h-3 w-3" />
+                          <span className="truncate">{article.title}</span>
                         </div>
                       </Button>
                     ))}
@@ -110,8 +81,8 @@ export function CategoryTree({
               </div>
             )
           })}
-        </CardContent>
-      </Card>
-    </aside>
+        </div>
+      </ScrollArea>
+    </div>
   )
 }

@@ -3,12 +3,12 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import type { Category, User } from "../types/knowledge-base"
@@ -16,7 +16,7 @@ import type { Category, User } from "../types/knowledge-base"
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (article: {
+  onSubmit: (articleData: {
     title: string
     content: string
     categoryId: string
@@ -34,27 +34,29 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("draft")
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim() || !categoryId) return
 
-    setIsLoading(true)
-    try {
-      onSubmit({
-        title: title.trim(),
-        content: content.trim(),
-        categoryId,
-        tags,
-        status,
-      })
-      handleClose()
-    } catch (error) {
-      console.error("Error creating article:", error)
-    } finally {
-      setIsLoading(false)
+    if (!title.trim() || !content.trim() || !categoryId) {
+      return
     }
+
+    onSubmit({
+      title: title.trim(),
+      content: content.trim(),
+      categoryId,
+      tags,
+      status,
+    })
+
+    // Reset form
+    setTitle("")
+    setContent("")
+    setCategoryId("")
+    setTags([])
+    setTagInput("")
+    setStatus("draft")
   }
 
   const handleClose = () => {
@@ -88,17 +90,16 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter article title"
@@ -129,7 +130,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your article content here..."
-              rows={12}
+              className="min-h-[200px]"
               required
             />
           </div>
@@ -139,13 +140,12 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <div className="flex space-x-2">
               <Input
                 id="tags"
-                type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={handleTagInputKeyPress}
                 placeholder="Add tags (press Enter)"
               />
-              <Button type="button" onClick={addTag} disabled={!tagInput.trim()}>
+              <Button type="button" onClick={addTag} variant="outline">
                 Add
               </Button>
             </div>
@@ -154,7 +154,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
-                    <button type="button" onClick={() => removeTag(tag)} className="ml-1">
+                    <button type="button" onClick={() => removeTag(tag)} className="ml-1 hover:text-red-600">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -180,9 +180,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !title.trim() || !content.trim() || !categoryId}>
-              {isLoading ? "Creating..." : "Create Article"}
-            </Button>
+            <Button type="submit">Save Article</Button>
           </div>
         </form>
       </DialogContent>

@@ -4,7 +4,6 @@ export const initialUsers: User[] = [
   {
     id: "1",
     username: "admin",
-    password: "admin123",
     email: "admin@kuhlekt.com",
     role: "admin",
     createdAt: new Date().toISOString(),
@@ -12,7 +11,6 @@ export const initialUsers: User[] = [
   {
     id: "2",
     username: "editor",
-    password: "editor123",
     email: "editor@kuhlekt.com",
     role: "editor",
     createdAt: new Date().toISOString(),
@@ -20,9 +18,15 @@ export const initialUsers: User[] = [
   {
     id: "3",
     username: "viewer",
-    password: "viewer123",
     email: "viewer@kuhlekt.com",
     role: "viewer",
     createdAt: new Date().toISOString(),
   },
 ]
+
+// Simple password storage (in production, use proper hashing)
+export const userPasswords: Record<string, string> = {
+  admin: "admin123",
+  editor: "editor123",
+  viewer: "viewer123",
+}
