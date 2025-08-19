@@ -47,7 +47,7 @@ export default function KnowledgeBase() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize data and auto-login as admin (bypass login)
+  // Initialize data without auto-login
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -124,37 +124,6 @@ export default function KnowledgeBase() {
           storage.saveAuditLog(initialAuditLog)
         } else {
           setAuditLog(storedAuditLog)
-        }
-
-        // Auto-login as admin (bypass login completely)
-        const adminUser = (storedUsers.length > 0 ? storedUsers : initialUsers).find((user) => user.role === "admin")
-        if (adminUser) {
-          console.log("🔓 Auto-logging in as admin:", adminUser.username)
-          const updatedAdminUser = { ...adminUser, lastLogin: new Date() }
-          setCurrentUser(updatedAdminUser)
-
-          // Update the users array with the updated admin user
-          const updatedUsers = (storedUsers.length > 0 ? storedUsers : initialUsers).map((user) =>
-            user.id === adminUser.id ? updatedAdminUser : user,
-          )
-          setUsers(updatedUsers)
-          storage.saveUsers(updatedUsers)
-        } else {
-          // Create default admin if none exists
-          console.log("Creating default admin user...")
-          const defaultAdmin: User = {
-            id: "admin-default",
-            username: "admin",
-            email: "admin@kuhlekt.com",
-            password: "admin123",
-            role: "admin",
-            createdAt: new Date(),
-            lastLogin: new Date(),
-          }
-          const allUsers = storedUsers.length > 0 ? [...storedUsers, defaultAdmin] : [...initialUsers, defaultAdmin]
-          setUsers(allUsers)
-          storage.saveUsers(allUsers)
-          setCurrentUser(defaultAdmin)
         }
 
         // Increment page visits
@@ -557,8 +526,10 @@ export default function KnowledgeBase() {
   }
 
   const handleLogout = () => {
-    // Don't actually log out - just refresh data since we're bypassing login
-    console.log("Logout requested but bypassing - staying logged in as admin")
+    setCurrentUser(null)
+    setCurrentView("browse")
+    setSelectedArticle(null)
+    setEditingArticle(null)
   }
 
   const getTotalArticles = () => {
@@ -707,6 +678,7 @@ export default function KnowledgeBase() {
                   <ArticleViewer
                     article={selectedArticle}
                     categories={categories}
+                    currentUser={currentUser}
                     onBack={handleBackToArticles}
                     backButtonText={getBackButtonText()}
                     onEdit={(article) => {
@@ -738,7 +710,7 @@ export default function KnowledgeBase() {
           </>
         )}
 
-        {currentView === "add" && (
+        {currentView === "add" && currentUser && currentUser.role === "admin" && (
           <AddArticleForm
             categories={categories}
             onSubmit={handleAddArticle}
@@ -746,7 +718,7 @@ export default function KnowledgeBase() {
           />
         )}
 
-        {currentView === "edit" && editingArticle && (
+        {currentView === "edit" && editingArticle && currentUser && currentUser.role === "admin" && (
           <EditArticleForm
             article={editingArticle}
             categories={categories}
@@ -759,7 +731,7 @@ export default function KnowledgeBase() {
           />
         )}
 
-        {currentView === "admin" && (
+        {currentView === "admin" && currentUser && currentUser.role === "admin" && (
           <AdminDashboard
             categories={categories}
             users={users}

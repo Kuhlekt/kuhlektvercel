@@ -13,11 +13,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Edit, Trash2, ArrowLeft, Calendar, User, Tag, Hash, Clock } from "lucide-react"
-import type { Article, Category } from "../types/knowledge-base"
+import type { Article, Category, UserType } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
   article: Article
   categories: Category[]
+  currentUser?: UserType | null
   onEdit?: (article: Article) => void
   onDelete?: (articleId: string) => void
   onBack: () => void
@@ -83,6 +84,7 @@ function processArticleContent(content: string): string {
 export function ArticleViewer({
   article,
   categories,
+  currentUser,
   onEdit,
   onDelete,
   onBack,
@@ -122,7 +124,7 @@ export function ArticleViewer({
           <span>{backButtonText}</span>
         </Button>
 
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete) && currentUser && currentUser.role === "admin" && (
           <div className="flex space-x-2">
             {onEdit && (
               <Button variant="outline" onClick={() => onEdit(currentArticle)}>

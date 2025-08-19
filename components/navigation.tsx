@@ -3,15 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Plus, Settings, LogIn, LogOut, User } from "lucide-react"
-import type { User as UserType } from "../types/knowledge-base"
-
-interface NavigationProps {
-  currentUser: UserType | null
-  onLogin: () => void
-  onLogout: () => void
-  onViewChange: (view: "browse" | "add" | "edit" | "admin") => void
-  currentView: "browse" | "add" | "edit" | "admin"
-}
+import type { NavigationProps } from "./navigation-props" // Declare NavigationProps
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
   return (
@@ -20,7 +12,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-3">
-            <BookOpen className="h-8 w-8 text-blue-600" />
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-auto" />
             <div>
               <h1 className="text-xl font-bold text-gray-900">Kuhlekt KB</h1>
               <p className="text-xs text-gray-500">Knowledge Base</p>
@@ -39,26 +31,30 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
               <span>Browse</span>
             </Button>
 
-            {/* Always show admin features since we're bypassing login */}
-            <Button
-              variant={currentView === "add" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewChange("add")}
-              className="flex items-center space-x-1"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Article</span>
-            </Button>
+            {/* Show admin features only if user is admin */}
+            {currentUser && currentUser.role === "admin" && (
+              <>
+                <Button
+                  variant={currentView === "add" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("add")}
+                  className="flex items-center space-x-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Article</span>
+                </Button>
 
-            <Button
-              variant={currentView === "admin" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewChange("admin")}
-              className="flex items-center space-x-1"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Admin</span>
-            </Button>
+                <Button
+                  variant={currentView === "admin" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("admin")}
+                  className="flex items-center space-x-1"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Admin</span>
+                </Button>
+              </>
+            )}
 
             {/* User Info */}
             {currentUser && (
@@ -71,7 +67,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
               </div>
             )}
 
-            {/* Login/Logout Button - Hidden since we're bypassing login */}
+            {/* Login/Logout Buttons */}
             {!currentUser && (
               <Button
                 variant="outline"
@@ -90,7 +86,6 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                 size="sm"
                 onClick={onLogout}
                 className="flex items-center space-x-1 bg-transparent"
-                style={{ display: "none" }} // Hide logout button since we're bypassing login
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
