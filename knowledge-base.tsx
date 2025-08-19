@@ -38,6 +38,7 @@ export default function KnowledgeBase() {
   const handleLogin = (user: User) => {
     console.log("🔐 User logged in:", user.username)
     setCurrentUser(user)
+    setIsLoginModalOpen(false)
   }
 
   const handleLogout = () => {
@@ -45,6 +46,8 @@ export default function KnowledgeBase() {
     storage.setCurrentUser(null)
     setCurrentUser(null)
     setCurrentView("browse")
+    setSelectedArticle(null)
+    setSelectedCategory(null)
   }
 
   const handleArticleSelect = (article: Article) => {
@@ -53,8 +56,12 @@ export default function KnowledgeBase() {
   }
 
   const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId)
-    setSelectedArticle(null)
+    if (selectedCategory === categoryId) {
+      setSelectedCategory(null)
+    } else {
+      setSelectedCategory(categoryId)
+      setSelectedArticle(null)
+    }
   }
 
   const handleAddArticle = (article: Article) => {
@@ -84,7 +91,7 @@ export default function KnowledgeBase() {
 
     const matchesCategory = selectedCategory === null || article.categoryId === selectedCategory
 
-    return matchesSearch && matchesCategory
+    return matchesSearch && matchesCategory && article.status === "published"
   })
 
   const renderContent = () => {
@@ -110,7 +117,7 @@ export default function KnowledgeBase() {
       default:
         return (
           <div className="flex flex-1 overflow-hidden">
-            <div className="w-80 border-r bg-gray-50 overflow-y-auto">
+            <div className="w-80">
               <CategoryTree
                 categories={categories}
                 articles={filteredArticles}
@@ -120,7 +127,7 @@ export default function KnowledgeBase() {
                 searchQuery={searchQuery}
               />
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1">
               <ArticleViewer article={selectedArticle} articles={filteredArticles} categories={categories} />
             </div>
           </div>

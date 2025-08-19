@@ -3,10 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
@@ -29,35 +29,37 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setIsLoading(true)
 
     try {
-      console.log("🔐 Attempting login with:", { username, password })
-
       const user = storage.authenticateUser(username, password)
 
       if (user) {
-        console.log("✅ Login successful:", user)
-        storage.setCurrentUser(user)
         onLogin(user)
         onClose()
         setUsername("")
         setPassword("")
       } else {
-        console.log("❌ Login failed")
         setError("Invalid username or password")
       }
     } catch (err) {
-      console.error("Login error:", err)
-      setError("An error occurred during login")
+      setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
@@ -66,10 +68,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
               required
               disabled={isLoading}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -77,17 +81,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               required
               disabled={isLoading}
             />
           </div>
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
@@ -95,11 +102,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </Button>
           </div>
         </form>
-        <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
-          <p className="font-medium mb-2">Demo Credentials:</p>
-          <p>Admin: admin / admin123</p>
-          <p>Editor: editor / editor123</p>
-          <p>Viewer: viewer / viewer123</p>
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
+          <div className="text-xs space-y-1">
+            <div>
+              <strong>Admin:</strong> admin / admin123
+            </div>
+            <div>
+              <strong>Editor:</strong> editor / editor123
+            </div>
+            <div>
+              <strong>Viewer:</strong> viewer / viewer123
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
