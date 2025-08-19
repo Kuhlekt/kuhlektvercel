@@ -1,101 +1,103 @@
-import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
+import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
+import { initialUsers } from "../data/initial-users"
+import { initialCategories, initialArticles } from "../data/initial-data"
 
 const STORAGE_KEYS = {
-  CATEGORIES: "kb_categories",
   USERS: "kb_users",
+  CATEGORIES: "kb_categories",
+  ARTICLES: "kb_articles",
   AUDIT_LOG: "kb_audit_log",
-  PAGE_VISITS: "kb_page_visits",
-} as const
+  CURRENT_USER: "kb_current_user",
+}
 
 export const storage = {
-  getCategories: (): Category[] => {
-    try {
-      if (typeof window === "undefined") return []
-      const data = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-      return data ? JSON.parse(data) : []
-    } catch (error) {
-      console.error("Error loading categories:", error)
-      return []
+  // Users
+  getUsers(): User[] {
+    if (typeof window === "undefined") return initialUsers
+    const stored = localStorage.getItem(STORAGE_KEYS.USERS)
+    return stored ? JSON.parse(stored) : initialUsers
+  },
+
+  saveUsers(users: User[]): void {
+    if (typeof window === "undefined") return
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+  },
+
+  // Categories
+  getCategories(): Category[] {
+    if (typeof window === "undefined") return initialCategories
+    const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
+    return stored ? JSON.parse(stored) : initialCategories
+  },
+
+  saveCategories(categories: Category[]): void {
+    if (typeof window === "undefined") return
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
+  },
+
+  // Articles
+  getArticles(): Article[] {
+    if (typeof window === "undefined") return initialArticles
+    const stored = localStorage.getItem(STORAGE_KEYS.ARTICLES)
+    return stored ? JSON.parse(stored) : initialArticles
+  },
+
+  saveArticles(articles: Article[]): void {
+    if (typeof window === "undefined") return
+    localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles))
+  },
+
+  // Audit Log
+  getAuditLog(): AuditLog[] {
+    if (typeof window === "undefined") return []
+    const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
+    return stored ? JSON.parse(stored) : []
+  },
+
+  saveAuditLog(log: AuditLog[]): void {
+    if (typeof window === "undefined") return
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(log))
+  },
+
+  addAuditEntry(entry: Omit<AuditLog, "id" | "timestamp">): void {
+    const log = this.getAuditLog()
+    const newEntry: AuditLog = {
+      ...entry,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    }
+    log.push(newEntry)
+    this.saveAuditLog(log)
+  },
+
+  // Current User
+  getCurrentUser(): User | null {
+    if (typeof window === "undefined") return null
+    const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
+    return stored ? JSON.parse(stored) : null
+  },
+
+  setCurrentUser(user: User | null): void {
+    if (typeof window === "undefined") return
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
     }
   },
 
-  saveCategories: (categories: Category[]): void => {
-    try {
-      if (typeof window === "undefined") return
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
-    } catch (error) {
-      console.error("Error saving categories:", error)
-    }
-  },
+  // Initialize storage with default data
+  initializeStorage(): void {
+    if (typeof window === "undefined") return
 
-  getUsers: (): User[] => {
-    try {
-      if (typeof window === "undefined") return []
-      const data = localStorage.getItem(STORAGE_KEYS.USERS)
-      return data ? JSON.parse(data) : []
-    } catch (error) {
-      console.error("Error loading users:", error)
-      return []
+    if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+      this.saveUsers(initialUsers)
     }
-  },
-
-  saveUsers: (users: User[]): void => {
-    try {
-      if (typeof window === "undefined") return
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
-    } catch (error) {
-      console.error("Error saving users:", error)
+    if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
+      this.saveCategories(initialCategories)
     }
-  },
-
-  getAuditLog: (): AuditLogEntry[] => {
-    try {
-      if (typeof window === "undefined") return []
-      const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
-      return data ? JSON.parse(data) : []
-    } catch (error) {
-      console.error("Error loading audit log:", error)
-      return []
-    }
-  },
-
-  saveAuditLog: (auditLog: AuditLogEntry[]): void => {
-    try {
-      if (typeof window === "undefined") return
-      localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
-    } catch (error) {
-      console.error("Error saving audit log:", error)
-    }
-  },
-
-  getPageVisits: (): number => {
-    try {
-      if (typeof window === "undefined") return 0
-      const data = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
-      return data ? Number.parseInt(data, 10) : 0
-    } catch (error) {
-      console.error("Error loading page visits:", error)
-      return 0
-    }
-  },
-
-  savePageVisits: (visits: number): void => {
-    try {
-      if (typeof window === "undefined") return
-      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, visits.toString())
-    } catch (error) {
-      console.error("Error saving page visits:", error)
-    }
-  },
-
-  clearAll: (): void => {
-    try {
-      if (typeof window === "undefined") return
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        localStorage.removeItem(key)
-      })
-    } catch (error) {
-      console.error("Error clearing storage:", error)
+    if (!localStorage.getItem(STORAGE_KEYS.ARTICLES)) {
+      this.saveArticles(initialArticles)
     }
   },
 }

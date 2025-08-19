@@ -1,96 +1,73 @@
 "use client"
 
+import { Search, Plus, Settings, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { User, LogOut, Plus, Settings, Home } from 'lucide-react'
+import { Input } from "@/components/ui/input"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
   currentUser: UserType | null
+  searchTerm: string
+  onSearchChange: (term: string) => void
+  onAddArticle: () => void
+  onAdminPanel: () => void
   onLogin: () => void
   onLogout: () => void
-  onViewChange: (view: "browse" | "add" | "edit" | "admin") => void
-  currentView: "browse" | "add" | "edit" | "admin"
 }
 
-export function Navigation({ 
-  currentUser, 
-  onLogin, 
-  onLogout, 
-  onViewChange, 
-  currentView 
+export function Navigation({
+  currentUser,
+  searchTerm,
+  onSearchChange,
+  onAddArticle,
+  onAdminPanel,
+  onLogin,
+  onLogout,
 }: NavigationProps) {
   return (
-    <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Left side - Logo and title */}
-          <div className="flex items-center space-x-4">
-            <img
-              src="/images/kuhlekt-logo.jpg"
-              alt="Kuhlekt Logo"
-              className="h-8 w-auto"
+    <nav className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <h1 className="text-xl font-bold text-gray-900">Kuhlekt KB</h1>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search articles..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 w-64"
             />
-            <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
           </div>
+        </div>
 
-          {/* Center - Navigation buttons */}
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={currentView === "browse" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewChange("browse")}
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Browse
-            </Button>
-
-            {currentUser && (
-              <Button
-                variant={currentView === "add" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onViewChange("add")}
-              >
-                <Plus className="h-4 w-4 mr-2" />
+        <div className="flex items-center space-x-2">
+          {currentUser ? (
+            <>
+              <Button onClick={onAddArticle} size="sm">
+                <Plus className="h-4 w-4 mr-1" />
                 Add Article
               </Button>
-            )}
-
-            {currentUser?.role === "admin" && (
-              <Button
-                variant={currentView === "admin" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onViewChange("admin")}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            )}
-          </div>
-
-          {/* Right side - User info */}
-          <div className="flex items-center space-x-4">
-            {currentUser ? (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">{currentUser.username}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {currentUser.role}
-                  </Badge>
-                </div>
-                <Button variant="ghost" size="sm" onClick={onLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
+              {currentUser.role === "admin" && (
+                <Button onClick={onAdminPanel} variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-1" />
+                  Admin
                 </Button>
+              )}
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span>{currentUser.username}</span>
               </div>
-            ) : (
-              <Button variant="outline" size="sm" onClick={onLogin}>
-                <User className="h-4 w-4 mr-2" />
-                Login
+              <Button onClick={onLogout} variant="outline" size="sm">
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
               </Button>
-            )}
-          </div>
+            </>
+          ) : (
+            <Button onClick={onLogin} size="sm">
+              Login
+            </Button>
+          )}
         </div>
       </div>
     </nav>

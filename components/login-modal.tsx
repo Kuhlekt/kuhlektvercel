@@ -1,96 +1,74 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, LogIn, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  users: User[]
   onLogin: (user: User) => void
 }
 
-export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setIsLoading(true)
+    setError("")
 
     try {
-      if (!username.trim() || !password.trim()) {
-        setError("Please enter both username and password")
-        return
-      }
+      console.log("Attempting login with:", { username, password })
 
-      console.log("Login attempt:", { username: username.trim(), password: password.trim() })
-      console.log(
-        "Available users:",
-        users.map((u) => ({ username: u.username, password: u.password })),
-      )
+      const users = storage.getUsers()
+      console.log("Available users:", users)
 
-      const user = users.find((u) => u.username === username.trim() && u.password === password.trim())
+      const user = users.find((u) => u.username === username && u.password === password)
+      console.log("Found user:", user)
 
       if (user) {
-        console.log("Login successful for:", user.username)
+        // Update last login
+        const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date().toISOString() } : u))
+        storage.saveUsers(updatedUsers)
+        storage.setCurrentUser(user)
+        storage.addAuditEntry({
+          userId: user.id,
+          action: "LOGIN",
+          details: `User ${user.username} logged in`,
+        })
+
         onLogin(user)
+        onClose()
         setUsername("")
         setPassword("")
-        setError("")
-        onClose()
       } else {
-        console.log("Login failed - no matching user")
         setError("Invalid username or password")
       }
-    } catch (error) {
-      console.error("Login error:", error)
+    } catch (err) {
+      console.error("Login error:", err)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleClose = () => {
-    setUsername("")
-    setPassword("")
-    setError("")
-    setShowPassword(false)
-    onClose()
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <LogIn className="h-5 w-5" />
-            <span>Login to Knowledge Base</span>
-          </DialogTitle>
-          <DialogDescription id="login-description">
-            Enter your credentials to access admin features. Default: admin/admin123
-          </DialogDescription>
+          <DialogTitle>Login to Knowledge Base</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -98,48 +76,29 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
-              disabled={isLoading}
-              autoComplete="username"
+              placeholder="Enter username"
+              required
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="admin123"
-                disabled={isLoading}
-                autoComplete="current-password"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400" />
-                )}
-              </Button>
-            </div>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              required
+            />
           </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
+          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
+          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">Default login: admin / admin123</div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? "Logging in..." : "Login"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
             </Button>
           </div>
         </form>

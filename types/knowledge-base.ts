@@ -4,10 +4,10 @@ export interface Article {
   content: string
   categoryId: string
   subcategoryId?: string
+  authorId: string
+  createdAt: string
+  updatedAt: string
   tags: string[]
-  createdAt: Date
-  updatedAt: Date
-  author?: string
   status: "draft" | "published" | "archived"
   priority: "low" | "medium" | "high"
   attachments?: string[]
@@ -24,8 +24,10 @@ export interface Category {
   id: string
   name: string
   description?: string
+  parentId?: string
   articles: Article[]
   subcategories: Subcategory[]
+  createdAt: string
 }
 
 export interface User {
@@ -33,9 +35,9 @@ export interface User {
   username: string
   password: string
   email: string
-  role: "admin" | "editor" | "viewer"
-  createdAt: Date
-  lastLogin?: Date
+  role: "admin" | "editor" | "viewer" | "user"
+  createdAt: string
+  lastLogin?: string
 }
 
 export interface AuditLogEntry {
@@ -46,6 +48,14 @@ export interface AuditLogEntry {
   performedBy: string
   timestamp: Date
   details: string
+}
+
+export interface AuditLog {
+  id: string
+  userId: string
+  action: string
+  details: string
+  timestamp: string
 }
 
 export interface UserManagementProps {

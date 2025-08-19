@@ -1,51 +1,49 @@
-import type { Category } from "../types/knowledge-base"
+import type { Category, Article } from "../types/knowledge-base"
 
 export const initialCategories: Category[] = [
   {
     id: "1",
     name: "Getting Started",
-    description: "Basic information to get you started",
-    articles: [
-      {
-        id: "1",
-        title: "Welcome to the Knowledge Base",
-        content:
-          "This is your comprehensive knowledge base system. Here you can browse articles, search for information, and manage content.",
-        categoryId: "1",
-        tags: ["welcome", "introduction"],
-        createdAt: new Date("2024-01-01"),
-        updatedAt: new Date("2024-01-01"),
-        status: "published",
-        priority: "high",
-      },
-    ],
-    subcategories: [],
+    description: "Basic information and setup guides",
+    createdAt: new Date().toISOString(),
   },
   {
     id: "2",
     name: "Technical Documentation",
-    description: "Technical guides and documentation",
-    articles: [],
-    subcategories: [
-      {
-        id: "2-1",
-        name: "API Documentation",
-        description: "API guides and references",
-        articles: [
-          {
-            id: "2",
-            title: "API Getting Started",
-            content: "Learn how to use our API endpoints effectively.",
-            categoryId: "2",
-            subcategoryId: "2-1",
-            tags: ["api", "development"],
-            createdAt: new Date("2024-01-02"),
-            updatedAt: new Date("2024-01-02"),
-            status: "published",
-            priority: "medium",
-          },
-        ],
-      },
-    ],
+    description: "Detailed technical guides and references",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "3",
+    name: "FAQ",
+    description: "Frequently asked questions",
+    createdAt: new Date().toISOString(),
+  },
+]
+
+export const initialArticles: Article[] = [
+  {
+    id: "1",
+    title: "Welcome to Kuhlekt Knowledge Base",
+    content:
+      "This is your comprehensive knowledge base system. You can browse articles by category, search for specific content, and manage your knowledge efficiently.",
+    categoryId: "1",
+    authorId: "1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tags: ["welcome", "introduction"],
+    status: "published",
+  },
+  {
+    id: "2",
+    title: "How to Add New Articles",
+    content:
+      'To add a new article, click the "Add Article" button in the navigation. Fill in the title, select a category, add content, and optionally include tags.',
+    categoryId: "1",
+    authorId: "1",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tags: ["tutorial", "articles"],
+    status: "published",
   },
 ]
