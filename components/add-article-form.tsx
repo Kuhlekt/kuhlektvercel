@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
 import type { Category, User } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
@@ -31,19 +29,26 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState("")
+  const [tags, setTags] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("draft")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim() || !categoryId) return
+
+    if (!title.trim() || !content.trim() || !categoryId) {
+      return
+    }
+
+    const tagArray = tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0)
 
     onSubmit({
       title: title.trim(),
       content: content.trim(),
       categoryId,
-      tags,
+      tags: tagArray,
       status,
     })
 
@@ -51,43 +56,22 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setTitle("")
     setContent("")
     setCategoryId("")
-    setTags([])
-    setTagInput("")
+    setTags("")
     setStatus("draft")
-  }
-
-  const handleAddTag = () => {
-    const tag = tagInput.trim().toLowerCase()
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag])
-      setTagInput("")
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-  }
-
-  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      handleAddTag()
-    }
   }
 
   const handleClose = () => {
     setTitle("")
     setContent("")
     setCategoryId("")
-    setTags([])
-    setTagInput("")
+    setTags("")
     setStatus("draft")
     onClose()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
@@ -126,41 +110,19 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your article content here..."
-              className="min-h-[200px]"
+              placeholder="Enter article content"
+              rows={10}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Tags</Label>
-            <div className="flex space-x-2">
-              <Input
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleTagInputKeyPress}
-                placeholder="Add a tag"
-              />
-              <Button type="button" onClick={handleAddTag} variant="outline">
-                Add
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
-                    <span>{tag}</span>
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2, tag3" />
           </div>
 
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label htmlFor="status">Status</Label>
             <Select value={status} onValueChange={(value: "draft" | "published") => setStatus(value)}>
               <SelectTrigger>
                 <SelectValue />

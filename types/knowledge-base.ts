@@ -25,7 +25,6 @@ export interface Category {
   description: string
   parentId?: string
   createdAt: string
-  createdBy: string
   subcategories: Subcategory[]
   articles: Article[]
 }
