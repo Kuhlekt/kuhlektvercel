@@ -30,8 +30,6 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      console.log("Login attempt:", { username, password, availableUsers: users.length })
-
       if (!username.trim()) {
         setError("Please enter a username")
         return
@@ -42,23 +40,13 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
         return
       }
 
-      // Find user by username (case insensitive)
-      const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
-      console.log("Found user:", user ? { id: user.id, username: user.username, role: user.role } : "none")
+      // Find user by username and password
+      const user = users.find((u) => u.username === username.trim() && u.password === password.trim())
 
       if (!user) {
         setError("Invalid username or password")
         return
       }
-
-      // Check password (exact match)
-      if (user.password !== password) {
-        console.log("Password mismatch:", { expected: user.password, provided: password })
-        setError("Invalid username or password")
-        return
-      }
-
-      console.log("Login successful for:", user.username)
 
       // Successful login
       onLogin(user)
@@ -75,7 +63,6 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   const handleDemoLogin = () => {
     const adminUser = users.find((u) => u.username === "admin")
-    console.log("Demo login - admin user:", adminUser)
     if (adminUser) {
       onLogin(adminUser)
       setUsername("")
@@ -155,18 +142,8 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
             </div>
 
             <Button type="button" variant="outline" onClick={handleDemoLogin} disabled={isLoading}>
-              Login as Admin (admin/admin123)
+              Login as Admin
             </Button>
-          </div>
-
-          {/* Debug info - remove in production */}
-          <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded">
-            <div>Available users: {users.length}</div>
-            {users.map((u) => (
-              <div key={u.id}>
-                {u.username} ({u.role})
-              </div>
-            ))}
           </div>
         </form>
       </DialogContent>

@@ -6,8 +6,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, Upload, AlertCircle, CheckCircle, Database } from "lucide-react"
-import { storage } from "../utils/storage"
+import { Badge } from "@/components/ui/badge"
+import { Download, Upload, AlertCircle, CheckCircle, FileText, Users, Activity } from "lucide-react"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface DataManagementProps {
@@ -20,7 +20,10 @@ interface DataManagementProps {
 export function DataManagement({ categories, users, auditLog, onDataImported }: DataManagementProps) {
   const [importData, setImportData] = useState("")
   const [isImporting, setIsImporting] = useState(false)
-  const [importStatus, setImportStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [importStatus, setImportStatus] = useState<{
+    type: "success" | "error" | null
+    message: string
+  }>({ type: null, message: "" })
 
   const handleExport = () => {
     const exportData = {
@@ -34,7 +37,6 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     const dataStr = JSON.stringify(exportData, null, 2)
     const dataBlob = new Blob([dataStr], { type: "application/json" })
     const url = URL.createObjectURL(dataBlob)
-
     const link = document.createElement("a")
     link.href = url
     link.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
@@ -51,42 +53,36 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     }
 
     setIsImporting(true)
-    setImportStatus(null)
+    setImportStatus({ type: null, message: "" })
 
     try {
-      const data = JSON.parse(importData)
+      const parsedData = JSON.parse(importData)
 
-      // Validate data structure
-      if (!data.categories || !Array.isArray(data.categories)) {
+      // Validate the structure
+      if (!parsedData.categories || !Array.isArray(parsedData.categories)) {
         throw new Error("Invalid data format: categories array is required")
       }
 
-      // Import categories
-      if (data.categories) {
-        storage.saveCategories(data.categories)
+      // Store the data
+      if (parsedData.categories) {
+        localStorage.setItem("kb_categories", JSON.stringify(parsedData.categories))
       }
-
-      // Import users (but keep existing admin if no users in import)
-      if (data.users && Array.isArray(data.users) && data.users.length > 0) {
-        storage.saveUsers(data.users)
+      if (parsedData.users && Array.isArray(parsedData.users)) {
+        localStorage.setItem("kb_users", JSON.stringify(parsedData.users))
       }
-
-      // Import audit log
-      if (data.auditLog && Array.isArray(data.auditLog)) {
-        storage.saveAuditLog(data.auditLog)
+      if (parsedData.auditLog && Array.isArray(parsedData.auditLog)) {
+        localStorage.setItem("kb_auditLog", JSON.stringify(parsedData.auditLog))
       }
 
       setImportStatus({
         type: "success",
-        message: `Successfully imported ${data.categories.length} categories, ${data.users?.length || 0} users, and ${data.auditLog?.length || 0} audit entries`,
+        message: `Successfully imported ${parsedData.categories.length} categories, ${
+          parsedData.users?.length || 0
+        } users, and ${parsedData.auditLog?.length || 0} audit log entries`,
       })
 
       setImportData("")
-
-      // Notify parent to reload data
-      setTimeout(() => {
-        onDataImported()
-      }, 1000)
+      onDataImported()
     } catch (error) {
       console.error("Import error:", error)
       setImportStatus({
@@ -98,10 +94,18 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
     }
   }
 
-  const handleClearData = () => {
-    if (confirm("Are you sure you want to clear all data? This cannot be undone.")) {
-      storage.clearAll()
-      setImportStatus({ type: "success", message: "All data cleared successfully" })
+  const clearAllData = () => {
+    if (confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
+      localStorage.removeItem("kb_categories")
+      localStorage.removeItem("kb_users")
+      localStorage.removeItem("kb_auditLog")
+      localStorage.removeItem("kb_pageVisits")
+
+      setImportStatus({
+        type: "success",
+        message: "All data has been cleared successfully",
+      })
+
       onDataImported()
     }
   }
@@ -121,62 +125,105 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
 
   return (
     <div className="space-y-6">
-      {/* Data Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Categories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{categories.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Articles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getTotalArticles()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Audit Entries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{auditLog.length}</div>
-          </CardContent>
-        </Card>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Data Management</h2>
+        <p className="text-gray-600">Import, export, and manage your knowledge base data</p>
       </div>
 
-      <Tabs defaultValue="import" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="import">Import Data</TabsTrigger>
           <TabsTrigger value="export">Export Data</TabsTrigger>
-          <TabsTrigger value="manage">Manage Data</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Articles</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{getTotalArticles()}</div>
+                <p className="text-xs text-muted-foreground">Across {categories.length} categories</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{users.length}</div>
+                <p className="text-xs text-muted-foreground">System users</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Activity Log</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{auditLog.length}</div>
+                <p className="text-xs text-muted-foreground">Log entries</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-2">Categories</h4>
+                  <div className="space-y-1">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex justify-between items-center text-sm">
+                        <span>{category.name}</span>
+                        <Badge variant="outline">
+                          {(category.articles?.length || 0) +
+                            (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) ||
+                              0)}{" "}
+                          articles
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">Users by Role</h4>
+                  <div className="space-y-1">
+                    {["admin", "editor", "viewer"].map((role) => {
+                      const count = users.filter((user) => user.role === role).length
+                      return (
+                        <div key={role} className="flex justify-between items-center text-sm">
+                          <span className="capitalize">{role}</span>
+                          <Badge variant="outline">{count}</Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="import" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Upload className="h-5 w-5" />
-                <span>Import Knowledge Base Data</span>
+                <span>Import Data</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {importStatus && (
+              {importStatus.type && (
                 <Alert variant={importStatus.type === "error" ? "destructive" : "default"}>
                   {importStatus.type === "error" ? (
                     <AlertCircle className="h-4 w-4" />
@@ -193,17 +240,22 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
                 </label>
                 <Textarea
                   id="import-data"
+                  placeholder="Paste your exported JSON data here..."
                   value={importData}
                   onChange={(e) => setImportData(e.target.value)}
-                  placeholder="Paste your exported JSON data here..."
-                  className="min-h-[200px] font-mono text-sm"
+                  rows={12}
                   disabled={isImporting}
                 />
               </div>
 
-              <Button onClick={handleImport} disabled={isImporting || !importData.trim()}>
-                {isImporting ? "Importing..." : "Import Data"}
-              </Button>
+              <div className="flex justify-between">
+                <Button variant="destructive" onClick={clearAllData} disabled={isImporting}>
+                  Clear All Data
+                </Button>
+                <Button onClick={handleImport} disabled={isImporting || !importData.trim()}>
+                  {isImporting ? "Importing..." : "Import Data"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -213,43 +265,37 @@ export function DataManagement({ categories, users, auditLog, onDataImported }: 
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Download className="h-5 w-5" />
-                <span>Export Knowledge Base Data</span>
+                <span>Export Data</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                Export all your knowledge base data including categories, articles, users, and audit logs as a JSON file
-                that can be imported later.
+                Export all your knowledge base data including articles, categories, users, and audit logs as a JSON
+                file.
               </p>
 
-              <Button onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="manage" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Database className="h-5 w-5" />
-                <span>Data Management</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-red-600 mb-2">Danger Zone</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Clear all data from the knowledge base. This action cannot be undone.
-                  </p>
-                  <Button variant="destructive" onClick={handleClearData}>
-                    Clear All Data
-                  </Button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 border rounded-lg">
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+                  <div className="font-medium">{getTotalArticles()}</div>
+                  <div className="text-sm text-gray-500">Articles</div>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <div className="font-medium">{users.length}</div>
+                  <div className="text-sm text-gray-500">Users</div>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <Activity className="h-8 w-8 mx-auto mb-2 text-purple-500" />
+                  <div className="font-medium">{auditLog.length}</div>
+                  <div className="text-sm text-gray-500">Log Entries</div>
                 </div>
               </div>
+
+              <Button onClick={handleExport} className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Export All Data
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

@@ -28,7 +28,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [newTag, setNewTag] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const selectedCategory = categories.find((c) => c.id === categoryId)
+  const selectedCategory = categories.find((cat) => cat.id === categoryId)
   const subcategories = selectedCategory?.subcategories || []
 
   const handleAddTag = () => {
@@ -44,21 +44,20 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!title.trim() || !content.trim() || !categoryId) {
-      return
-    }
-
     setIsSubmitting(true)
 
     try {
+      if (!title.trim() || !content.trim() || !categoryId) {
+        return
+      }
+
       const articleData: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
         title: title.trim(),
         content: content.trim(),
         categoryId,
         subcategoryId: subcategoryId || undefined,
         tags,
-        author: "Current User", // You might want to use actual user info
+        author: "Current User", // This should come from the logged-in user
         status: "published",
       }
 
@@ -92,7 +91,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Article Title *</Label>
+              <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
                 value={title}
@@ -145,10 +144,11 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter article content..."
-              className="min-h-[300px]"
+              placeholder="Enter article content"
               required
               disabled={isSubmitting}
+              rows={12}
+              className="resize-none"
             />
           </div>
 
@@ -158,7 +158,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               {tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
                   {tag}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveTag(tag)} />
+                  <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveTag(tag)} />
                 </Badge>
               ))}
             </div>
@@ -167,10 +167,15 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 placeholder="Add a tag"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
                 disabled={isSubmitting}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleAddTag()
+                  }
+                }}
               />
-              <Button type="button" onClick={handleAddTag} variant="outline" disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={handleAddTag} disabled={isSubmitting || !newTag.trim()}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
