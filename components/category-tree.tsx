@@ -1,31 +1,21 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChevronDown, ChevronRight, Folder, FileText } from "lucide-react"
+import { useState } from "react"
 import type { Category } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
   categories: Category[]
-  selectedCategories: Set<string>
-  selectedSubcategories: Set<string>
-  onCategoryToggle: (categoryId: string) => void
-  onSubcategoryToggle: (subcategoryId: string) => void
+  onCategorySelect: (categoryId: string) => void
+  selectedCategory: string | null
 }
 
-export function CategoryTree({
-  categories,
-  selectedCategories,
-  selectedSubcategories,
-  onCategoryToggle,
-  onSubcategoryToggle,
-}: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.filter(cat => cat.expanded).map(cat => cat.id))
-  )
+export function CategoryTree({ categories, onCategorySelect, selectedCategory }: CategoryTreeProps) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
-  const toggleExpanded = (categoryId: string) => {
+  const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
     if (newExpanded.has(categoryId)) {
       newExpanded.delete(categoryId)
@@ -36,84 +26,69 @@ export function CategoryTree({
   }
 
   return (
-    <div className="space-y-2">
-      {categories.map((category) => {
-        const isExpanded = expandedCategories.has(category.id)
-        const isSelected = selectedCategories.has(category.id)
-        const hasSubcategories = category.subcategories.length > 0
-        
-        // Only count direct articles in the category, not subcategory articles
-        const directArticleCount = category.articles.length
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Categories</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <Button
+          variant={selectedCategory === null ? "default" : "ghost"}
+          onClick={() => onCategorySelect("")}
+          className="w-full justify-start h-auto p-2"
+        >
+          <Folder className="h-4 w-4 mr-2" />
+          All Articles
+        </Button>
 
-        return (
+        {categories.map((category) => (
           <div key={category.id} className="space-y-1">
-            <div className="flex items-center space-x-2">
-              {hasSubcategories ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => toggleExpanded(category.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : (
-                <div className="w-6" />
-              )}
-              
+            <div className="flex items-center">
               <Button
-                variant={isSelected ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="flex-1 justify-start h-8"
-                onClick={() => onCategoryToggle(category.id)}
+                onClick={() => toggleCategory(category.id)}
+                className="h-6 w-6 p-0 mr-1"
               >
-                {isExpanded ? (
-                  <FolderOpen className="h-4 w-4 mr-2" />
+                {expandedCategories.has(category.id) ? (
+                  <ChevronDown className="h-3 w-3" />
                 ) : (
-                  <Folder className="h-4 w-4 mr-2" />
+                  <ChevronRight className="h-3 w-3" />
                 )}
-                <span className="truncate">{category.name}</span>
-                {directArticleCount > 0 && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {directArticleCount}
-                  </Badge>
-                )}
+              </Button>
+              <Button
+                variant={selectedCategory === category.id ? "default" : "ghost"}
+                onClick={() => onCategorySelect(category.id)}
+                className="flex-1 justify-start h-auto p-2"
+              >
+                <Folder className="h-4 w-4 mr-2" />
+                <span>{category.name}</span>
+                <span className="ml-auto text-xs text-gray-500">
+                  (
+                  {category.articles.length + category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)}
+                  )
+                </span>
               </Button>
             </div>
 
-            {isExpanded && hasSubcategories && (
-              <div className="ml-8 space-y-1">
-                {category.subcategories.map((subcategory) => {
-                  const isSubSelected = selectedSubcategories.has(subcategory.id)
-                  const subcategoryArticleCount = subcategory.articles.length
-
-                  return (
-                    <Button
-                      key={subcategory.id}
-                      variant={isSubSelected ? "default" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start h-8"
-                      onClick={() => onSubcategoryToggle(subcategory.id)}
-                    >
-                      <Folder className="h-4 w-4 mr-2" />
-                      <span className="truncate">{subcategory.name}</span>
-                      {subcategoryArticleCount > 0 && (
-                        <Badge variant="outline" className="ml-auto">
-                          {subcategoryArticleCount}
-                        </Badge>
-                      )}
-                    </Button>
-                  )
-                })}
+            {expandedCategories.has(category.id) && (
+              <div className="ml-6 space-y-1">
+                {category.subcategories.map((subcategory) => (
+                  <Button
+                    key={subcategory.id}
+                    variant={selectedCategory === subcategory.id ? "default" : "ghost"}
+                    onClick={() => onCategorySelect(subcategory.id)}
+                    className="w-full justify-start h-auto p-2"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    <span>{subcategory.name}</span>
+                    <span className="ml-auto text-xs text-gray-500">({subcategory.articles.length})</span>
+                  </Button>
+                ))}
               </div>
             )}
           </div>
-        )
-      })}
-    </div>
+        ))}
+      </CardContent>
+    </Card>
   )
 }

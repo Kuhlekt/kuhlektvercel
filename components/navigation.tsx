@@ -8,8 +8,8 @@ interface NavigationProps {
   currentUser: User | null
   onLogin: () => void
   onLogout: () => void
-  onViewChange: (view: "browse" | "add" | "edit" | "admin") => void
-  currentView: "browse" | "add" | "edit" | "admin"
+  onViewChange: (view: "browse" | "add" | "admin") => void
+  currentView: "browse" | "add" | "admin"
 }
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
@@ -17,7 +17,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
     <nav className="bg-white shadow-sm border-b h-24">
       <div className="container mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* Logo - halved size */}
+          {/* Logo */}
           <div className="flex items-center space-x-3">
             <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-20 w-20 object-contain" />
           </div>
