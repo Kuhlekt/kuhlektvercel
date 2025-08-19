@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Eye, X, Home } from "lucide-react"
+import { Search, Eye, X, Home, LogIn } from "lucide-react"
 
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
@@ -47,7 +47,7 @@ export default function KnowledgeBase() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize data without auto-login
+  // Initialize data and auto-login as admin (bypass login)
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -126,11 +126,8 @@ export default function KnowledgeBase() {
           setAuditLog(storedAuditLog)
         }
 
-        // Increment page visits
-        const newVisitCount = storage.incrementPageVisits()
-        setPageVisits(newVisitCount)
-
-        console.log("Data initialization completed successfully")
+        // Data initialization completed - user must log in
+        console.log("Data initialization completed - user must log in")
       } catch (error) {
         console.error("Error during initialization:", error)
         setError("Failed to load application data. Please refresh the page.")
@@ -529,7 +526,9 @@ export default function KnowledgeBase() {
     setCurrentUser(null)
     setCurrentView("browse")
     setSelectedArticle(null)
-    setEditingArticle(null)
+    setSearchQuery("")
+    setSearchResults([])
+    setNavigationContext({ type: "all" })
   }
 
   const getTotalArticles = () => {
@@ -678,7 +677,6 @@ export default function KnowledgeBase() {
                   <ArticleViewer
                     article={selectedArticle}
                     categories={categories}
-                    currentUser={currentUser}
                     onBack={handleBackToArticles}
                     backButtonText={getBackButtonText()}
                     onEdit={(article) => {
@@ -686,6 +684,7 @@ export default function KnowledgeBase() {
                       setCurrentView("edit")
                     }}
                     onDelete={handleDeleteArticle}
+                    currentUser={currentUser}
                   />
                 ) : searchQuery.trim() ? (
                   // Show search results when there's a search query
@@ -710,42 +709,91 @@ export default function KnowledgeBase() {
           </>
         )}
 
-        {currentView === "add" && currentUser && currentUser.role === "admin" && (
-          <AddArticleForm
-            categories={categories}
-            onSubmit={handleAddArticle}
-            onCancel={() => setCurrentView("browse")}
-          />
+        {currentView === "add" && !currentUser ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">Please log in to add articles.</p>
+            <Button onClick={() => setShowLoginModal(true)}>
+              <LogIn className="h-4 w-4 mr-2" />
+              Log In
+            </Button>
+          </div>
+        ) : currentView === "add" && currentUser?.role !== "admin" ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Admin Access Required</h2>
+            <p className="text-gray-600">You need admin privileges to add articles.</p>
+          </div>
+        ) : (
+          currentView === "add" && (
+            <AddArticleForm
+              categories={categories}
+              onSubmit={handleAddArticle}
+              onCancel={() => setCurrentView("browse")}
+            />
+          )
         )}
 
-        {currentView === "edit" && editingArticle && currentUser && currentUser.role === "admin" && (
-          <EditArticleForm
-            article={editingArticle}
-            categories={categories}
-            currentUser={currentUser}
-            onSubmit={handleEditArticle}
-            onCancel={() => {
-              setCurrentView("browse")
-              setEditingArticle(null)
-            }}
-          />
+        {currentView === "edit" && !currentUser ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">Please log in to edit articles.</p>
+            <Button onClick={() => setShowLoginModal(true)}>
+              <LogIn className="h-4 w-4 mr-2" />
+              Log In
+            </Button>
+          </div>
+        ) : currentView === "edit" && currentUser?.role !== "admin" ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Admin Access Required</h2>
+            <p className="text-gray-600">You need admin privileges to edit articles.</p>
+          </div>
+        ) : (
+          currentView === "edit" &&
+          editingArticle && (
+            <EditArticleForm
+              article={editingArticle}
+              categories={categories}
+              currentUser={currentUser}
+              onSubmit={handleEditArticle}
+              onCancel={() => {
+                setCurrentView("browse")
+                setEditingArticle(null)
+              }}
+            />
+          )
         )}
 
-        {currentView === "admin" && currentUser && currentUser.role === "admin" && (
-          <AdminDashboard
-            categories={categories}
-            users={users}
-            auditLog={auditLog}
-            onCategoriesUpdate={(newCategories) => {
-              setCategories(newCategories)
-              setAuditLog(storage.getAuditLog())
-            }}
-            onUsersUpdate={(newUsers) => {
-              setUsers(newUsers)
-              setAuditLog(storage.getAuditLog())
-            }}
-            onAuditLogUpdate={setAuditLog}
-          />
+        {currentView === "admin" && !currentUser ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">Please log in to access admin features.</p>
+            <Button onClick={() => setShowLoginModal(true)}>
+              <LogIn className="h-4 w-4 mr-2" />
+              Log In
+            </Button>
+          </div>
+        ) : currentView === "admin" && currentUser?.role !== "admin" ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold mb-4">Admin Access Required</h2>
+            <p className="text-gray-600">You need admin privileges to access this section.</p>
+          </div>
+        ) : (
+          currentView === "admin" && (
+            <AdminDashboard
+              categories={categories}
+              users={users}
+              auditLog={auditLog}
+              onCategoriesUpdate={(newCategories) => {
+                setCategories(newCategories)
+                setAuditLog(storage.getAuditLog())
+              }}
+              onUsersUpdate={(newUsers) => {
+                setUsers(newUsers)
+                setAuditLog(storage.getAuditLog())
+              }}
+              onAuditLogUpdate={setAuditLog}
+            />
+          )
         )}
       </div>
 
