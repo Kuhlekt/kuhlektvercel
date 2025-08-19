@@ -2,8 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { FileText, Calendar, User, Tag, AlertCircle } from "lucide-react"
+import { FileText, Calendar, Tag, User } from "lucide-react"
 import type { Article, Category } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
@@ -14,67 +13,81 @@ interface ArticleViewerProps {
 export function ArticleViewer({ article, categories }: ArticleViewerProps) {
   if (!article) {
     return (
-      <Card className="h-full">
+      <Card>
         <CardContent className="flex items-center justify-center h-96">
           <div className="text-center text-gray-500">
             <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-medium mb-2">No Article Selected</h3>
-            <p>Select an article from the categories on the left to view its content.</p>
+            <p>Select an article from the categories to view its content.</p>
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  const getCategoryPath = () => {
-    const category = categories.find((c) => c.id === article.categoryId)
-    if (!category) return "Unknown Category"
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find((c) => c.id === categoryId)
+    return category?.name || "Unknown Category"
+  }
 
-    if (article.subcategoryId) {
-      const subcategory = category.subcategories?.find((s) => s.id === article.subcategoryId)
-      return subcategory ? `${category.name} > ${subcategory.name}` : category.name
-    }
+  const getSubcategoryName = (categoryId: string, subcategoryId?: string) => {
+    if (!subcategoryId) return null
+    const category = categories.find((c) => c.id === categoryId)
+    const subcategory = category?.subcategories?.find((s) => s.id === subcategoryId)
+    return subcategory?.name || "Unknown Subcategory"
+  }
 
-    return category.name
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "destructive"
+        return "bg-red-100 text-red-800"
       case "medium":
-        return "default"
+        return "bg-yellow-100 text-yellow-800"
       case "low":
-        return "secondary"
+        return "bg-green-100 text-green-800"
       default:
-        return "outline"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "published":
-        return "default"
+        return "bg-green-100 text-green-800"
       case "draft":
-        return "secondary"
+        return "bg-yellow-100 text-yellow-800"
       case "archived":
-        return "outline"
+        return "bg-gray-100 text-gray-800"
       default:
-        return "outline"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
   return (
-    <Card className="h-full">
+    <Card>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-xl mb-2">{article.title}</CardTitle>
-            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+            <CardTitle className="text-2xl mb-2">{article.title}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
               <div className="flex items-center space-x-1">
                 <Calendar className="h-4 w-4" />
-                <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                <span>Created: {formatDate(article.createdAt)}</span>
               </div>
+              {article.updatedAt && article.updatedAt !== article.createdAt && (
+                <div className="flex items-center space-x-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Updated: {formatDate(article.updatedAt)}</span>
+                </div>
+              )}
               {article.author && (
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
@@ -82,58 +95,61 @@ export function ArticleViewer({ article, categories }: ArticleViewerProps) {
                 </div>
               )}
             </div>
-            <div className="text-sm text-gray-500 mb-3">{getCategoryPath()}</div>
           </div>
           <div className="flex flex-col space-y-2">
-            <Badge variant={getPriorityColor(article.priority)} className="text-xs">
-              {article.priority.charAt(0).toUpperCase() + article.priority.slice(1)} Priority
-            </Badge>
-            <Badge variant={getStatusColor(article.status)} className="text-xs">
-              {article.status.charAt(0).toUpperCase() + article.status.slice(1)}
-            </Badge>
+            <Badge className={getStatusColor(article.status)}>{article.status}</Badge>
+            <Badge className={getPriorityColor(article.priority)}>{article.priority} priority</Badge>
           </div>
         </div>
-
-        {article.tags && article.tags.length > 0 && (
-          <div className="flex items-center space-x-2 flex-wrap">
-            <Tag className="h-4 w-4 text-gray-500" />
-            {article.tags.map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
       </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* Category and Subcategory */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">{getCategoryName(article.categoryId)}</Badge>
+            {article.subcategoryId && (
+              <Badge variant="outline">{getSubcategoryName(article.categoryId, article.subcategoryId)}</Badge>
+            )}
+          </div>
 
-      <Separator />
+          {/* Content */}
+          <div className="prose max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{article.content}</div>
+          </div>
 
-      <CardContent className="pt-6">
-        <div className="prose max-w-none">
-          <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{article.content}</div>
-        </div>
-
-        {article.attachments && article.attachments.length > 0 && (
-          <div className="mt-6 pt-6 border-t">
-            <h4 className="font-medium mb-3 flex items-center">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              Attachments
-            </h4>
-            <div className="space-y-2">
-              {article.attachments.map((attachment, index) => (
-                <div key={index} className="text-sm text-blue-600 hover:underline cursor-pointer">
-                  {attachment}
-                </div>
-              ))}
+          {/* Tags */}
+          {article.tags && article.tags.length > 0 && (
+            <div className="border-t pt-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Tag className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Tags:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {article.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="mt-6 pt-6 border-t text-xs text-gray-500">
-          <div className="flex justify-between">
-            <span>Created: {new Date(article.createdAt).toLocaleString()}</span>
-            <span>Updated: {new Date(article.updatedAt).toLocaleString()}</span>
-          </div>
+          {/* Attachments */}
+          {article.attachments && article.attachments.length > 0 && (
+            <div className="border-t pt-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Attachments:</span>
+              </div>
+              <div className="space-y-1">
+                {article.attachments.map((attachment, index) => (
+                  <div key={index} className="text-sm text-blue-600 hover:text-blue-800">
+                    {attachment}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

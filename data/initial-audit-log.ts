@@ -8,6 +8,6 @@ export const initialAuditLog: AuditLogEntry[] = [
     entityId: "system",
     performedBy: "system",
     timestamp: new Date("2024-01-01T00:00:00.000Z"),
-    details: "Knowledge base system initialized with default data",
+    details: "Knowledge base system initialized",
   },
 ]
