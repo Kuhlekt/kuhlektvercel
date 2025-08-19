@@ -42,17 +42,8 @@ export default function KnowledgeBase() {
     setAuditLog(loadedAuditLog)
 
     // Check for existing user session
-    let existingUser = storage.getCurrentUser()
-
-    // If no existing user, automatically log in as admin
-    if (!existingUser) {
-      console.log("🔐 No existing session, logging in as admin...")
-      existingUser = storage.authenticateUser("admin", "admin123")
-      if (existingUser) {
-        console.log("✅ Auto-login successful for admin")
-        setCurrentUser(existingUser)
-      }
-    } else {
+    const existingUser = storage.getCurrentUser()
+    if (existingUser) {
       console.log("👤 Found existing user session:", existingUser.username)
       setCurrentUser(existingUser)
     }
