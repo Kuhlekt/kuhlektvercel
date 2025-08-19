@@ -34,7 +34,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
 
     try {
-      console.log("🔐 Attempting login with:", username)
+      console.log("🔐 Attempting login with:", username, password)
       const user = storage.authenticateUser(username.trim(), password)
 
       if (user) {
@@ -61,6 +61,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setPassword("")
     setError("")
     onClose()
+  }
+
+  const handleTestLogin = () => {
+    setUsername("admin")
+    setPassword("admin123")
   }
 
   return (
@@ -130,6 +135,15 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border">
           <p className="text-sm text-blue-800 font-medium">Default Admin Account:</p>
           <p className="text-xs text-blue-700 mt-1">Username: admin | Password: admin123</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleTestLogin}
+            className="mt-2 text-xs bg-transparent"
+          >
+            Fill Test Credentials
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
