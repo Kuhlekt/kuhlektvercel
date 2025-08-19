@@ -9,22 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import {
-  Download,
-  Upload,
-  Trash2,
-  RefreshCw,
-  Database,
-  FileText,
-  Users,
-  FolderOpen,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-} from "lucide-react"
-
+import { Download, Trash2, RefreshCw, Database, FileText, Users, Activity } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
@@ -43,163 +28,175 @@ export function DataManagement({
   auditLog = [],
   onDataChange,
 }: DataManagementProps) {
-  const [isExporting, setIsExporting] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [importStatus, setImportStatus] = useState<{
-    type: "success" | "error" | "info" | null
-    message: string
-  }>({ type: null, message: "" })
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleExport = async () => {
-    setIsExporting(true)
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 5000)
+  }
+
+  const handleExport = () => {
     try {
-      const data = storage.exportData()
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      setIsLoading(true)
+
+      // Get fresh data from storage
+      const exportData = {
+        users: storage.getUsers(),
+        categories: storage.getCategories(),
+        articles: storage.getArticles(),
+        auditLog: storage.getAuditLog(),
+        exportDate: new Date().toISOString(),
+        version: "1.0",
+      }
+
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: "application/json" })
+      const url = URL.createObjectURL(dataBlob)
+
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      setImportStatus({
-        type: "success",
-        message: "Backup exported successfully!",
-      })
+      showMessage("success", "Data exported successfully!")
+      console.log("✅ Export completed:", exportData)
     } catch (error) {
-      console.error("Export error:", error)
-      setImportStatus({
-        type: "error",
-        message: "Failed to export backup. Please try again.",
-      })
+      console.error("❌ Export error:", error)
+      showMessage("error", "Failed to export data")
     } finally {
-      setIsExporting(false)
+      setIsLoading(false)
     }
   }
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setIsImporting(true)
-    setImportStatus({ type: null, message: "" })
+    setIsLoading(true)
+    const reader = new FileReader()
 
-    try {
-      const text = await file.text()
-      let data: any
-
+    reader.onload = (e) => {
       try {
-        data = JSON.parse(text)
-      } catch (parseError) {
-        throw new Error("Invalid JSON format")
-      }
+        const content = e.target?.result as string
+        console.log("📁 Import file content:", content.substring(0, 200) + "...")
 
-      // Flexible validation - check if it's an object and has at least one expected property
-      if (!data || typeof data !== "object") {
-        throw new Error("Invalid backup file format - not a valid object")
-      }
+        const importedData = JSON.parse(content)
+        console.log("📊 Parsed import data:", importedData)
 
-      const hasValidData =
-        data.users ||
-        data.categories ||
-        data.articles ||
-        data.auditLog ||
-        data.exportDate ||
-        Array.isArray(data.users) ||
-        Array.isArray(data.categories) ||
-        Array.isArray(data.articles) ||
-        Array.isArray(data.auditLog)
-
-      if (!hasValidData) {
-        throw new Error("Invalid backup file format - no recognizable data found")
-      }
-
-      console.log("📥 Importing data:", {
-        users: data.users?.length || 0,
-        categories: data.categories?.length || 0,
-        articles: data.articles?.length || 0,
-        auditLog: data.auditLog?.length || 0,
-      })
-
-      // Import the data with fallbacks for missing properties
-      const importData = {
-        users: Array.isArray(data.users) ? data.users : [],
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        articles: Array.isArray(data.articles) ? data.articles : [],
-        auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
-        exportDate: data.exportDate || new Date().toISOString(),
-      }
-
-      storage.importData(importData)
-
-      const importedCounts = {
-        users: importData.users.length,
-        categories: importData.categories.length,
-        articles: importData.articles.length,
-        auditLog: importData.auditLog.length,
-      }
-
-      setImportStatus({
-        type: "success",
-        message: `Backup imported successfully! Users: ${importedCounts.users}, Categories: ${importedCounts.categories}, Articles: ${importedCounts.articles}, Audit entries: ${importedCounts.auditLog}`,
-      })
-
-      // Refresh the data
-      if (onDataChange) {
-        onDataChange()
-      }
-    } catch (error) {
-      console.error("Import error:", error)
-      setImportStatus({
-        type: "error",
-        message: error instanceof Error ? error.message : "Failed to import backup file",
-      })
-    } finally {
-      setIsImporting(false)
-      // Reset the input
-      event.target.value = ""
-    }
-  }
-
-  const handleClearData = () => {
-    if (confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
-      storage.clearAll()
-      setImportStatus({
-        type: "info",
-        message: "All data has been cleared.",
-      })
-      if (onDataChange) {
-        onDataChange()
-      }
-    }
-  }
-
-  const handleResetToDefaults = () => {
-    if (confirm("Are you sure you want to reset to default settings? This will clear all data.")) {
-      storage.resetToDefaults()
-      setImportStatus({
-        type: "info",
-        message: "System has been reset to defaults.",
-      })
-      if (onDataChange) {
-        onDataChange()
-      }
-    }
-  }
-
-  const getStorageSize = () => {
-    try {
-      let total = 0
-      for (const key in localStorage) {
-        if (localStorage.hasOwnProperty(key) && key.startsWith("kb_")) {
-          total += localStorage[key].length
+        // Flexible validation - check if it's an object and has at least one expected property
+        if (!importedData || typeof importedData !== "object") {
+          throw new Error("Invalid file format - not a valid JSON object")
         }
+
+        // Check if it has at least one of the expected properties
+        const hasValidData =
+          importedData.users || importedData.categories || importedData.articles || importedData.auditLog
+        if (!hasValidData) {
+          throw new Error("Invalid backup file - no recognizable data found")
+        }
+
+        // Import data with defaults for missing properties
+        const usersToImport = Array.isArray(importedData.users) ? importedData.users : []
+        const categoriesToImport = Array.isArray(importedData.categories) ? importedData.categories : []
+        const articlesToImport = Array.isArray(importedData.articles) ? importedData.articles : []
+        const auditLogToImport = Array.isArray(importedData.auditLog) ? importedData.auditLog : []
+
+        console.log("📥 Importing:", {
+          users: usersToImport.length,
+          categories: categoriesToImport.length,
+          articles: articlesToImport.length,
+          auditLog: auditLogToImport.length,
+        })
+
+        // Save imported data
+        if (usersToImport.length > 0) {
+          storage.saveUsers(usersToImport)
+        }
+        if (categoriesToImport.length > 0) {
+          storage.saveCategories(categoriesToImport)
+        }
+        if (articlesToImport.length > 0) {
+          storage.saveArticles(articlesToImport)
+        }
+        if (auditLogToImport.length > 0) {
+          storage.saveAuditLog(auditLogToImport)
+        }
+
+        // Refresh the UI
+        if (onDataChange) {
+          onDataChange()
+        }
+
+        const importSummary = [
+          usersToImport.length > 0 ? `${usersToImport.length} users` : null,
+          categoriesToImport.length > 0 ? `${categoriesToImport.length} categories` : null,
+          articlesToImport.length > 0 ? `${articlesToImport.length} articles` : null,
+          auditLogToImport.length > 0 ? `${auditLogToImport.length} audit entries` : null,
+        ]
+          .filter(Boolean)
+          .join(", ")
+
+        showMessage("success", `Data imported successfully! Imported: ${importSummary}`)
+        console.log("✅ Import completed successfully")
+      } catch (error) {
+        console.error("❌ Import error:", error)
+        showMessage("error", `Import failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      } finally {
+        setIsLoading(false)
+        // Reset the file input
+        event.target.value = ""
       }
-      return (total / 1024).toFixed(2) + " KB"
+    }
+
+    reader.onerror = () => {
+      console.error("❌ File read error")
+      showMessage("error", "Failed to read file")
+      setIsLoading(false)
+    }
+
+    reader.readAsText(file)
+  }
+
+  const handleClearAll = () => {
+    if (!confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      storage.clearAll()
+
+      if (onDataChange) {
+        onDataChange()
+      }
+
+      showMessage("success", "All data cleared successfully!")
+      console.log("🗑️ All data cleared")
     } catch (error) {
-      return "Unknown"
+      console.error("❌ Clear error:", error)
+      showMessage("error", "Failed to clear data")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    try {
+      setIsLoading(true)
+      if (onDataChange) {
+        onDataChange()
+      }
+      showMessage("success", "Data refreshed successfully!")
+      console.log("🔄 Data refreshed")
+    } catch (error) {
+      console.error("❌ Refresh error:", error)
+      showMessage("error", "Failed to refresh data")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -232,7 +229,7 @@ export function DataManagement({
 
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <FolderOpen className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <Database className="h-8 w-8 mx-auto mb-2 text-green-600" />
                     <div className="text-2xl font-bold">{categories?.length || 0}</div>
                     <div className="text-sm text-gray-600">Categories</div>
                   </CardContent>
@@ -254,148 +251,92 @@ export function DataManagement({
                   </CardContent>
                 </Card>
               </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Storage Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Storage Used:</span>
-                      <Badge variant="outline">{getStorageSize()}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Last Export:</span>
-                      <Badge variant="outline">Never</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="backup" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Download className="h-4 w-4" />
-                      <span>Export Backup</span>
-                    </CardTitle>
+                    <CardTitle className="text-lg">Export Data</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Download a complete backup of all your knowledge base data including users, categories, articles,
-                      and audit logs.
-                    </p>
-                    <Button onClick={handleExport} disabled={isExporting} className="w-full">
-                      {isExporting ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Exporting...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Export Backup
-                        </>
-                      )}
+                    <p className="text-sm text-gray-600">Download a complete backup of all your knowledge base data.</p>
+                    <Button onClick={handleExport} disabled={isLoading} className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      {isLoading ? "Exporting..." : "Export Data"}
                     </Button>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Upload className="h-4 w-4" />
-                      <span>Import Backup</span>
-                    </CardTitle>
+                    <CardTitle className="text-lg">Import Data</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Restore your knowledge base from a previously exported backup file. This will replace all current
-                      data.
-                    </p>
-                    <div className="space-y-2">
-                      <Label htmlFor="backup-file">Select Backup File</Label>
+                    <p className="text-sm text-gray-600">Restore data from a previously exported backup file.</p>
+                    <div>
+                      <Label htmlFor="import-file">Select Backup File</Label>
                       <Input
-                        id="backup-file"
+                        id="import-file"
                         type="file"
                         accept=".json"
                         onChange={handleImport}
-                        disabled={isImporting}
+                        disabled={isLoading}
+                        className="mt-1"
                       />
                     </div>
-                    {isImporting && (
-                      <div className="flex items-center space-x-2 text-sm text-blue-600">
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span>Importing backup...</span>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>
-
-              {importStatus.type && (
-                <Alert
-                  variant={importStatus.type === "error" ? "destructive" : "default"}
-                  className={
-                    importStatus.type === "success"
-                      ? "border-green-200 bg-green-50"
-                      : importStatus.type === "info"
-                        ? "border-blue-200 bg-blue-50"
-                        : ""
-                  }
-                >
-                  {importStatus.type === "success" && <CheckCircle className="h-4 w-4" />}
-                  {importStatus.type === "error" && <AlertTriangle className="h-4 w-4" />}
-                  {importStatus.type === "info" && <Info className="h-4 w-4" />}
-                  <AlertDescription>{importStatus.message}</AlertDescription>
-                </Alert>
-              )}
             </TabsContent>
 
             <TabsContent value="maintenance" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>Danger Zone</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                      <h4 className="font-medium text-red-800 mb-2">Clear All Data</h4>
-                      <p className="text-sm text-red-600 mb-3">
-                        This will permanently delete all users, categories, articles, and audit logs. This action cannot
-                        be undone.
-                      </p>
-                      <Button variant="destructive" onClick={handleClearData} className="w-full">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear All Data
-                      </Button>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Refresh Data</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Reload all data from storage to ensure everything is up to date.
+                    </p>
+                    <Button
+                      onClick={handleRefresh}
+                      disabled={isLoading}
+                      variant="outline"
+                      className="w-full bg-transparent"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {isLoading ? "Refreshing..." : "Refresh Data"}
+                    </Button>
+                  </CardContent>
+                </Card>
 
-                    <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
-                      <h4 className="font-medium text-orange-800 mb-2">Reset to Defaults</h4>
-                      <p className="text-sm text-orange-600 mb-3">
-                        This will clear all data and restore the system to its initial state with default admin user.
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={handleResetToDefaults}
-                        className="w-full border-orange-300 bg-transparent"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Reset to Defaults
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg text-red-600">Clear All Data</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">Permanently delete all data. This action cannot be undone.</p>
+                    <Button onClick={handleClearAll} disabled={isLoading} variant="destructive" className="w-full">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isLoading ? "Clearing..." : "Clear All Data"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
+
+          {message && (
+            <Alert
+              className={`mt-4 ${message.type === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}
+            >
+              <AlertDescription className={message.type === "error" ? "text-red-800" : "text-green-800"}>
+                {message.text}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>

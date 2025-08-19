@@ -7,22 +7,26 @@ import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
   categories: Category[]
-  articles: Article[]
-  selectedCategoryId: string | null
-  selectedArticleId: string | null
-  onCategorySelect: (categoryId: string) => void
+  articles?: Article[]
+  selectedCategoryId?: string | null
+  selectedArticleId?: string | null
+  onCategorySelect?: (categoryId: string) => void
   onArticleSelect: (articleId: string) => void
 }
 
 export function CategoryTree({
-  categories,
-  articles,
+  categories = [],
+  articles = [],
   selectedCategoryId,
   selectedArticleId,
   onCategorySelect,
   onArticleSelect,
 }: CategoryTreeProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+
+  // Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : []
+  const safeArticles = Array.isArray(articles) ? articles : []
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -35,11 +39,11 @@ export function CategoryTree({
   }
 
   const getCategoryArticles = (categoryId: string) => {
-    return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
+    return safeArticles.filter((article) => article.categoryId === categoryId && article.status === "published")
   }
 
   const getSubcategories = (parentId: string | null) => {
-    return categories.filter((cat) => cat.parentId === parentId)
+    return safeCategories.filter((cat) => cat.parentId === parentId)
   }
 
   const renderCategory = (category: Category, level = 0) => {
@@ -57,7 +61,9 @@ export function CategoryTree({
           }`}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
-            onCategorySelect(category.id)
+            if (onCategorySelect) {
+              onCategorySelect(category.id)
+            }
             if (hasChildren) {
               toggleCategory(category.id)
             }
@@ -103,10 +109,10 @@ export function CategoryTree({
   }
 
   const rootCategories = getSubcategories(null)
-  const uncategorizedArticles = articles.filter((article) => !article.categoryId && article.status === "published")
+  const uncategorizedArticles = safeArticles.filter((article) => !article.categoryId && article.status === "published")
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-full bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
       </div>
