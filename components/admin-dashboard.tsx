@@ -46,80 +46,61 @@ export function AdminDashboard({
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-semibold text-blue-900">Total Users</h3>
-                <p className="text-2xl font-bold text-blue-700">{users.length}</p>
+              <div className="p-4 border rounded-lg">
+                <h3 className="font-semibold">Total Users</h3>
+                <p className="text-2xl font-bold">{users.length}</p>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h3 className="font-semibold text-green-900">Total Articles</h3>
-                <p className="text-2xl font-bold text-green-700">{articles.length}</p>
+              <div className="p-4 border rounded-lg">
+                <h3 className="font-semibold">Total Categories</h3>
+                <p className="text-2xl font-bold">{categories.length}</p>
               </div>
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <h3 className="font-semibold text-purple-900">Categories</h3>
-                <p className="text-2xl font-bold text-purple-700">{categories.length}</p>
+              <div className="p-4 border rounded-lg">
+                <h3 className="font-semibold">Total Articles</h3>
+                <p className="text-2xl font-bold">{articles.length}</p>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
             <div className="space-y-2">
-              <h3 className="font-semibold">User Management</h3>
-              <div className="border rounded-lg">
-                <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 font-medium">
-                  <div>Username</div>
-                  <div>Email</div>
-                  <div>Role</div>
-                  <div>Last Login</div>
-                </div>
-                {users.map((user) => (
-                  <div key={user.id} className="grid grid-cols-4 gap-4 p-3 border-t">
-                    <div>{user.username}</div>
-                    <div>{user.email}</div>
-                    <div className="capitalize">{user.role}</div>
-                    <div>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}</div>
+              {users.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{user.username}</p>
+                    <p className="text-sm text-gray-600">{user.email}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-sm">
+                    <span className="px-2 py-1 bg-gray-100 rounded">{user.role}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-4">
             <div className="space-y-2">
-              <h3 className="font-semibold">Category Management</h3>
-              <div className="border rounded-lg">
-                <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 font-medium">
-                  <div>Name</div>
-                  <div>Description</div>
-                  <div>Articles</div>
+              {categories.map((category) => (
+                <div key={category.id} className="p-3 border rounded-lg">
+                  <h3 className="font-medium">{category.name}</h3>
+                  <p className="text-sm text-gray-600">{category.description}</p>
                 </div>
-                {categories.map((category) => (
-                  <div key={category.id} className="grid grid-cols-3 gap-4 p-3 border-t">
-                    <div>{category.name}</div>
-                    <div>{category.description}</div>
-                    <div>{articles.filter((a) => a.categoryId === category.id).length}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </TabsContent>
 
           <TabsContent value="audit" className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Audit Log</h3>
-              <div className="border rounded-lg max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 font-medium sticky top-0">
-                  <div>Action</div>
-                  <div>Details</div>
-                  <div>Timestamp</div>
-                </div>
-                {auditLog.map((entry) => (
-                  <div key={entry.id} className="grid grid-cols-3 gap-4 p-3 border-t">
-                    <div className="font-medium">{entry.action}</div>
-                    <div>{entry.details}</div>
-                    <div>{new Date(entry.timestamp).toLocaleString()}</div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {auditLog.map((entry) => (
+                <div key={entry.id} className="p-3 border rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{entry.action}</p>
+                      <p className="text-sm text-gray-600">{entry.details}</p>
+                    </div>
+                    <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
