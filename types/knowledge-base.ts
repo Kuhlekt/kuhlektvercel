@@ -1,7 +1,7 @@
 export interface User {
   id: string
   username: string
-  email: string
+  password: string
   role: "admin" | "editor" | "viewer"
   createdAt: Date
   lastLogin?: Date
@@ -20,6 +20,7 @@ export interface Category {
   description?: string
   articles: Article[]
   subcategories: Subcategory[]
+  expanded?: boolean
 }
 
 export interface Article {
@@ -31,26 +32,16 @@ export interface Article {
   tags: string[]
   createdAt: Date
   updatedAt: Date
-  createdBy: string
-  editCount?: number
+  createdBy?: string
   lastEditedBy?: string
+  editCount?: number
 }
 
 export interface AuditLogEntry {
   id: string
-  action:
-    | "article_created"
-    | "article_updated"
-    | "article_deleted"
-    | "category_created"
-    | "category_updated"
-    | "category_deleted"
-    | "user_created"
-    | "user_updated"
-    | "user_deleted"
+  action: string
   articleId?: string
   articleTitle?: string
-  categoryId?: string
   categoryName?: string
   subcategoryName?: string
   userId?: string
