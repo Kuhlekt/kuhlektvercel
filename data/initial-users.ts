@@ -4,7 +4,7 @@ export const initialUsers: User[] = [
   {
     id: "1",
     username: "admin",
-    password: "admin123", // Updated password to ensure it matches exactly
+    password: "admin123",
     email: "admin@kuhlekt.com",
     role: "admin",
     createdAt: new Date("2024-01-01T00:00:00.000Z"),

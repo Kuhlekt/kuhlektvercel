@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,26 +30,24 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      // Simulate a small delay for better UX
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
       const trimmedUsername = username.trim()
       const trimmedPassword = password.trim()
 
       if (!trimmedUsername || !trimmedPassword) {
         setError("Please enter both username and password")
+        setIsLoading(false)
         return
       }
 
-      const user = users.find(
-        (u) => u.username.toLowerCase() === trimmedUsername.toLowerCase() && u.password === trimmedPassword,
-      )
+      // Find user with exact match
+      const user = users.find((u) => u.username === trimmedUsername && u.password === trimmedPassword)
 
       if (user) {
         onLogin(user)
         setUsername("")
         setPassword("")
         setError("")
+        onClose()
       } else {
         setError("Invalid username or password")
       }
@@ -71,20 +68,22 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <LogIn className="h-5 w-5" />
             <span>Login to Knowledge Base</span>
           </DialogTitle>
-          <DialogDescription id="login-description">Enter your credentials to access admin features</DialogDescription>
+          <DialogDescription>
+            Enter your credentials to access admin features. Default: admin/admin123
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">{error}</AlertDescription>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
@@ -95,7 +94,7 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="admin"
               disabled={isLoading}
               autoComplete="username"
             />
@@ -109,7 +108,7 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="admin123"
                 disabled={isLoading}
                 autoComplete="current-password"
                 className="pr-10"
