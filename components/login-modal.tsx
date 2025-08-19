@@ -30,25 +30,43 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      // Find user by username
-      const user = users.find((u) => u.username === username)
+      console.log("Login attempt:", { username, password, availableUsers: users.length })
+
+      if (!username.trim()) {
+        setError("Please enter a username")
+        return
+      }
+
+      if (!password.trim()) {
+        setError("Please enter a password")
+        return
+      }
+
+      // Find user by username (case insensitive)
+      const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
+      console.log("Found user:", user ? { id: user.id, username: user.username, role: user.role } : "none")
 
       if (!user) {
         setError("Invalid username or password")
         return
       }
 
-      // Check password
+      // Check password (exact match)
       if (user.password !== password) {
+        console.log("Password mismatch:", { expected: user.password, provided: password })
         setError("Invalid username or password")
         return
       }
+
+      console.log("Login successful for:", user.username)
 
       // Successful login
       onLogin(user)
       setUsername("")
       setPassword("")
+      setError("")
     } catch (err) {
+      console.error("Login error:", err)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -57,15 +75,26 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
 
   const handleDemoLogin = () => {
     const adminUser = users.find((u) => u.username === "admin")
+    console.log("Demo login - admin user:", adminUser)
     if (adminUser) {
       onLogin(adminUser)
       setUsername("")
       setPassword("")
+      setError("")
+    } else {
+      setError("Admin user not found")
     }
   }
 
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -93,6 +122,7 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               placeholder="Enter your username"
               required
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
@@ -106,11 +136,12 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               placeholder="Enter your password"
               required
               disabled={isLoading}
+              autoComplete="current-password"
             />
           </div>
 
           <div className="flex flex-col space-y-2">
-            <Button type="submit" disabled={isLoading || !username || !password}>
+            <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()}>
               {isLoading ? "Logging in..." : "Login"}
             </Button>
 
@@ -126,6 +157,16 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
             <Button type="button" variant="outline" onClick={handleDemoLogin} disabled={isLoading}>
               Login as Admin (admin/admin123)
             </Button>
+          </div>
+
+          {/* Debug info - remove in production */}
+          <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded">
+            <div>Available users: {users.length}</div>
+            {users.map((u) => (
+              <div key={u.id}>
+                {u.username} ({u.role})
+              </div>
+            ))}
           </div>
         </form>
       </DialogContent>

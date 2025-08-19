@@ -6,11 +6,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
@@ -23,12 +23,13 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [subcategoryId, setSubcategoryId] = useState("none")
+  const [subcategoryId, setSubcategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
+  const subcategories = selectedCategory?.subcategories || []
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -41,154 +42,150 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!title.trim() || !content.trim() || !categoryId) {
       return
     }
 
-    onSubmit({
-      title: title.trim(),
-      content: content.trim(),
-      categoryId,
-      subcategoryId: subcategoryId === "none" ? undefined : subcategoryId,
-      tags,
-      createdBy: "admin",
-      editCount: 0,
-    })
+    setIsSubmitting(true)
+
+    try {
+      const articleData: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
+        title: title.trim(),
+        content: content.trim(),
+        categoryId,
+        subcategoryId: subcategoryId || undefined,
+        tags,
+        author: "Current User", // You might want to use actual user info
+        status: "published",
+      }
+
+      onSubmit(articleData)
+
+      // Reset form
+      setTitle("")
+      setContent("")
+      setCategoryId("")
+      setSubcategoryId("")
+      setTags([])
+      setNewTag("")
+    } catch (error) {
+      console.error("Error creating article:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleCategoryChange = (newCategoryId: string) => {
-    setCategoryId(newCategoryId)
-    setSubcategoryId("none") // Reset subcategory when category changes
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value)
+    setSubcategoryId("") // Reset subcategory when category changes
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Article</CardTitle>
-          <CardDescription>Create a new article for your knowledge base</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
+    <Card className="max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>Add New Article</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Article Title *</Label>
               <Input
                 id="title"
-                type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter article title"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
-            {/* Category Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select value={categoryId} onValueChange={handleCategoryChange} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategory (Optional)</Label>
-                <Select
-                  value={subcategoryId}
-                  onValueChange={setSubcategoryId}
-                  disabled={!categoryId || availableSubcategories.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subcategory" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {availableSubcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Tags */}
             <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                    {tag}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 hover:bg-transparent"
-                      onClick={() => handleRemoveTag(tag)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add a tag"
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={handleAddTag} disabled={!newTag.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <Label htmlFor="category">Category *</Label>
+              <Select value={categoryId} onValueChange={handleCategoryChange} disabled={isSubmitting}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
 
-            {/* Content Editor */}
+          {subcategories.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="content">Content *</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here..."
-                className="min-h-[300px]"
-                required
+              <Label htmlFor="subcategory">Subcategory (Optional)</Label>
+              <Select value={subcategoryId} onValueChange={setSubcategoryId} disabled={isSubmitting}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {subcategories.map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="content">Content *</Label>
+            <Textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Enter article content..."
+              className="min-h-[300px]"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                  {tag}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveTag(tag)} />
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Add a tag"
+                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                disabled={isSubmitting}
               />
+              <Button type="button" onClick={handleAddTag} variant="outline" disabled={isSubmitting}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
 
-            {/* Form Actions */}
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!title.trim() || !content.trim() || !categoryId}>
-                Add Article
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim() || !categoryId}>
+              {isSubmitting ? "Creating..." : "Create Article"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
