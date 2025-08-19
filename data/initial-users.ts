@@ -7,7 +7,8 @@ export const initialUsers: User[] = [
     email: "admin@kuhlekt.com",
     password: "admin123",
     role: "admin",
-    createdAt: new Date().toISOString(),
+    createdAt: "2024-01-01T00:00:00Z",
+    lastLogin: undefined,
   },
   {
     id: "2",
@@ -15,7 +16,8 @@ export const initialUsers: User[] = [
     email: "editor@kuhlekt.com",
     password: "editor123",
     role: "editor",
-    createdAt: new Date().toISOString(),
+    createdAt: "2024-01-01T00:00:00Z",
+    lastLogin: undefined,
   },
   {
     id: "3",
@@ -23,6 +25,7 @@ export const initialUsers: User[] = [
     email: "viewer@kuhlekt.com",
     password: "viewer123",
     role: "viewer",
-    createdAt: new Date().toISOString(),
+    createdAt: "2024-01-01T00:00:00Z",
+    lastLogin: undefined,
   },
 ]
