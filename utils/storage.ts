@@ -234,7 +234,7 @@ class Storage {
         createdAt: new Date(article.createdAt),
         updatedAt: new Date(article.updatedAt),
       }))
-      this.saveArticles(parsedArticles)
+      localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(parsedArticles))
       console.log("📥 Articles imported:", parsedArticles.length)
     }
 

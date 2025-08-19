@@ -328,6 +328,9 @@ Are you sure you want to continue?`
       console.log("- Articles:", restoredArticles.length)
       console.log("- Audit entries:", restoredAuditLog.length)
 
+      // Log articles before import
+      console.log("Articles before import:", storage.getArticles().length)
+
       // Use the storage import method for proper handling
       storage.importData({
         users: restoredUsers,
@@ -335,6 +338,13 @@ Are you sure you want to continue?`
         articles: restoredArticles,
         auditLog: restoredAuditLog,
       })
+
+      // Log articles after import
+      console.log("Articles after import:", storage.getArticles().length)
+
+      // Verify articles in localStorage
+      const storedArticles = localStorage.getItem("kb_articles")
+      console.log("Articles in localStorage:", storedArticles ? JSON.parse(storedArticles).length : 0)
 
       // Add restore entry to audit log
       storage.addAuditEntry({
