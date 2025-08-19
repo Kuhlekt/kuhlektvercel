@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { X, Plus } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Plus, X, AlertCircle } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
@@ -20,64 +21,68 @@ interface AddArticleFormProps {
 }
 
 export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFormProps) {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [categoryId, setCategoryId] = useState("")
-  const [subcategoryId, setSubcategoryId] = useState("")
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    categoryId: "",
+    subcategoryId: "",
+    author: "",
+    status: "draft" as Article["status"],
+  })
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [author, setAuthor] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
-  const selectedCategory = categories.find((cat) => cat.id === categoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
+  const selectedCategory = categories.find((c) => c.id === formData.categoryId)
 
-  const handleAddTag = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    if (!formData.title.trim()) {
+      setError("Title is required")
+      return
+    }
+
+    if (!formData.content.trim()) {
+      setError("Content is required")
+      return
+    }
+
+    if (!formData.categoryId) {
+      setError("Category is required")
+      return
+    }
+
+    const articleData: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
+      title: formData.title.trim(),
+      content: formData.content.trim(),
+      categoryId: formData.categoryId,
+      subcategoryId: formData.subcategoryId || undefined,
+      tags,
+      author: formData.author.trim() || "Anonymous",
+      status: formData.status,
+    }
+
+    onSubmit(articleData)
+  }
+
+  const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()])
       setNewTag("")
     }
   }
 
-  const handleRemoveTag = (tagToRemove: string) => {
+  const removeTag = (tagToRemove: string) => {
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault()
-      handleAddTag()
+      addTag()
     }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !content.trim() || !categoryId) {
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const articleData: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
-        title: title.trim(),
-        content: content.trim(),
-        tags,
-        categoryId,
-        subcategoryId: subcategoryId || undefined,
-        author: author.trim() || undefined,
-      }
-
-      onSubmit(articleData)
-    } catch (error) {
-      console.error("Error submitting article:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCategoryChange = (newCategoryId: string) => {
-    setCategoryId(newCategoryId)
-    setSubcategoryId("") // Reset subcategory when category changes
   }
 
   return (
@@ -87,13 +92,20 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter article title"
                 required
               />
@@ -103,19 +115,22 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               <Label htmlFor="author">Author</Label>
               <Input
                 id="author"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
+                value={formData.author}
+                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                 placeholder="Enter author name"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select value={categoryId} onValueChange={handleCategoryChange} required>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value, subcategoryId: "" })}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -130,15 +145,15 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             <div className="space-y-2">
               <Label htmlFor="subcategory">Subcategory</Label>
               <Select
-                value={subcategoryId}
-                onValueChange={setSubcategoryId}
-                disabled={!categoryId || availableSubcategories.length === 0}
+                value={formData.subcategoryId}
+                onValueChange={(value) => setFormData({ ...formData, subcategoryId: value })}
+                disabled={!selectedCategory || !selectedCategory.subcategories?.length}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a subcategory (optional)" />
+                  <SelectValue placeholder="Select subcategory" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSubcategories.map((subcategory) => (
+                  {selectedCategory?.subcategories?.map((subcategory) => (
                     <SelectItem key={subcategory.id} value={subcategory.id}>
                       {subcategory.name}
                     </SelectItem>
@@ -146,34 +161,36 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: Article["status"]) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter article content (supports basic markdown)"
-              className="min-h-[300px]"
-              required
-            />
-            <p className="text-xs text-gray-500">
-              Supports basic markdown: # Headers, ## Subheaders, - Lists, ```code blocks```
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex space-x-2">
+            <Label>Tags</Label>
+            <div className="flex items-center space-x-2">
               <Input
-                id="tags"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Add a tag"
+                className="flex-1"
               />
-              <Button type="button" onClick={handleAddTag} variant="outline" size="sm">
+              <Button type="button" onClick={addTag} size="sm">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -182,22 +199,41 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 ml-1"
+                      onClick={() => removeTag(tag)}
+                    >
                       <X className="h-3 w-3" />
-                    </button>
+                    </Button>
                   </Badge>
                 ))}
               </div>
             )}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="content">Content *</Label>
+            <Textarea
+              id="content"
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              placeholder="Enter article content (supports basic markdown)"
+              className="min-h-[300px]"
+              required
+            />
+            <div className="text-xs text-gray-500">
+              Supports basic markdown: # Headers, ## Subheaders, - Lists, ```code blocks```
+            </div>
+          </div>
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim() || !categoryId}>
-              {isSubmitting ? "Adding..." : "Add Article"}
-            </Button>
+            <Button type="submit">Create Article</Button>
           </div>
         </form>
       </CardContent>
