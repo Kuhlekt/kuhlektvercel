@@ -4,126 +4,137 @@ import { useState, useEffect } from "react"
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { ArticleViewer } from "./components/article-viewer"
+import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
-import { LoginModal } from "./components/login-modal"
 import { storage } from "./utils/storage"
-import type { User, Category, Article, AuditLogEntry } from "./types/knowledge-base"
+import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [users, setUsers] = useState<User[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [articles, setArticles] = useState<Article[]>([])
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
-  const [currentView, setCurrentView] = useState<"browse" | "add-article" | "admin">("browse")
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
+  const [auditLog, setAuditLog] = useState<AuditLog[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Initialize data on component mount
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        console.log("🚀 Initializing Knowledge Base...")
+    console.log("🚀 Initializing Knowledge Base...")
 
-        // Initialize storage
-        storage.init()
+    // Initialize storage
+    storage.init()
 
-        // Load data
-        const loadedCategories = storage.getCategories()
-        const loadedArticles = storage.getArticles()
-        const loadedAuditLog = storage.getAuditLog()
-        const loadedUser = storage.getCurrentUser()
+    // Load all data
+    const loadedUsers = storage.getUsers()
+    const loadedCategories = storage.getCategories()
+    const loadedArticles = storage.getArticles()
+    const loadedAuditLog = storage.getAuditLog()
 
-        setCategories(loadedCategories)
-        setArticles(loadedArticles)
-        setAuditLog(loadedAuditLog)
-        setCurrentUser(loadedUser)
+    setUsers(loadedUsers)
+    setCategories(loadedCategories)
+    setArticles(loadedArticles)
+    setAuditLog(loadedAuditLog)
 
-        console.log("✅ Knowledge Base initialized successfully")
-        console.log(
-          `📊 Loaded: ${loadedCategories.length} categories, ${loadedArticles.length} articles, ${loadedAuditLog.length} audit entries`,
-        )
-
-        if (loadedUser) {
-          console.log(`👤 Current user: ${loadedUser.username} (${loadedUser.role})`)
-        }
-      } catch (error) {
-        console.error("❌ Failed to initialize Knowledge Base:", error)
-      } finally {
-        setIsLoading(false)
-      }
+    // Check for existing user session
+    const existingUser = storage.getCurrentUser()
+    if (existingUser) {
+      console.log("👤 Found existing user session:", existingUser.username)
+      setCurrentUser(existingUser)
     }
 
-    initializeData()
+    setIsInitialized(true)
+    console.log("✅ Knowledge Base initialized")
   }, [])
 
   const handleLogin = (user: User) => {
-    console.log("🔐 User logged in:", user.username)
+    console.log("🎉 User logged in:", user.username)
     setCurrentUser(user)
-    setShowLoginModal(false)
-    refreshAuditLog()
+    setIsLoginModalOpen(false)
+
+    // Refresh audit log after login
+    setAuditLog(storage.getAuditLog())
   }
 
   const handleLogout = () => {
+    console.log("👋 User logged out")
     if (currentUser) {
-      console.log("🚪 User logged out:", currentUser.username)
       storage.addAuditEntry({
         performedBy: currentUser.id,
         action: "LOGOUT",
         details: `User ${currentUser.username} logged out`,
       })
+      setAuditLog(storage.getAuditLog())
     }
+
     storage.setCurrentUser(null)
     setCurrentUser(null)
-    setCurrentView("browse")
-    setSelectedArticle(null)
-    refreshAuditLog()
+    setSelectedArticleId(null)
+    setSelectedCategoryId(null)
   }
 
-  const refreshData = () => {
-    console.log("🔄 Refreshing data...")
-    setCategories(storage.getCategories())
-    setArticles(storage.getArticles())
-    refreshAuditLog()
-  }
+  const handleAddArticle = (articleData: {
+    title: string
+    content: string
+    categoryId: string
+    tags: string[]
+    status: "draft" | "published"
+  }) => {
+    if (!currentUser) return
 
-  const refreshAuditLog = () => {
+    const newArticle: Article = {
+      id: Date.now().toString(),
+      ...articleData,
+      authorId: currentUser.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: currentUser.username,
+    }
+
+    const updatedArticles = [...articles, newArticle]
+    setArticles(updatedArticles)
+    storage.saveArticles(updatedArticles)
+
+    storage.addAuditEntry({
+      performedBy: currentUser.id,
+      action: "CREATE_ARTICLE",
+      details: `Created article "${articleData.title}"`,
+    })
     setAuditLog(storage.getAuditLog())
+
+    setIsAddArticleModalOpen(false)
+    console.log("📝 Article created:", newArticle.title)
   }
 
-  const handleArticleSelect = (article: Article) => {
-    setSelectedArticle(article)
-    setCurrentView("browse")
+  const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
+  const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
+  const selectedAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : undefined
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategoryId(categoryId === selectedCategoryId ? null : categoryId)
+    setSelectedArticleId(null)
   }
 
-  const handleAddArticle = () => {
-    setCurrentView("add-article")
-    setSelectedArticle(null)
+  const handleArticleSelect = (articleId: string) => {
+    setSelectedArticleId(articleId)
   }
 
-  const handleArticleAdded = () => {
-    refreshData()
-    setCurrentView("browse")
+  const handleBackFromArticle = () => {
+    setSelectedArticleId(null)
   }
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
+  const handleEditArticle = () => {
+    console.log("✏️ Edit article functionality will be implemented")
   }
 
-  const filteredArticles = searchQuery
-    ? articles.filter(
-        (article) =>
-          article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          article.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())),
-      )
-    : articles
-
-  if (isLoading) {
+  if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Knowledge Base...</p>
@@ -133,61 +144,65 @@ export default function KnowledgeBase() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       <Navigation
         currentUser={currentUser}
-        onLogin={() => setShowLoginModal(true)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onAddArticle={() => setIsAddArticleModalOpen(true)}
+        onAdminPanel={() => setIsAdminDashboardOpen(true)}
+        onLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
-        onSearch={handleSearch}
-        onViewChange={setCurrentView}
-        currentView={currentView}
       />
 
-      <div className="flex h-[calc(100vh-64px)]">
-        {currentView === "browse" && (
-          <>
-            <CategoryTree
-              categories={categories}
-              articles={filteredArticles}
-              selectedArticleId={selectedArticle?.id}
-              onArticleSelect={handleArticleSelect}
-              onAddArticle={
-                currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
-                  ? handleAddArticle
-                  : undefined
-              }
-              currentUser={currentUser}
-            />
-            <ArticleViewer article={selectedArticle} currentUser={currentUser} />
-          </>
-        )}
+      <div className="flex-1 flex overflow-hidden">
+        <CategoryTree
+          categories={categories}
+          articles={articles}
+          selectedCategoryId={selectedCategoryId}
+          selectedArticleId={selectedArticleId}
+          onCategorySelect={handleCategorySelect}
+          onArticleSelect={handleArticleSelect}
+        />
 
-        {currentView === "add-article" && (
-          <div className="flex-1 p-6">
-            <AddArticleForm
-              categories={categories}
-              currentUser={currentUser}
-              onArticleAdded={handleArticleAdded}
-              onCancel={() => setCurrentView("browse")}
-            />
-          </div>
-        )}
-
-        {currentView === "admin" && currentUser?.role === "admin" && (
-          <div className="flex-1 p-6">
-            <AdminDashboard
-              categories={categories}
-              articles={articles}
-              auditLog={auditLog}
-              currentUser={currentUser}
-              onDataChange={refreshData}
-              onAuditLogUpdate={refreshAuditLog}
-            />
-          </div>
-        )}
+        <main className="flex-1 overflow-hidden">
+          <ArticleViewer
+            article={selectedArticle}
+            category={selectedCategory}
+            author={selectedAuthor}
+            currentUser={currentUser}
+            onEdit={handleEditArticle}
+            onBack={handleBackFromArticle}
+          />
+        </main>
       </div>
 
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
+
+      {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
+        <AddArticleForm
+          isOpen={isAddArticleModalOpen}
+          onClose={() => setIsAddArticleModalOpen(false)}
+          onSubmit={handleAddArticle}
+          categories={categories}
+          currentUser={currentUser}
+        />
+      )}
+
+      {currentUser && currentUser.role === "admin" && (
+        <AdminDashboard
+          isOpen={isAdminDashboardOpen}
+          onClose={() => setIsAdminDashboardOpen(false)}
+          currentUser={currentUser}
+          users={users}
+          categories={categories}
+          articles={articles}
+          auditLog={auditLog}
+          onUpdateUsers={setUsers}
+          onUpdateCategories={setCategories}
+          onUpdateArticles={setArticles}
+        />
+      )}
     </div>
   )
 }
