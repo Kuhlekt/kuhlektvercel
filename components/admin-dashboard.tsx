@@ -69,8 +69,11 @@ export function AdminDashboard({
                     <p className="font-medium">{user.username}</p>
                     <p className="text-sm text-gray-600">{user.email}</p>
                   </div>
-                  <div className="text-sm">
-                    <span className="px-2 py-1 bg-gray-100 rounded">{user.role}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{user.role}</p>
+                    <p className="text-xs text-gray-500">
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -83,6 +86,9 @@ export function AdminDashboard({
                 <div key={category.id} className="p-3 border rounded-lg">
                   <h3 className="font-medium">{category.name}</h3>
                   <p className="text-sm text-gray-600">{category.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {articles.filter((a) => a.categoryId === category.id).length} articles
+                  </p>
                 </div>
               ))}
             </div>
@@ -97,7 +103,7 @@ export function AdminDashboard({
                       <p className="font-medium">{entry.action}</p>
                       <p className="text-sm text-gray-600">{entry.details}</p>
                     </div>
-                    <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</span>
+                    <p className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</p>
                   </div>
                 </div>
               ))}

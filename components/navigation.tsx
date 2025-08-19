@@ -71,7 +71,7 @@ export function Navigation({
                 <Avatar className="w-8 h-8">
                   <AvatarFallback>{currentUser.username.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium">{currentUser.username}</span>
+                <span className="text-sm font-medium text-gray-700">{currentUser.username}</span>
               </div>
 
               <Button onClick={onLogout} variant="outline" size="sm">
