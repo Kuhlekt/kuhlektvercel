@@ -4,8 +4,13 @@ const Navigation = () => {
   return (
     <nav className="bg-white p-4 shadow-md">
       <div className="flex items-center justify-between">
+        {/* Logo and Title */}
         <div className="flex items-center space-x-3">
-          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
+          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-8 object-contain" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Kuhlekt KB</h1>
+            <p className="text-xs text-gray-500">Knowledge Base</p>
+          </div>
         </div>
         <div className="space-x-4">
           <Link href="/">

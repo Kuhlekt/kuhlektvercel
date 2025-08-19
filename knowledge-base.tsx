@@ -6,6 +6,10 @@ import { Modal, Button } from "antd"
 import { LogIn } from "lucide-react"
 import type { User } from "./types" // Assuming a User type is defined somewhere
 import ArticleViewer from "./ArticleViewer" // Assuming ArticleViewer is defined somewhere
+import AddArticleForm from "./AddArticleForm" // Assuming AddArticleForm is defined somewhere
+import EditArticleForm from "./EditArticleForm" // Assuming EditArticleForm is defined somewhere
+import AdminDashboard from "./AdminDashboard" // Assuming AdminDashboard is defined somewhere
+import storage from "./storage" // Assuming storage is defined somewhere
 
 const KnowledgeBase: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
@@ -16,6 +20,9 @@ const KnowledgeBase: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [navigationContext, setNavigationContext] = useState({ type: "all" })
+  const [categories, setCategories] = useState([]) // Assuming categories are defined somewhere
+  const [auditLog, setAuditLog] = useState([]) // Assuming auditLog is defined somewhere
+  const [editingArticle, setEditingArticle] = useState(null) // Assuming editingArticle is defined somewhere
 
   useEffect(() => {
     // Fetch users from an API or a local source
@@ -42,6 +49,14 @@ const KnowledgeBase: React.FC = () => {
     setSearchQuery("")
     setSearchResults([])
     setNavigationContext({ type: "all" })
+  }
+
+  const handleAddArticle = (article) => {
+    // Logic to handle adding an article
+  }
+
+  const handleEditArticle = (article) => {
+    // Logic to handle editing an article
   }
 
   return (
@@ -79,7 +94,13 @@ const KnowledgeBase: React.FC = () => {
           <p className="text-gray-600">You need admin privileges to add articles.</p>
         </div>
       ) : (
-        <div>{/* Render add article view here */}</div>
+        currentView === "add" && (
+          <AddArticleForm
+            categories={categories}
+            onSubmit={handleAddArticle}
+            onCancel={() => setCurrentView("browse")}
+          />
+        )
       )}
       {currentView === "edit" && !currentUser ? (
         <div className="text-center py-12">
@@ -96,7 +117,19 @@ const KnowledgeBase: React.FC = () => {
           <p className="text-gray-600">You need admin privileges to edit articles.</p>
         </div>
       ) : (
-        <div>{/* Render edit article view here */}</div>
+        currentView === "edit" &&
+        editingArticle && (
+          <EditArticleForm
+            article={editingArticle}
+            categories={categories}
+            currentUser={currentUser}
+            onSubmit={handleEditArticle}
+            onCancel={() => {
+              setCurrentView("browse")
+              setEditingArticle(null)
+            }}
+          />
+        )
       )}
       {currentView === "admin" && !currentUser ? (
         <div className="text-center py-12">
@@ -113,16 +146,31 @@ const KnowledgeBase: React.FC = () => {
           <p className="text-gray-600">You need admin privileges to access this section.</p>
         </div>
       ) : (
-        <div>{/* Render admin view here */}</div>
+        currentView === "admin" && (
+          <AdminDashboard
+            categories={categories}
+            users={users}
+            auditLog={auditLog}
+            onCategoriesUpdate={(newCategories) => {
+              setCategories(newCategories)
+              setAuditLog(storage.getAuditLog())
+            }}
+            onUsersUpdate={(newUsers) => {
+              setUsers(newUsers)
+              setAuditLog(storage.getAuditLog())
+            }}
+            onAuditLogUpdate={setAuditLog}
+          />
+        )
       )}
       {currentView === "browse" && <div>{/* Render browse view here */}</div>}
       {selectedArticle && (
         <ArticleViewer
           article={selectedArticle}
-          categories={[]}
+          categories={categories}
           onBack={() => {}}
           backButtonText=""
-          onEdit={(article) => {}}
+          onEdit={(article) => setEditingArticle(article)}
           onDelete={() => {}}
           currentUser={currentUser}
         />
