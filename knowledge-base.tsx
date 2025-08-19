@@ -7,7 +7,6 @@ import { ArticleViewer } from "./components/article-viewer"
 import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
-import { FileText } from "lucide-react"
 import { storage } from "./utils/storage"
 import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
 
@@ -24,35 +23,40 @@ export default function KnowledgeBase() {
   const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
 
-  // Load data on component mount
+  // Initialize data on component mount
   useEffect(() => {
-    const loadData = () => {
-      console.log("Loading data...")
-      setCurrentUser(storage.getCurrentUser())
-      setUsers(storage.getUsers())
-      setCategories(storage.getCategories())
-      setArticles(storage.getArticles())
-      setAuditLog(storage.getAuditLog())
-      console.log("Data loaded")
+    console.log("Initializing Knowledge Base...")
+    storage.init()
+
+    // Load data from storage
+    setUsers(storage.getUsers())
+    setCategories(storage.getCategories())
+    setArticles(storage.getArticles())
+    setAuditLog(storage.getAuditLog())
+
+    // Check for existing user session
+    const existingUser = storage.getCurrentUser()
+    if (existingUser) {
+      console.log("Found existing user session:", existingUser)
+      setCurrentUser(existingUser)
     }
 
-    loadData()
+    console.log("Knowledge Base initialized")
   }, [])
 
-  // Auto-select first category on load
-  useEffect(() => {
-    if (categories.length > 0 && !selectedCategoryId) {
-      setSelectedCategoryId(categories[0].id)
-    }
-  }, [categories, selectedCategoryId])
-
+  // Handle login
   const handleLogin = (user: User) => {
-    console.log("Handling login for user:", user)
+    console.log("User logged in:", user)
     setCurrentUser(user)
-    setUsers(storage.getUsers()) // Refresh users to get updated lastLogin
+    setIsLoginModalOpen(false)
+
+    // Refresh audit log to show login entry
+    setAuditLog(storage.getAuditLog())
   }
 
+  // Handle logout
   const handleLogout = () => {
+    console.log("User logged out")
     if (currentUser) {
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -61,10 +65,14 @@ export default function KnowledgeBase() {
       })
       setAuditLog(storage.getAuditLog())
     }
+
     storage.setCurrentUser(null)
     setCurrentUser(null)
+    setSelectedArticleId(null)
+    setSelectedCategoryId(null)
   }
 
+  // Handle article creation
   const handleAddArticle = (articleData: {
     title: string
     content: string
@@ -78,61 +86,78 @@ export default function KnowledgeBase() {
       id: Date.now().toString(),
       ...articleData,
       authorId: currentUser.id,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: currentUser.username,
     }
 
     const updatedArticles = [...articles, newArticle]
     setArticles(updatedArticles)
     storage.saveArticles(updatedArticles)
 
+    // Add to audit log
     storage.addAuditEntry({
       userId: currentUser.id,
       action: "CREATE_ARTICLE",
-      details: `Created article: ${articleData.title}`,
+      details: `Created article "${articleData.title}"`,
     })
     setAuditLog(storage.getAuditLog())
 
     setIsAddArticleModalOpen(false)
-  }
-
-  const handleUpdateUsers = (updatedUsers: User[]) => {
-    setUsers(updatedUsers)
-    storage.saveUsers(updatedUsers)
-  }
-
-  const handleUpdateCategories = (updatedCategories: Category[]) => {
-    setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-  }
-
-  const handleUpdateArticles = (updatedArticles: Article[]) => {
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
+    console.log("Article created:", newArticle)
   }
 
   // Filter articles based on search term
-  const filteredArticles = searchTerm
-    ? articles.filter(
-        (article) =>
-          article.status === "published" &&
-          (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))),
-      )
-    : articles
+  const getFilteredArticles = () => {
+    if (!searchTerm.trim()) return articles
 
-  // Get current article and related data
+    const query = searchTerm.toLowerCase()
+    return articles.filter(
+      (article) =>
+        article.status === "published" &&
+        (article.title.toLowerCase().includes(query) ||
+          article.content.toLowerCase().includes(query) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(query))),
+    )
+  }
+
+  // Get articles for selected category
+  const getCategoryArticles = () => {
+    if (!selectedCategoryId) return []
+    return articles.filter((article) => article.categoryId === selectedCategoryId && article.status === "published")
+  }
+
+  // Get selected article
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
   const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
-  const articleAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : null
+  const selectedAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : undefined
 
-  // Get articles for selected category (filtered by search if applicable)
-  const categoryArticles = selectedCategoryId
-    ? filteredArticles.filter((a) => a.categoryId === selectedCategoryId && a.status === "published")
-    : []
+  // Handle category selection
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategoryId(categoryId === selectedCategoryId ? null : categoryId)
+    setSelectedArticleId(null)
+  }
+
+  // Handle article selection
+  const handleArticleSelect = (articleId: string) => {
+    setSelectedArticleId(articleId)
+  }
+
+  // Handle back from article view
+  const handleBackFromArticle = () => {
+    setSelectedArticleId(null)
+  }
+
+  // Handle edit article (placeholder)
+  const handleEditArticle = () => {
+    console.log("Edit article functionality not implemented yet")
+  }
+
+  const filteredArticles = getFilteredArticles()
+  const categoryArticles = getCategoryArticles()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       <Navigation
         currentUser={currentUser}
         searchTerm={searchTerm}
@@ -143,108 +168,78 @@ export default function KnowledgeBase() {
         onLogout={handleLogout}
       />
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex-1 flex overflow-hidden">
         <CategoryTree
           categories={categories}
-          articles={filteredArticles}
+          articles={articles}
           selectedCategoryId={selectedCategoryId}
           selectedArticleId={selectedArticleId}
-          onCategorySelect={(categoryId) => {
-            setSelectedCategoryId(categoryId)
-            setSelectedArticleId(null)
-          }}
-          onArticleSelect={setSelectedArticleId}
+          onCategorySelect={handleCategorySelect}
+          onArticleSelect={handleArticleSelect}
         />
 
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 overflow-hidden">
           {selectedArticle ? (
             <ArticleViewer
               article={selectedArticle}
               category={selectedCategory}
-              author={articleAuthor}
+              author={selectedAuthor}
               currentUser={currentUser}
-              onEdit={() => {
-                // TODO: Implement edit functionality
-                console.log("Edit article:", selectedArticle.id)
-              }}
-              onBack={() => setSelectedArticleId(null)}
+              onEdit={handleEditArticle}
+              onBack={handleBackFromArticle}
             />
           ) : (
-            <div className="space-y-6">
-              {selectedCategory && (
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{selectedCategory.name}</h1>
-                  {selectedCategory.description && <p className="text-gray-600 mb-6">{selectedCategory.description}</p>}
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-blue-600 font-bold text-xl">KB</span>
                 </div>
-              )}
-
-              {categoryArticles.length > 0 ? (
-                <div className="grid gap-4">
-                  {categoryArticles.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setSelectedArticleId(article.id)}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <FileText className="h-5 w-5 text-blue-600 mt-1" />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
-                          <p className="text-gray-600 text-sm line-clamp-2">{article.content.substring(0, 150)}...</p>
-                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                            <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-                            {article.tags.length > 0 && <span>Tags: {article.tags.slice(0, 3).join(", ")}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg border border-gray-200 flex items-center justify-center h-96">
-                  <div className="text-center text-gray-500">
-                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2">
-                      {searchTerm ? "No articles found" : "No articles in this category"}
-                    </h3>
-                    <p>
-                      {searchTerm
-                        ? `No articles match "${searchTerm}"`
-                        : "Select a category to view articles or add new content."}
-                    </p>
-                  </div>
-                </div>
-              )}
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Kuhlekt Knowledge Base</h2>
+                <p className="text-gray-600 mb-6 max-w-md">
+                  Select a category from the sidebar to browse articles, or use the search bar to find specific content.
+                </p>
+                {!currentUser && (
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Login to Get Started
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </main>
       </div>
 
+      {/* Modals */}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
 
-      {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
-        <AddArticleForm
-          isOpen={isAddArticleModalOpen}
-          onClose={() => setIsAddArticleModalOpen(false)}
-          onSubmit={handleAddArticle}
-          categories={categories}
-          currentUser={currentUser}
-        />
-      )}
+      {currentUser && (
+        <>
+          <AddArticleForm
+            isOpen={isAddArticleModalOpen}
+            onClose={() => setIsAddArticleModalOpen(false)}
+            onSubmit={handleAddArticle}
+            categories={categories}
+            currentUser={currentUser}
+          />
 
-      {currentUser?.role === "admin" && (
-        <AdminDashboard
-          isOpen={isAdminDashboardOpen}
-          onClose={() => setIsAdminDashboardOpen(false)}
-          currentUser={currentUser}
-          users={users}
-          categories={categories}
-          articles={articles}
-          auditLog={auditLog}
-          onUpdateUsers={handleUpdateUsers}
-          onUpdateCategories={handleUpdateCategories}
-          onUpdateArticles={handleUpdateArticles}
-        />
+          {currentUser.role === "admin" && (
+            <AdminDashboard
+              isOpen={isAdminDashboardOpen}
+              onClose={() => setIsAdminDashboardOpen(false)}
+              currentUser={currentUser}
+              users={users}
+              categories={categories}
+              articles={articles}
+              auditLog={auditLog}
+              onUpdateUsers={setUsers}
+              onUpdateCategories={setCategories}
+              onUpdateArticles={setArticles}
+            />
+          )}
+        </>
       )}
     </div>
   )

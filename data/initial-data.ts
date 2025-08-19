@@ -6,24 +6,32 @@ export const initialCategories: Category[] = [
     name: "Getting Started",
     description: "Essential information for new users",
     createdAt: new Date().toISOString(),
+    subcategories: [],
+    articles: [],
   },
   {
     id: "2",
-    name: "User Guides",
-    description: "Step-by-step guides for common tasks",
+    name: "Technical Documentation",
+    description: "Technical guides and API documentation",
     createdAt: new Date().toISOString(),
+    subcategories: [],
+    articles: [],
   },
   {
     id: "3",
-    name: "Technical Documentation",
-    description: "Detailed technical information and API references",
+    name: "Troubleshooting",
+    description: "Common issues and solutions",
     createdAt: new Date().toISOString(),
+    subcategories: [],
+    articles: [],
   },
   {
     id: "4",
-    name: "FAQ",
-    description: "Frequently asked questions and answers",
+    name: "Best Practices",
+    description: "Recommended approaches and methodologies",
     createdAt: new Date().toISOString(),
+    subcategories: [],
+    articles: [],
   },
 ]
 
@@ -31,146 +39,187 @@ export const initialArticles: Article[] = [
   {
     id: "1",
     title: "Welcome to Kuhlekt Knowledge Base",
-    content: `# Welcome to Kuhlekt Knowledge Base
-
-This is your comprehensive knowledge management system. Here you can:
-
-- Browse articles by category
-- Search for specific information
-- Add new articles (if you have permissions)
-- Manage users and content (admin only)
+    content: `Welcome to the Kuhlekt Knowledge Base! This comprehensive platform is designed to help you find answers, learn new concepts, and stay up-to-date with the latest information.
 
 ## Getting Started
 
-1. **Browse Categories**: Use the sidebar to navigate through different categories
-2. **Search**: Use the search bar to find specific articles
-3. **Login**: Click the login button to access additional features
-4. **Add Content**: Editors and admins can add new articles
+This knowledge base contains articles organized by categories to help you quickly find the information you need. Use the search functionality to find specific topics or browse through categories.
 
 ## Features
 
-- **Role-based Access**: Different permissions for admins, editors, and viewers
-- **Rich Text Editing**: Full-featured editor for creating content
-- **Category Management**: Organize content in a hierarchical structure
-- **Search Functionality**: Find articles quickly with full-text search
-- **Audit Logging**: Track all system activities
+- **Search**: Use the search bar to find articles by title, content, or tags
+- **Categories**: Browse articles organized by topic
+- **User Roles**: Different access levels for viewing and editing content
+- **Rich Content**: Articles support formatted text and multimedia
 
-Enjoy using the knowledge base!`,
+## Need Help?
+
+If you can't find what you're looking for, please contact our support team or check the troubleshooting section.`,
     categoryId: "1",
     authorId: "1",
-    tags: ["welcome", "getting-started", "overview"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
     status: "published",
-    createdAt: new Date().toISOString(),
+    tags: ["welcome", "getting-started", "introduction"],
+    createdBy: "admin",
   },
   {
     id: "2",
-    title: "How to Create Your First Article",
-    content: `# Creating Your First Article
+    title: "How to Search Effectively",
+    content: `Learn how to make the most of the search functionality in our knowledge base.
 
-Follow these steps to create your first article:
+## Search Tips
 
-## Step 1: Login
-Make sure you're logged in with an editor or admin account.
+1. **Use specific keywords**: Be specific about what you're looking for
+2. **Try different terms**: If one search doesn't work, try synonyms
+3. **Use quotes**: Put phrases in quotes for exact matches
+4. **Filter by category**: Narrow down results by selecting specific categories
 
-## Step 2: Click "Add Article"
-Look for the "Add Article" button in the navigation bar.
+## Advanced Search
 
-## Step 3: Fill in the Details
-- **Title**: Give your article a descriptive title
-- **Category**: Select the appropriate category
-- **Content**: Write your article content using the rich text editor
-- **Tags**: Add relevant tags to help with searchability
-- **Status**: Choose between "Draft" or "Published"
+- Use the category filter to limit results to specific topics
+- Search results highlight matching terms
+- Articles are ranked by relevance
 
-## Step 4: Save
-Click "Save Article" to add it to the knowledge base.
+## Still Can't Find It?
 
-## Tips
-- Use clear, descriptive titles
-- Add relevant tags for better discoverability
-- Use the rich text editor features for formatting
-- Save as draft first to review before publishing`,
-    categoryId: "2",
+If you're still having trouble finding what you need, try browsing through the categories or contact support.`,
+    categoryId: "1",
     authorId: "1",
-    tags: ["tutorial", "article-creation", "guide"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
     status: "published",
-    createdAt: new Date().toISOString(),
+    tags: ["search", "tips", "help"],
+    createdBy: "admin",
   },
   {
     id: "3",
-    title: "API Documentation Overview",
-    content: `# API Documentation
+    title: "API Authentication Guide",
+    content: `This guide covers how to authenticate with our API endpoints.
 
-This section contains technical documentation for developers.
+## Authentication Methods
 
-## Authentication
-All API requests require authentication using JWT tokens.
+### API Keys
+Generate an API key from your dashboard and include it in the header:
+\`\`\`
+Authorization: Bearer YOUR_API_KEY
+\`\`\`
 
-## Endpoints
+### OAuth 2.0
+For more secure applications, use OAuth 2.0 flow:
 
-### Articles
-- \`GET /api/articles\` - List all articles
-- \`POST /api/articles\` - Create new article
-- \`PUT /api/articles/:id\` - Update article
-- \`DELETE /api/articles/:id\` - Delete article
-
-### Categories
-- \`GET /api/categories\` - List all categories
-- \`POST /api/categories\` - Create new category
-
-### Users
-- \`GET /api/users\` - List users (admin only)
-- \`POST /api/users\` - Create user (admin only)
+1. Register your application
+2. Redirect users to authorization endpoint
+3. Exchange authorization code for access token
+4. Use access token in API requests
 
 ## Rate Limiting
-API requests are limited to 100 requests per minute per user.
+
+API requests are limited to:
+- 1000 requests per hour for authenticated users
+- 100 requests per hour for unauthenticated requests
 
 ## Error Handling
-All errors return JSON with error code and message.`,
-    categoryId: "3",
+
+Common error responses:
+- 401: Unauthorized - Invalid or missing authentication
+- 403: Forbidden - Insufficient permissions
+- 429: Too Many Requests - Rate limit exceeded`,
+    categoryId: "2",
     authorId: "1",
-    tags: ["api", "documentation", "technical"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
     status: "published",
-    createdAt: new Date().toISOString(),
+    tags: ["api", "authentication", "security"],
+    createdBy: "admin",
   },
   {
     id: "4",
-    title: "Frequently Asked Questions",
-    content: `# Frequently Asked Questions
+    title: "Common Login Issues",
+    content: `Troubleshoot common problems when logging into the system.
 
-## General Questions
+## Forgot Password
 
-### Q: How do I reset my password?
-A: Contact your administrator to reset your password.
+1. Click "Forgot Password" on the login page
+2. Enter your email address
+3. Check your email for reset instructions
+4. Follow the link to create a new password
 
-### Q: Can I edit articles created by other users?
-A: Only admins can edit articles created by other users. Editors can only edit their own articles.
+## Account Locked
 
-### Q: How do I search for articles?
-A: Use the search bar in the navigation. It searches through titles, content, and tags.
+If your account is locked after multiple failed attempts:
+- Wait 15 minutes before trying again
+- Contact support if the issue persists
 
-## Technical Questions
+## Browser Issues
 
-### Q: What file formats are supported for uploads?
-A: Currently, we support images (PNG, JPG, GIF) and documents (PDF, DOC, DOCX).
+Clear your browser cache and cookies:
+1. Open browser settings
+2. Find "Clear browsing data"
+3. Select cookies and cached files
+4. Clear data and try logging in again
 
-### Q: Is there a mobile app?
-A: The knowledge base is web-based and responsive, working well on mobile browsers.
+## Still Having Problems?
 
-### Q: How is data backed up?
-A: Data is automatically backed up daily. Contact your administrator for restore requests.
+Contact our support team with:
+- Your username (not password)
+- Browser and version
+- Error messages you're seeing`,
+    categoryId: "3",
+    authorId: "2",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    status: "published",
+    tags: ["login", "troubleshooting", "password"],
+    createdBy: "editor",
+  },
+  {
+    id: "5",
+    title: "Writing Effective Documentation",
+    content: `Best practices for creating clear and helpful documentation.
 
-## Account Questions
+## Structure Your Content
 
-### Q: How do I change my role?
-A: Only administrators can change user roles. Submit a request to your admin.
+### Use Clear Headings
+Organize content with descriptive headings that help readers scan and find information quickly.
 
-### Q: Can I delete my account?
-A: Contact your administrator to delete your account and associated data.`,
+### Start with Overview
+Begin each article with a brief overview of what the reader will learn.
+
+### Use Examples
+Include practical examples and code snippets where applicable.
+
+## Writing Style
+
+- **Be concise**: Get to the point quickly
+- **Use active voice**: "Click the button" instead of "The button should be clicked"
+- **Define terms**: Explain technical terms when first used
+- **Use bullet points**: Break up long paragraphs with lists
+
+## Visual Elements
+
+- Add screenshots for UI instructions
+- Use code blocks for technical examples
+- Include diagrams for complex processes
+
+## Review and Update
+
+- Review content regularly for accuracy
+- Update screenshots when UI changes
+- Remove outdated information
+- Ask for feedback from users`,
     categoryId: "4",
     authorId: "1",
-    tags: ["faq", "help", "support"],
+    createdAt: new Date(),
+    updatedAt: new Date(),
     status: "published",
-    createdAt: new Date().toISOString(),
+    tags: ["documentation", "writing", "best-practices"],
+    createdBy: "admin",
   },
 ]
+
+// Add articles to their respective categories
+initialCategories[0].articles = [initialArticles[0], initialArticles[1]]
+initialCategories[1].articles = [initialArticles[2]]
+initialCategories[2].articles = [initialArticles[3]]
+initialCategories[3].articles = [initialArticles[4]]
