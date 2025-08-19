@@ -17,10 +17,10 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo and Title */}
           <div className="flex items-center space-x-3">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-12 w-12 object-contain" />
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-16 object-contain" />
           </div>
 
           {/* Navigation Buttons */}
@@ -35,26 +35,30 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
               <span>Browse</span>
             </Button>
 
-            {/* Always show admin features since we're bypassing login */}
-            <Button
-              variant={currentView === "add" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewChange("add")}
-              className="flex items-center space-x-1"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Article</span>
-            </Button>
+            {/* Show admin features only if user is logged in */}
+            {currentUser && (
+              <>
+                <Button
+                  variant={currentView === "add" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("add")}
+                  className="flex items-center space-x-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Article</span>
+                </Button>
 
-            <Button
-              variant={currentView === "admin" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewChange("admin")}
-              className="flex items-center space-x-1"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Admin</span>
-            </Button>
+                <Button
+                  variant={currentView === "admin" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("admin")}
+                  className="flex items-center space-x-1"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Admin</span>
+                </Button>
+              </>
+            )}
 
             {/* User Info */}
             {currentUser && (
@@ -67,7 +71,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
               </div>
             )}
 
-            {/* Login/Logout Button - Hidden since we're bypassing login */}
+            {/* Login/Logout Button */}
             {!currentUser && (
               <Button
                 variant="outline"
@@ -86,7 +90,6 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                 size="sm"
                 onClick={onLogout}
                 className="flex items-center space-x-1 bg-transparent"
-                style={{ display: "none" }} // Hide logout button since we're bypassing login
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
