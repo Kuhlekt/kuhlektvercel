@@ -3,21 +3,19 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  subcategoryId?: string
   authorId: string
+  createdBy: string
   tags: string[]
   status: "draft" | "published"
   createdAt: Date
   updatedAt: Date
-  createdBy: string
-  editCount?: number
-  lastEditedBy?: string
 }
 
 export interface Subcategory {
   id: string
   name: string
-  description: string
+  description?: string
+  categoryId: string
   articles: Article[]
 }
 
@@ -25,8 +23,10 @@ export interface Category {
   id: string
   name: string
   description: string
-  articles: Article[]
+  parentId?: string
+  createdAt: string
   subcategories: Subcategory[]
+  articles: Article[]
 }
 
 export interface User {

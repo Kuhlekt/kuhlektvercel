@@ -1,9 +1,9 @@
 "use client"
 
+import { ArrowLeft, Edit, Calendar, User, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ArrowLeft, Edit, Calendar, User, Tag, Folder } from "lucide-react"
 import type { Article, Category, User as UserType } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
@@ -19,61 +19,61 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
   const canEdit = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{article.title}</h1>
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>Updated {article.updatedAt.toLocaleDateString()}</span>
-                </div>
-                {author && (
-                  <div className="flex items-center space-x-1">
-                    <User className="h-3 w-3" />
-                    <span>by {author.username}</span>
-                  </div>
-                )}
-                {category && (
-                  <div className="flex items-center space-x-1">
-                    <Folder className="h-3 w-3" />
-                    <span>{category.name}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="h-full flex flex-col bg-white">
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button onClick={onBack} variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Categories
+          </Button>
+
           {canEdit && (
             <Button onClick={onEdit} size="sm">
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              Edit Article
             </Button>
           )}
         </div>
 
-        {article.tags.length > 0 && (
-          <div className="flex items-center space-x-2 mt-4">
-            <Tag className="h-4 w-4 text-gray-400" />
-            <div className="flex flex-wrap gap-1">
-              {article.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
+
+        <div className="flex items-center space-x-6 text-sm text-gray-600">
+          {category && (
+            <div className="flex items-center">
+              <Tag className="h-4 w-4 mr-1" />
+              {category.name}
             </div>
+          )}
+
+          {author && (
+            <div className="flex items-center">
+              <User className="h-4 w-4 mr-1" />
+              {author.username}
+            </div>
+          )}
+
+          <div className="flex items-center">
+            <Calendar className="h-4 w-4 mr-1" />
+            {article.createdAt.toLocaleDateString()}
+          </div>
+        </div>
+
+        {article.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {article.tags.map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+              </Badge>
+            ))}
           </div>
         )}
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-6">
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
+          <div className="prose max-w-none">
+            <div dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, "<br>") }} />
+          </div>
         </div>
       </ScrollArea>
     </div>
