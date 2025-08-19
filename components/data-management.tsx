@@ -1,12 +1,25 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Download, Upload, Trash2, RefreshCw, AlertCircle, CheckCircle, Database } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Download,
+  Upload,
+  Database,
+  Trash2,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+  Users,
+  FolderOpen,
+  Activity,
+} from "lucide-react"
 import { storage } from "../utils/storage"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
@@ -25,9 +38,9 @@ export function DataManagement({
   auditLog = [],
   onDataChange,
 }: DataManagementProps) {
-  const [isExporting, setIsExporting] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
   const [isImporting, setIsImporting] = useState(false)
-  const [isClearing, setIsClearing] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   // Get current data from storage if props are empty
@@ -41,7 +54,7 @@ export function DataManagement({
     setMessage(null)
 
     try {
-      const data = {
+      const exportData = {
         users: currentUsers,
         categories: currentCategories,
         articles: currentArticles,
@@ -50,151 +63,161 @@ export function DataManagement({
         version: "1.0",
       }
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: "application/json" })
+
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      setMessage({ type: "success", text: "Data exported successfully!" })
-      console.log("📤 Data exported successfully")
+      setMessage({
+        type: "success",
+        text: `Backup exported successfully! Contains ${currentUsers.length} users, ${currentCategories.length} categories, ${currentArticles.length} articles, and ${currentAuditLog.length} audit entries.`,
+      })
+
+      console.log("✅ Export successful:", {
+        users: currentUsers.length,
+        categories: currentCategories.length,
+        articles: currentArticles.length,
+        auditLog: currentAuditLog.length,
+      })
     } catch (error) {
-      console.error("Export error:", error)
-      setMessage({ type: "error", text: "Failed to export data" })
+      console.error("❌ Export failed:", error)
+      setMessage({ type: "error", text: "Failed to export data. Please try again." })
     } finally {
       setIsExporting(false)
     }
   }
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImport = async () => {
+    if (!importFile) {
+      setMessage({ type: "error", text: "Please select a file to import." })
+      return
+    }
 
     setIsImporting(true)
     setMessage(null)
 
     try {
-      const text = await file.text()
-      const data = JSON.parse(text)
+      const fileContent = await importFile.text()
+      console.log("📁 Reading import file...")
 
-      console.log("📥 Importing data:", data)
-
-      // Flexible validation - check if it's a valid object with at least one expected property
-      if (!data || typeof data !== "object") {
-        throw new Error("Invalid file format - not a valid JSON object")
+      let importData
+      try {
+        importData = JSON.parse(fileContent)
+      } catch (parseError) {
+        console.error("❌ JSON parse error:", parseError)
+        throw new Error("Invalid JSON format in backup file")
       }
 
-      // Check if it has at least one of the expected properties
-      const hasValidData = data.users || data.categories || data.articles || data.auditLog
+      console.log("📊 Import data structure:", {
+        hasUsers: !!importData.users,
+        hasCategories: !!importData.categories,
+        hasArticles: !!importData.articles,
+        hasAuditLog: !!importData.auditLog,
+        userCount: Array.isArray(importData.users) ? importData.users.length : 0,
+        categoryCount: Array.isArray(importData.categories) ? importData.categories.length : 0,
+        articleCount: Array.isArray(importData.articles) ? importData.articles.length : 0,
+        auditCount: Array.isArray(importData.auditLog) ? importData.auditLog.length : 0,
+      })
+
+      // Flexible validation - check if it's an object with at least one expected property
+      if (!importData || typeof importData !== "object") {
+        throw new Error("Invalid backup file format - not a valid object")
+      }
+
+      const hasValidData = importData.users || importData.categories || importData.articles || importData.auditLog
       if (!hasValidData) {
-        throw new Error("Invalid backup file - no recognizable data found")
+        throw new Error("Invalid backup file format - no recognized data found")
       }
 
-      // Import data with fallbacks
-      let importedCount = 0
+      // Import the data with proper validation
+      const importedCounts = { users: 0, categories: 0, articles: 0, auditLog: 0 }
 
-      if (data.users && Array.isArray(data.users)) {
-        storage.saveUsers(data.users)
-        importedCount += data.users.length
-        console.log(`📥 Imported ${data.users.length} users`)
+      if (importData.users && Array.isArray(importData.users)) {
+        storage.saveUsers(importData.users)
+        importedCounts.users = importData.users.length
+        console.log("👥 Users imported:", importedCounts.users)
       }
 
-      if (data.categories && Array.isArray(data.categories)) {
-        storage.saveCategories(data.categories)
-        importedCount += data.categories.length
-        console.log(`📥 Imported ${data.categories.length} categories`)
+      if (importData.categories && Array.isArray(importData.categories)) {
+        storage.saveCategories(importData.categories)
+        importedCounts.categories = importData.categories.length
+        console.log("📁 Categories imported:", importedCounts.categories)
       }
 
-      if (data.articles && Array.isArray(data.articles)) {
-        storage.saveArticles(data.articles)
-        importedCount += data.articles.length
-        console.log(`📥 Imported ${data.articles.length} articles`)
+      if (importData.articles && Array.isArray(importData.articles)) {
+        storage.saveArticles(importData.articles)
+        importedCounts.articles = importData.articles.length
+        console.log("📄 Articles imported:", importedCounts.articles)
       }
 
-      if (data.auditLog && Array.isArray(data.auditLog)) {
-        const auditEntries = data.auditLog.map((entry: any) => ({
-          ...entry,
-          timestamp: new Date(entry.timestamp),
-        }))
-        localStorage.setItem("kb_audit_log", JSON.stringify(auditEntries))
-        console.log(`📥 Imported ${auditEntries.length} audit log entries`)
+      if (importData.auditLog && Array.isArray(importData.auditLog)) {
+        localStorage.setItem("kb_audit_log", JSON.stringify(importData.auditLog))
+        importedCounts.auditLog = importData.auditLog.length
+        console.log("📋 Audit log imported:", importedCounts.auditLog)
       }
 
       setMessage({
         type: "success",
-        text: `Data imported successfully! Imported ${importedCount} items.`,
+        text: `Import successful! Imported ${importedCounts.users} users, ${importedCounts.categories} categories, ${importedCounts.articles} articles, and ${importedCounts.auditLog} audit entries.`,
       })
 
-      // Refresh data
+      // Refresh the data
       if (onDataChange) {
         onDataChange()
       }
+
+      setImportFile(null)
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ""
+      }
     } catch (error) {
-      console.error("Import error:", error)
+      console.error("❌ Import failed:", error)
       setMessage({
         type: "error",
-        text: error instanceof Error ? error.message : "Failed to import data",
+        text: error instanceof Error ? error.message : "Failed to import data. Please check the file format.",
       })
     } finally {
       setIsImporting(false)
-      // Reset file input
-      event.target.value = ""
     }
   }
 
-  const handleClearData = async () => {
-    if (!confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
-      return
-    }
+  const handleClearData = () => {
+    if (confirm("Are you sure you want to clear all articles and categories? This action cannot be undone.")) {
+      storage.clearArticlesAndCategories()
+      setMessage({ type: "success", text: "Articles and categories cleared successfully." })
 
-    setIsClearing(true)
-    setMessage(null)
-
-    try {
-      storage.clearAll()
-      storage.init() // Reinitialize with defaults
-
-      setMessage({ type: "success", text: "All data cleared successfully!" })
-      console.log("🗑️ All data cleared")
-
-      // Refresh data
       if (onDataChange) {
         onDataChange()
       }
-    } catch (error) {
-      console.error("Clear data error:", error)
-      setMessage({ type: "error", text: "Failed to clear data" })
-    } finally {
-      setIsClearing(false)
     }
   }
 
-  const handleResetToDefaults = async () => {
-    if (!confirm("Reset to default settings? This will clear all data and restore defaults.")) {
-      return
-    }
-
-    setIsClearing(true)
-    setMessage(null)
-
-    try {
+  const handleResetAll = () => {
+    if (
+      confirm(
+        "Are you sure you want to reset ALL data including users? This will restore default settings and cannot be undone.",
+      )
+    ) {
       storage.resetToDefaults()
-      setMessage({ type: "success", text: "Reset to defaults successfully!" })
-      console.log("🔄 Reset to defaults complete")
+      setMessage({ type: "success", text: "All data reset to defaults successfully." })
 
-      // Refresh data
       if (onDataChange) {
         onDataChange()
       }
-    } catch (error) {
-      console.error("Reset error:", error)
-      setMessage({ type: "error", text: "Failed to reset to defaults" })
-    } finally {
-      setIsClearing(false)
+
+      // Reload the page to reflect changes
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
     }
   }
 
@@ -207,125 +230,154 @@ export function DataManagement({
             <span>Data Management</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="backup">Backup</TabsTrigger>
+              <TabsTrigger value="restore">Restore</TabsTrigger>
+              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold">{currentUsers.length || 0}</div>
+                    <div className="text-sm text-gray-600">Users</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <FolderOpen className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold">{currentCategories.length || 0}</div>
+                    <div className="text-sm text-gray-600">Categories</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <FileText className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <div className="text-2xl font-bold">{currentArticles.length || 0}</div>
+                    <div className="text-sm text-gray-600">Articles</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Activity className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <div className="text-2xl font-bold">{currentAuditLog.length || 0}</div>
+                    <div className="text-sm text-gray-600">Audit Entries</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                <p>Published Articles: {currentArticles.filter((a) => a.status === "published").length || 0}</p>
+                <p>Draft Articles: {currentArticles.filter((a) => a.status === "draft").length || 0}</p>
+                <p>Admin Users: {currentUsers.filter((u) => u.role === "admin").length || 0}</p>
+                <p>Editor Users: {currentUsers.filter((u) => u.role === "editor").length || 0}</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="backup" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Export Data</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Export all data including users, categories, articles, and audit logs to a JSON file.
+                  </p>
+                  <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
+                    {isExporting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Exporting...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Backup
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="restore" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Import Data</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Import data from a previously exported JSON backup file. This will replace existing data.
+                  </p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="import-file">Select Backup File</Label>
+                      <Input
+                        id="import-file"
+                        type="file"
+                        accept=".json"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <Button onClick={handleImport} disabled={!importFile || isImporting} className="w-full sm:w-auto">
+                      {isImporting ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import Backup
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="maintenance" className="space-y-4">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Clear Content Data</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Remove all articles and categories while keeping users and settings.
+                  </p>
+                  <Button onClick={handleClearData} variant="outline" className="w-full sm:w-auto bg-transparent">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Articles & Categories
+                  </Button>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-2 text-red-600">Reset All Data</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Reset everything to default settings. This will remove all users, articles, categories, and audit
+                    logs.
+                  </p>
+                  <Button onClick={handleResetAll} variant="destructive" className="w-full sm:w-auto">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reset All Data
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
           {message && (
-            <Alert variant={message.type === "error" ? "destructive" : "default"}>
+            <Alert variant={message.type === "error" ? "destructive" : "default"} className="mt-4">
               {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
               <AlertDescription>{message.text}</AlertDescription>
             </Alert>
           )}
-
-          {/* Data Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{currentUsers?.length || 0}</div>
-              <div className="text-sm text-blue-800">Users</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{currentCategories?.length || 0}</div>
-              <div className="text-sm text-green-800">Categories</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{currentArticles?.length || 0}</div>
-              <div className="text-sm text-purple-800">Articles</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{currentAuditLog?.length || 0}</div>
-              <div className="text-sm text-orange-800">Audit Entries</div>
-            </div>
-          </div>
-
-          {/* Export/Import Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <h3 className="font-semibold">Export Data</h3>
-              <p className="text-sm text-gray-600">Download all data as a JSON backup file</p>
-              <Button onClick={handleExport} disabled={isExporting} className="w-full">
-                {isExporting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Data
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="font-semibold">Import Data</h3>
-              <p className="text-sm text-gray-600">Restore data from a JSON backup file</p>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  disabled={isImporting}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Button disabled={isImporting} className="w-full bg-transparent" variant="outline">
-                  {isImporting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Importing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import Data
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="border-t pt-6">
-            <h3 className="font-semibold text-red-600 mb-3">Danger Zone</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h4 className="font-medium">Clear All Data</h4>
-                <p className="text-sm text-gray-600">
-                  Permanently delete all users, categories, articles, and audit logs
-                </p>
-                <Button onClick={handleClearData} disabled={isClearing} variant="destructive" className="w-full">
-                  {isClearing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Clearing...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Clear All Data
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-medium">Reset to Defaults</h4>
-                <p className="text-sm text-gray-600">Clear all data and restore default admin user</p>
-                <Button onClick={handleResetToDefaults} disabled={isClearing} variant="destructive" className="w-full">
-                  {isClearing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Resetting...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reset to Defaults
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

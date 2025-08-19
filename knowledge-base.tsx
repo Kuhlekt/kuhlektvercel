@@ -51,7 +51,7 @@ export default function KnowledgeBase() {
       // Create default admin if none exists
       console.log("👤 Creating default admin user...")
       const defaultAdmin: User = {
-        id: "admin-1",
+        id: "admin-default",
         username: "admin",
         email: "admin@kuhlekt.com",
         password: "admin123",
@@ -71,22 +71,36 @@ export default function KnowledgeBase() {
   }, [])
 
   const loadData = () => {
+    console.log("📊 Loading data from storage...")
     const loadedCategories = storage.getCategories()
     const loadedArticles = storage.getArticles()
     const loadedUsers = storage.getUsers()
     const loadedAuditLog = storage.getAuditLog()
 
-    // Ensure dates are properly converted
-    const processedArticles = loadedArticles.map((article) => ({
-      ...article,
-      createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
-      updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
-    }))
+    // Ensure dates are properly converted and data is safe
+    const processedArticles = Array.isArray(loadedArticles)
+      ? loadedArticles.map((article) => ({
+          ...article,
+          createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
+          updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
+        }))
+      : []
 
-    setCategories(loadedCategories)
+    const processedCategories = Array.isArray(loadedCategories) ? loadedCategories : []
+    const processedUsers = Array.isArray(loadedUsers) ? loadedUsers : []
+    const processedAuditLog = Array.isArray(loadedAuditLog) ? loadedAuditLog : []
+
+    setCategories(processedCategories)
     setArticles(processedArticles)
-    setUsers(loadedUsers)
-    setAuditLog(loadedAuditLog)
+    setUsers(processedUsers)
+    setAuditLog(processedAuditLog)
+
+    console.log("✅ Data loaded:", {
+      categories: processedCategories.length,
+      articles: processedArticles.length,
+      users: processedUsers.length,
+      auditLog: processedAuditLog.length,
+    })
   }
 
   const handleLogin = (user: User) => {
@@ -96,25 +110,20 @@ export default function KnowledgeBase() {
   }
 
   const handleLogout = () => {
-    if (currentUser) {
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "LOGOUT",
-        details: `User ${currentUser.username} logged out`,
-      })
-    }
-    // Don't actually log out - just refresh
+    // Don't actually log out - just refresh data
+    console.log("🔄 Refreshing data...")
     loadData()
   }
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     if (query.trim()) {
-      const results = articles.filter(
+      const safeArticles = Array.isArray(articles) ? articles : []
+      const results = safeArticles.filter(
         (article) =>
           article.title.toLowerCase().includes(query.toLowerCase()) ||
           article.content.toLowerCase().includes(query.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase())),
+          (Array.isArray(article.tags) && article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))),
       )
       setSearchResults(results)
       setActiveTab("search")
@@ -215,32 +224,32 @@ export default function KnowledgeBase() {
     loadData()
   }
 
-  const handleAuditLogUpdate = (updatedAuditLog: AuditLogType[]) => {
-    setAuditLog(updatedAuditLog)
-  }
-
-  // Get articles for categories (with proper date handling)
+  // Get articles for categories (with proper date and safety handling)
   const getCategoriesWithArticles = (): Category[] => {
-    return categories.map((category) => ({
+    const safeCategories = Array.isArray(categories) ? categories : []
+    const safeArticles = Array.isArray(articles) ? articles : []
+
+    return safeCategories.map((category) => ({
       ...category,
-      articles: articles
+      articles: safeArticles
         .filter((article) => article.categoryId === category.id && !article.subcategoryId)
         .map((article) => ({
           ...article,
           createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
           updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
         })),
-      subcategories:
-        category.subcategories?.map((subcategory) => ({
-          ...subcategory,
-          articles: articles
-            .filter((article) => article.subcategoryId === subcategory.id)
-            .map((article) => ({
-              ...article,
-              createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
-              updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
-            })),
-        })) || [],
+      subcategories: Array.isArray(category.subcategories)
+        ? category.subcategories.map((subcategory) => ({
+            ...subcategory,
+            articles: safeArticles
+              .filter((article) => article.subcategoryId === subcategory.id)
+              .map((article) => ({
+                ...article,
+                createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
+                updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
+              })),
+          }))
+        : [],
     }))
   }
 
@@ -251,7 +260,7 @@ export default function KnowledgeBase() {
     action()
   }
 
-  // Always admin access
+  // Always admin access - bypass login
   const isAdmin = true
   const canEdit = true
 
