@@ -23,40 +23,33 @@ export default function KnowledgeBase() {
   const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
 
-  // Initialize data on component mount
   useEffect(() => {
-    console.log("Initializing Knowledge Base...")
+    console.log("🚀 Initializing Knowledge Base...")
     storage.init()
 
-    // Load data from storage
     setUsers(storage.getUsers())
     setCategories(storage.getCategories())
     setArticles(storage.getArticles())
     setAuditLog(storage.getAuditLog())
 
-    // Check for existing user session
     const existingUser = storage.getCurrentUser()
     if (existingUser) {
-      console.log("Found existing user session:", existingUser)
+      console.log("👤 Found existing user session:", existingUser)
       setCurrentUser(existingUser)
     }
 
-    console.log("Knowledge Base initialized")
+    console.log("✅ Knowledge Base initialized")
   }, [])
 
-  // Handle login
   const handleLogin = (user: User) => {
-    console.log("User logged in:", user)
+    console.log("🎉 User logged in:", user)
     setCurrentUser(user)
     setIsLoginModalOpen(false)
-
-    // Refresh audit log to show login entry
     setAuditLog(storage.getAuditLog())
   }
 
-  // Handle logout
   const handleLogout = () => {
-    console.log("User logged out")
+    console.log("👋 User logged out")
     if (currentUser) {
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -72,7 +65,6 @@ export default function KnowledgeBase() {
     setSelectedCategoryId(null)
   }
 
-  // Handle article creation
   const handleAddArticle = (articleData: {
     title: string
     content: string
@@ -95,7 +87,6 @@ export default function KnowledgeBase() {
     setArticles(updatedArticles)
     storage.saveArticles(updatedArticles)
 
-    // Add to audit log
     storage.addAuditEntry({
       userId: currentUser.id,
       action: "CREATE_ARTICLE",
@@ -104,10 +95,9 @@ export default function KnowledgeBase() {
     setAuditLog(storage.getAuditLog())
 
     setIsAddArticleModalOpen(false)
-    console.log("Article created:", newArticle)
+    console.log("📝 Article created:", newArticle)
   }
 
-  // Filter articles based on search term
   const getFilteredArticles = () => {
     if (!searchTerm.trim()) return articles
 
@@ -121,40 +111,26 @@ export default function KnowledgeBase() {
     )
   }
 
-  // Get articles for selected category
-  const getCategoryArticles = () => {
-    if (!selectedCategoryId) return []
-    return articles.filter((article) => article.categoryId === selectedCategoryId && article.status === "published")
-  }
-
-  // Get selected article
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
   const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
   const selectedAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : undefined
 
-  // Handle category selection
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId === selectedCategoryId ? null : categoryId)
     setSelectedArticleId(null)
   }
 
-  // Handle article selection
   const handleArticleSelect = (articleId: string) => {
     setSelectedArticleId(articleId)
   }
 
-  // Handle back from article view
   const handleBackFromArticle = () => {
     setSelectedArticleId(null)
   }
 
-  // Handle edit article (placeholder)
   const handleEditArticle = () => {
-    console.log("Edit article functionality not implemented yet")
+    console.log("✏️ Edit article functionality not implemented yet")
   }
-
-  const filteredArticles = getFilteredArticles()
-  const categoryArticles = getCategoryArticles()
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -212,7 +188,6 @@ export default function KnowledgeBase() {
         </main>
       </div>
 
-      {/* Modals */}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
 
       {currentUser && (

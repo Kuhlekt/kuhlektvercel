@@ -26,7 +26,7 @@ export function Navigation({
   onLogout,
 }: NavigationProps) {
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-3">
+    <nav className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -39,7 +39,7 @@ export function Navigation({
 
         <div className="flex-1 max-w-md mx-8">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
               placeholder="Search articles..."
@@ -50,7 +50,7 @@ export function Navigation({
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           {currentUser ? (
             <>
               {(currentUser.role === "admin" || currentUser.role === "editor") && (

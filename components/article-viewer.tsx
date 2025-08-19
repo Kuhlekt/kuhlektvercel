@@ -8,8 +8,8 @@ import type { Article, Category, User as UserType } from "../types/knowledge-bas
 
 interface ArticleViewerProps {
   article: Article
-  category: Category | undefined
-  author: UserType | undefined
+  category?: Category
+  author?: UserType
   currentUser: UserType | null
   onEdit: () => void
   onBack: () => void
@@ -21,67 +21,69 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
     (currentUser.role === "admin" || (currentUser.role === "editor" && currentUser.id === article.authorId))
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+    <div className="h-full flex flex-col bg-white">
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button onClick={onBack} variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          {category && <Badge variant="secondary">{category.name}</Badge>}
+          {canEdit && (
+            <Button onClick={onEdit} size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
         </div>
 
-        {canEdit && (
-          <Button onClick={onEdit} size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        )}
+        <div className="space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{article.title}</h1>
+            {category && (
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <span>in</span>
+                <Badge variant="outline">{category.name}</Badge>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-6 text-sm text-gray-600">
+            {author && (
+              <div className="flex items-center space-x-1">
+                <User className="h-4 w-4" />
+                <span>{author.username}</span>
+              </div>
+            )}
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-4 w-4" />
+              <span>{article.createdAt.toLocaleDateString()}</span>
+            </div>
+            {article.tags.length > 0 && (
+              <div className="flex items-center space-x-1">
+                <Tag className="h-4 w-4" />
+                <div className="flex space-x-1">
+                  {article.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {article.tags.length > 3 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{article.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto p-6">
-          <article className="prose prose-lg max-w-none">
-            <header className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
-                {author && (
-                  <div className="flex items-center space-x-1">
-                    <User className="h-4 w-4" />
-                    <span>{author.username}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-                </div>
-
-                {article.updatedAt && (
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>Updated {new Date(article.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-
-              {article.tags.length > 0 && (
-                <div className="flex items-center space-x-2 mb-6">
-                  <Tag className="h-4 w-4 text-gray-500" />
-                  <div className="flex flex-wrap gap-2">
-                    {article.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </header>
-
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">{article.content}</div>
-          </article>
+        <div className="p-6">
+          <div className="prose max-w-none">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{article.content}</div>
+          </div>
         </div>
       </ScrollArea>
     </div>

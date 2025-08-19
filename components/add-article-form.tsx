@@ -16,7 +16,7 @@ import type { Category, User } from "../types/knowledge-base"
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (articleData: {
+  onSubmit: (data: {
     title: string
     content: string
     categoryId: string
@@ -33,14 +33,11 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [categoryId, setCategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
-  const [status, setStatus] = useState<"draft" | "published">("draft")
+  const [status, setStatus] = useState<"draft" | "published">("published")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!title.trim() || !content.trim() || !categoryId) {
-      return
-    }
+    if (!title.trim() || !content.trim() || !categoryId) return
 
     onSubmit({
       title: title.trim(),
@@ -56,7 +53,26 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setCategoryId("")
     setTags([])
     setTagInput("")
-    setStatus("draft")
+    setStatus("published")
+  }
+
+  const handleAddTag = () => {
+    const tag = tagInput.trim().toLowerCase()
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag])
+      setTagInput("")
+    }
+  }
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddTag()
+    }
   }
 
   const handleClose = () => {
@@ -65,27 +81,8 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setCategoryId("")
     setTags([])
     setTagInput("")
-    setStatus("draft")
+    setStatus("published")
     onClose()
-  }
-
-  const addTag = () => {
-    const tag = tagInput.trim().toLowerCase()
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag])
-      setTagInput("")
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-  }
-
-  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      addTag()
-    }
   }
 
   return (
@@ -95,7 +92,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -145,7 +142,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 onKeyPress={handleTagInputKeyPress}
                 placeholder="Add tags (press Enter)"
               />
-              <Button type="button" onClick={addTag} variant="outline">
+              <Button type="button" onClick={handleAddTag} variant="outline">
                 Add
               </Button>
             </div>
@@ -154,7 +151,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
-                    <button type="button" onClick={() => removeTag(tag)} className="ml-1 hover:text-red-600">
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-600">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -176,11 +173,11 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit">Save Article</Button>
+            <Button type="submit">Create Article</Button>
           </div>
         </form>
       </DialogContent>

@@ -9,40 +9,34 @@ class Storage {
   private readonly CURRENT_USER_KEY = "kb_current_user"
   private readonly AUDIT_LOG_KEY = "kb_audit_log"
 
-  // Initialize storage with default data if empty
   init() {
     if (typeof window === "undefined") return
 
-    console.log("Initializing storage...")
+    console.log("🔧 Initializing storage...")
 
-    // Initialize users
     if (!localStorage.getItem(this.USERS_KEY)) {
-      console.log("No users found, initializing with default users")
+      console.log("👥 No users found, initializing with default users")
       localStorage.setItem(this.USERS_KEY, JSON.stringify(initialUsers))
     }
 
-    // Initialize categories
     if (!localStorage.getItem(this.CATEGORIES_KEY)) {
-      console.log("No categories found, initializing with default categories")
+      console.log("📁 No categories found, initializing with default categories")
       localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(initialCategories))
     }
 
-    // Initialize articles
     if (!localStorage.getItem(this.ARTICLES_KEY)) {
-      console.log("No articles found, initializing with default articles")
+      console.log("📄 No articles found, initializing with default articles")
       localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(initialArticles))
     }
 
-    // Initialize audit log
     if (!localStorage.getItem(this.AUDIT_LOG_KEY)) {
-      console.log("No audit log found, initializing empty audit log")
+      console.log("📋 No audit log found, initializing empty audit log")
       localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify([]))
     }
 
-    console.log("Storage initialization complete")
+    console.log("✅ Storage initialization complete")
   }
 
-  // User management
   getUsers(): User[] {
     if (typeof window === "undefined") return initialUsers
     const users = localStorage.getItem(this.USERS_KEY)
@@ -55,18 +49,17 @@ class Storage {
   }
 
   authenticateUser(username: string, password: string): User | null {
-    console.log("Authenticating user:", username)
+    console.log("🔐 Authenticating user:", username)
     const users = this.getUsers()
     console.log(
-      "Available users:",
+      "👥 Available users:",
       users.map((u) => ({ username: u.username, role: u.role })),
     )
 
     const user = users.find((u) => u.username === username && u.password === password)
 
     if (user) {
-      console.log("Authentication successful for:", user.username)
-      // Update last login
+      console.log("✅ Authentication successful for:", user.username)
       const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date().toISOString() } : u))
       this.saveUsers(updatedUsers)
       this.addAuditEntry({
@@ -77,26 +70,29 @@ class Storage {
       return { ...user, lastLogin: new Date().toISOString() }
     }
 
-    console.log("Authentication failed for:", username)
+    console.log("❌ Authentication failed for:", username)
     return null
   }
 
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
     const user = localStorage.getItem(this.CURRENT_USER_KEY)
-    return user ? JSON.parse(user) : null
+    const parsedUser = user ? JSON.parse(user) : null
+    console.log("👤 Current user from storage:", parsedUser)
+    return parsedUser
   }
 
   setCurrentUser(user: User | null) {
     if (typeof window === "undefined") return
     if (user) {
+      console.log("💾 Setting current user:", user.username)
       localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user))
     } else {
+      console.log("🗑️ Clearing current user")
       localStorage.removeItem(this.CURRENT_USER_KEY)
     }
   }
 
-  // Category management
   getCategories(): Category[] {
     if (typeof window === "undefined") return initialCategories
     const categories = localStorage.getItem(this.CATEGORIES_KEY)
@@ -108,13 +104,11 @@ class Storage {
     localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(categories))
   }
 
-  // Article management
   getArticles(): Article[] {
     if (typeof window === "undefined") return initialArticles
     const articles = localStorage.getItem(this.ARTICLES_KEY)
     const parsedArticles = articles ? JSON.parse(articles) : initialArticles
 
-    // Convert date strings back to Date objects
     return parsedArticles.map((article: any) => ({
       ...article,
       createdAt: new Date(article.createdAt),
@@ -127,7 +121,6 @@ class Storage {
     localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(articles))
   }
 
-  // Audit log
   getAuditLog(): AuditLog[] {
     if (typeof window === "undefined") return []
     const log = localStorage.getItem(this.AUDIT_LOG_KEY)
@@ -142,11 +135,10 @@ class Storage {
       timestamp: new Date().toISOString(),
       ...entry,
     }
-    log.unshift(newEntry) // Add to beginning
+    log.unshift(newEntry)
     localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(log))
   }
 
-  // Clear all data
   clearAll() {
     if (typeof window === "undefined") return
     localStorage.removeItem(this.USERS_KEY)

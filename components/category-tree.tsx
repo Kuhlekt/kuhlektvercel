@@ -1,8 +1,8 @@
 "use client"
 
 import { Folder, FileText, ChevronRight, ChevronDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { Category, Article } from "../types/knowledge-base"
 
@@ -28,55 +28,59 @@ export function CategoryTree({
   }
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200">
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-900">Categories</h2>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-8rem)]">
+      <ScrollArea className="flex-1">
         <div className="p-2">
           {categories.map((category) => {
             const categoryArticles = getCategoryArticles(category.id)
             const isSelected = selectedCategoryId === category.id
+            const isExpanded = isSelected
 
             return (
               <div key={category.id} className="mb-2">
-                <Button
-                  variant="ghost"
-                  className={cn("w-full justify-start p-2 h-auto", isSelected && "bg-blue-50 text-blue-700")}
+                <button
                   onClick={() => onCategorySelect(category.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-2 rounded-lg text-left hover:bg-gray-100 transition-colors",
+                    isSelected && "bg-blue-50 text-blue-700",
+                  )}
                 >
-                  <div className="flex items-center space-x-2 w-full">
-                    {isSelected ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <div className="flex items-center space-x-2 flex-1">
+                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <Folder className="h-4 w-4" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{category.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {categoryArticles.length} article{categoryArticles.length !== 1 ? "s" : ""}
-                      </div>
-                    </div>
+                    <span className="font-medium truncate">{category.name}</span>
                   </div>
-                </Button>
+                  {categoryArticles.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {categoryArticles.length}
+                    </Badge>
+                  )}
+                </button>
 
-                {isSelected && categoryArticles.length > 0 && (
+                {isExpanded && categoryArticles.length > 0 && (
                   <div className="ml-6 mt-1 space-y-1">
                     {categoryArticles.map((article) => (
-                      <Button
+                      <button
                         key={article.id}
-                        variant="ghost"
-                        className={cn(
-                          "w-full justify-start p-2 h-auto text-sm",
-                          selectedArticleId === article.id && "bg-blue-100 text-blue-800",
-                        )}
                         onClick={() => onArticleSelect(article.id)}
+                        className={cn(
+                          "w-full flex items-center space-x-2 p-2 rounded-md text-left hover:bg-gray-100 transition-colors text-sm",
+                          selectedArticleId === article.id && "bg-blue-50 text-blue-700",
+                        )}
                       >
-                        <div className="flex items-center space-x-2 w-full">
-                          <FileText className="h-3 w-3" />
-                          <span className="truncate">{article.title}</span>
-                        </div>
-                      </Button>
+                        <FileText className="h-3 w-3" />
+                        <span className="truncate">{article.title}</span>
+                      </button>
                     ))}
                   </div>
+                )}
+
+                {isExpanded && categoryArticles.length === 0 && (
+                  <div className="ml-6 mt-1 p-2 text-sm text-gray-500 italic">No articles in this category</div>
                 )}
               </div>
             )

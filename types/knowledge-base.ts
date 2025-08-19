@@ -26,6 +26,7 @@ export interface Category {
   id: string
   name: string
   description?: string
+  parentId?: string
   createdAt: string
   subcategories: Subcategory[]
   articles: Article[]

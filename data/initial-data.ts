@@ -39,99 +39,41 @@ export const initialArticles: Article[] = [
   {
     id: "1",
     title: "Welcome to Kuhlekt Knowledge Base",
-    content: `Welcome to the Kuhlekt Knowledge Base! This comprehensive platform is designed to help you find answers, learn new concepts, and stay up-to-date with the latest information.
-
-## Getting Started
-
-This knowledge base contains articles organized by categories to help you quickly find the information you need. Use the search functionality to find specific topics or browse through categories.
-
-## Features
-
-- **Search**: Use the search bar to find articles by title, content, or tags
-- **Categories**: Browse articles organized by topic
-- **User Roles**: Different access levels for viewing and editing content
-- **Rich Content**: Articles support formatted text and multimedia
-
-## Need Help?
-
-If you can't find what you're looking for, please contact our support team or check the troubleshooting section.`,
+    content:
+      "This is your comprehensive knowledge base system. Here you can find all the information you need to get started with our platform.",
     categoryId: "1",
     authorId: "1",
+    tags: ["welcome", "introduction", "getting-started"],
+    status: "published",
     createdAt: new Date(),
     updatedAt: new Date(),
-    status: "published",
-    tags: ["welcome", "getting-started", "introduction"],
     createdBy: "admin",
   },
   {
     id: "2",
-    title: "How to Search Effectively",
-    content: `Learn how to make the most of the search functionality in our knowledge base.
-
-## Search Tips
-
-1. **Use specific keywords**: Be specific about what you're looking for
-2. **Try different terms**: If one search doesn't work, try synonyms
-3. **Use quotes**: Put phrases in quotes for exact matches
-4. **Filter by category**: Narrow down results by selecting specific categories
-
-## Advanced Search
-
-- Use the category filter to limit results to specific topics
-- Search results highlight matching terms
-- Articles are ranked by relevance
-
-## Still Can't Find It?
-
-If you're still having trouble finding what you need, try browsing through the categories or contact support.`,
+    title: "How to Create Your First Article",
+    content:
+      "Creating articles is easy! Simply click the 'Add Article' button in the navigation bar and fill out the form with your content.",
     categoryId: "1",
     authorId: "1",
+    tags: ["tutorial", "articles", "creation"],
+    status: "published",
     createdAt: new Date(),
     updatedAt: new Date(),
-    status: "published",
-    tags: ["search", "tips", "help"],
     createdBy: "admin",
   },
   {
     id: "3",
-    title: "API Authentication Guide",
-    content: `This guide covers how to authenticate with our API endpoints.
-
-## Authentication Methods
-
-### API Keys
-Generate an API key from your dashboard and include it in the header:
-\`\`\`
-Authorization: Bearer YOUR_API_KEY
-\`\`\`
-
-### OAuth 2.0
-For more secure applications, use OAuth 2.0 flow:
-
-1. Register your application
-2. Redirect users to authorization endpoint
-3. Exchange authorization code for access token
-4. Use access token in API requests
-
-## Rate Limiting
-
-API requests are limited to:
-- 1000 requests per hour for authenticated users
-- 100 requests per hour for unauthenticated requests
-
-## Error Handling
-
-Common error responses:
-- 401: Unauthorized - Invalid or missing authentication
-- 403: Forbidden - Insufficient permissions
-- 429: Too Many Requests - Rate limit exceeded`,
+    title: "API Documentation Overview",
+    content:
+      "Our API provides comprehensive access to all platform features. This guide covers authentication, endpoints, and best practices.",
     categoryId: "2",
-    authorId: "1",
+    authorId: "2",
+    tags: ["api", "documentation", "technical"],
+    status: "published",
     createdAt: new Date(),
     updatedAt: new Date(),
-    status: "published",
-    tags: ["api", "authentication", "security"],
-    createdBy: "admin",
+    createdBy: "editor",
   },
   {
     id: "4",
