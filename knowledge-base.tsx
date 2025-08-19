@@ -24,7 +24,19 @@ import { Navigation } from "./components/navigation"
 import { storage } from "./utils/storage"
 import type { User, Category, Article, AuditLog as AuditLogType } from "./types/knowledge-base"
 
-export default function KnowledgeBase() {
+interface KnowledgeBaseProps {
+  initialUsers?: User[]
+  initialCategories?: Category[]
+  initialArticles?: Article[]
+  initialAuditLog?: AuditLogType[]
+}
+
+export default function KnowledgeBase({
+  initialUsers = [],
+  initialCategories = [],
+  initialArticles = [],
+  initialAuditLog = [],
+}: KnowledgeBaseProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [showLogin, setShowLogin] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
@@ -426,7 +438,13 @@ export default function KnowledgeBase() {
               </TabsContent>
 
               <TabsContent value="data" className="mt-6">
-                <DataManagement onDataChange={loadData} />
+                <DataManagement
+                  users={users}
+                  categories={categories}
+                  articles={articles}
+                  auditLog={auditLog}
+                  onDataChange={loadData}
+                />
               </TabsContent>
             </>
           )}

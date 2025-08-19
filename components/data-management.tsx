@@ -10,13 +10,20 @@ import { storage } from "../utils/storage"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
 interface DataManagementProps {
-  users: User[]
-  categories: Category[]
-  articles: Article[]
-  auditLog: AuditLog[]
+  users?: User[]
+  categories?: Category[]
+  articles?: Article[]
+  auditLog?: AuditLog[]
+  onDataChange?: () => void
 }
 
-export function DataManagement({ users, categories, articles, auditLog }: DataManagementProps) {
+export function DataManagement({
+  users = [],
+  categories = [],
+  articles = [],
+  auditLog = [],
+  onDataChange,
+}: DataManagementProps) {
   const [importStatus, setImportStatus] = useState<string>("")
 
   const handleExport = () => {
@@ -42,6 +49,9 @@ export function DataManagement({ users, categories, articles, auditLog }: DataMa
         const data = JSON.parse(e.target?.result as string)
         storage.importData(data)
         setImportStatus("Data imported successfully! Please refresh the page to see changes.")
+        if (onDataChange) {
+          onDataChange()
+        }
       } catch (error) {
         setImportStatus("Error importing data. Please check the file format.")
       }
@@ -54,9 +64,18 @@ export function DataManagement({ users, categories, articles, auditLog }: DataMa
       if (confirm("This will delete all users, categories, articles, and audit logs. Are you absolutely sure?")) {
         storage.clearAll()
         setImportStatus("All data cleared! Please refresh the page.")
+        if (onDataChange) {
+          onDataChange()
+        }
       }
     }
   }
+
+  // Get current data from storage if props are empty
+  const currentUsers = users.length > 0 ? users : storage.getUsers()
+  const currentCategories = categories.length > 0 ? categories : storage.getCategories()
+  const currentArticles = articles.length > 0 ? articles : storage.getArticles()
+  const currentAuditLog = auditLog.length > 0 ? auditLog : storage.getAuditLog()
 
   return (
     <div className="space-y-6">
@@ -67,19 +86,19 @@ export function DataManagement({ users, categories, articles, auditLog }: DataMa
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 border rounded-lg text-center">
-          <div className="text-2xl font-bold text-blue-600">{users.length}</div>
+          <div className="text-2xl font-bold text-blue-600">{currentUsers?.length || 0}</div>
           <div className="text-sm text-gray-600">Users</div>
         </div>
         <div className="p-4 border rounded-lg text-center">
-          <div className="text-2xl font-bold text-green-600">{categories.length}</div>
+          <div className="text-2xl font-bold text-green-600">{currentCategories?.length || 0}</div>
           <div className="text-sm text-gray-600">Categories</div>
         </div>
         <div className="p-4 border rounded-lg text-center">
-          <div className="text-2xl font-bold text-purple-600">{articles.length}</div>
+          <div className="text-2xl font-bold text-purple-600">{currentArticles?.length || 0}</div>
           <div className="text-sm text-gray-600">Articles</div>
         </div>
         <div className="p-4 border rounded-lg text-center">
-          <div className="text-2xl font-bold text-orange-600">{auditLog.length}</div>
+          <div className="text-2xl font-bold text-orange-600">{currentAuditLog?.length || 0}</div>
           <div className="text-sm text-gray-600">Audit Entries</div>
         </div>
       </div>
