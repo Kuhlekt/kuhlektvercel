@@ -11,11 +11,14 @@ const STORAGE_KEYS = {
 }
 
 export const storage = {
-  // Users
   getUsers(): User[] {
     if (typeof window === "undefined") return initialUsers
     const stored = localStorage.getItem(STORAGE_KEYS.USERS)
-    return stored ? JSON.parse(stored) : initialUsers
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(initialUsers))
+      return initialUsers
+    }
+    return JSON.parse(stored)
   },
 
   saveUsers(users: User[]): void {
@@ -23,11 +26,14 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
   },
 
-  // Categories
   getCategories(): Category[] {
     if (typeof window === "undefined") return initialCategories
     const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
-    return stored ? JSON.parse(stored) : initialCategories
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(initialCategories))
+      return initialCategories
+    }
+    return JSON.parse(stored)
   },
 
   saveCategories(categories: Category[]): void {
@@ -35,11 +41,14 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories))
   },
 
-  // Articles
   getArticles(): Article[] {
     if (typeof window === "undefined") return initialArticles
     const stored = localStorage.getItem(STORAGE_KEYS.ARTICLES)
-    return stored ? JSON.parse(stored) : initialArticles
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(initialArticles))
+      return initialArticles
+    }
+    return JSON.parse(stored)
   },
 
   saveArticles(articles: Article[]): void {
@@ -47,7 +56,6 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(articles))
   },
 
-  // Audit Log
   getAuditLog(): AuditLog[] {
     if (typeof window === "undefined") return []
     const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
@@ -70,7 +78,6 @@ export const storage = {
     this.saveAuditLog(log)
   },
 
-  // Current User
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
     const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
@@ -83,21 +90,6 @@ export const storage = {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user))
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
-    }
-  },
-
-  // Initialize storage with default data
-  initializeStorage(): void {
-    if (typeof window === "undefined") return
-
-    if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-      this.saveUsers(initialUsers)
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
-      this.saveCategories(initialCategories)
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ARTICLES)) {
-      this.saveArticles(initialArticles)
     }
   },
 }

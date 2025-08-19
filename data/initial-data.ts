@@ -4,13 +4,13 @@ export const initialCategories: Category[] = [
   {
     id: "1",
     name: "Getting Started",
-    description: "Basic information and setup guides",
+    description: "Basic information to get you started",
     createdAt: new Date().toISOString(),
   },
   {
     id: "2",
     name: "Technical Documentation",
-    description: "Detailed technical guides and references",
+    description: "Technical guides and documentation",
     createdAt: new Date().toISOString(),
   },
   {
@@ -24,26 +24,26 @@ export const initialCategories: Category[] = [
 export const initialArticles: Article[] = [
   {
     id: "1",
-    title: "Welcome to Kuhlekt Knowledge Base",
+    title: "Welcome to the Knowledge Base",
     content:
-      "This is your comprehensive knowledge base system. You can browse articles by category, search for specific content, and manage your knowledge efficiently.",
+      "This is your comprehensive knowledge base system. Here you can browse articles, search for information, and if you have the right permissions, add new content.",
     categoryId: "1",
     authorId: "1",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
     tags: ["welcome", "introduction"],
     status: "published",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
     id: "2",
-    title: "How to Add New Articles",
+    title: "How to Login",
     content:
-      'To add a new article, click the "Add Article" button in the navigation. Fill in the title, select a category, add content, and optionally include tags.',
+      "To access admin features, click the Login button in the top right corner. Use the credentials: admin / admin123",
     categoryId: "1",
     authorId: "1",
+    tags: ["login", "authentication"],
+    status: "published",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    tags: ["tutorial", "articles"],
-    status: "published",
   },
 ]

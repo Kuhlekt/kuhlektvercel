@@ -8,14 +8,14 @@ import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { storage } from "./utils/storage"
-import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
+import type { Category, Article, User, AuditLog } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [articles, setArticles] = useState<Article[]>([])
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLog[]>([])
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
@@ -27,12 +27,13 @@ export default function KnowledgeBase() {
 
   // Initialize data on component mount
   useEffect(() => {
-    storage.initializeStorage()
+    console.log("Initializing knowledge base...")
     setUsers(storage.getUsers())
     setCategories(storage.getCategories())
     setArticles(storage.getArticles())
     setAuditLog(storage.getAuditLog())
     setCurrentUser(storage.getCurrentUser())
+    console.log("Knowledge base initialized")
   }, [])
 
   // Filter articles based on category and search term
@@ -47,10 +48,12 @@ export default function KnowledgeBase() {
   })
 
   const handleLogin = (user: User) => {
+    console.log("User logged in:", user.username)
     setCurrentUser(user)
   }
 
   const handleLogout = () => {
+    console.log("User logged out")
     storage.setCurrentUser(null)
     setCurrentUser(null)
     setSelectedArticle(null)
@@ -82,6 +85,7 @@ export default function KnowledgeBase() {
       details: `Created article "${articleData.title}"`,
     })
     setAuditLog(storage.getAuditLog())
+    setIsAddArticleModalOpen(false)
   }
 
   const handleUpdateUsers = (updatedUsers: User[]) => {
@@ -128,7 +132,8 @@ export default function KnowledgeBase() {
               category={categories.find((c) => c.id === selectedArticle.categoryId)}
               author={users.find((u) => u.id === selectedArticle.authorId)}
               currentUser={currentUser}
-              onEdit={() => {}} // TODO: Implement edit functionality
+              onEdit={() => {}}
+              onBack={() => setSelectedArticle(null)}
             />
           ) : (
             <div className="space-y-4">

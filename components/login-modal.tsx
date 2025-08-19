@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
 
@@ -28,10 +29,13 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
 
     try {
-      console.log("Attempting login with:", { username, password })
+      console.log("Login attempt:", { username, password })
 
       const users = storage.getUsers()
-      console.log("Available users:", users)
+      console.log(
+        "Available users:",
+        users.map((u) => ({ username: u.username, password: u.password })),
+      )
 
       const user = users.find((u) => u.username === username && u.password === password)
       console.log("Found user:", user)
@@ -47,11 +51,13 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           details: `User ${user.username} logged in`,
         })
 
+        console.log("Login successful")
         onLogin(user)
         onClose()
         setUsername("")
         setPassword("")
       } else {
+        console.log("Login failed - invalid credentials")
         setError("Invalid username or password")
       }
     } catch (err) {
@@ -62,8 +68,15 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
@@ -78,6 +91,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
               required
+              autoComplete="username"
             />
           </div>
           <div className="space-y-2">
@@ -89,15 +103,26 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               required
+              autoComplete="current-password"
             />
           </div>
-          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
-          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">Default login: admin / admin123</div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+            <strong>Default credentials:</strong>
+            <br />
+            Username: admin
+            <br />
+            Password: admin123
+          </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? "Logging in..." : "Login"}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
           </div>

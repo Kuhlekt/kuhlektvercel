@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { X } from "lucide-react"
 import type { Category, User } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (articleData: {
+  onSubmit: (article: {
     title: string
     content: string
     categoryId: string
@@ -29,22 +31,19 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [tags, setTags] = useState("")
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("published")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    const tagArray = tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
+    if (!title.trim() || !content.trim() || !categoryId) return
 
     onSubmit({
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       categoryId,
-      tags: tagArray,
+      tags,
       status,
     })
 
@@ -52,17 +51,37 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setTitle("")
     setContent("")
     setCategoryId("")
-    setTags("")
+    setTags([])
+    setTagInput("")
     setStatus("published")
-    onClose()
+  }
+
+  const handleAddTag = () => {
+    const tag = tagInput.trim()
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag])
+      setTagInput("")
+    }
+  }
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddTag()
+    }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
@@ -104,8 +123,31 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
-            <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2, tag3" />
+            <Label htmlFor="tags">Tags</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add a tag and press Enter"
+              />
+              <Button type="button" onClick={handleAddTag}>
+                Add
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                    <span>{tag}</span>
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -121,13 +163,11 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1">
-              Add Article
-            </Button>
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
+            <Button type="submit">Create Article</Button>
           </div>
         </form>
       </DialogContent>

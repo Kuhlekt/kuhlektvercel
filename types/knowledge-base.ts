@@ -34,8 +34,8 @@ export interface User {
   id: string
   username: string
   password: string
-  email: string
-  role: "admin" | "editor" | "viewer" | "user"
+  email?: string
+  role: "admin" | "editor" | "viewer"
   createdAt: string
   lastLogin?: string
 }
