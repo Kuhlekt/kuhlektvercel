@@ -5,20 +5,27 @@ import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { ArticleList } from "./components/article-list"
 import { ArticleViewer } from "./components/article-viewer"
+import { AddArticleForm } from "./components/add-article-form"
+import { AdminDashboard } from "./components/admin-dashboard"
 import { LoginModal } from "./components/login-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, X } from "lucide-react"
-import type { Category, Article, User } from "./types/knowledge-base"
+import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 import { storage } from "./utils/storage"
+import { initialCategories } from "./data/initial-data"
+import { initialUsers } from "./data/initial-users"
+import { initialAuditLog } from "./data/initial-audit-log"
 
 export default function KnowledgeBase() {
   // State management
   const [categories, setCategories] = useState<Category[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Article[]>([])
   const [currentView, setCurrentView] = useState<"browse" | "add" | "admin">("browse")
@@ -32,18 +39,42 @@ export default function KnowledgeBase() {
         console.log("Loading data...")
 
         // Load categories
-        const loadedCategories = storage.getCategories()
+        let loadedCategories = storage.getCategories()
+        if (!loadedCategories || loadedCategories.length === 0) {
+          console.log("No categories found, using initial data")
+          loadedCategories = initialCategories
+          storage.saveCategories(loadedCategories)
+        }
         console.log("Loaded categories:", loadedCategories)
         setCategories(loadedCategories)
 
         // Load users
-        const loadedUsers = storage.getUsers()
+        let loadedUsers = storage.getUsers()
+        if (!loadedUsers || loadedUsers.length === 0) {
+          console.log("No users found, using initial data")
+          loadedUsers = initialUsers
+          storage.saveUsers(loadedUsers)
+        }
         console.log("Loaded users:", loadedUsers)
         setUsers(loadedUsers)
+
+        // Load audit log
+        let loadedAuditLog = storage.getAuditLog()
+        if (!loadedAuditLog || loadedAuditLog.length === 0) {
+          console.log("No audit log found, using initial data")
+          loadedAuditLog = initialAuditLog
+          storage.saveAuditLog(loadedAuditLog)
+        }
+        console.log("Loaded audit log:", loadedAuditLog)
+        setAuditLog(loadedAuditLog)
 
         console.log("Data loaded successfully")
       } catch (error) {
         console.error("Error loading data:", error)
+        // Fallback to initial data
+        setCategories(initialCategories)
+        setUsers(initialUsers)
+        setAuditLog(initialAuditLog)
       } finally {
         setIsLoading(false)
       }
@@ -63,7 +94,14 @@ export default function KnowledgeBase() {
     if (user) {
       const updatedUser = { ...user, lastLogin: new Date() }
       setCurrentUser(updatedUser)
+
+      // Update users array with last login time
+      const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
+      setUsers(updatedUsers)
+      storage.saveUsers(updatedUsers)
+
       console.log("Login successful, user set:", updatedUser)
+      setShowLoginModal(false)
       return true
     }
 
@@ -75,6 +113,8 @@ export default function KnowledgeBase() {
   const handleLogout = () => {
     setCurrentUser(null)
     setCurrentView("browse")
+    setSelectedArticle(null)
+    setEditingArticle(null)
   }
 
   // Get all articles from categories
@@ -147,8 +187,8 @@ export default function KnowledgeBase() {
   }
 
   // Handle category selection
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId || null)
+  const handleCategorySelect = (categoryId: string | null) => {
+    setSelectedCategory(categoryId)
     setSelectedArticle(null)
     clearSearch()
   }
@@ -161,6 +201,100 @@ export default function KnowledgeBase() {
   // Handle back to articles
   const handleBackToArticles = () => {
     setSelectedArticle(null)
+  }
+
+  // Handle add article
+  const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
+    const newArticle: Article = {
+      ...articleData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const updatedCategories = categories.map((category) => {
+      if (category.id === articleData.categoryId) {
+        if (articleData.subcategoryId) {
+          // Add to subcategory
+          return {
+            ...category,
+            subcategories: category.subcategories.map((subcategory) =>
+              subcategory.id === articleData.subcategoryId
+                ? { ...subcategory, articles: [...subcategory.articles, newArticle] }
+                : subcategory,
+            ),
+          }
+        } else {
+          // Add to main category
+          return {
+            ...category,
+            articles: [...category.articles, newArticle],
+          }
+        }
+      }
+      return category
+    })
+
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+
+    // Add audit log entry
+    const newAuditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "article_created",
+      entityType: "article",
+      entityId: newArticle.id,
+      details: `Created article: ${newArticle.title}`,
+      userId: currentUser?.id || "unknown",
+      timestamp: new Date(),
+    }
+
+    const updatedAuditLog = [newAuditEntry, ...auditLog]
+    setAuditLog(updatedAuditLog)
+    storage.saveAuditLog(updatedAuditLog)
+
+    setCurrentView("browse")
+  }
+
+  // Handle edit article
+  const handleEditArticle = (article: Article) => {
+    setEditingArticle(article)
+    // For now, just log - would implement edit form
+    console.log("Edit article:", article)
+  }
+
+  // Handle delete article
+  const handleDeleteArticle = (articleId: string) => {
+    if (window.confirm("Are you sure you want to delete this article?")) {
+      const updatedCategories = categories.map((category) => ({
+        ...category,
+        articles: category.articles.filter((a) => a.id !== articleId),
+        subcategories: category.subcategories.map((sub) => ({
+          ...sub,
+          articles: sub.articles.filter((a) => a.id !== articleId),
+        })),
+      }))
+
+      setCategories(updatedCategories)
+      storage.saveCategories(updatedCategories)
+
+      // Add audit log entry
+      const newAuditEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        action: "article_deleted",
+        entityType: "article",
+        entityId: articleId,
+        details: `Deleted article`,
+        userId: currentUser?.id || "unknown",
+        timestamp: new Date(),
+      }
+
+      const updatedAuditLog = [newAuditEntry, ...auditLog]
+      setAuditLog(updatedAuditLog)
+      storage.saveAuditLog(updatedAuditLog)
+
+      setSelectedArticle(null)
+    }
   }
 
   // Get current articles to display
@@ -284,8 +418,8 @@ export default function KnowledgeBase() {
                     categories={categories}
                     currentUser={currentUser}
                     onBack={handleBackToArticles}
-                    onEdit={currentUser ? (article) => console.log("Edit:", article) : undefined}
-                    onDelete={currentUser ? (articleId) => console.log("Delete:", articleId) : undefined}
+                    onEdit={currentUser ? handleEditArticle : undefined}
+                    onDelete={currentUser ? handleDeleteArticle : undefined}
                   />
                 ) : (
                   <ArticleList
@@ -301,17 +435,22 @@ export default function KnowledgeBase() {
         )}
 
         {currentView === "add" && currentUser && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Add Article</h2>
-            <p className="text-gray-600">Add article form would go here</p>
-          </div>
+          <AddArticleForm
+            categories={categories}
+            onSubmit={handleAddArticle}
+            onCancel={() => setCurrentView("browse")}
+          />
         )}
 
         {currentView === "admin" && currentUser && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Admin Dashboard</h2>
-            <p className="text-gray-600">Admin dashboard would go here</p>
-          </div>
+          <AdminDashboard
+            categories={categories}
+            users={users}
+            auditLog={auditLog}
+            onCategoriesUpdate={setCategories}
+            onUsersUpdate={setUsers}
+            onAuditLogUpdate={setAuditLog}
+          />
         )}
       </div>
 

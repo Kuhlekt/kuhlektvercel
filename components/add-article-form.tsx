@@ -6,13 +6,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RichTextEditor } from "./rich-text-editor"
-import { EnhancedRichEditor } from "./enhanced-rich-editor"
-import type { Category, Article } from "../types/knowledge-base"
+import type { Article, Category } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
   categories: Category[]
@@ -24,10 +23,9 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [subcategoryId, setSubcategoryId] = useState("none")
+  const [subcategoryId, setSubcategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [editorType, setEditorType] = useState<"rich" | "enhanced">("rich")
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
@@ -54,16 +52,15 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
       title: title.trim(),
       content: content.trim(),
       categoryId,
-      subcategoryId: subcategoryId === "none" ? undefined : subcategoryId,
+      subcategoryId: subcategoryId || undefined,
       tags,
       createdBy: "admin",
-      editCount: 0,
     })
   }
 
   const handleCategoryChange = (newCategoryId: string) => {
     setCategoryId(newCategoryId)
-    setSubcategoryId("none") // Reset subcategory when category changes
+    setSubcategoryId("") // Reset subcategory when category changes
   }
 
   return (
@@ -71,7 +68,6 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
       <Card>
         <CardHeader>
           <CardTitle>Add New Article</CardTitle>
-          <CardDescription>Create a new article for your knowledge base</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -166,45 +162,17 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </div>
             </div>
 
-            {/* Editor Type Selection */}
-            <div className="space-y-2">
-              <Label>Editor Type</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={editorType === "rich" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditorType("rich")}
-                >
-                  Rich Text Editor
-                </Button>
-                <Button
-                  type="button"
-                  variant={editorType === "enhanced" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditorType("enhanced")}
-                >
-                  Enhanced Editor
-                </Button>
-              </div>
-            </div>
-
-            {/* Content Editor */}
+            {/* Content */}
             <div className="space-y-2">
               <Label htmlFor="content">Content *</Label>
-              {editorType === "rich" ? (
-                <RichTextEditor
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Write your article content here..."
-                />
-              ) : (
-                <EnhancedRichEditor
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Write your article content here..."
-                />
-              )}
+              <Textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your article content here..."
+                rows={12}
+                required
+              />
             </div>
 
             {/* Form Actions */}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,11 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Users, FileText, FolderTree, Activity, Eye, Plus, Folder, Download, Upload, Trash2 } from 'lucide-react'
-import { UserManagementTable } from "./user-management-table"
-import { AuditLog } from "./audit-log"
-import { DataManagement } from "./data-management"
-import { storage } from "../utils/storage"
+import { Users, FileText, FolderTree, Plus, Folder, Trash2 } from "lucide-react"
+import { ArticleManagement } from "./article-management"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
@@ -32,22 +29,14 @@ export function AdminDashboard({
   onUsersUpdate,
   onAuditLogUpdate,
 }: AdminDashboardProps) {
-  const [pageVisits, setPageVisits] = useState(0)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newSubcategoryName, setNewSubcategoryName] = useState("")
   const [selectedParentCategory, setSelectedParentCategory] = useState("")
 
-  useEffect(() => {
-    setPageVisits(storage.getPageVisits())
-  }, [])
-
   const getTotalArticles = () => {
     return categories.reduce((total, category) => {
       const categoryArticles = category.articles.length
-      const subcategoryArticles = category.subcategories.reduce(
-        (subTotal, sub) => subTotal + sub.articles.length,
-        0
-      )
+      const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
       return total + categoryArticles + subcategoryArticles
     }, 0)
   }
@@ -63,57 +52,58 @@ export function AdminDashboard({
       id: Date.now().toString(),
       name: newCategoryName.trim(),
       articles: [],
-      subcategories: []
+      subcategories: [],
     }
 
     const updatedCategories = [...categories, newCategory]
     onCategoriesUpdate(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    
-    storage.addAuditEntry({
-      action: "create",
-      entityType: "category",
-      entityId: newCategory.id,
-      details: `Created category: ${newCategory.name}`,
-      userId: "admin"
-    })
-
     setNewCategoryName("")
   }
 
   const handleAddSubcategory = () => {
     if (!newSubcategoryName.trim() || !selectedParentCategory) return
 
-    const updatedCategories = categories.map(category => {
+    const updatedCategories = categories.map((category) => {
       if (category.id === selectedParentCategory) {
         const newSubcategory = {
           id: Date.now().toString(),
           name: newSubcategoryName.trim(),
-          articles: []
+          articles: [],
         }
-        
+
         return {
           ...category,
-          subcategories: [...category.subcategories, newSubcategory]
+          subcategories: [...category.subcategories, newSubcategory],
         }
       }
       return category
     })
 
     onCategoriesUpdate(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    
-    const parentCategoryName = categories.find(c => c.id === selectedParentCategory)?.name
-    storage.addAuditEntry({
-      action: "create",
-      entityType: "subcategory",
-      entityId: Date.now().toString(),
-      details: `Created subcategory: ${newSubcategoryName.trim()} in ${parentCategoryName}`,
-      userId: "admin"
-    })
-
     setNewSubcategoryName("")
     setSelectedParentCategory("")
+  }
+
+  const handleDeleteCategory = (categoryId: string) => {
+    if (window.confirm("Are you sure you want to delete this category? All articles in it will be lost.")) {
+      const updatedCategories = categories.filter((cat) => cat.id !== categoryId)
+      onCategoriesUpdate(updatedCategories)
+    }
+  }
+
+  const handleDeleteSubcategory = (categoryId: string, subcategoryId: string) => {
+    if (window.confirm("Are you sure you want to delete this subcategory? All articles in it will be lost.")) {
+      const updatedCategories = categories.map((category) => {
+        if (category.id === categoryId) {
+          return {
+            ...category,
+            subcategories: category.subcategories.filter((sub) => sub.id !== subcategoryId),
+          }
+        }
+        return category
+      })
+      onCategoriesUpdate(updatedCategories)
+    }
   }
 
   const stats = [
@@ -121,38 +111,26 @@ export function AdminDashboard({
       title: "Total Articles",
       value: getTotalArticles(),
       icon: FileText,
-      color: "text-blue-600"
+      color: "text-blue-600",
     },
     {
       title: "Categories",
       value: categories.length,
       icon: FolderTree,
-      color: "text-green-600"
+      color: "text-green-600",
     },
     {
-      title: "Subcategories", 
+      title: "Subcategories",
       value: getTotalSubcategories(),
       icon: Folder,
-      color: "text-purple-600"
+      color: "text-purple-600",
     },
     {
       title: "Users",
       value: users.length,
       icon: Users,
-      color: "text-orange-600"
+      color: "text-orange-600",
     },
-    {
-      title: "Page Visits",
-      value: pageVisits,
-      icon: Eye,
-      color: "text-indigo-600"
-    },
-    {
-      title: "Recent Activities",
-      value: auditLog.length,
-      icon: Activity,
-      color: "text-red-600"
-    }
   ]
 
   return (
@@ -162,7 +140,7 @@ export function AdminDashboard({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-6">
@@ -180,12 +158,11 @@ export function AdminDashboard({
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="articles">Articles</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -199,7 +176,7 @@ export function AdminDashboard({
                   {auditLog.slice(0, 5).map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <div>
-                        <p className="text-sm font-medium">{entry.action} {entry.entityType}</p>
+                        <p className="text-sm font-medium">{entry.action}</p>
                         <p className="text-xs text-gray-600">{entry.details}</p>
                       </div>
                       <Badge variant="outline" className="text-xs">
@@ -218,9 +195,10 @@ export function AdminDashboard({
               <CardContent>
                 <div className="space-y-3">
                   {categories.slice(0, 5).map((category) => {
-                    const totalArticles = category.articles.length + 
+                    const totalArticles =
+                      category.articles.length +
                       category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)
-                    
+
                     return (
                       <div key={category.id} className="flex items-center justify-between">
                         <span className="text-sm font-medium">{category.name}</span>
@@ -257,7 +235,7 @@ export function AdminDashboard({
                     placeholder="Enter category name"
                   />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full">
+                <Button onClick={handleAddCategory} className="w-full" disabled={!newCategoryName.trim()}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Category
                 </Button>
@@ -297,7 +275,11 @@ export function AdminDashboard({
                     placeholder="Enter subcategory name"
                   />
                 </div>
-                <Button onClick={handleAddSubcategory} className="w-full">
+                <Button
+                  onClick={handleAddSubcategory}
+                  className="w-full"
+                  disabled={!newSubcategoryName.trim() || !selectedParentCategory}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Subcategory
                 </Button>
@@ -313,9 +295,9 @@ export function AdminDashboard({
             <CardContent>
               <div className="space-y-4">
                 {categories.map((category) => {
-                  const totalArticles = category.articles.length + 
-                    category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)
-                  
+                  const totalArticles =
+                    category.articles.length + category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)
+
                   return (
                     <div key={category.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
@@ -326,17 +308,35 @@ export function AdminDashboard({
                         <div className="flex items-center space-x-2">
                           <Badge variant="secondary">{totalArticles} total</Badge>
                           <Badge variant="outline">{category.articles.length} direct</Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
-                      
+
                       {category.subcategories.length > 0 && (
                         <div className="ml-6 space-y-1">
                           {category.subcategories.map((sub) => (
                             <div key={sub.id} className="flex items-center justify-between text-sm">
                               <span className="text-gray-600">• {sub.name}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {sub.articles.length}
-                              </Badge>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {sub.articles.length}
+                                </Badge>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteSubcategory(category.id, sub.id)}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -349,26 +349,39 @@ export function AdminDashboard({
           </Card>
         </TabsContent>
 
-        <TabsContent value="users">
-          <UserManagementTable
-            users={users}
-            onUsersUpdate={onUsersUpdate}
-          />
-        </TabsContent>
-
-        <TabsContent value="audit">
-          <AuditLog auditLog={auditLog} />
-        </TabsContent>
-
-        <TabsContent value="data">
-          <DataManagement
+        <TabsContent value="articles">
+          <ArticleManagement
             categories={categories}
-            users={users}
-            auditLog={auditLog}
-            onCategoriesUpdate={onCategoriesUpdate}
-            onUsersUpdate={onUsersUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
+            onEditArticle={(article) => console.log("Edit article:", article)}
+            onDeleteArticle={(articleId) => console.log("Delete article:", articleId)}
           />
+        </TabsContent>
+
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{user.username}</p>
+                      <p className="text-sm text-gray-600">{user.email}</p>
+                      <p className="text-xs text-gray-500">Role: {user.role}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                      {user.lastLogin && (
+                        <span className="text-xs text-gray-500">Last login: {user.lastLogin.toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

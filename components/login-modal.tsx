@@ -6,9 +6,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { X } from "lucide-react"
+import { X, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -34,7 +34,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         setPassword("")
         onClose()
       } else {
-        setError("Invalid credentials. Please try again.")
+        setError("Invalid username or password")
       }
     } catch (err) {
       setError("Login failed. Please try again.")
@@ -43,23 +43,31 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    onClose()
+  }
+
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="relative max-w-md w-full mx-4">
-        <Card>
-          <CardHeader className="text-center relative">
-            <Button variant="ghost" size="sm" onClick={onClose} className="absolute right-2 top-2 h-8 w-8 p-0">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <Card className="border-0 shadow-none">
+          <CardHeader className="relative">
+            <Button variant="ghost" size="sm" onClick={handleClose} className="absolute right-2 top-2 h-8 w-8 p-0">
               <X className="h-4 w-4" />
             </Button>
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-12 w-12 mx-auto mb-2" />
             <CardTitle>Login to Knowledge Base</CardTitle>
+            <CardDescription>Enter your credentials to access admin features</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
@@ -73,7 +81,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter username"
                   required
-                  autoFocus
+                  disabled={isLoading}
                 />
               </div>
 
@@ -86,22 +94,30 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
-              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                <p className="font-medium">Default credentials:</p>
-                <p>
-                  Username: <code className="bg-gray-200 px-1 rounded">admin</code>
-                </p>
-                <p>
-                  Password: <code className="bg-gray-200 px-1 rounded">admin123</code>
-                </p>
+              <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-600">
+                <p className="font-medium mb-1">Default Credentials:</p>
+                <p>Username: admin</p>
+                <p>Password: admin123</p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  className="flex-1 bg-transparent"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" disabled={isLoading}>
+                  {isLoading ? "Logging in..." : "Login"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
