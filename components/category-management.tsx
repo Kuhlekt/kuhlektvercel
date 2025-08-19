@@ -4,164 +4,199 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Database, Plus, Edit, Trash2, Search, Folder, FileText, AlertTriangle, CheckCircle } from "lucide-react"
-import type { Category, AuditLogEntry } from "../types/knowledge-base"
+import { Plus, Edit, Trash2, FolderOpen, Folder, AlertCircle, CheckCircle } from "lucide-react"
+import type { Category, Subcategory, AuditLogEntry } from "../types/knowledge-base"
 
 interface CategoryManagementProps {
   categories: Category[]
+  auditLog: AuditLogEntry[]
   onCategoriesUpdate: (categories: Category[]) => void
   onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
 }
 
-export function CategoryManagement({ categories, onCategoriesUpdate, onAuditLogUpdate }: CategoryManagementProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false)
+export function CategoryManagement({
+  categories,
+  auditLog,
+  onCategoriesUpdate,
+  onAuditLogUpdate,
+}: CategoryManagementProps) {
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showCreateSubDialog, setShowCreateSubDialog] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [selectedCategoryForSub, setSelectedCategoryForSub] = useState<Category | null>(null)
-  const [newCategory, setNewCategory] = useState({
+  const [formData, setFormData] = useState({
     name: "",
-    description: "",
-  })
-  const [newSubcategory, setNewSubcategory] = useState({
-    name: "",
-    description: "",
+    parentCategoryId: "",
   })
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  const filteredCategories = categories.filter(
-    (category) =>
-      category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (category.description && category.description.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
-
-  const addAuditEntry = (action: string, details: string) => {
-    const entry: AuditLogEntry = {
-      id: Date.now().toString(),
-      action: action as any,
-      entityType: "category",
-      performedBy: "admin",
-      timestamp: new Date(),
-      details,
-    }
-    onAuditLogUpdate([entry])
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 3000)
   }
 
-  const getTotalArticles = (category: Category) => {
-    const categoryArticles = Array.isArray(category.articles) ? category.articles.length : 0
-    const subcategoryArticles = Array.isArray(category.subcategories)
-      ? category.subcategories.reduce(
-          (total, sub) => total + (Array.isArray(sub.articles) ? sub.articles.length : 0),
-          0,
-        )
-      : 0
-    return categoryArticles + subcategoryArticles
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      parentCategoryId: "",
+    })
   }
 
-  const handleAddCategory = () => {
-    if (!newCategory.name.trim()) {
-      setMessage({ type: "error", text: "Please enter a category name" })
+  const handleCreateCategory = () => {
+    if (!formData.name.trim()) {
+      showMessage("error", "Please enter a category name")
       return
     }
 
-    if (categories.some((c) => c.name.toLowerCase() === newCategory.name.toLowerCase())) {
-      setMessage({ type: "error", text: "Category name already exists" })
+    if (categories.some((c) => c.name.toLowerCase() === formData.name.toLowerCase())) {
+      showMessage("error", "Category name already exists")
       return
     }
 
-    const category: Category = {
-      id: Date.now().toString(),
-      name: newCategory.name.trim(),
-      description: newCategory.description.trim() || undefined,
+    const newCategory: Category = {
+      id: formData.name.toLowerCase().replace(/\s+/g, "-"),
+      name: formData.name.trim(),
+      expanded: false,
       articles: [],
       subcategories: [],
     }
 
-    const updatedCategories = [...categories, category]
+    const updatedCategories = [...categories, newCategory]
     onCategoriesUpdate(updatedCategories)
-    addAuditEntry("category_created", `Created category: ${category.name}`)
 
-    setNewCategory({ name: "", description: "" })
-    setShowAddDialog(false)
-    setMessage({ type: "success", text: "Category created successfully" })
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "category_created",
+      entityType: "category",
+      entityId: newCategory.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Created category: ${newCategory.name}`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    setShowCreateDialog(false)
+    resetForm()
+    showMessage("success", "Category created successfully")
   }
 
-  const handleAddSubcategory = () => {
-    if (!selectedCategoryForSub || !newSubcategory.name.trim()) {
-      setMessage({ type: "error", text: "Please enter a subcategory name" })
+  const handleCreateSubcategory = () => {
+    if (!formData.name.trim() || !selectedCategoryForSub) {
+      showMessage("error", "Please enter a subcategory name")
       return
     }
 
-    const existingSubcategories = selectedCategoryForSub.subcategories || []
-    if (existingSubcategories.some((s) => s.name.toLowerCase() === newSubcategory.name.toLowerCase())) {
-      setMessage({ type: "error", text: "Subcategory name already exists in this category" })
+    const existingSubcategory = selectedCategoryForSub.subcategories?.some(
+      (sub) => sub.name.toLowerCase() === formData.name.toLowerCase(),
+    )
+
+    if (existingSubcategory) {
+      showMessage("error", "Subcategory name already exists in this category")
       return
     }
 
-    const subcategory = {
-      id: Date.now().toString(),
-      name: newSubcategory.name.trim(),
-      description: newSubcategory.description.trim() || undefined,
+    const newSubcategory: Subcategory = {
+      id: `${selectedCategoryForSub.id}-${formData.name.toLowerCase().replace(/\s+/g, "-")}`,
+      name: formData.name.trim(),
       articles: [],
     }
 
-    const updatedCategories = categories.map((c) =>
-      c.id === selectedCategoryForSub.id ? { ...c, subcategories: [...existingSubcategories, subcategory] } : c,
-    )
+    const updatedCategories = categories.map((category) => {
+      if (category.id === selectedCategoryForSub.id) {
+        return {
+          ...category,
+          subcategories: [...(category.subcategories || []), newSubcategory],
+        }
+      }
+      return category
+    })
 
     onCategoriesUpdate(updatedCategories)
-    addAuditEntry("category_created", `Created subcategory: ${subcategory.name} in ${selectedCategoryForSub.name}`)
 
-    setNewSubcategory({ name: "", description: "" })
-    setShowAddSubcategoryDialog(false)
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "subcategory_created",
+      entityType: "subcategory",
+      entityId: newSubcategory.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Created subcategory: ${newSubcategory.name} in ${selectedCategoryForSub.name}`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    setShowCreateSubDialog(false)
     setSelectedCategoryForSub(null)
-    setMessage({ type: "success", text: "Subcategory created successfully" })
+    resetForm()
+    showMessage("success", "Subcategory created successfully")
   }
 
   const handleEditCategory = (category: Category) => {
     setEditingCategory(category)
-    setNewCategory({
+    setFormData({
       name: category.name,
-      description: category.description || "",
+      parentCategoryId: "",
     })
+    setShowEditDialog(true)
   }
 
   const handleUpdateCategory = () => {
-    if (!editingCategory || !newCategory.name.trim()) {
-      setMessage({ type: "error", text: "Please enter a category name" })
+    if (!editingCategory || !formData.name.trim()) {
+      showMessage("error", "Please enter a category name")
       return
     }
 
-    const updatedCategories = categories.map((c) =>
-      c.id === editingCategory.id
-        ? {
-            ...c,
-            name: newCategory.name.trim(),
-            description: newCategory.description.trim() || undefined,
-          }
-        : c,
-    )
+    // Check for duplicate name (excluding current category)
+    if (categories.some((c) => c.id !== editingCategory.id && c.name.toLowerCase() === formData.name.toLowerCase())) {
+      showMessage("error", "Category name already exists")
+      return
+    }
+
+    const updatedCategories = categories.map((category) => {
+      if (category.id === editingCategory.id) {
+        return {
+          ...category,
+          name: formData.name.trim(),
+        }
+      }
+      return category
+    })
 
     onCategoriesUpdate(updatedCategories)
-    addAuditEntry("category_updated", `Updated category: ${newCategory.name}`)
 
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "category_updated",
+      entityType: "category",
+      entityId: editingCategory.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Updated category: ${formData.name.trim()}`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    setShowEditDialog(false)
     setEditingCategory(null)
-    setNewCategory({ name: "", description: "" })
-    setMessage({ type: "success", text: "Category updated successfully" })
+    resetForm()
+    showMessage("success", "Category updated successfully")
   }
 
   const handleDeleteCategory = (category: Category) => {
-    const totalArticles = getTotalArticles(category)
+    const articleCount =
+      (category.articles?.length || 0) +
+      (category.subcategories?.reduce((total, sub) => total + (sub.articles?.length || 0), 0) || 0)
 
-    if (totalArticles > 0) {
+    if (articleCount > 0) {
       if (
         !window.confirm(
-          `This category contains ${totalArticles} article(s). Deleting it will also delete all articles. Are you sure?`,
+          `This category contains ${articleCount} article(s). Are you sure you want to delete it? All articles will be permanently lost.`,
         )
       ) {
         return
@@ -174,198 +209,152 @@ export function CategoryManagement({ categories, onCategoriesUpdate, onAuditLogU
 
     const updatedCategories = categories.filter((c) => c.id !== category.id)
     onCategoriesUpdate(updatedCategories)
-    addAuditEntry("category_deleted", `Deleted category: ${category.name} (${totalArticles} articles)`)
-    setMessage({ type: "success", text: "Category deleted successfully" })
+
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "category_deleted",
+      entityType: "category",
+      entityId: category.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Deleted category: ${category.name} (${articleCount} articles)`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    showMessage("success", "Category deleted successfully")
+  }
+
+  const handleDeleteSubcategory = (category: Category, subcategory: Subcategory) => {
+    const articleCount = subcategory.articles?.length || 0
+
+    if (articleCount > 0) {
+      if (
+        !window.confirm(
+          `This subcategory contains ${articleCount} article(s). Are you sure you want to delete it? All articles will be permanently lost.`,
+        )
+      ) {
+        return
+      }
+    } else {
+      if (!window.confirm(`Are you sure you want to delete the subcategory "${subcategory.name}"?`)) {
+        return
+      }
+    }
+
+    const updatedCategories = categories.map((cat) => {
+      if (cat.id === category.id) {
+        return {
+          ...cat,
+          subcategories: cat.subcategories?.filter((sub) => sub.id !== subcategory.id) || [],
+        }
+      }
+      return cat
+    })
+
+    onCategoriesUpdate(updatedCategories)
+
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "subcategory_deleted",
+      entityType: "subcategory",
+      entityId: subcategory.id,
+      performedBy: "admin",
+      timestamp: new Date(),
+      details: `Deleted subcategory: ${subcategory.name} from ${category.name} (${articleCount} articles)`,
+    }
+    onAuditLogUpdate([auditEntry, ...auditLog])
+
+    showMessage("success", "Subcategory deleted successfully")
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold">Category Management</h3>
-          <p className="text-gray-600">Organize your knowledge base content</p>
-        </div>
-        <div className="flex space-x-2">
-          <Dialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Subcategory
-              </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby="add-subcategory-description">
-              <DialogHeader>
-                <DialogTitle>Add Subcategory</DialogTitle>
-              </DialogHeader>
-              <div id="add-subcategory-description" className="text-sm text-gray-600 mb-4">
-                Create a new subcategory within an existing category
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Parent Category</Label>
-                  <select
-                    className="w-full p-2 border rounded-md"
-                    value={selectedCategoryForSub?.id || ""}
-                    onChange={(e) => {
-                      const category = categories.find((c) => c.id === e.target.value)
-                      setSelectedCategoryForSub(category || null)
-                    }}
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory-name">Subcategory Name</Label>
-                  <Input
-                    id="subcategory-name"
-                    value={newSubcategory.name}
-                    onChange={(e) => setNewSubcategory({ ...newSubcategory, name: e.target.value })}
-                    placeholder="Enter subcategory name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory-description">Description (Optional)</Label>
-                  <Textarea
-                    id="subcategory-description"
-                    value={newSubcategory.description}
-                    onChange={(e) => setNewSubcategory({ ...newSubcategory, description: e.target.value })}
-                    placeholder="Enter subcategory description"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowAddSubcategoryDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddSubcategory}>Create Subcategory</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby="add-category-description">
-              <DialogHeader>
-                <DialogTitle>Add New Category</DialogTitle>
-              </DialogHeader>
-              <div id="add-category-description" className="text-sm text-gray-600 mb-4">
-                Create a new main category for organizing articles
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category-name">Category Name</Label>
-                  <Input
-                    id="category-name"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                    placeholder="Enter category name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category-description">Description (Optional)</Label>
-                  <Textarea
-                    id="category-description"
-                    value={newCategory.description}
-                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                    placeholder="Enter category description"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddCategory}>Create Category</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Status Message */}
       {message && (
         <Alert className={message.type === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
-          {message.type === "error" ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{message.text}</AlertDescription>
+          <div className="flex items-center">
+            {message.type === "error" ? (
+              <AlertCircle className="h-4 w-4 text-red-600" />
+            ) : (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
+            <AlertDescription className="ml-2">{message.text}</AlertDescription>
+          </div>
         </Alert>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Search categories..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Category Management</h3>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Category
+        </Button>
       </div>
 
-      {/* Categories List */}
       <div className="space-y-4">
-        {filteredCategories.map((category) => (
+        {categories.map((category) => (
           <Card key={category.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Database className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle className="text-xl">{category.name}</CardTitle>
-                    {category.description && <p className="text-sm text-gray-600 mt-1">{category.description}</p>}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="flex items-center space-x-1">
-                    <FileText className="h-3 w-3" />
-                    <span>{getTotalArticles(category)} articles</span>
+                <CardTitle className="text-base flex items-center space-x-2">
+                  <FolderOpen className="h-4 w-4" />
+                  <span>{category.name}</span>
+                  <Badge variant="outline">
+                    {(category.articles?.length || 0) +
+                      (category.subcategories?.reduce((total, sub) => total + (sub.articles?.length || 0), 0) ||
+                        0)}{" "}
+                    articles
                   </Badge>
+                </CardTitle>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCategoryForSub(category)
+                      setShowCreateSubDialog(true)
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Sub
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteCategory(category)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
             </CardHeader>
-
             {category.subcategories && category.subcategories.length > 0 && (
               <CardContent>
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Subcategories:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <h4 className="text-sm font-medium text-gray-700">Subcategories:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {category.subcategories.map((subcategory) => (
-                      <div key={subcategory.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={subcategory.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <div className="flex items-center space-x-2">
-                          <Folder className="h-4 w-4 text-gray-500" />
-                          <div>
-                            <p className="text-sm font-medium">{subcategory.name}</p>
-                            {subcategory.description && (
-                              <p className="text-xs text-gray-500">{subcategory.description}</p>
-                            )}
-                          </div>
+                          <Folder className="h-3 w-3 text-gray-500" />
+                          <span className="text-sm">{subcategory.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {subcategory.articles?.length || 0}
+                          </Badge>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {Array.isArray(subcategory.articles) ? subcategory.articles.length : 0} articles
-                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSubcategory(category, subcategory)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -376,50 +365,106 @@ export function CategoryManagement({ categories, onCategoriesUpdate, onAuditLogU
         ))}
       </div>
 
-      {filteredCategories.length === 0 && (
-        <div className="text-center py-12">
-          <Database className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600">No categories found</p>
-          <p className="text-sm text-gray-500 mt-1">
-            {searchQuery ? "Try adjusting your search" : "Create your first category to get started"}
-          </p>
-        </div>
-      )}
+      {/* Create Category Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent aria-describedby="create-category-description">
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+            <DialogDescription id="create-category-description">
+              Add a new category to organize your articles
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-category-name">Category Name</Label>
+              <Input
+                id="create-category-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter category name"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateDialog(false)
+                  resetForm()
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateCategory}>Create Category</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Category Dialog */}
-      <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent aria-describedby="edit-category-description">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription id="edit-category-description">Update the category name</DialogDescription>
           </DialogHeader>
-          <div id="edit-category-description" className="text-sm text-gray-600 mb-4">
-            Update category information and settings
-          </div>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="edit-category-name">Category Name</Label>
               <Input
                 id="edit-category-name"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter category name"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-category-description">Description (Optional)</Label>
-              <Textarea
-                id="edit-category-description"
-                value={newCategory.description}
-                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                placeholder="Enter category description"
-                rows={3}
-              />
-            </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setEditingCategory(null)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false)
+                  setEditingCategory(null)
+                  resetForm()
+                }}
+              >
                 Cancel
               </Button>
               <Button onClick={handleUpdateCategory}>Update Category</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Subcategory Dialog */}
+      <Dialog open={showCreateSubDialog} onOpenChange={setShowCreateSubDialog}>
+        <DialogContent aria-describedby="create-subcategory-description">
+          <DialogHeader>
+            <DialogTitle>Create New Subcategory</DialogTitle>
+            <DialogDescription id="create-subcategory-description">
+              Add a new subcategory to {selectedCategoryForSub?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-subcategory-name">Subcategory Name</Label>
+              <Input
+                id="create-subcategory-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter subcategory name"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateSubDialog(false)
+                  setSelectedCategoryForSub(null)
+                  resetForm()
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateSubcategory}>Create Subcategory</Button>
             </div>
           </div>
         </DialogContent>

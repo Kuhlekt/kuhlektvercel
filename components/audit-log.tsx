@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Activity, Search, Filter, Calendar, User, FileText, Database, Trash2, Download } from "lucide-react"
+import { Search, Download, Filter, Calendar, User, FileText, FolderOpen, Activity, Trash2 } from "lucide-react"
 import type { AuditLogEntry } from "../types/knowledge-base"
 
 interface AuditLogProps {
@@ -16,99 +16,86 @@ interface AuditLogProps {
 
 export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [actionFilter, setActionFilter] = useState("all")
-  const [dateFilter, setDateFilter] = useState("all")
+  const [filterAction, setFilterAction] = useState("all")
+  const [filterUser, setFilterUser] = useState("all")
 
   const getActionIcon = (action: string) => {
-    if (action.includes("article")) return <FileText className="h-4 w-4" />
-    if (action.includes("user")) return <User className="h-4 w-4" />
-    if (action.includes("category")) return <Database className="h-4 w-4" />
-    return <Activity className="h-4 w-4" />
+    if (action.includes("user")) return <User className="h-4 w-4 text-blue-500" />
+    if (action.includes("article")) return <FileText className="h-4 w-4 text-green-500" />
+    if (action.includes("category")) return <FolderOpen className="h-4 w-4 text-purple-500" />
+    return <Activity className="h-4 w-4 text-gray-500" />
   }
 
   const getActionColor = (action: string) => {
-    if (action.includes("created")) return "text-green-600"
-    if (action.includes("updated")) return "text-blue-600"
-    if (action.includes("deleted")) return "text-red-600"
-    return "text-gray-600"
+    if (action.includes("created")) return "bg-green-100 text-green-800"
+    if (action.includes("updated")) return "bg-blue-100 text-blue-800"
+    if (action.includes("deleted")) return "bg-red-100 text-red-800"
+    if (action.includes("login")) return "bg-purple-100 text-purple-800"
+    return "bg-gray-100 text-gray-800"
   }
 
-  const getActionBadgeVariant = (action: string) => {
-    if (action.includes("created")) return "default"
-    if (action.includes("updated")) return "secondary"
-    if (action.includes("deleted")) return "destructive"
-    return "outline"
-  }
-
-  const filteredEntries = auditLog.filter((entry) => {
+  const filteredLog = auditLog.filter((entry) => {
     const matchesSearch =
-      entry.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.performedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.action.toLowerCase().includes(searchQuery.toLowerCase())
+      searchQuery === "" ||
+      entry.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.performedBy.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesAction = actionFilter === "all" || entry.action.includes(actionFilter)
+    const matchesAction = filterAction === "all" || entry.action === filterAction
+    const matchesUser = filterUser === "all" || entry.performedBy === filterUser
 
-    const matchesDate = (() => {
-      if (dateFilter === "all") return true
-      const entryDate = new Date(entry.timestamp)
-      const now = new Date()
-
-      switch (dateFilter) {
-        case "today":
-          return entryDate.toDateString() === now.toDateString()
-        case "week":
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          return entryDate >= weekAgo
-        case "month":
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          return entryDate >= monthAgo
-        default:
-          return true
-      }
-    })()
-
-    return matchesSearch && matchesAction && matchesDate
+    return matchesSearch && matchesAction && matchesUser
   })
 
-  const handleExportLog = () => {
-    const exportData = {
-      auditLog: filteredEntries,
-      exportedAt: new Date().toISOString(),
-      totalEntries: filteredEntries.length,
-    }
+  const uniqueActions = [...new Set(auditLog.map((entry) => entry.action))]
+  const uniqueUsers = [...new Set(auditLog.map((entry) => entry.performedBy))]
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+  const exportAuditLog = () => {
+    const csvContent = [
+      ["Timestamp", "Action", "Entity Type", "Entity ID", "Performed By", "Details"].join(","),
+      ...filteredLog.map((entry) =>
+        [
+          new Date(entry.timestamp).toISOString(),
+          entry.action,
+          entry.entityType,
+          entry.entityId,
+          entry.performedBy,
+          `"${entry.details.replace(/"/g, '""')}"`,
+        ].join(","),
+      ),
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `audit-log-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `audit-log-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
-  const handleClearLog = () => {
-    if (!window.confirm("Are you sure you want to clear the entire audit log? This cannot be undone!")) {
-      return
+  const clearAuditLog = () => {
+    if (window.confirm("Are you sure you want to clear the entire audit log? This action cannot be undone.")) {
+      onAuditLogUpdate([])
     }
-    onAuditLogUpdate([])
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold">Audit Log</h3>
-          <p className="text-gray-600">Track all system activities and changes</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleExportLog}>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <h3 className="text-lg font-semibold">Audit Log ({filteredLog.length} entries)</h3>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportAuditLog} size="sm">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Export CSV
           </Button>
-          <Button variant="outline" onClick={handleClearLog} className="text-red-600 bg-transparent">
+          <Button
+            variant="outline"
+            onClick={clearAuditLog}
+            size="sm"
+            className="text-red-600 hover:text-red-700 bg-transparent"
+          >
             <Trash2 className="h-4 w-4 mr-2" />
             Clear Log
           </Button>
@@ -118,8 +105,8 @@ export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle className="text-base flex items-center space-x-2">
+            <Filter className="h-4 w-4" />
             <span>Filters</span>
           </CardTitle>
         </CardHeader>
@@ -130,7 +117,7 @@ export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search activities..."
+                  placeholder="Search details or user..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -139,34 +126,35 @@ export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Action Type</label>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
+              <label className="text-sm font-medium">Action</label>
+              <Select value={filterAction} onValueChange={setFilterAction}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="article">Article Actions</SelectItem>
-                  <SelectItem value="user">User Actions</SelectItem>
-                  <SelectItem value="category">Category Actions</SelectItem>
-                  <SelectItem value="created">Created</SelectItem>
-                  <SelectItem value="updated">Updated</SelectItem>
-                  <SelectItem value="deleted">Deleted</SelectItem>
+                  {uniqueActions.map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Time Period</label>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
+              <label className="text-sm font-medium">User</label>
+              <Select value={filterUser} onValueChange={setFilterUser}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Last Week</SelectItem>
-                  <SelectItem value="month">Last Month</SelectItem>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {uniqueUsers.map((user) => (
+                    <SelectItem key={user} value={user}>
+                      {user}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -174,61 +162,48 @@ export function AuditLog({ auditLog, onAuditLogUpdate }: AuditLogProps) {
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {filteredEntries.length} of {auditLog.length} entries
-        </p>
-        <Badge variant="outline">
-          <Activity className="h-3 w-3 mr-1" />
-          {filteredEntries.length} activities
-        </Badge>
-      </div>
-
-      {/* Audit Entries */}
+      {/* Audit Log Entries */}
       <div className="space-y-3">
-        {filteredEntries.length > 0 ? (
-          filteredEntries.map((entry) => (
+        {filteredLog.length > 0 ? (
+          filteredLog.map((entry) => (
             <Card key={entry.id}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <div className={`flex-shrink-0 ${getActionColor(entry.action)}`}>{getActionIcon(entry.action)}</div>
+                    <div className="flex-shrink-0 mt-1">{getActionIcon(entry.action)}</div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <Badge variant={getActionBadgeVariant(entry.action)} className="text-xs">
-                          {entry.action.replace(/_/g, " ").toUpperCase()}
+                        <Badge className={getActionColor(entry.action)}>
+                          {entry.action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                         </Badge>
                         <span className="text-sm text-gray-500">by {entry.performedBy}</span>
                       </div>
-                      <p className="text-sm font-medium">{entry.details || entry.action}</p>
-                      {entry.articleTitle && (
-                        <p className="text-xs text-gray-500 mt-1">Article: {entry.articleTitle}</p>
-                      )}
-                      {entry.categoryName && (
-                        <p className="text-xs text-gray-500 mt-1">Category: {entry.categoryName}</p>
-                      )}
-                      {entry.username && <p className="text-xs text-gray-500 mt-1">User: {entry.username}</p>}
+                      <p className="text-sm font-medium">{entry.details}</p>
+                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(entry.timestamp).toLocaleString()}</span>
+                        </div>
+                        <span>Entity: {entry.entityType}</span>
+                        <span>ID: {entry.entityId}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-500">
-                    <Calendar className="h-3 w-3" />
-                    <span>{entry.timestamp.toLocaleString()}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <div className="text-center py-12">
-            <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600">No audit entries found</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {searchQuery || actionFilter !== "all" || dateFilter !== "all"
-                ? "Try adjusting your filters"
-                : "System activities will appear here"}
-            </p>
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-500">
+                {searchQuery || filterAction !== "all" || filterUser !== "all"
+                  ? "No audit entries match your filters"
+                  : "No audit entries yet"}
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
