@@ -34,16 +34,68 @@ function convertToPlainText(content: string): string {
   const scripts = tempDiv.querySelectorAll("script, style")
   scripts.forEach((el) => el.remove())
 
-  // Get text content
-  let text = tempDiv.textContent || tempDiv.innerText || ""
+  // Handle images - replace with [Image: filename] notation
+  const images = tempDiv.querySelectorAll("img")
+  images.forEach((img) => {
+    const alt = img.getAttribute("alt") || "Image"
+    const textNode = document.createTextNode(`[Image: ${alt}]`)
+    img.parentNode?.replaceChild(textNode, img)
+  })
 
-  // Clean up whitespace and normalize
-  text = text.replace(/\s+/g, " ").trim()
+  // Handle links - keep text but add URL in parentheses
+  const links = tempDiv.querySelectorAll("a")
+  links.forEach((link) => {
+    const href = link.getAttribute("href")
+    const text = link.textContent || ""
+    if (href && href !== text) {
+      link.textContent = `${text} (${href})`
+    }
+  })
 
-  // Convert to paragraphs by splitting on double line breaks
-  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
+  // Handle lists - add bullet points or numbers
+  const listItems = tempDiv.querySelectorAll("li")
+  listItems.forEach((li, index) => {
+    const parent = li.parentElement
+    const isOrdered = parent?.tagName.toLowerCase() === "ol"
+    const prefix = isOrdered ? `${index + 1}. ` : "• "
+    li.textContent = prefix + (li.textContent || "")
+  })
 
-  return paragraphs.join("\n\n")
+  // Handle headings - add line breaks and emphasis
+  const headings = tempDiv.querySelectorAll("h1, h2, h3, h4, h5, h6")
+  headings.forEach((heading) => {
+    const text = heading.textContent || ""
+    heading.textContent = `\n\n${text.toUpperCase()}\n`
+  })
+
+  // Handle paragraphs - add line breaks
+  const paragraphs = tempDiv.querySelectorAll("p")
+  paragraphs.forEach((p) => {
+    const text = p.textContent || ""
+    if (text.trim()) {
+      p.textContent = text + "\n\n"
+    }
+  })
+
+  // Handle line breaks
+  const breaks = tempDiv.querySelectorAll("br")
+  breaks.forEach((br) => {
+    br.parentNode?.replaceChild(document.createTextNode("\n"), br)
+  })
+
+  // Get the final plain text
+  let plainText = tempDiv.textContent || tempDiv.innerText || ""
+
+  // Clean up multiple line breaks and spaces
+  plainText = plainText
+    .replace(/\n\s*\n\s*\n/g, "\n\n") // Replace multiple line breaks with double
+    .replace(/[ \t]+/g, " ") // Replace multiple spaces/tabs with single space
+    .trim()
+
+  // Handle image placeholders from our editor
+  plainText = plainText.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, "[Image: $2]")
+
+  return plainText
 }
 
 export function ArticleViewer({
@@ -71,7 +123,6 @@ export function ArticleViewer({
     }
   }
 
-  // Convert content to plain readable text
   const plainTextContent = convertToPlainText(currentArticle.content)
 
   return (
@@ -156,7 +207,9 @@ export function ArticleViewer({
         </CardHeader>
 
         <CardContent>
-          <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">{plainTextContent}</div>
+          <div className="text-gray-800 leading-relaxed whitespace-pre-wrap font-mono text-sm bg-gray-50 p-4 rounded-lg border">
+            {plainTextContent}
+          </div>
         </CardContent>
       </Card>
 
