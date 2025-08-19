@@ -44,7 +44,11 @@ export function ArticleManagement({ categories, onEditArticle, onDeleteArticle }
       })
     })
 
-    return articles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    return articles.sort((a, b) => {
+      const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt)
+      const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt)
+      return dateB.getTime() - dateA.getTime()
+    })
   }
 
   // Filter articles based on search and category
