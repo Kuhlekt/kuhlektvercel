@@ -14,7 +14,7 @@ import type { Category, User } from "../types/knowledge-base"
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (articleData: {
+  onSubmit: (article: {
     title: string
     content: string
     categoryId: string
@@ -22,7 +22,7 @@ interface AddArticleFormProps {
     status: "draft" | "published"
   }) => void
   categories: Category[]
-  currentUser: User | null
+  currentUser: User
 }
 
 export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentUser }: AddArticleFormProps) {
@@ -34,18 +34,16 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentUser) return
-
-    const tagArray = tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
+    if (!title.trim() || !content.trim() || !categoryId) return
 
     onSubmit({
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       categoryId,
-      tags: tagArray,
+      tags: tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
       status,
     })
 
@@ -78,7 +76,6 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter article title"
@@ -109,7 +106,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your article content here..."
-              rows={12}
+              className="min-h-[300px]"
               required
             />
           </div>
@@ -118,7 +115,6 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <Label htmlFor="tags">Tags</Label>
             <Input
               id="tags"
-              type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="Enter tags separated by commas"
@@ -138,7 +134,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>

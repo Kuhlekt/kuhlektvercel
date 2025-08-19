@@ -6,24 +6,28 @@ export const initialCategories: Category[] = [
     name: "Getting Started",
     description: "Basic information to get you started",
     createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
   },
   {
     id: "2",
     name: "User Guide",
     description: "Comprehensive user documentation",
     createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
   },
   {
     id: "3",
-    name: "API Documentation",
-    description: "Technical API reference",
+    name: "Technical Documentation",
+    description: "Technical specifications and API documentation",
     createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
   },
   {
     id: "4",
-    name: "Troubleshooting",
-    description: "Common issues and solutions",
+    name: "FAQ",
+    description: "Frequently asked questions",
     createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
   },
 ]
 
@@ -36,15 +40,16 @@ export const initialArticles: Article[] = [
 This is your comprehensive knowledge management system. Here you can:
 
 - Browse articles by category
-- Search for specific content
+- Search for specific information
 - Create and edit articles (with proper permissions)
 - Manage users and categories (admin only)
 
 ## Getting Started
 
-1. **Browse Categories**: Use the sidebar to navigate through different categories
-2. **Search**: Use the search bar to find specific articles
+1. **Browse Categories**: Use the left sidebar to navigate through different categories
+2. **Search**: Use the search bar in the top navigation to find specific articles
 3. **Login**: Click the login button to access editing features
+4. **Add Articles**: Once logged in, use the "Add Article" button to create new content
 
 ## User Roles
 
@@ -56,144 +61,131 @@ Enjoy exploring the knowledge base!`,
     categoryId: "1",
     authorId: "1",
     createdBy: "admin",
-    tags: ["welcome", "getting-started"],
+    tags: ["welcome", "getting-started", "introduction"],
     status: "published",
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
   },
   {
     id: "2",
-    title: "How to Create Articles",
-    content: `# Creating Articles
+    title: "How to Create an Article",
+    content: `# How to Create an Article
 
-To create a new article, you need editor or admin permissions.
+Creating articles in the knowledge base is simple and straightforward.
 
-## Steps:
+## Prerequisites
 
-1. Click the "Add Article" button in the navigation
-2. Fill in the article details:
-   - **Title**: A descriptive title for your article
-   - **Category**: Select the appropriate category
-   - **Content**: Write your article content using Markdown
-   - **Tags**: Add relevant tags for better searchability
-   - **Status**: Choose between Draft or Published
+- You must be logged in as an Editor or Admin
+- You need to have at least one category available
 
-3. Click "Create Article" to save
+## Steps
 
-## Markdown Support
+1. **Login**: Click the "Login" button in the top navigation
+2. **Add Article**: Click the "Add Article" button (appears after login)
+3. **Fill Details**: 
+   - Enter a descriptive title
+   - Select the appropriate category
+   - Write your content using Markdown
+   - Add relevant tags
+   - Choose publication status
 
-You can use Markdown formatting in your articles:
+4. **Save**: Click "Create Article" to save
 
-- **Bold text** with \`**text**\`
-- *Italic text* with \`*text*\`
-- Lists with \`-\` or \`1.\`
-- Headers with \`#\`, \`##\`, etc.
-- Code blocks with triple backticks
-
-## Best Practices
+## Tips
 
 - Use clear, descriptive titles
-- Add relevant tags
-- Keep content well-structured
-- Review before publishing`,
+- Add relevant tags for better searchability
+- Use Markdown formatting for better readability
+- Save as draft first, then publish when ready`,
     categoryId: "2",
     authorId: "2",
     createdBy: "editor",
-    tags: ["articles", "creation", "markdown"],
+    tags: ["tutorial", "article-creation", "how-to"],
     status: "published",
     createdAt: new Date("2024-01-02"),
     updatedAt: new Date("2024-01-02"),
   },
   {
     id: "3",
-    title: "API Authentication",
-    content: `# API Authentication
+    title: "API Documentation",
+    content: `# API Documentation
 
-Our API uses token-based authentication for secure access.
+This section covers the technical aspects of the knowledge base system.
 
-## Authentication Methods
+## Authentication
 
-### Bearer Token
-Include your API token in the Authorization header:
+The system uses session-based authentication with localStorage persistence.
 
-\`\`\`
-Authorization: Bearer your-api-token-here
-\`\`\`
+## Data Structure
 
-### API Key
-Alternatively, you can use an API key parameter:
+### Articles
+- ID: Unique identifier
+- Title: Article title
+- Content: Markdown content
+- Category: Associated category
+- Author: Creator information
+- Tags: Searchable keywords
+- Status: Draft or Published
 
-\`\`\`
-GET /api/articles?api_key=your-api-key
-\`\`\`
+### Categories
+- Hierarchical structure
+- Nested categories supported
+- Admin-managed
 
-## Getting Your Token
+## Storage
 
-1. Log into your account
-2. Go to Settings > API Access
-3. Generate a new token
-4. Copy and store it securely
-
-## Rate Limits
-
-- 1000 requests per hour for authenticated users
-- 100 requests per hour for unauthenticated users
-
-## Error Responses
-
-- \`401 Unauthorized\`: Invalid or missing token
-- \`403 Forbidden\`: Insufficient permissions
-- \`429 Too Many Requests\`: Rate limit exceeded`,
+Data is stored in browser localStorage with the following keys:
+- \`kb_users\`: User accounts
+- \`kb_categories\`: Category structure
+- \`kb_articles\`: Article content
+- \`kb_current_user\`: Active session
+- \`kb_audit_log\`: Activity tracking`,
     categoryId: "3",
     authorId: "1",
     createdBy: "admin",
-    tags: ["api", "authentication", "security"],
+    tags: ["api", "technical", "documentation", "development"],
     status: "published",
     createdAt: new Date("2024-01-03"),
     updatedAt: new Date("2024-01-03"),
   },
   {
     id: "4",
-    title: "Common Login Issues",
-    content: `# Common Login Issues
+    title: "Frequently Asked Questions",
+    content: `# Frequently Asked Questions
 
-Having trouble logging in? Here are the most common issues and solutions.
+## General Questions
 
-## Forgot Password
+### Q: How do I reset my password?
+A: Contact your administrator to reset your password.
 
-If you've forgotten your password:
+### Q: Can I delete articles?
+A: Only admins can delete articles. Editors can set articles to draft status.
 
-1. Click "Forgot Password" on the login page
-2. Enter your email address
-3. Check your email for reset instructions
-4. Follow the link to create a new password
+### Q: How do I search for articles?
+A: Use the search bar in the top navigation. It searches titles, content, and tags.
 
-## Account Locked
+## Technical Questions
 
-After multiple failed login attempts, your account may be temporarily locked:
+### Q: Where is my data stored?
+A: Data is stored locally in your browser's localStorage.
 
-- Wait 15 minutes before trying again
-- Contact support if the issue persists
+### Q: Can I export my data?
+A: Yes, admins can export all data from the admin dashboard.
 
-## Browser Issues
+### Q: Is there a mobile app?
+A: The web interface is responsive and works well on mobile devices.
 
-Clear your browser cache and cookies:
+## Troubleshooting
 
-1. Press Ctrl+Shift+Delete (or Cmd+Shift+Delete on Mac)
-2. Select "Cookies and other site data"
-3. Select "Cached images and files"
-4. Click "Clear data"
+### Q: I can't see the login button
+A: Refresh the page. If the issue persists, clear your browser cache.
 
-## Still Having Issues?
-
-Contact our support team:
-- Email: support@kuhlekt.com
-- Phone: 1-800-KUHLEKT
-- Live chat available 9 AM - 5 PM EST`,
+### Q: My articles aren't saving
+A: Check that you have editor or admin permissions and try again.`,
     categoryId: "4",
-    authorId: "2",
-    createdBy: "editor",
-    tags: ["login", "troubleshooting", "support"],
+    authorId: "1",
+    createdBy: "admin",
+    tags: ["faq", "help", "troubleshooting", "support"],
     status: "published",
     createdAt: new Date("2024-01-04"),
     updatedAt: new Date("2024-01-04"),

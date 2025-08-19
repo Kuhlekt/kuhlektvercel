@@ -1,7 +1,7 @@
 "use client"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import type { AuditLog as AuditLogType, User } from "../types/knowledge-base"
 
 interface AuditLogProps {
@@ -15,47 +15,56 @@ export function AuditLog({ auditLog, users }: AuditLogProps) {
     return user ? user.username : "Unknown User"
   }
 
-  const getActionBadgeColor = (action: string) => {
+  const getActionColor = (action: string) => {
     switch (action) {
       case "LOGIN":
-        return "bg-green-100 text-green-800"
+        return "default"
       case "LOGOUT":
-        return "bg-gray-100 text-gray-800"
+        return "secondary"
       case "CREATE_ARTICLE":
-        return "bg-blue-100 text-blue-800"
+      case "CREATE_USER":
+      case "CREATE_CATEGORY":
+        return "default"
       case "UPDATE_ARTICLE":
-        return "bg-yellow-100 text-yellow-800"
+      case "UPDATE_USER":
+      case "UPDATE_CATEGORY":
+        return "secondary"
       case "DELETE_ARTICLE":
-        return "bg-red-100 text-red-800"
+      case "DELETE_USER":
+      case "DELETE_CATEGORY":
+        return "destructive"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "outline"
     }
   }
 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Audit Log</h3>
-
-      <ScrollArea className="h-96">
-        <div className="space-y-2">
+      <div className="border rounded-lg">
+        <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b bg-gray-50">
+          <div>User</div>
+          <div>Action</div>
+          <div>Details</div>
+          <div>Timestamp</div>
+        </div>
+        <ScrollArea className="max-h-96">
           {auditLog.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No audit entries found</div>
+            <div className="p-4 text-center text-gray-500">No audit log entries</div>
           ) : (
             auditLog.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <Badge className={getActionBadgeColor(entry.action)}>{entry.action}</Badge>
-                  <div>
-                    <div className="font-medium">{getUserName(entry.userId)}</div>
-                    <div className="text-sm text-gray-600">{entry.details}</div>
-                  </div>
+              <div key={entry.id} className="grid grid-cols-4 gap-4 p-4 border-b last:border-b-0">
+                <div className="font-medium">{getUserName(entry.userId)}</div>
+                <div>
+                  <Badge variant={getActionColor(entry.action)}>{entry.action}</Badge>
                 </div>
-                <div className="text-sm text-gray-500">{entry.timestamp.toLocaleString()}</div>
+                <div className="text-gray-600">{entry.details}</div>
+                <div className="text-gray-600">{entry.timestamp.toLocaleString()}</div>
               </div>
             ))
           )}
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
     </div>
   )
 }

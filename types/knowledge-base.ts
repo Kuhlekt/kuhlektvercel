@@ -25,6 +25,7 @@ export interface Category {
   description: string
   parentId?: string
   createdAt: Date
+  createdBy: string
 }
 
 export interface User {
