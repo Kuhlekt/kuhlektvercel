@@ -4,12 +4,15 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Modal, Button } from "antd"
 import { LogIn } from "lucide-react"
-import type { User } from "./types" // Assuming a User type is defined somewhere
+import type { User, Category, AuditLogEntry } from "./types" // Assuming a User type is defined somewhere
 import ArticleViewer from "./ArticleViewer" // Assuming ArticleViewer is defined somewhere
 import AddArticleForm from "./AddArticleForm" // Assuming AddArticleForm is defined somewhere
 import EditArticleForm from "./EditArticleForm" // Assuming EditArticleForm is defined somewhere
 import AdminDashboard from "./AdminDashboard" // Assuming AdminDashboard is defined somewhere
 import storage from "./storage" // Assuming storage is defined somewhere
+import initialCategories from "./initialCategories" // Assuming initialCategories is defined somewhere
+import initialUsers from "./initialUsers" // Assuming initialUsers is defined somewhere
+import initialAuditLog from "./initialAuditLog" // Assuming initialAuditLog is defined somewhere
 
 const KnowledgeBase: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
@@ -20,21 +23,115 @@ const KnowledgeBase: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [navigationContext, setNavigationContext] = useState({ type: "all" })
-  const [categories, setCategories] = useState([]) // Assuming categories are defined somewhere
-  const [auditLog, setAuditLog] = useState([]) // Assuming auditLog is defined somewhere
+  const [categories, setCategories] = useState<Category[]>([]) // Assuming categories are defined somewhere
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]) // Assuming auditLog is defined somewhere
   const [editingArticle, setEditingArticle] = useState(null) // Assuming editingArticle is defined somewhere
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [pageVisits, setPageVisits] = useState(0)
 
   useEffect(() => {
-    // Fetch users from an API or a local source
-    const fetchUsers = async () => {
-      const response = await fetch("/api/users")
-      const data = await response.json()
-      setUsers(data)
+    // Initialize data and require proper login
+    const initializeData = async () => {
+      try {
+        console.log("Starting data initialization...")
+
+        // Load existing data or initialize with defaults
+        let storedCategories: Category[] = []
+        let storedUsers: User[] = []
+        let storedAuditLog: AuditLogEntry[] = []
+
+        try {
+          storedCategories = storage.getCategories()
+          console.log("Loaded categories:", storedCategories)
+        } catch (error) {
+          console.error("Error loading categories:", error)
+          storedCategories = []
+        }
+
+        try {
+          storedUsers = storage.getUsers()
+          console.log("Loaded users:", storedUsers)
+        } catch (error) {
+          console.error("Error loading users:", error)
+          storedUsers = []
+        }
+
+        try {
+          storedAuditLog = storage.getAuditLog()
+          console.log("Loaded audit log:", storedAuditLog)
+        } catch (error) {
+          console.error("Error loading audit log:", error)
+          storedAuditLog = []
+        }
+
+        if (!Array.isArray(storedCategories) || storedCategories.length === 0) {
+          // First time setup - initialize with default data
+          console.log("Initializing with default categories...")
+          const categoriesWithDates = initialCategories.map((category) => ({
+            ...category,
+            articles: (category.articles || []).map((article) => ({
+              ...article,
+              createdAt: new Date(article.createdAt),
+              updatedAt: new Date(article.updatedAt),
+              editCount: 0,
+            })),
+            subcategories: (category.subcategories || []).map((subcategory) => ({
+              ...subcategory,
+              articles: (subcategory.articles || []).map((article) => ({
+                ...article,
+                createdAt: new Date(article.createdAt),
+                updatedAt: new Date(article.updatedAt),
+                editCount: 0,
+              })),
+            })),
+          }))
+
+          setCategories(categoriesWithDates)
+          storage.saveCategories(categoriesWithDates)
+        } else {
+          setCategories(storedCategories)
+        }
+
+        if (!Array.isArray(storedUsers) || storedUsers.length === 0) {
+          console.log("Initializing with default users...")
+          setUsers(initialUsers)
+          storage.saveUsers(initialUsers)
+        } else {
+          setUsers(storedUsers)
+        }
+
+        if (!Array.isArray(storedAuditLog) || storedAuditLog.length === 0) {
+          console.log("Initializing with default audit log...")
+          setAuditLog(initialAuditLog)
+          storage.saveAuditLog(initialAuditLog)
+        } else {
+          setAuditLog(storedAuditLog)
+        }
+
+        // DO NOT auto-login - require proper authentication
+        console.log("🔒 Data initialization completed - user must log in")
+
+        // Increment page visits
+        const newVisitCount = storage.incrementPageVisits()
+        setPageVisits(newVisitCount)
+
+        console.log("Data initialization completed successfully")
+      } catch (error) {
+        console.error("Error during initialization:", error)
+        setError("Failed to load application data. Please refresh the page.")
+
+        // Set fallback empty data
+        setCategories([])
+        setUsers([])
+        setAuditLog([])
+        setPageVisits(0)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    fetchUsers()
-    // Data initialization completed - user must log in
-    console.log("Data initialization completed - user must log in")
+    initializeData()
   }, [])
 
   const handleLogin = (user: User) => {
@@ -49,6 +146,7 @@ const KnowledgeBase: React.FC = () => {
     setSearchQuery("")
     setSearchResults([])
     setNavigationContext({ type: "all" })
+    setShowLoginModal(true)
   }
 
   const handleAddArticle = (article) => {

@@ -6,10 +6,10 @@ const Navigation = () => {
       <div className="flex items-center justify-between">
         {/* Logo and Title */}
         <div className="flex items-center space-x-3">
-          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-8 object-contain" />
+          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-auto" />
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Kuhlekt KB</h1>
-            <p className="text-xs text-gray-500">Knowledge Base</p>
+            <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+            <p className="text-xs text-gray-500">Kuhlekt KB</p>
           </div>
         </div>
         <div className="space-x-4">
