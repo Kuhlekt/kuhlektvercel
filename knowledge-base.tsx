@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { ArticleViewer } from "./components/article-viewer"
+import { HomeDashboard } from "./components/home-dashboard"
 import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
@@ -20,6 +21,7 @@ export default function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
+  const [currentView, setCurrentView] = useState<"home" | "category" | "article">("home")
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
@@ -35,6 +37,13 @@ export default function KnowledgeBase() {
     setCategories(loadedCategories)
     setArticles(loadedArticles)
     setAuditLog(loadedAuditLog)
+
+    console.log("📊 Data loaded:", {
+      users: loadedUsers.length,
+      categories: loadedCategories.length,
+      articles: loadedArticles.length,
+      auditLog: loadedAuditLog.length,
+    })
   }
 
   useEffect(() => {
@@ -81,6 +90,7 @@ export default function KnowledgeBase() {
     setCurrentUser(null)
     setSelectedArticleId(null)
     setSelectedCategoryId(null)
+    setCurrentView("home")
   }
 
   const handleAddArticle = (articleData: {
@@ -132,14 +142,28 @@ export default function KnowledgeBase() {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId === selectedCategoryId ? null : categoryId)
     setSelectedArticleId(null)
+    setCurrentView("category")
   }
 
   const handleArticleSelect = (articleId: string) => {
     setSelectedArticleId(articleId)
+    setCurrentView("article")
+  }
+
+  const handleBackToHome = () => {
+    setSelectedArticleId(null)
+    setSelectedCategoryId(null)
+    setCurrentView("home")
+    setSearchTerm("")
   }
 
   const handleBackFromArticle = () => {
     setSelectedArticleId(null)
+    if (selectedCategoryId) {
+      setCurrentView("category")
+    } else {
+      setCurrentView("home")
+    }
   }
 
   const handleEditArticle = () => {
@@ -157,6 +181,51 @@ export default function KnowledgeBase() {
     )
   }
 
+  const renderMainContent = () => {
+    switch (currentView) {
+      case "article":
+        return (
+          <ArticleViewer
+            article={selectedArticle}
+            category={selectedCategory}
+            author={selectedAuthor}
+            currentUser={currentUser}
+            onEdit={handleEditArticle}
+            onBack={handleBackFromArticle}
+          />
+        )
+      case "category":
+        // For now, show home dashboard with category filter
+        return (
+          <HomeDashboard
+            categories={categories}
+            articles={articles}
+            users={users}
+            currentUser={currentUser}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onCategorySelect={handleCategorySelect}
+            onArticleSelect={handleArticleSelect}
+            onAddArticle={() => setIsAddArticleModalOpen(true)}
+          />
+        )
+      default:
+        return (
+          <HomeDashboard
+            categories={categories}
+            articles={articles}
+            users={users}
+            currentUser={currentUser}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onCategorySelect={handleCategorySelect}
+            onArticleSelect={handleArticleSelect}
+            onAddArticle={() => setIsAddArticleModalOpen(true)}
+          />
+        )
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <Navigation
@@ -167,28 +236,23 @@ export default function KnowledgeBase() {
         onAdminPanel={() => setIsAdminDashboardOpen(true)}
         onLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
+        onHomeClick={handleBackToHome}
       />
 
       <div className="flex-1 flex overflow-hidden">
-        <CategoryTree
-          categories={categories}
-          articles={articles}
-          selectedCategoryId={selectedCategoryId}
-          selectedArticleId={selectedArticleId}
-          onCategorySelect={handleCategorySelect}
-          onArticleSelect={handleArticleSelect}
-        />
-
-        <main className="flex-1 overflow-hidden">
-          <ArticleViewer
-            article={selectedArticle}
-            category={selectedCategory}
-            author={selectedAuthor}
-            currentUser={currentUser}
-            onEdit={handleEditArticle}
-            onBack={handleBackFromArticle}
+        {/* Show category tree only when not on home */}
+        {currentView !== "home" && (
+          <CategoryTree
+            categories={categories}
+            articles={articles}
+            selectedCategoryId={selectedCategoryId}
+            selectedArticleId={selectedArticleId}
+            onCategorySelect={handleCategorySelect}
+            onArticleSelect={handleArticleSelect}
           />
-        </main>
+        )}
+
+        <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
       </div>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />

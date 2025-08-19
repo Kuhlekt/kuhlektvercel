@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Plus, Settings, LogIn, LogOut, User } from "lucide-react"
+import { Search, Plus, Settings, LogIn, LogOut, User, Home } from "lucide-react"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
@@ -13,6 +13,7 @@ interface NavigationProps {
   onAdminPanel: () => void
   onLogin: () => void
   onLogout: () => void
+  onHomeClick?: () => void
 }
 
 export function Navigation({
@@ -23,6 +24,7 @@ export function Navigation({
   onAdminPanel,
   onLogin,
   onLogout,
+  onHomeClick,
 }: NavigationProps) {
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-3">
@@ -30,7 +32,13 @@ export function Navigation({
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-8 rounded" />
-            <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+            <Button
+              variant="ghost"
+              onClick={onHomeClick}
+              className="text-xl font-bold text-gray-900 hover:bg-transparent p-0"
+            >
+              Knowledge Base
+            </Button>
           </div>
 
           <div className="relative">
@@ -46,6 +54,13 @@ export function Navigation({
         </div>
 
         <div className="flex items-center space-x-2">
+          {onHomeClick && (
+            <Button variant="ghost" size="sm" onClick={onHomeClick}>
+              <Home className="h-4 w-4 mr-1" />
+              Home
+            </Button>
+          )}
+
           {currentUser ? (
             <>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
