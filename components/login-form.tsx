@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -82,6 +81,21 @@ export function LoginForm({ onLogin, error, loading }: LoginFormProps) {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
+            <div className="text-xs space-y-1">
+              <div>
+                <strong>Admin:</strong> admin / admin123
+              </div>
+              <div>
+                <strong>Editor:</strong> editor / editor123
+              </div>
+              <div>
+                <strong>Viewer:</strong> viewer / viewer123
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

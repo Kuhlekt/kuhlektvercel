@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -35,78 +35,95 @@ export function CategoryTree({
     setExpandedCategories(newExpanded)
   }
 
+  const getChildCategories = (parentId?: string) => {
+    return categories.filter((cat) => cat.parentId === parentId)
+  }
+
   const getCategoryArticles = (categoryId: string) => {
     return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
   }
 
-  return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
-      </div>
+  const renderCategory = (category: Category, level = 0) => {
+    const childCategories = getChildCategories(category.id)
+    const categoryArticles = getCategoryArticles(category.id)
+    const isExpanded = expandedCategories.has(category.id)
+    const isSelected = selectedCategoryId === category.id
+    const hasChildren = childCategories.length > 0 || categoryArticles.length > 0
 
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {categories.map((category) => {
-            const categoryArticles = getCategoryArticles(category.id)
-            const isExpanded = expandedCategories.has(category.id)
-            const isSelected = selectedCategoryId === category.id
+    return (
+      <div key={category.id}>
+        <div
+          className={`flex items-center space-x-2 px-3 py-2 cursor-pointer hover:bg-gray-100 ${
+            isSelected ? "bg-blue-50 border-r-2 border-blue-500" : ""
+          }`}
+          style={{ paddingLeft: `${12 + level * 16}px` }}
+          onClick={() => {
+            onCategorySelect(category.id)
+            if (hasChildren) {
+              toggleCategory(category.id)
+            }
+          }}
+        >
+          {hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleCategory(category.id)
+              }}
+              className="p-0.5 hover:bg-gray-200 rounded"
+            >
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+          )}
+          {!hasChildren && <div className="w-5" />}
 
-            return (
-              <div key={category.id} className="mb-1">
-                <div className="flex items-center">
-                  <Button variant="ghost" size="sm" className="p-1 h-6 w-6" onClick={() => toggleCategory(category.id)}>
-                    {categoryArticles.length > 0 ? (
-                      isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )
-                    ) : (
-                      <div className="h-4 w-4" />
-                    )}
-                  </Button>
+          {isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600" /> : <Folder className="h-4 w-4 text-gray-600" />}
 
-                  <Button
-                    variant="ghost"
-                    className={`flex-1 justify-start h-8 px-2 ${
-                      isSelected ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                    }`}
-                    onClick={() => onCategorySelect(category.id)}
-                  >
-                    {isExpanded ? (
-                      <FolderOpen className="h-4 w-4 mr-2 text-blue-500" />
-                    ) : (
-                      <Folder className="h-4 w-4 mr-2 text-gray-500" />
-                    )}
-                    <span className="truncate">{category.name}</span>
-                    {categoryArticles.length > 0 && (
-                      <span className="ml-auto text-xs text-gray-500">({categoryArticles.length})</span>
-                    )}
-                  </Button>
-                </div>
+          <span className="flex-1 text-sm font-medium">{category.name}</span>
 
-                {isExpanded && categoryArticles.length > 0 && (
-                  <div className="ml-6 mt-1 space-y-1">
-                    {categoryArticles.map((article) => (
-                      <Button
-                        key={article.id}
-                        variant="ghost"
-                        className={`w-full justify-start h-8 px-2 text-sm ${
-                          selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
-                        }`}
-                        onClick={() => onArticleSelect(article.id)}
-                      >
-                        <FileText className="h-3 w-3 mr-2 text-gray-400" />
-                        <span className="truncate">{article.title}</span>
-                      </Button>
-                    ))}
-                  </div>
+          {categoryArticles.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {categoryArticles.length}
+            </Badge>
+          )}
+        </div>
+
+        {isExpanded && (
+          <div>
+            {childCategories.map((child) => renderCategory(child, level + 1))}
+            {categoryArticles.map((article) => (
+              <div
+                key={article.id}
+                className={`flex items-center space-x-2 px-3 py-2 cursor-pointer hover:bg-gray-100 ${
+                  selectedArticleId === article.id ? "bg-green-50 border-r-2 border-green-500" : ""
+                }`}
+                style={{ paddingLeft: `${28 + level * 16}px` }}
+                onClick={() => onArticleSelect(article.id)}
+              >
+                <FileText className="h-4 w-4 text-gray-500" />
+                <span className="flex-1 text-sm">{article.title}</span>
+                {article.status === "draft" && (
+                  <Badge variant="outline" className="text-xs">
+                    Draft
+                  </Badge>
                 )}
               </div>
-            )
-          })}
-        </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const rootCategories = getChildCategories()
+
+  return (
+    <div className="w-80 bg-white border-r border-gray-200">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="font-semibold text-gray-900">Categories</h2>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="py-2">{rootCategories.map((category) => renderCategory(category))}</div>
       </ScrollArea>
     </div>
   )

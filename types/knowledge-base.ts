@@ -40,21 +40,13 @@ export interface User {
 
 export interface AuditLogEntry {
   id: string
-  action: string
-  entityType: string
-  entityId: string
   performedBy: string
-  timestamp: Date
+  action: string
   details: string
+  timestamp: Date
 }
 
-export interface AuditLog {
-  id: string
-  userId: string
-  action: string
-  details: string
-  timestamp: Date
-}
+export type AuditLog = AuditLogEntry
 
 export interface UserManagementProps {
   users: User[]

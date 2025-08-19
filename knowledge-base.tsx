@@ -52,7 +52,7 @@ export default function KnowledgeBase() {
     console.log("👋 User logged out")
     if (currentUser) {
       storage.addAuditEntry({
-        userId: currentUser.id,
+        performedBy: currentUser.id,
         action: "LOGOUT",
         details: `User ${currentUser.username} logged out`,
       })
@@ -88,7 +88,7 @@ export default function KnowledgeBase() {
     storage.saveArticles(updatedArticles)
 
     storage.addAuditEntry({
-      userId: currentUser.id,
+      performedBy: currentUser.id,
       action: "CREATE_ARTICLE",
       details: `Created article "${articleData.title}"`,
     })

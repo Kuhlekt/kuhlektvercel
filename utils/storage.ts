@@ -76,7 +76,7 @@ class Storage {
       const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
       this.saveUsers(updatedUsers)
       this.addAuditEntry({
-        userId: user.id,
+        performedBy: user.id,
         action: "LOGIN",
         details: `User ${user.username} logged in`,
       })
@@ -162,7 +162,7 @@ class Storage {
     return []
   }
 
-  addAuditEntry(entry: { userId: string; action: string; details: string }) {
+  addAuditEntry(entry: { performedBy: string; action: string; details: string }) {
     if (typeof window === "undefined") return
     const log = this.getAuditLog()
     const newEntry: AuditLog = {

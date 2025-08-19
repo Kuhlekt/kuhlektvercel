@@ -11,7 +11,7 @@ export const initialCategories: Category[] = [
   {
     id: "2",
     name: "User Guides",
-    description: "Step-by-step guides for users",
+    description: "Step-by-step user guides",
     createdAt: new Date("2024-01-01"),
     createdBy: "admin",
   },
@@ -26,6 +26,22 @@ export const initialCategories: Category[] = [
     id: "4",
     name: "FAQ",
     description: "Frequently asked questions",
+    createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
+  },
+  {
+    id: "5",
+    name: "Installation",
+    description: "Installation guides",
+    parentId: "1",
+    createdAt: new Date("2024-01-01"),
+    createdBy: "admin",
+  },
+  {
+    id: "6",
+    name: "Configuration",
+    description: "Configuration guides",
+    parentId: "1",
     createdAt: new Date("2024-01-01"),
     createdBy: "admin",
   },
@@ -48,143 +64,149 @@ This is your comprehensive knowledge management system. Here you can:
 
 1. **Browse Categories**: Use the left sidebar to navigate through different categories
 2. **Search**: Use the search bar in the top navigation to find specific articles
-3. **Login**: Click the login button to access editing features
-4. **Create Articles**: Once logged in, use the "Add Article" button to create new content
+3. **Login**: Click the login button to access additional features based on your role
 
 ## User Roles
 
-- **Admin**: Full access to all features including user management
+- **Viewer**: Can read all published articles
 - **Editor**: Can create and edit articles
-- **Viewer**: Read-only access to published articles
+- **Admin**: Full access to all features including user management
 
-Enjoy using the knowledge base!`,
+## Features
+
+- Rich text editing with image support
+- Category-based organization
+- Full-text search
+- User role management
+- Audit logging
+- Data export/import
+
+Start exploring by clicking on any category in the sidebar!`,
     categoryId: "1",
     authorId: "1",
     createdBy: "admin",
-    tags: ["welcome", "getting-started", "introduction"],
+    tags: ["welcome", "getting-started", "overview"],
     status: "published",
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
   },
   {
     id: "2",
-    title: "How to Create an Article",
-    content: `# How to Create an Article
+    title: "How to Install the System",
+    content: `# Installation Guide
 
-Creating articles in the knowledge base is simple and straightforward.
+Follow these steps to install the Kuhlekt Knowledge Base system:
 
 ## Prerequisites
 
-- You must be logged in as an Editor or Admin
-- You need to have at least one category created
+- Node.js 18 or higher
+- npm or yarn package manager
+- Modern web browser
 
-## Steps
+## Installation Steps
 
-1. **Login**: Click the "Login" button in the top navigation
-2. **Add Article**: Click the "Add Article" button (appears after login)
-3. **Fill in Details**:
-   - Enter a descriptive title
-   - Select the appropriate category
-   - Write your content using Markdown
-   - Add relevant tags (comma-separated)
-   - Choose status (draft or published)
-4. **Save**: Click "Create Article" to save
+1. **Clone the repository**
+   \`\`\`bash
+   git clone https://github.com/kuhlekt/knowledge-base.git
+   cd knowledge-base
+   \`\`\`
 
-## Tips
+2. **Install dependencies**
+   \`\`\`bash
+   npm install
+   \`\`\`
 
-- Use clear, descriptive titles
-- Add relevant tags to make articles easier to find
-- Use Markdown formatting for better readability
-- Save as draft first, then publish when ready
+3. **Start the development server**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-## Markdown Support
+4. **Open your browser**
+   Navigate to \`http://localhost:3000\`
 
-The editor supports full Markdown syntax including:
-- Headers (# ## ###)
-- **Bold** and *italic* text
-- Lists and numbered lists
-- Links and images
-- Code blocks`,
-    categoryId: "2",
-    authorId: "2",
-    createdBy: "editor",
-    tags: ["tutorial", "articles", "creation", "markdown"],
+## Configuration
+
+The system uses localStorage for data persistence in development. For production, you may want to integrate with a proper database.
+
+## Default Users
+
+The system comes with three default users:
+- admin/admin123 (Administrator)
+- editor/editor123 (Editor)
+- viewer/viewer123 (Viewer)
+
+You can change these credentials after logging in as an administrator.`,
+    categoryId: "5",
+    authorId: "1",
+    createdBy: "admin",
+    tags: ["installation", "setup", "guide"],
     status: "published",
-    createdAt: new Date("2024-01-02"),
-    updatedAt: new Date("2024-01-02"),
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
   },
   {
     id: "3",
-    title: "API Documentation",
-    content: `# API Documentation
+    title: "User Management Guide",
+    content: `# User Management
 
-This document outlines the internal API structure used by the knowledge base.
+This guide explains how to manage users in the Kuhlekt Knowledge Base system.
 
-## Data Models
+## Accessing User Management
 
-### User
-\`\`\`typescript
-interface User {
-  id: string
-  username: string
-  email: string
-  password: string
-  role: "admin" | "editor" | "viewer"
-  createdAt: Date
-  lastLogin?: Date
-}
-\`\`\`
+Only administrators can access user management features:
 
-### Article
-\`\`\`typescript
-interface Article {
-  id: string
-  title: string
-  content: string
-  categoryId: string
-  authorId: string
-  createdBy: string
-  tags: string[]
-  status: "draft" | "published"
-  createdAt: Date
-  updatedAt: Date
-}
-\`\`\`
+1. Log in as an administrator
+2. Click the "Admin Panel" button in the top navigation
+3. Select the "User Management" tab
 
-### Category
-\`\`\`typescript
-interface Category {
-  id: string
-  name: string
-  description?: string
-  parentId?: string
-  createdAt: Date
-  createdBy: string
-}
-\`\`\`
+## User Roles
 
-## Storage
+### Administrator
+- Full system access
+- Can create, edit, and delete users
+- Can manage categories and articles
+- Access to audit logs and system settings
 
-The application uses localStorage for data persistence:
-- \`kb_users\`: User accounts
-- \`kb_categories\`: Article categories
-- \`kb_articles\`: Article content
-- \`kb_current_user\`: Current session
-- \`kb_audit_log\`: Activity log
+### Editor
+- Can create and edit articles
+- Can view all categories
+- Cannot manage users or system settings
 
-## Authentication
+### Viewer
+- Read-only access to published articles
+- Can search and browse content
+- Cannot create or edit content
 
-Authentication is handled through the storage utility:
-- Passwords are stored in plain text (demo purposes only)
-- Sessions persist in localStorage
-- Audit trail tracks all user actions`,
-    categoryId: "3",
+## Creating New Users
+
+1. In the User Management tab, click "Add User"
+2. Fill in the required information:
+   - Username (must be unique)
+   - Email address
+   - Password
+   - Role selection
+3. Click "Create User"
+
+## Editing Users
+
+1. Find the user in the user list
+2. Click the "Edit" button
+3. Modify the desired fields
+4. Click "Save Changes"
+
+## Security Best Practices
+
+- Use strong passwords
+- Regularly review user access
+- Remove inactive users
+- Monitor the audit log for suspicious activity`,
+    categoryId: "2",
     authorId: "1",
     createdBy: "admin",
-    tags: ["api", "documentation", "technical", "development"],
+    tags: ["users", "management", "admin", "security"],
     status: "published",
-    createdAt: new Date("2024-01-03"),
-    updatedAt: new Date("2024-01-03"),
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
   },
   {
     id: "4",
@@ -194,10 +216,10 @@ Authentication is handled through the storage utility:
 ## General Questions
 
 ### Q: How do I reset my password?
-A: Contact your administrator to reset your password. This demo version doesn't include password reset functionality.
+A: Contact your system administrator to reset your password. Password reset functionality will be added in a future update.
 
-### Q: Can I delete articles?
-A: Currently, article deletion is not implemented. You can edit articles to mark them as drafts or update their content.
+### Q: Can I change my username?
+A: Usernames can only be changed by administrators through the user management interface.
 
 ### Q: How do I search for articles?
 A: Use the search bar in the top navigation. It searches through article titles, content, and tags.
@@ -205,38 +227,39 @@ A: Use the search bar in the top navigation. It searches through article titles,
 ## Technical Questions
 
 ### Q: Where is my data stored?
-A: All data is stored locally in your browser's localStorage. This means data is specific to your browser and device.
+A: In the current version, data is stored in your browser's localStorage. For production use, consider integrating with a proper database.
 
 ### Q: Can I export my data?
-A: Yes! Admins can use the Data Management section in the Admin Dashboard to export all data as JSON.
+A: Yes, administrators can export all system data through the Admin Panel > Data Management section.
 
-### Q: Is this suitable for production use?
-A: This is a demo application. For production use, you would need:
-- Proper backend database
-- Secure authentication
-- User management features
-- Data backup and recovery
+### Q: How do I backup the system?
+A: Use the export feature in the Admin Panel to create regular backups of your data.
 
 ## Troubleshooting
 
-### Q: Login isn't working
-A: Try these steps:
-1. Make sure you're using the correct credentials
-2. Check the browser console for errors
-3. Clear localStorage and refresh the page
-4. Try the demo credentials: admin/admin123
+### Q: I can't log in
+A: Check that you're using the correct username and password. Contact your administrator if the problem persists.
 
 ### Q: Articles aren't saving
-A: This usually indicates a localStorage issue:
-1. Check if localStorage is enabled in your browser
-2. Clear localStorage and try again
-3. Check browser console for errors`,
+A: Ensure you have the proper permissions (Editor or Admin role) and that your browser allows localStorage.
+
+### Q: Images aren't displaying
+A: Make sure images are properly uploaded and that your browser supports the image format.
+
+## Feature Requests
+
+### Q: Can you add feature X?
+A: Feature requests can be submitted through the appropriate channels. Common requested features include:
+- Email notifications
+- Advanced search filters
+- Document versioning
+- Integration with external systems`,
     categoryId: "4",
-    authorId: "1",
-    createdBy: "admin",
-    tags: ["faq", "help", "troubleshooting", "support"],
+    authorId: "2",
+    createdBy: "editor",
+    tags: ["faq", "help", "troubleshooting"],
     status: "published",
-    createdAt: new Date("2024-01-04"),
-    updatedAt: new Date("2024-01-04"),
+    createdAt: new Date("2024-01-02"),
+    updatedAt: new Date("2024-01-02"),
   },
 ]
