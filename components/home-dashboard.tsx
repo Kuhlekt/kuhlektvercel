@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,14 +34,44 @@ export function HomeDashboard({
 }: HomeDashboardProps) {
   const [selectedFilter, setSelectedFilter] = useState<"all" | "recent" | "popular">("all")
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🏠 HomeDashboard render:", {
+      totalArticles: articles.length,
+      totalCategories: categories.length,
+      totalUsers: users.length,
+      currentUser: currentUser?.username,
+      searchTerm,
+      selectedFilter,
+    })
+
+    if (articles.length > 0) {
+      console.log(
+        "📝 Sample articles in HomeDashboard:",
+        articles.slice(0, 3).map((a) => ({
+          id: a.id,
+          title: a.title,
+          status: a.status,
+          categoryId: a.categoryId,
+          createdAt: a.createdAt,
+        })),
+      )
+    }
+  }, [articles, categories, users, currentUser, searchTerm, selectedFilter])
+
   // Get published articles only
   const publishedArticles = useMemo(() => {
-    const published = articles.filter((article) => article.status === "published")
-    console.log("📊 Published articles:", {
+    const published = articles.filter((article) => {
+      console.log(`📄 Checking article "${article.title}": status=${article.status}`)
+      return article.status === "published"
+    })
+
+    console.log("📊 Article filtering results:", {
       total: articles.length,
       published: published.length,
-      sample: published.slice(0, 2).map((a) => ({ id: a.id, title: a.title, status: a.status })),
+      statuses: articles.map((a) => ({ title: a.title, status: a.status })),
     })
+
     return published
   }, [articles])
 
@@ -53,25 +83,34 @@ export function HomeDashboard({
       (article) => Date.now() - article.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000,
     ).length
 
-    return {
+    const statsData = {
       totalArticles,
       totalCategories,
       recentArticles,
       totalUsers: users.length,
     }
+
+    console.log("📊 Dashboard stats:", statsData)
+    return statsData
   }, [publishedArticles, categories, users])
 
   // Get recent articles (last 7 days)
   const recentArticles = useMemo(() => {
-    return publishedArticles
+    const recent = publishedArticles
       .filter((article) => Date.now() - article.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 5)
+
+    console.log("🕒 Recent articles:", recent.length)
+    return recent
   }, [publishedArticles])
 
   // Get latest articles
   const latestArticles = useMemo(() => {
-    return publishedArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 8)
+    const latest = publishedArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 8)
+
+    console.log("📰 Latest articles:", latest.length)
+    return latest
   }, [publishedArticles])
 
   // Filter articles based on search and filter
@@ -102,7 +141,15 @@ export function HomeDashboard({
         filtered = filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     }
 
-    return filtered.slice(0, 12) // Limit to 12 articles
+    const result = filtered.slice(0, 12) // Limit to 12 articles
+    console.log("🔍 Filtered articles:", {
+      searchTerm,
+      selectedFilter,
+      beforeFilter: publishedArticles.length,
+      afterFilter: result.length,
+    })
+
+    return result
   }, [publishedArticles, searchTerm, selectedFilter])
 
   // Get category name
@@ -211,6 +258,15 @@ export function HomeDashboard({
                 >
                   Popular
                 </Button>
+              </div>
+            </div>
+
+            {/* Debug Info */}
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+              <div className="font-medium text-yellow-800 mb-1">Debug Info:</div>
+              <div className="text-yellow-700">
+                Total Articles: {articles.length} | Published: {publishedArticles.length} | Recent:{" "}
+                {recentArticles.length} | Latest: {latestArticles.length} | Filtered: {filteredArticles.length}
               </div>
             </div>
           </div>

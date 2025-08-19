@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { X, Plus, Save, AlertTriangle } from "lucide-react"
-import type { Article, Category, User } from "../types/knowledge-base"
+import type { Category, Article, User } from "../types/knowledge-base"
 
 interface EditArticleModalProps {
   isOpen: boolean
@@ -41,11 +41,11 @@ export function EditArticleModal({
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [status, setStatus] = useState<"draft" | "published">("draft")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [error, setError] = useState("")
+  const [status, setStatus] = useState<"draft" | "published">("draft")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   // Initialize form with article data when modal opens
   useEffect(() => {
@@ -53,9 +53,8 @@ export function EditArticleModal({
       setTitle(article.title)
       setContent(article.content)
       setCategoryId(article.categoryId)
-      setStatus(article.status)
       setTags([...article.tags])
-      setNewTag("")
+      setStatus(article.status)
       setError("")
     }
   }, [isOpen, article])
@@ -82,26 +81,23 @@ export function EditArticleModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsSubmitting(true)
 
-    // Validation
     if (!title.trim()) {
       setError("Title is required")
-      setIsSubmitting(false)
       return
     }
 
     if (!content.trim()) {
       setError("Content is required")
-      setIsSubmitting(false)
       return
     }
 
     if (!categoryId) {
       setError("Please select a category")
-      setIsSubmitting(false)
       return
     }
+
+    setIsSubmitting(true)
 
     try {
       await onSubmit({
@@ -117,9 +113,9 @@ export function EditArticleModal({
       setTitle("")
       setContent("")
       setCategoryId("")
-      setStatus("draft")
       setTags([])
       setNewTag("")
+      setStatus("draft")
     } catch (error) {
       setError("Failed to update article. Please try again.")
     } finally {
@@ -135,7 +131,7 @@ export function EditArticleModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Article</DialogTitle>
         </DialogHeader>
@@ -148,101 +144,96 @@ export function EditArticleModal({
             </Alert>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-title">Title *</Label>
-                <Input
-                  id="edit-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter article title"
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-title">Title *</Label>
+            <Input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter article title..."
+              disabled={isSubmitting}
+              required
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="edit-category">Category *</Label>
-                <Select value={categoryId} onValueChange={setCategoryId} disabled={isSubmitting}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-category">Category *</Label>
+            <Select value={categoryId} onValueChange={setCategoryId} disabled={isSubmitting}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value: "draft" | "published") => setStatus(value)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-content">Content *</Label>
+            <Textarea
+              id="edit-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write your article content here..."
+              className="min-h-[200px]"
+              disabled={isSubmitting}
+              required
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="edit-tags">Tags</Label>
-                <div className="flex space-x-2 mb-2">
-                  <Input
-                    id="edit-tags"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Add a tag"
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="ml-1 hover:text-red-500"
                     disabled={isSubmitting}
-                  />
-                  <Button type="button" onClick={handleAddTag} size="sm" disabled={isSubmitting}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-red-500"
-                        disabled={isSubmitting}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
-
-            <div>
-              <Label htmlFor="edit-content">Content *</Label>
-              <Textarea
-                id="edit-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here..."
-                className="min-h-[400px] resize-none"
+            <div className="flex gap-2">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add a tag..."
                 disabled={isSubmitting}
-                required
               />
+              <Button type="button" onClick={handleAddTag} variant="outline" disabled={isSubmitting}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select
+              value={status}
+              onValueChange={(value: "draft" | "published") => setStatus(value)}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>

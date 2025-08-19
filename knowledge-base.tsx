@@ -10,6 +10,7 @@ import { AddArticleForm } from "./components/add-article-form"
 import { EditArticleModal } from "./components/edit-article-modal"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { StorageDebugSimple } from "./components/storage-debug-simple"
+import { StorageDebugDetailed } from "./components/storage-debug-detailed"
 import { storage } from "./utils/storage"
 import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
 
@@ -37,7 +38,7 @@ export default function KnowledgeBase() {
     const loadedArticles = storage.getArticles()
     const loadedAuditLog = storage.getAuditLog()
 
-    console.log("📊 Raw data loaded:", {
+    console.log("📊 Raw data loaded from storage:", {
       users: loadedUsers.length,
       categories: loadedCategories.length,
       articles: loadedArticles.length,
@@ -46,18 +47,25 @@ export default function KnowledgeBase() {
 
     // Log article details for debugging
     if (loadedArticles.length > 0) {
-      console.log(
-        "📝 Sample articles:",
-        loadedArticles.slice(0, 3).map((a) => ({
-          id: a.id,
-          title: a.title,
-          status: a.status,
-          categoryId: a.categoryId,
-          createdAt: a.createdAt,
-        })),
-      )
+      console.log("📝 Detailed article data:")
+      loadedArticles.forEach((article, index) => {
+        console.log(`  ${index + 1}. "${article.title}"`, {
+          id: article.id,
+          status: article.status,
+          categoryId: article.categoryId,
+          authorId: article.authorId,
+          createdBy: article.createdBy,
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
+          contentLength: article.content.length,
+          tags: article.tags,
+        })
+      })
+    } else {
+      console.log("📝 No articles found in storage")
     }
 
+    // Update state
     setUsers(loadedUsers)
     setCategories(loadedCategories)
     setArticles(loadedArticles)
@@ -85,6 +93,16 @@ export default function KnowledgeBase() {
     setIsInitialized(true)
     console.log("✅ Knowledge Base initialized")
   }, [])
+
+  // Debug effect to track state changes
+  useEffect(() => {
+    console.log("🔄 State changed - Articles:", {
+      count: articles.length,
+      published: articles.filter((a) => a.status === "published").length,
+      draft: articles.filter((a) => a.status === "draft").length,
+      sample: articles.slice(0, 2).map((a) => ({ title: a.title, status: a.status })),
+    })
+  }, [articles])
 
   const handleLogin = (user: User) => {
     console.log("🎉 User logged in:", user.username)
@@ -131,6 +149,8 @@ export default function KnowledgeBase() {
       createdBy: currentUser.username,
     }
 
+    console.log("📝 Creating new article:", newArticle)
+
     const updatedArticles = [...articles, newArticle]
     setArticles(updatedArticles)
     storage.saveArticles(updatedArticles)
@@ -143,7 +163,7 @@ export default function KnowledgeBase() {
     setAuditLog(storage.getAuditLog())
 
     setIsAddArticleModalOpen(false)
-    console.log("📝 Article created:", newArticle.title)
+    console.log("✅ Article created successfully:", newArticle.title)
   }
 
   const handleEditArticle = (articleData: {
@@ -155,6 +175,8 @@ export default function KnowledgeBase() {
     status: "draft" | "published"
   }) => {
     if (!currentUser) return
+
+    console.log("✏️ Editing article:", articleData.id)
 
     const updatedArticles = articles.map((article) =>
       article.id === articleData.id
@@ -181,7 +203,7 @@ export default function KnowledgeBase() {
     setAuditLog(storage.getAuditLog())
 
     setIsEditArticleModalOpen(false)
-    console.log("✏️ Article updated:", articleData.title)
+    console.log("✅ Article updated successfully:", articleData.title)
   }
 
   const handleDataRestored = () => {
@@ -216,6 +238,7 @@ export default function KnowledgeBase() {
   }
 
   const handleArticleSelect = (articleId: string) => {
+    console.log("📖 Selecting article:", articleId)
     setSelectedArticleId(articleId)
     setCurrentView("article")
   }
@@ -238,6 +261,7 @@ export default function KnowledgeBase() {
 
   const handleOpenEditArticle = () => {
     if (selectedArticle && currentUser && (currentUser.role === "admin" || currentUser.role === "editor")) {
+      console.log("✏️ Opening edit modal for article:", selectedArticle.id)
       setIsEditArticleModalOpen(true)
     }
   }
@@ -367,6 +391,7 @@ export default function KnowledgeBase() {
       )}
 
       <StorageDebugSimple />
+      <StorageDebugDetailed />
     </div>
   )
 }
