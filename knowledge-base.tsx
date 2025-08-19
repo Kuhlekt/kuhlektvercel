@@ -39,17 +39,17 @@ export default function KnowledgeBase() {
 
   // Initialize storage and auto-login as admin (bypass login)
   useEffect(() => {
+    console.log("🚀 Initializing Knowledge Base...")
     storage.init()
     loadData()
 
     // Auto-login as admin - bypass login completely
-    const adminUser = storage.getUsers().find((user) => user.role === "admin")
-    if (adminUser) {
-      console.log("🔓 Auto-logging in as admin:", adminUser.username)
-      setCurrentUser(adminUser)
-      storage.setCurrentUser(adminUser)
-    } else {
+    const loadedUsers = storage.getUsers()
+    let adminUser = loadedUsers.find((user) => user.role === "admin")
+
+    if (!adminUser) {
       // Create default admin if none exists
+      console.log("👤 Creating default admin user...")
       const defaultAdmin: User = {
         id: "admin-1",
         username: "admin",
@@ -59,13 +59,15 @@ export default function KnowledgeBase() {
         createdAt: new Date(),
         lastLogin: new Date(),
       }
-      const allUsers = storage.getUsers()
-      const updatedUsers = [...allUsers, defaultAdmin]
+      const updatedUsers = [...loadedUsers, defaultAdmin]
       storage.saveUsers(updatedUsers)
-      setCurrentUser(defaultAdmin)
-      storage.setCurrentUser(defaultAdmin)
       setUsers(updatedUsers)
+      adminUser = defaultAdmin
     }
+
+    console.log("🔓 Auto-logging in as admin:", adminUser.username)
+    setCurrentUser(adminUser)
+    storage.setCurrentUser(adminUser)
   }, [])
 
   const loadData = () => {

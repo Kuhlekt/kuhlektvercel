@@ -1,32 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
-  categories: Category[]
-  articles?: Article[]
-  selectedCategoryId?: string | null
-  selectedArticleId?: string | null
-  onCategorySelect?: (categoryId: string) => void
-  onArticleSelect: (articleId: string) => void
+  categories?: Category[]
+  onArticleSelect?: (article: Article) => void
+  selectedArticleId?: string
 }
 
-export function CategoryTree({
-  categories = [],
-  articles = [],
-  selectedCategoryId,
-  selectedArticleId,
-  onCategorySelect,
-  onArticleSelect,
-}: CategoryTreeProps) {
+export function CategoryTree({ categories = [], onArticleSelect, selectedArticleId }: CategoryTreeProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   // Ensure categories is always an array
   const safeCategories = Array.isArray(categories) ? categories : []
-  const safeArticles = Array.isArray(articles) ? articles : []
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -38,122 +28,147 @@ export function CategoryTree({
     setExpandedCategories(newExpanded)
   }
 
-  const getCategoryArticles = (categoryId: string) => {
-    return safeArticles.filter((article) => article.categoryId === categoryId && article.status === "published")
+  const handleArticleClick = (article: Article) => {
+    if (onArticleSelect) {
+      onArticleSelect(article)
+    }
   }
 
-  const getSubcategories = (parentId: string | null) => {
-    return safeCategories.filter((cat) => cat.parentId === parentId)
-  }
-
-  const renderCategory = (category: Category, level = 0) => {
-    const subcategories = getSubcategories(category.id)
-    const categoryArticles = getCategoryArticles(category.id)
-    const isExpanded = expandedCategories.has(category.id)
-    const isSelected = selectedCategoryId === category.id
-    const hasChildren = subcategories.length > 0 || categoryArticles.length > 0
-
+  if (safeCategories.length === 0) {
     return (
-      <div key={category.id}>
-        <div
-          className={`flex items-center space-x-2 px-2 py-1 rounded cursor-pointer hover:bg-gray-100 ${
-            isSelected ? "bg-blue-50 text-blue-700" : ""
-          }`}
-          style={{ paddingLeft: `${level * 16 + 8}px` }}
-          onClick={() => {
-            if (onCategorySelect) {
-              onCategorySelect(category.id)
-            }
-            if (hasChildren) {
-              toggleCategory(category.id)
-            }
-          }}
-        >
-          {hasChildren ? (
-            isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )
-          ) : (
-            <div className="w-4" />
-          )}
-          {isExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
-          <span className="text-sm font-medium">{category.name}</span>
-          {categoryArticles.length > 0 && (
-            <span className="text-xs text-gray-500 ml-auto">({categoryArticles.length})</span>
-          )}
-        </div>
-
-        {isExpanded && (
-          <div>
-            {subcategories.map((subcat) => renderCategory(subcat, level + 1))}
-            {categoryArticles.map((article) => (
-              <div
-                key={article.id}
-                className={`flex items-center space-x-2 px-2 py-1 rounded cursor-pointer hover:bg-gray-100 ${
-                  selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : ""
-                }`}
-                style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }}
-                onClick={() => onArticleSelect(article.id)}
-              >
-                <div className="w-4" />
-                <FileText className="h-4 w-4" />
-                <span className="text-sm">{article.title}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="text-center py-8 text-gray-500">
+        <Folder className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>No categories available</p>
+        <p className="text-sm">Create categories to organize your articles</p>
       </div>
     )
   }
 
-  const rootCategories = getSubcategories(null)
-  const uncategorizedArticles = safeArticles.filter((article) => !article.categoryId && article.status === "published")
-
   return (
-    <div className="w-full bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
-      </div>
+    <div className="space-y-2">
+      {safeCategories.map((category) => {
+        const isExpanded = expandedCategories.has(category.id)
+        const categoryArticles = Array.isArray(category.articles) ? category.articles : []
+        const subcategories = Array.isArray(category.subcategories) ? category.subcategories : []
 
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {rootCategories.length === 0 && uncategorizedArticles.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Folder className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-sm">No categories or articles yet</p>
-              <p className="text-xs mt-1">Create your first category and article to get started</p>
-            </div>
-          ) : (
-            <>
-              {rootCategories.map((category) => renderCategory(category))}
+        return (
+          <div key={category.id} className="space-y-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-start h-auto p-2 hover:bg-gray-100"
+              onClick={() => toggleCategory(category.id)}
+            >
+              <div className="flex items-center space-x-2 w-full">
+                {(categoryArticles.length > 0 || subcategories.length > 0) && (
+                  <>
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                    )}
+                  </>
+                )}
+                {isExpanded ? (
+                  <FolderOpen className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <Folder className="h-4 w-4 text-blue-600" />
+                )}
+                <span className="font-medium text-left flex-1">{category.name}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {categoryArticles.length}
+                </Badge>
+              </div>
+            </Button>
 
-              {uncategorizedArticles.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center space-x-2 px-2 py-1 text-gray-600">
-                    <FileText className="h-4 w-4" />
-                    <span className="text-sm font-medium">Uncategorized</span>
-                  </div>
-                  {uncategorizedArticles.map((article) => (
-                    <div
-                      key={article.id}
-                      className={`flex items-center space-x-2 px-2 py-1 ml-4 rounded cursor-pointer hover:bg-gray-100 ${
-                        selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : ""
-                      }`}
-                      onClick={() => onArticleSelect(article.id)}
-                    >
-                      <div className="w-4" />
-                      <FileText className="h-4 w-4" />
-                      <span className="text-sm">{article.title}</span>
+            {isExpanded && (
+              <div className="ml-6 space-y-1">
+                {/* Category Articles */}
+                {categoryArticles.map((article) => (
+                  <Button
+                    key={article.id}
+                    variant="ghost"
+                    className={`w-full justify-start h-auto p-2 text-sm hover:bg-blue-50 ${
+                      selectedArticleId === article.id ? "bg-blue-100 border-l-2 border-blue-500" : ""
+                    }`}
+                    onClick={() => handleArticleClick(article)}
+                  >
+                    <div className="flex items-center space-x-2 w-full">
+                      <FileText className="h-3 w-3 text-gray-400" />
+                      <span className="text-left flex-1 truncate">{article.title}</span>
+                      <Badge variant={article.status === "published" ? "default" : "secondary"} className="text-xs">
+                        {article.status}
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </ScrollArea>
+                  </Button>
+                ))}
+
+                {/* Subcategories */}
+                {subcategories.map((subcategory) => {
+                  const subcategoryArticles = Array.isArray(subcategory.articles) ? subcategory.articles : []
+                  const isSubExpanded = expandedCategories.has(subcategory.id)
+
+                  return (
+                    <div key={subcategory.id} className="space-y-1">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-auto p-2 hover:bg-gray-50"
+                        onClick={() => toggleCategory(subcategory.id)}
+                      >
+                        <div className="flex items-center space-x-2 w-full">
+                          {subcategoryArticles.length > 0 && (
+                            <>
+                              {isSubExpanded ? (
+                                <ChevronDown className="h-3 w-3 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3 text-gray-400" />
+                              )}
+                            </>
+                          )}
+                          {isSubExpanded ? (
+                            <FolderOpen className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Folder className="h-3 w-3 text-green-600" />
+                          )}
+                          <span className="text-sm text-left flex-1">{subcategory.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {subcategoryArticles.length}
+                          </Badge>
+                        </div>
+                      </Button>
+
+                      {isSubExpanded && (
+                        <div className="ml-6 space-y-1">
+                          {subcategoryArticles.map((article) => (
+                            <Button
+                              key={article.id}
+                              variant="ghost"
+                              className={`w-full justify-start h-auto p-2 text-sm hover:bg-green-50 ${
+                                selectedArticleId === article.id ? "bg-green-100 border-l-2 border-green-500" : ""
+                              }`}
+                              onClick={() => handleArticleClick(article)}
+                            >
+                              <div className="flex items-center space-x-2 w-full">
+                                <FileText className="h-3 w-3 text-gray-400" />
+                                <span className="text-left flex-1 truncate">{article.title}</span>
+                                <Badge
+                                  variant={article.status === "published" ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {article.status}
+                                </Badge>
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
