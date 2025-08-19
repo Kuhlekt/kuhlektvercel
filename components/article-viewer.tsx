@@ -8,8 +8,8 @@ import type { Article, Category, User as UserType } from "../types/knowledge-bas
 
 interface ArticleViewerProps {
   article: Article
-  category?: Category
-  author?: UserType
+  category?: Category | null
+  author?: UserType | null
   currentUser: UserType | null
   onEdit: () => void
   onBack: () => void
@@ -21,14 +21,15 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+        <Button variant="outline" onClick={onBack} className="flex items-center space-x-2 bg-transparent">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Articles</span>
         </Button>
+
         {canEdit && (
-          <Button onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Article
+          <Button onClick={onEdit} className="flex items-center space-x-2">
+            <Edit className="h-4 w-4" />
+            <span>Edit Article</span>
           </Button>
         )}
       </div>
@@ -36,38 +37,41 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
       <Card>
         <CardHeader>
           <div className="space-y-4">
-            <CardTitle className="text-2xl">{article.title}</CardTitle>
-
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <div>
+              <CardTitle className="text-2xl mb-2">{article.title}</CardTitle>
               {category && (
-                <div className="flex items-center space-x-1">
-                  <Tag className="h-4 w-4" />
+                <Badge variant="secondary" className="flex items-center space-x-1 w-fit">
                   <span>{category.name}</span>
-                </div>
+                </Badge>
               )}
+            </div>
+
+            <div className="flex items-center space-x-6 text-sm text-gray-500">
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>Created {new Date(article.createdAt).toLocaleDateString()}</span>
+              </div>
 
               {author && (
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
-                  <span>{author.username}</span>
+                  <span>By {author.username}</span>
                 </div>
               )}
-
-              <div className="flex items-center space-x-1">
-                <Calendar className="h-4 w-4" />
-                <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-              </div>
 
               <Badge variant={article.status === "published" ? "default" : "secondary"}>{article.status}</Badge>
             </div>
 
             {article.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+              <div className="flex items-center space-x-2">
+                <Tag className="h-4 w-4 text-gray-500" />
+                <div className="flex flex-wrap gap-1">
+                  {article.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>
