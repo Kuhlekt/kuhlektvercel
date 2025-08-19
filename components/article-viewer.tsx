@@ -24,60 +24,26 @@ interface ArticleViewerProps {
   backButtonText?: string
 }
 
-// Function to process content and render images properly
-function processArticleContent(content: string): string {
-  let processedContent = content
+// Function to convert HTML content to plain readable text
+function convertToPlainText(content: string): string {
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = content
 
-  console.log("Processing article content:", content)
+  // Remove script and style elements
+  const scripts = tempDiv.querySelectorAll("script, style")
+  scripts.forEach((el) => el.remove())
 
-  // If content is already HTML with img tags, return it as-is
-  if (content.includes("<img") && !content.includes("[IMAGE:")) {
-    console.log("Content already contains HTML img tags, returning as-is")
-    return processedContent
-  }
+  // Get text content
+  let text = tempDiv.textContent || tempDiv.innerText || ""
 
-  // Replace image placeholders with actual images
-  processedContent = processedContent.replace(/\[IMAGE:([^:]+):([^\]]+)\]/g, (match, id, filename) => {
-    // Check if we have stored images in global reference
-    const storedImages = (window as any).textareaImages || (window as any).editingImages || []
-    const imageData = storedImages.find((img: any) => img.id === id || img.placeholder === match)
+  // Clean up whitespace and normalize
+  text = text.replace(/\s+/g, " ").trim()
 
-    console.log("Looking for image:", { id, filename, match, storedImages })
+  // Convert to paragraphs by splitting on double line breaks
+  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
 
-    if (imageData && imageData.dataUrl) {
-      console.log("Found image data:", imageData)
-      return `<img src="${imageData.dataUrl}" alt="${filename}" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />`
-    }
-
-    // If no stored image found, return a placeholder div
-    console.log("No image data found for:", { id, filename })
-    return `<div style="padding: 20px; border: 2px dashed #ccc; text-align: center; margin: 10px 0; border-radius: 8px; background-color: #f9f9f9;">
-      <p style="margin: 0; color: #666;">📷 Image: ${filename}</p>
-    </div>`
-  })
-
-  // Convert URLs to actual images (handle both HTTP and data URLs)
-  processedContent = processedContent.replace(
-    /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi,
-    '<img src="$1" alt="Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
-
-  // Convert standalone data URLs to images
-  processedContent = processedContent.replace(
-    /(?<!src=["'])(data:image\/[^;]+;base64,[^\s"'<>]+)(?!["'])/gi,
-    '<img src="$1" alt="Embedded Image" style="max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />',
-  )
-
-  // Convert line breaks to proper HTML if content doesn't already have HTML structure
-  if (!processedContent.includes("<p>") && !processedContent.includes("<div>") && !processedContent.includes("<br>")) {
-    processedContent = processedContent.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")
-    if (processedContent && !processedContent.startsWith("<p>")) {
-      processedContent = "<p>" + processedContent + "</p>"
-    }
-  }
-
-  console.log("Final processed content:", processedContent)
-  return processedContent
+  return paragraphs.join("\n\n")
 }
 
 export function ArticleViewer({
@@ -95,12 +61,6 @@ export function ArticleViewer({
     setCurrentArticle(article)
   }, [article])
 
-  useEffect(() => {
-    console.log("ArticleViewer received article:", currentArticle)
-    console.log("Article content:", currentArticle.content)
-    console.log("Current stored images:", (window as any).textareaImages)
-  }, [currentArticle])
-
   const category = categories.find((cat) => cat.id === currentArticle.categoryId)
   const subcategory = category?.subcategories.find((sub) => sub.id === currentArticle.subcategoryId)
 
@@ -111,7 +71,8 @@ export function ArticleViewer({
     }
   }
 
-  const processedContent = processArticleContent(currentArticle.content)
+  // Convert content to plain readable text
+  const plainTextContent = convertToPlainText(currentArticle.content)
 
   return (
     <div className="space-y-6">
@@ -195,15 +156,7 @@ export function ArticleViewer({
         </CardHeader>
 
         <CardContent>
-          <div
-            className="prose max-w-none text-gray-800 leading-relaxed"
-            style={{
-              lineHeight: "1.7",
-              fontSize: "16px",
-              fontFamily: "system-ui, -apple-system, sans-serif",
-            }}
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-          />
+          <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">{plainTextContent}</div>
         </CardContent>
       </Card>
 
