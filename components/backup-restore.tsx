@@ -33,9 +33,10 @@ interface BackupRestoreProps {
 }
 
 interface BackupData {
-  version: string
-  timestamp: string
-  metadata: {
+  version?: string
+  timestamp?: string
+  exportDate?: string
+  metadata?: {
     totalUsers: number
     totalCategories: number
     totalArticles: number
@@ -43,12 +44,17 @@ interface BackupData {
     createdBy: string
     description?: string
   }
-  data: {
+  data?: {
     users: User[]
     categories: Category[]
     articles: Article[]
     auditLog: AuditLog[]
   }
+  // Support legacy format
+  users?: User[]
+  categories?: Category[]
+  articles?: Article[]
+  auditLog?: AuditLog[]
 }
 
 export function BackupRestore({
@@ -147,21 +153,53 @@ export function BackupRestore({
       try {
         const backupData = JSON.parse(e.target?.result as string) as BackupData
 
-        // Validate backup structure
-        if (!backupData.version || !backupData.data || !backupData.metadata) {
-          throw new Error("Invalid backup file structure")
+        console.log("📁 Backup file loaded:", backupData)
+
+        // Enhanced validation - support both new and legacy formats
+        const isNewFormat = backupData.version && backupData.data && backupData.metadata
+        const isLegacyFormat = backupData.users || backupData.categories || backupData.articles || backupData.exportDate
+
+        if (!isNewFormat && !isLegacyFormat) {
+          throw new Error("Invalid backup file structure - missing required fields")
         }
 
-        setBackupPreview(backupData)
+        // Convert legacy format to new format for consistency
+        if (isLegacyFormat && !isNewFormat) {
+          console.log("🔄 Converting legacy backup format")
+          const convertedData: BackupData = {
+            version: "1.0.0",
+            timestamp: backupData.exportDate || new Date().toISOString(),
+            metadata: {
+              totalUsers: backupData.users?.length || 0,
+              totalCategories: backupData.categories?.length || 0,
+              totalArticles: backupData.articles?.length || 0,
+              totalAuditEntries: backupData.auditLog?.length || 0,
+              createdBy: "Unknown",
+              description: "Legacy backup file",
+            },
+            data: {
+              users: backupData.users || [],
+              categories: backupData.categories || [],
+              articles: backupData.articles || [],
+              auditLog: backupData.auditLog || [],
+            },
+          }
+          setBackupPreview(convertedData)
+        } else {
+          setBackupPreview(backupData)
+        }
+
         setRestoreStatus({
           type: "info",
-          message: "Backup file loaded. Review the details below and click 'Restore Data' to proceed.",
+          message: "Backup file loaded successfully. Review the details below and click 'Restore Data' to proceed.",
         })
+
+        console.log("✅ Backup file validated and loaded")
       } catch (error) {
-        console.error("Backup file parsing error:", error)
+        console.error("❌ Backup file parsing error:", error)
         setRestoreStatus({
           type: "error",
-          message: "Invalid backup file. Please select a valid Kuhlekt KB backup file.",
+          message: `Invalid backup file: ${error instanceof Error ? error.message : "Unknown error"}. Please select a valid Kuhlekt KB backup file.`,
         })
       } finally {
         setIsProcessing(false)
@@ -180,7 +218,7 @@ export function BackupRestore({
   }
 
   const restoreFromBackup = () => {
-    if (!backupPreview) return
+    if (!backupPreview || !backupPreview.data) return
 
     const confirmMessage = `This will replace ALL current data with the backup data. This action cannot be undone.
 
@@ -191,10 +229,10 @@ Current data:
 - Audit entries: ${auditLog.length}
 
 Backup data:
-- Users: ${backupPreview.metadata.totalUsers}
-- Categories: ${backupPreview.metadata.totalCategories}
-- Articles: ${backupPreview.metadata.totalArticles}
-- Audit entries: ${backupPreview.metadata.totalAuditEntries}
+- Users: ${backupPreview.metadata?.totalUsers || backupPreview.data.users.length}
+- Categories: ${backupPreview.metadata?.totalCategories || backupPreview.data.categories.length}
+- Articles: ${backupPreview.metadata?.totalArticles || backupPreview.data.articles.length}
+- Audit entries: ${backupPreview.metadata?.totalAuditEntries || backupPreview.data.auditLog.length}
 
 Are you sure you want to continue?`
 
@@ -203,6 +241,8 @@ Are you sure you want to continue?`
     setIsProcessing(true)
 
     try {
+      console.log("🔄 Starting backup restoration...")
+
       // Restore users (but keep current admin password if exists)
       const restoredUsers = backupPreview.data.users.map((user) => {
         if (user.username === "admin") {
@@ -216,7 +256,7 @@ Are you sure you want to continue?`
         }
         return {
           ...user,
-          password: "default123", // Set default password for other users
+          password: user.password === "***REDACTED***" ? "default123" : user.password, // Handle redacted passwords
           createdAt: new Date(user.createdAt),
           lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
         }
@@ -224,6 +264,7 @@ Are you sure you want to continue?`
 
       // Ensure admin user exists
       if (!restoredUsers.some((u) => u.username === "admin")) {
+        console.log("👥 Adding missing admin user")
         restoredUsers.push({
           id: "admin-001",
           username: "admin",
@@ -247,30 +288,34 @@ Are you sure you want to continue?`
         updatedAt: new Date(article.updatedAt),
       }))
 
+      // Restore audit log with proper date parsing
+      const restoredAuditLog = backupPreview.data.auditLog.map((entry) => ({
+        ...entry,
+        timestamp: new Date(entry.timestamp),
+      }))
+
+      console.log("💾 Saving restored data...")
+      console.log("- Users:", restoredUsers.length)
+      console.log("- Categories:", restoredCategories.length)
+      console.log("- Articles:", restoredArticles.length)
+      console.log("- Audit entries:", restoredAuditLog.length)
+
       // Use the storage import method for proper handling
       storage.importData({
         users: restoredUsers,
         categories: restoredCategories,
         articles: restoredArticles,
-        auditLog: backupPreview.data.auditLog,
+        auditLog: restoredAuditLog,
       })
 
       // Add restore entry to audit log
-      const currentAuditLog = storage.getAuditLog()
-      const restoredAuditLog = [
-        ...currentAuditLog,
-        {
-          id: Date.now().toString(),
-          performedBy: currentUser.id,
-          action: "RESTORE_BACKUP",
-          details: `Restored backup from ${new Date(backupPreview.timestamp).toLocaleString()}${
-            backupPreview.metadata.description ? ` - ${backupPreview.metadata.description}` : ""
-          }`,
-          timestamp: new Date(),
-        },
-      ]
-
-      localStorage.setItem("kb_audit_log", JSON.stringify(restoredAuditLog))
+      storage.addAuditEntry({
+        performedBy: currentUser.id,
+        action: "RESTORE_BACKUP",
+        details: `Restored backup from ${new Date(backupPreview.timestamp || new Date()).toLocaleString()}${
+          backupPreview.metadata?.description ? ` - ${backupPreview.metadata.description}` : ""
+        }`,
+      })
 
       setRestoreStatus({
         type: "success",
@@ -288,7 +333,7 @@ Are you sure you want to continue?`
       console.error("❌ Restore error:", error)
       setRestoreStatus({
         type: "error",
-        message: "Failed to restore backup. Please try again.",
+        message: `Failed to restore backup: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
       })
       setIsProcessing(false)
     }
@@ -300,14 +345,6 @@ Are you sure you want to continue?`
     // Reset file input
     const fileInput = document.getElementById("backup-file") as HTMLInputElement
     if (fileInput) fileInput.value = ""
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
   return (
@@ -414,17 +451,19 @@ Are you sure you want to continue?`
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Version:</span>
-                      <Badge variant="outline">{backupPreview.version}</Badge>
+                      <Badge variant="outline">{backupPreview.version || "Legacy"}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Created:</span>
-                      <span>{new Date(backupPreview.timestamp).toLocaleString()}</span>
+                      <span>
+                        {new Date(backupPreview.timestamp || backupPreview.exportDate || new Date()).toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Created by:</span>
-                      <span>{backupPreview.metadata.createdBy}</span>
+                      <span>{backupPreview.metadata?.createdBy || "Unknown"}</span>
                     </div>
-                    {backupPreview.metadata.description && (
+                    {backupPreview.metadata?.description && (
                       <div className="flex justify-between">
                         <span>Description:</span>
                         <span className="font-medium">{backupPreview.metadata.description}</span>
@@ -434,19 +473,27 @@ Are you sure you want to continue?`
 
                   <div className="grid grid-cols-2 gap-2 mt-3">
                     <div className="text-center p-2 bg-blue-100 rounded">
-                      <div className="font-bold text-blue-600">{backupPreview.metadata.totalUsers}</div>
+                      <div className="font-bold text-blue-600">
+                        {backupPreview.metadata?.totalUsers || backupPreview.data?.users.length || 0}
+                      </div>
                       <div className="text-xs text-blue-800">Users</div>
                     </div>
                     <div className="text-center p-2 bg-green-100 rounded">
-                      <div className="font-bold text-green-600">{backupPreview.metadata.totalCategories}</div>
+                      <div className="font-bold text-green-600">
+                        {backupPreview.metadata?.totalCategories || backupPreview.data?.categories.length || 0}
+                      </div>
                       <div className="text-xs text-green-800">Categories</div>
                     </div>
                     <div className="text-center p-2 bg-purple-100 rounded">
-                      <div className="font-bold text-purple-600">{backupPreview.metadata.totalArticles}</div>
+                      <div className="font-bold text-purple-600">
+                        {backupPreview.metadata?.totalArticles || backupPreview.data?.articles.length || 0}
+                      </div>
                       <div className="text-xs text-purple-800">Articles</div>
                     </div>
                     <div className="text-center p-2 bg-orange-100 rounded">
-                      <div className="font-bold text-orange-600">{backupPreview.metadata.totalAuditEntries}</div>
+                      <div className="font-bold text-orange-600">
+                        {backupPreview.metadata?.totalAuditEntries || backupPreview.data?.auditLog.length || 0}
+                      </div>
                       <div className="text-xs text-orange-800">Audit Entries</div>
                     </div>
                   </div>
@@ -476,7 +523,7 @@ Are you sure you want to continue?`
             <div className="text-xs text-gray-600 space-y-1">
               <p>• ⚠️ This will replace ALL current data</p>
               <p>• Admin password will be preserved</p>
-              <p>• Other user passwords will be reset to "default123"</p>
+              <p>• Redacted passwords will be reset to "default123"</p>
               <p>• Page will reload after successful restore</p>
             </div>
           </CardContent>
