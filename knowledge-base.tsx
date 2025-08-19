@@ -7,8 +7,10 @@ import { ArticleViewer } from "./components/article-viewer"
 import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
+import { Card, CardContent } from "@/components/ui/card"
+import { FileText } from "lucide-react"
 import { storage } from "./utils/storage"
-import type { Category, Article, User, AuditLog } from "./types/knowledge-base"
+import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -16,47 +18,47 @@ export default function KnowledgeBase() {
   const [categories, setCategories] = useState<Category[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [auditLog, setAuditLog] = useState<AuditLog[]>([])
-
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
 
-  // Initialize data on component mount
+  // Load data on component mount
   useEffect(() => {
-    console.log("Initializing knowledge base...")
-    setUsers(storage.getUsers())
-    setCategories(storage.getCategories())
-    setArticles(storage.getArticles())
-    setAuditLog(storage.getAuditLog())
-    setCurrentUser(storage.getCurrentUser())
-    console.log("Knowledge base initialized")
+    const loadData = () => {
+      setCurrentUser(storage.getCurrentUser())
+      setUsers(storage.getUsers())
+      setCategories(storage.getCategories())
+      setArticles(storage.getArticles())
+      setAuditLog(storage.getAuditLog())
+    }
+
+    loadData()
   }, [])
 
-  // Filter articles based on category and search term
-  const filteredArticles = articles.filter((article) => {
-    const matchesCategory = selectedCategoryId ? article.categoryId === selectedCategoryId : true
-    const matchesSearch = searchTerm
-      ? article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      : true
-    return matchesCategory && matchesSearch && article.status === "published"
-  })
+  // Auto-select first category on load
+  useEffect(() => {
+    if (categories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(categories[0].id)
+    }
+  }, [categories, selectedCategoryId])
 
   const handleLogin = (user: User) => {
-    console.log("User logged in:", user.username)
     setCurrentUser(user)
+    setUsers(storage.getUsers()) // Refresh users to get updated lastLogin
   }
 
   const handleLogout = () => {
-    console.log("User logged out")
     storage.setCurrentUser(null)
     setCurrentUser(null)
-    setSelectedArticle(null)
+    storage.addAuditEntry({
+      userId: currentUser?.id || "",
+      action: "LOGOUT",
+      details: `User ${currentUser?.username} logged out`,
+    })
+    setAuditLog(storage.getAuditLog())
   }
 
   const handleAddArticle = (articleData: {
@@ -73,38 +75,57 @@ export default function KnowledgeBase() {
       ...articleData,
       authorId: currentUser.id,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     }
 
     const updatedArticles = [...articles, newArticle]
     setArticles(updatedArticles)
     storage.saveArticles(updatedArticles)
+
     storage.addAuditEntry({
       userId: currentUser.id,
       action: "CREATE_ARTICLE",
-      details: `Created article "${articleData.title}"`,
+      details: `Created article: ${articleData.title}`,
     })
     setAuditLog(storage.getAuditLog())
+
     setIsAddArticleModalOpen(false)
   }
 
   const handleUpdateUsers = (updatedUsers: User[]) => {
     setUsers(updatedUsers)
     storage.saveUsers(updatedUsers)
-    setAuditLog(storage.getAuditLog())
   }
 
   const handleUpdateCategories = (updatedCategories: Category[]) => {
     setCategories(updatedCategories)
     storage.saveCategories(updatedCategories)
-    setAuditLog(storage.getAuditLog())
   }
 
   const handleUpdateArticles = (updatedArticles: Article[]) => {
     setArticles(updatedArticles)
     storage.saveArticles(updatedArticles)
-    setAuditLog(storage.getAuditLog())
   }
+
+  // Filter articles based on search term
+  const filteredArticles = articles.filter(
+    (article) =>
+      article.status === "published" &&
+      (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))),
+  )
+
+  // Get current article and related data
+  const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
+  const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
+  const articleAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : null
+
+  // Get articles for selected category (filtered by search if applicable)
+  const categoryArticles = selectedCategoryId
+    ? searchTerm
+      ? filteredArticles.filter((a) => a.categoryId === selectedCategoryId)
+      : articles.filter((a) => a.categoryId === selectedCategoryId && a.status === "published")
+    : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -118,72 +139,90 @@ export default function KnowledgeBase() {
         onLogout={handleLogout}
       />
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-4rem)]">
         <CategoryTree
           categories={categories}
+          articles={searchTerm ? filteredArticles : articles}
           selectedCategoryId={selectedCategoryId}
-          onCategorySelect={setSelectedCategoryId}
+          selectedArticleId={selectedArticleId}
+          onCategorySelect={(categoryId) => {
+            setSelectedCategoryId(categoryId)
+            setSelectedArticleId(null)
+          }}
+          onArticleSelect={setSelectedArticleId}
         />
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 overflow-y-auto">
           {selectedArticle ? (
             <ArticleViewer
               article={selectedArticle}
-              category={categories.find((c) => c.id === selectedArticle.categoryId)}
-              author={users.find((u) => u.id === selectedArticle.authorId)}
+              category={selectedCategory}
+              author={articleAuthor}
               currentUser={currentUser}
-              onEdit={() => {}}
-              onBack={() => setSelectedArticle(null)}
+              onEdit={() => {
+                // TODO: Implement edit functionality
+                console.log("Edit article:", selectedArticle.id)
+              }}
+              onBack={() => setSelectedArticleId(null)}
             />
           ) : (
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {selectedCategoryId
-                  ? categories.find((c) => c.id === selectedCategoryId)?.name || "Category"
-                  : searchTerm
-                    ? `Search Results for "${searchTerm}"`
-                    : "All Articles"}
-              </h2>
-
-              {filteredArticles.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No articles found.</p>
-                  {currentUser && (
-                    <button
-                      onClick={() => setIsAddArticleModalOpen(true)}
-                      className="mt-4 text-blue-600 hover:text-blue-800"
-                    >
-                      Add the first article
-                    </button>
-                  )}
+            <div className="space-y-6">
+              {selectedCategory && (
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{selectedCategory.name}</h1>
+                  {selectedCategory.description && <p className="text-gray-600 mb-6">{selectedCategory.description}</p>}
                 </div>
-              ) : (
+              )}
+
+              {categoryArticles.length > 0 ? (
                 <div className="grid gap-4">
-                  {filteredArticles.map((article) => (
-                    <div
+                  {categoryArticles.map((article) => (
+                    <Card
                       key={article.id}
-                      onClick={() => setSelectedArticle(article)}
-                      className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setSelectedArticleId(article.id)}
                     >
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{article.title}</h3>
-                      <p className="text-gray-600 mb-3 line-clamp-2">{article.content.substring(0, 200)}...</p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{categories.find((c) => c.id === article.categoryId)?.name}</span>
-                        <span>{new Date(article.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                          <FileText className="h-5 w-5 text-blue-600 mt-1" />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1">{article.title}</h3>
+                            <p className="text-gray-600 text-sm line-clamp-2">{article.content.substring(0, 150)}...</p>
+                            <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                              <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                              {article.tags.length > 0 && <span>Tags: {article.tags.slice(0, 3).join(", ")}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
+              ) : (
+                <Card>
+                  <CardContent className="flex items-center justify-center h-96">
+                    <div className="text-center text-gray-500">
+                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium mb-2">
+                        {searchTerm ? "No articles found" : "No articles in this category"}
+                      </h3>
+                      <p>
+                        {searchTerm
+                          ? `No articles match "${searchTerm}"`
+                          : "Select a category to view articles or add new content."}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           )}
         </main>
       </div>
 
-      {/* Modals */}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
 
-      {currentUser && (
+      {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
         <AddArticleForm
           isOpen={isAddArticleModalOpen}
           onClose={() => setIsAddArticleModalOpen(false)}

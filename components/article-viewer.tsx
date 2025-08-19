@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, User, Tag } from "lucide-react"
+import { ArrowLeft, Calendar, User, Tag, Edit } from "lucide-react"
 import type { Article, Category, User as UserType } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
@@ -16,6 +16,8 @@ interface ArticleViewerProps {
 }
 
 export function ArticleViewer({ article, category, author, currentUser, onEdit, onBack }: ArticleViewerProps) {
+  const canEdit = currentUser && (currentUser.role === "admin" || currentUser.id === article.authorId)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -23,8 +25,11 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Articles
         </Button>
-        {currentUser && (currentUser.role === "admin" || currentUser.id === article.authorId) && (
-          <Button onClick={onEdit}>Edit Article</Button>
+        {canEdit && (
+          <Button onClick={onEdit}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Article
+          </Button>
         )}
       </div>
 

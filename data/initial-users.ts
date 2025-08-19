@@ -17,4 +17,12 @@ export const initialUsers: User[] = [
     role: "editor",
     createdAt: new Date().toISOString(),
   },
+  {
+    id: "3",
+    username: "viewer",
+    password: "viewer123",
+    email: "viewer@kuhlekt.com",
+    role: "viewer",
+    createdAt: new Date().toISOString(),
+  },
 ]

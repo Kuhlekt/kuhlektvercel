@@ -7,7 +7,7 @@ export interface Article {
   tags: string[]
   status: "draft" | "published"
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface Subcategory {
@@ -21,7 +21,6 @@ export interface Category {
   id: string
   name: string
   description?: string
-  parentId?: string
   createdAt: string
 }
 
@@ -29,7 +28,7 @@ export interface User {
   id: string
   username: string
   password: string
-  email?: string
+  email: string
   role: "admin" | "editor" | "viewer"
   createdAt: string
   lastLogin?: string

@@ -1,100 +1,68 @@
 "use client"
 
-import { useState } from "react"
-import { Folder, FolderOpen } from "lucide-react"
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Folder, FileText } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
   categories: Category[]
-  onSelectArticle: (article: Article) => void
-  selectedArticle: Article | null
+  articles: Article[]
   selectedCategoryId: string | null
-  onCategorySelect: (categoryId: string | null) => void
+  selectedArticleId: string | null
+  onCategorySelect: (categoryId: string) => void
+  onArticleSelect: (articleId: string) => void
 }
 
 export function CategoryTree({
   categories,
-  onSelectArticle,
-  selectedArticle,
+  articles,
   selectedCategoryId,
+  selectedArticleId,
   onCategorySelect,
+  onArticleSelect,
 }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
-
-  const toggleCategory = (categoryId: string) => {
-    const newExpanded = new Set(expandedCategories)
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId)
-    } else {
-      newExpanded.add(categoryId)
-    }
-    setExpandedCategories(newExpanded)
+  const getArticlesForCategory = (categoryId: string) => {
+    return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
   }
 
   return (
-    <aside className="w-64 bg-white border-r min-h-screen">
-      <Card className="border-0 rounded-none">
-        <CardHeader>
-          <CardTitle className="text-lg">Categories</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Button
-            variant={selectedCategoryId === null ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onCategorySelect(null)}
-          >
-            <FolderOpen className="h-4 w-4 mr-2" />
-            All Articles
-          </Button>
-
+    <div className="w-64 bg-white border-r border-gray-200 h-full overflow-y-auto">
+      <div className="p-4">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Categories</h2>
+        <div className="space-y-2">
           {categories.map((category) => {
-            const isExpanded = expandedCategories.has(category.id)
-            const hasContent = category.articles && category.articles.length > 0
+            const categoryArticles = getArticlesForCategory(category.id)
+            const isSelected = selectedCategoryId === category.id
 
             return (
               <div key={category.id} className="space-y-1">
                 <Button
-                  variant={selectedCategoryId === category.id ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    toggleCategory(category.id)
-                    onCategorySelect(category.id)
-                  }}
+                  variant={isSelected ? "secondary" : "ghost"}
+                  className="w-full justify-start text-left h-auto p-2"
+                  onClick={() => onCategorySelect(category.id)}
                 >
                   <div className="flex items-center space-x-2 w-full">
-                    {hasContent ? (
-                      isExpanded ? (
-                        <FolderOpen className="h-4 w-4 flex-shrink-0" />
-                      ) : (
-                        <Folder className="h-4 w-4 flex-shrink-0" />
-                      )
-                    ) : (
-                      <Folder className="h-4 w-4 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{category.name}</div>
-                    </div>
+                    <Folder className="h-4 w-4 text-blue-600" />
+                    <span className="flex-1 truncate">{category.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {categoryArticles.length}
+                    </Badge>
                   </div>
                 </Button>
 
-                {isExpanded && category.articles && (
+                {isSelected && categoryArticles.length > 0 && (
                   <div className="ml-6 space-y-1">
-                    {category.articles.map((article) => (
+                    {categoryArticles.map((article) => (
                       <Button
                         key={article.id}
-                        variant="ghost"
-                        className={`w-full justify-start h-auto p-2 text-left ${
-                          selectedArticle?.id === article.id ? "bg-blue-50 border border-blue-200" : ""
-                        }`}
-                        onClick={() => onSelectArticle(article)}
+                        variant={selectedArticleId === article.id ? "secondary" : "ghost"}
+                        className="w-full justify-start text-left h-auto p-2 text-sm"
+                        onClick={() => onArticleSelect(article.id)}
                       >
                         <div className="flex items-center space-x-2 w-full">
-                          <Folder className="h-4 w-4 flex-shrink-0 text-gray-500" />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{article.title}</div>
-                            <div className="text-xs text-gray-500 truncate">{article.content.substring(0, 60)}...</div>
-                          </div>
+                          <FileText className="h-3 w-3 text-gray-500" />
+                          <span className="flex-1 truncate">{article.title}</span>
                         </div>
                       </Button>
                     ))}
@@ -103,8 +71,8 @@ export function CategoryTree({
               </div>
             )
           })}
-        </CardContent>
-      </Card>
-    </aside>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Settings, LogIn, LogOut } from "lucide-react"
-import type { KnowledgeBaseUser } from "../types/knowledge-base"
+import type { User } from "../types/knowledge-base"
 
 interface NavigationProps {
-  currentUser: KnowledgeBaseUser | null
+  currentUser: User | null
   searchTerm: string
   onSearchChange: (term: string) => void
   onAddArticle: () => void
