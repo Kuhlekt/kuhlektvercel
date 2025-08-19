@@ -5,23 +5,26 @@ import type React from "react"
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import {
-  Database,
   Download,
   Upload,
   Trash2,
   RefreshCw,
-  AlertTriangle,
-  CheckCircle,
+  Database,
+  FileText,
   Users,
   FolderOpen,
-  FileText,
   Activity,
+  AlertTriangle,
+  CheckCircle,
+  Info,
 } from "lucide-react"
+
 import { storage } from "../utils/storage"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
@@ -42,14 +45,10 @@ export function DataManagement({
 }: DataManagementProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [importStatus, setImportStatus] = useState<string>("")
-  const [showConfirmClear, setShowConfirmClear] = useState(false)
-
-  // Get data from storage if props are empty
-  const actualUsers = users.length > 0 ? users : storage.getUsers()
-  const actualCategories = categories.length > 0 ? categories : storage.getCategories()
-  const actualArticles = articles.length > 0 ? articles : storage.getArticles()
-  const actualAuditLog = auditLog.length > 0 ? auditLog : storage.getAuditLog()
+  const [importStatus, setImportStatus] = useState<{
+    type: "success" | "error" | "info" | null
+    message: string
+  }>({ type: null, message: "" })
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -59,15 +58,22 @@ export function DataManagement({
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
+      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      setImportStatus("Data exported successfully!")
+
+      setImportStatus({
+        type: "success",
+        message: "Backup exported successfully!",
+      })
     } catch (error) {
       console.error("Export error:", error)
-      setImportStatus("Export failed. Please try again.")
+      setImportStatus({
+        type: "error",
+        message: "Failed to export backup. Please try again.",
+      })
     } finally {
       setIsExporting(false)
     }
@@ -78,21 +84,24 @@ export function DataManagement({
     if (!file) return
 
     setIsImporting(true)
-    setImportStatus("")
+    setImportStatus({ type: null, message: "" })
 
     try {
       const text = await file.text()
-      const data = JSON.parse(text)
+      let data: any
 
-      console.log("Import data structure:", data)
-
-      // More flexible validation - check if it's an object and has at least some expected properties
-      if (typeof data !== "object" || data === null) {
-        throw new Error("Invalid file format - not a valid JSON object")
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        throw new Error("Invalid JSON format")
       }
 
-      // Check if it has at least one of the expected properties
-      const hasValidStructure =
+      // Flexible validation - check if it's an object and has at least one expected property
+      if (!data || typeof data !== "object") {
+        throw new Error("Invalid backup file format - not a valid object")
+      }
+
+      const hasValidData =
         data.users ||
         data.categories ||
         data.articles ||
@@ -103,11 +112,18 @@ export function DataManagement({
         Array.isArray(data.articles) ||
         Array.isArray(data.auditLog)
 
-      if (!hasValidStructure) {
-        throw new Error("Invalid backup file - missing expected data structure")
+      if (!hasValidData) {
+        throw new Error("Invalid backup file format - no recognizable data found")
       }
 
-      // Ensure arrays exist with defaults
+      console.log("📥 Importing data:", {
+        users: data.users?.length || 0,
+        categories: data.categories?.length || 0,
+        articles: data.articles?.length || 0,
+        auditLog: data.auditLog?.length || 0,
+      })
+
+      // Import the data with fallbacks for missing properties
       const importData = {
         users: Array.isArray(data.users) ? data.users : [],
         categories: Array.isArray(data.categories) ? data.categories : [],
@@ -116,22 +132,30 @@ export function DataManagement({
         exportDate: data.exportDate || new Date().toISOString(),
       }
 
-      console.log("Processed import data:", importData)
-
       storage.importData(importData)
-      setImportStatus(
-        `Data imported successfully! Imported ${importData.users.length} users, ${importData.categories.length} categories, ${importData.articles.length} articles, and ${importData.auditLog.length} audit entries.`,
-      )
 
-      // Refresh the parent component
+      const importedCounts = {
+        users: importData.users.length,
+        categories: importData.categories.length,
+        articles: importData.articles.length,
+        auditLog: importData.auditLog.length,
+      }
+
+      setImportStatus({
+        type: "success",
+        message: `Backup imported successfully! Users: ${importedCounts.users}, Categories: ${importedCounts.categories}, Articles: ${importedCounts.articles}, Audit entries: ${importedCounts.auditLog}`,
+      })
+
+      // Refresh the data
       if (onDataChange) {
-        setTimeout(() => {
-          onDataChange()
-        }, 100)
+        onDataChange()
       }
     } catch (error) {
       console.error("Import error:", error)
-      setImportStatus(`Import failed: ${error instanceof Error ? error.message : "Unknown error"}`)
+      setImportStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to import backup file",
+      })
     } finally {
       setIsImporting(false)
       // Reset the input
@@ -140,22 +164,28 @@ export function DataManagement({
   }
 
   const handleClearData = () => {
-    storage.clearArticlesAndCategories()
-    setImportStatus("Articles and categories cleared successfully!")
-    setShowConfirmClear(false)
-
-    if (onDataChange) {
-      onDataChange()
+    if (confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
+      storage.clearAll()
+      setImportStatus({
+        type: "info",
+        message: "All data has been cleared.",
+      })
+      if (onDataChange) {
+        onDataChange()
+      }
     }
   }
 
-  const handleResetAll = () => {
-    storage.resetToDefaults()
-    setImportStatus("All data reset to defaults!")
-    setShowConfirmClear(false)
-
-    if (onDataChange) {
-      onDataChange()
+  const handleResetToDefaults = () => {
+    if (confirm("Are you sure you want to reset to default settings? This will clear all data.")) {
+      storage.resetToDefaults()
+      setImportStatus({
+        type: "info",
+        message: "System has been reset to defaults.",
+      })
+      if (onDataChange) {
+        onDataChange()
+      }
     }
   }
 
@@ -183,215 +213,191 @@ export function DataManagement({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-2xl font-bold text-blue-600">{actualUsers?.length || 0}</div>
-              <div className="text-sm text-gray-600">Users</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <FolderOpen className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <div className="text-2xl font-bold text-green-600">{actualCategories?.length || 0}</div>
-              <div className="text-sm text-gray-600">Categories</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <FileText className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-              <div className="text-2xl font-bold text-purple-600">{actualArticles?.length || 0}</div>
-              <div className="text-sm text-gray-600">Articles</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <Activity className="h-8 w-8 mx-auto mb-2 text-orange-600" />
-              <div className="text-2xl font-bold text-orange-600">{actualAuditLog?.length || 0}</div>
-              <div className="text-sm text-gray-600">Audit Entries</div>
-            </div>
-          </div>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
+              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            </TabsList>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button onClick={handleExport} disabled={isExporting} className="flex items-center space-x-2">
-              {isExporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              <span>{isExporting ? "Exporting..." : "Export Data"}</span>
-            </Button>
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                    <div className="text-2xl font-bold">{users?.length || 0}</div>
+                    <div className="text-sm text-gray-600">Users</div>
+                  </CardContent>
+                </Card>
 
-            <div className="relative">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImport}
-                disabled={isImporting}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <Button
-                disabled={isImporting}
-                className="w-full flex items-center space-x-2 bg-transparent"
-                variant="outline"
-              >
-                {isImporting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                <span>{isImporting ? "Importing..." : "Import Data"}</span>
-              </Button>
-            </div>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <FolderOpen className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                    <div className="text-2xl font-bold">{categories?.length || 0}</div>
+                    <div className="text-sm text-gray-600">Categories</div>
+                  </CardContent>
+                </Card>
 
-            <Button
-              onClick={() => setShowConfirmClear(true)}
-              variant="destructive"
-              className="flex items-center space-x-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Clear Data</span>
-            </Button>
-          </div>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <FileText className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                    <div className="text-2xl font-bold">{articles?.length || 0}</div>
+                    <div className="text-sm text-gray-600">Articles</div>
+                  </CardContent>
+                </Card>
 
-          {importStatus && (
-            <Alert className="mt-4">
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>{importStatus}</AlertDescription>
-            </Alert>
-          )}
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Activity className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                    <div className="text-2xl font-bold">{auditLog?.length || 0}</div>
+                    <div className="text-sm text-gray-600">Audit Entries</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-2">Storage Information</h3>
-            <div className="text-sm text-gray-600">
-              <p>
-                Total Storage Used: <Badge variant="outline">{getStorageSize()}</Badge>
-              </p>
-              <p className="mt-1">Data is stored locally in your browser's localStorage</p>
-            </div>
-          </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Storage Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Storage Used:</span>
+                      <Badge variant="outline">{getStorageSize()}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Last Export:</span>
+                      <Badge variant="outline">Never</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="backup" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Download className="h-4 w-4" />
+                      <span>Export Backup</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Download a complete backup of all your knowledge base data including users, categories, articles,
+                      and audit logs.
+                    </p>
+                    <Button onClick={handleExport} disabled={isExporting} className="w-full">
+                      {isExporting ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Backup
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Upload className="h-4 w-4" />
+                      <span>Import Backup</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Restore your knowledge base from a previously exported backup file. This will replace all current
+                      data.
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="backup-file">Select Backup File</Label>
+                      <Input
+                        id="backup-file"
+                        type="file"
+                        accept=".json"
+                        onChange={handleImport}
+                        disabled={isImporting}
+                      />
+                    </div>
+                    {isImporting && (
+                      <div className="flex items-center space-x-2 text-sm text-blue-600">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Importing backup...</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {importStatus.type && (
+                <Alert
+                  variant={importStatus.type === "error" ? "destructive" : "default"}
+                  className={
+                    importStatus.type === "success"
+                      ? "border-green-200 bg-green-50"
+                      : importStatus.type === "info"
+                        ? "border-blue-200 bg-blue-50"
+                        : ""
+                  }
+                >
+                  {importStatus.type === "success" && <CheckCircle className="h-4 w-4" />}
+                  {importStatus.type === "error" && <AlertTriangle className="h-4 w-4" />}
+                  {importStatus.type === "info" && <Info className="h-4 w-4" />}
+                  <AlertDescription>{importStatus.message}</AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            <TabsContent value="maintenance" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Danger Zone</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                      <h4 className="font-medium text-red-800 mb-2">Clear All Data</h4>
+                      <p className="text-sm text-red-600 mb-3">
+                        This will permanently delete all users, categories, articles, and audit logs. This action cannot
+                        be undone.
+                      </p>
+                      <Button variant="destructive" onClick={handleClearData} className="w-full">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear All Data
+                      </Button>
+                    </div>
+
+                    <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
+                      <h4 className="font-medium text-orange-800 mb-2">Reset to Defaults</h4>
+                      <p className="text-sm text-orange-600 mb-3">
+                        This will clear all data and restore the system to its initial state with default admin user.
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={handleResetToDefaults}
+                        className="w-full border-orange-300 bg-transparent"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Reset to Defaults
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-
-      {showConfirmClear && (
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Confirm Data Deletion</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">Choose what data you want to clear. This action cannot be undone.</p>
-            <div className="flex space-x-2">
-              <Button onClick={handleClearData} variant="destructive" size="sm">
-                Clear Articles & Categories Only
-              </Button>
-              <Button onClick={handleResetAll} variant="destructive" size="sm">
-                Reset All Data
-              </Button>
-              <Button onClick={() => setShowConfirmClear(false)} variant="outline" size="sm">
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Users Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {actualUsers?.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <span className="font-medium">{user.username}</span>
-                        <Badge variant="outline" className="ml-2">
-                          {user.role}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
-                    </div>
-                  )) || <p className="text-gray-500">No users found</p>}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="categories" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Categories Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {actualCategories?.map((category) => (
-                    <div key={category.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <span className="font-medium">{category.name}</span>
-                        {category.subcategories && category.subcategories.length > 0 && (
-                          <Badge variant="outline" className="ml-2">
-                            {category.subcategories.length} subcategories
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">{category.description}</div>
-                    </div>
-                  )) || <p className="text-gray-500">No categories found</p>}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="articles" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Articles Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {actualArticles?.map((article) => (
-                    <div key={article.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <span className="font-medium">{article.title}</span>
-                        <Badge variant="outline" className="ml-2">
-                          {article.status}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-500">by {article.createdBy}</div>
-                    </div>
-                  )) || <p className="text-gray-500">No articles found</p>}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="audit" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Audit Log Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {actualAuditLog?.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <span className="font-medium">{entry.action}</span>
-                        <div className="text-sm text-gray-500">{entry.details}</div>
-                      </div>
-                      <div className="text-sm text-gray-500">{new Date(entry.timestamp).toLocaleString()}</div>
-                    </div>
-                  )) || <p className="text-gray-500">No audit entries found</p>}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }
