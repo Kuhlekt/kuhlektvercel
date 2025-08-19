@@ -3,10 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
@@ -28,23 +28,25 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
     setIsLoading(true)
 
+    console.log("🔐 Login attempt:", { username, password: "***" })
+
     try {
       const user = storage.authenticateUser(username, password)
+
       if (user) {
-        storage.addAuditEntry({
-          userId: user.id,
-          action: "LOGIN",
-          details: `User ${user.username} logged in`,
-        })
+        console.log("✅ Login successful:", user)
+        storage.setCurrentUser(user)
         onLogin(user)
         onClose()
         setUsername("")
         setPassword("")
       } else {
+        console.log("❌ Login failed: Invalid credentials")
         setError("Invalid username or password")
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
+      console.error("💥 Login error:", err)
+      setError("An error occurred during login")
     } finally {
       setIsLoading(false)
     }
@@ -75,6 +77,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               placeholder="Enter your username"
               required
               disabled={isLoading}
+              autoFocus
             />
           </div>
 
@@ -107,9 +110,9 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </div>
         </form>
 
-        <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
+        <div className="mt-4 p-3 bg-gray-50 rounded-md text-sm">
           <p className="font-medium mb-2">Demo Credentials:</p>
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1 text-gray-600">
             <p>
               <strong>Admin:</strong> admin / admin123
             </p>

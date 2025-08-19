@@ -8,7 +8,6 @@ export const initialUsers: User[] = [
     password: "admin123",
     role: "admin",
     createdAt: new Date("2024-01-01"),
-    lastLogin: new Date(),
   },
   {
     id: "2",
@@ -17,7 +16,6 @@ export const initialUsers: User[] = [
     password: "editor123",
     role: "editor",
     createdAt: new Date("2024-01-01"),
-    lastLogin: new Date(),
   },
   {
     id: "3",
@@ -26,6 +24,5 @@ export const initialUsers: User[] = [
     password: "viewer123",
     role: "viewer",
     createdAt: new Date("2024-01-01"),
-    lastLogin: new Date(),
   },
 ]

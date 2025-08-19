@@ -25,8 +25,6 @@ export interface Category {
   description: string
   parentId?: string
   createdAt: Date
-  subcategories: Subcategory[]
-  articles: Article[]
 }
 
 export interface User {
@@ -36,7 +34,7 @@ export interface User {
   password: string
   role: "admin" | "editor" | "viewer"
   createdAt: Date
-  lastLogin?: string
+  lastLogin?: Date
 }
 
 export interface AuditLogEntry {

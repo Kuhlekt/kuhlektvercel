@@ -1,183 +1,136 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Download, Upload } from "lucide-react"
+import { UserManagement } from "./user-management"
+import { CategoryManagement } from "./category-management"
+import { AuditLog } from "./audit-log"
+import { DataManagement } from "./data-management"
 import { storage } from "../utils/storage"
-import type { Category, Article } from "../types/knowledge-base"
+import type { User, Category, Article, AuditLog as AuditLogType } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
-  articles: Article[]
+  isOpen: boolean
+  onClose: () => void
+  currentUser: User
+  users: User[]
   categories: Category[]
-  onUpdateArticles: (articles: Article[]) => void
+  articles: Article[]
+  auditLog: AuditLogType[]
+  onUpdateUsers: (users: User[]) => void
   onUpdateCategories: (categories: Category[]) => void
+  onUpdateArticles: (articles: Article[]) => void
 }
 
-export function AdminDashboard({ articles, categories, onUpdateArticles, onUpdateCategories }: AdminDashboardProps) {
-  const [importStatus, setImportStatus] = useState<string>("")
+export function AdminDashboard({
+  isOpen,
+  onClose,
+  currentUser,
+  users,
+  categories,
+  articles,
+  auditLog,
+  onUpdateUsers,
+  onUpdateCategories,
+  onUpdateArticles,
+}: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState("overview")
 
-  const handleExportData = () => {
-    const data = storage.exportData()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const handleUpdateUsers = (updatedUsers: User[]) => {
+    onUpdateUsers(updatedUsers)
+    storage.saveUsers(updatedUsers)
   }
 
-  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string)
-        storage.importData(data)
-
-        // Refresh the data
-        onUpdateArticles(storage.getArticles())
-        onUpdateCategories(storage.getCategories())
-
-        setImportStatus("Data imported successfully!")
-        setTimeout(() => setImportStatus(""), 3000)
-      } catch (error) {
-        setImportStatus("Error importing data. Please check the file format.")
-        setTimeout(() => setImportStatus(""), 3000)
-      }
-    }
-    reader.readAsText(file)
+  const handleUpdateCategories = (updatedCategories: Category[]) => {
+    onUpdateCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
   }
 
-  const stats = {
-    totalArticles: articles.length,
-    publishedArticles: articles.filter((a) => a.status === "published").length,
-    draftArticles: articles.filter((a) => a.status === "draft").length,
-    totalCategories: categories.length,
+  const handleUpdateArticles = (updatedArticles: Article[]) => {
+    onUpdateArticles(updatedArticles)
+    storage.saveArticles(updatedArticles)
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-1">Manage your knowledge base</p>
-      </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Admin Dashboard</DialogTitle>
+        </DialogHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-500">Total Articles</h3>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalArticles}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-500">Published</h3>
-          <p className="text-2xl font-bold text-green-600">{stats.publishedArticles}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-500">Drafts</h3>
-          <p className="text-2xl font-bold text-yellow-600">{stats.draftArticles}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-500">Categories</h3>
-          <p className="text-2xl font-bold text-blue-600">{stats.totalCategories}</p>
-        </div>
-      </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="audit">Audit Log</TabsTrigger>
+            <TabsTrigger value="data">Data</TabsTrigger>
+          </TabsList>
 
-      <Tabs defaultValue="data" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="data">Data Management</TabsTrigger>
-          <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="data" className="space-y-4">
-          <div className="bg-white p-6 rounded-lg border">
-            <h2 className="text-lg font-semibold mb-4">Backup & Restore</h2>
-            <div className="flex space-x-4">
-              <Button onClick={handleExportData} className="flex items-center space-x-2">
-                <Download className="w-4 h-4" />
-                <span>Export Data</span>
-              </Button>
-
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportData}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Button variant="outline" className="flex items-center space-x-2 bg-transparent">
-                  <Upload className="w-4 h-4" />
-                  <span>Import Data</span>
-                </Button>
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{users.length}</div>
+                <div className="text-sm text-blue-600">Total Users</div>
               </div>
-            </div>
-
-            {importStatus && (
-              <div
-                className={`mt-4 p-3 rounded ${
-                  importStatus.includes("Error") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
-                }`}
-              >
-                {importStatus}
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{categories.length}</div>
+                <div className="text-sm text-green-600">Categories</div>
               </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="articles" className="space-y-4">
-          <div className="bg-white p-6 rounded-lg border">
-            <h2 className="text-lg font-semibold mb-4">Article Management</h2>
-            <div className="space-y-4">
-              {articles.map((article) => (
-                <div key={article.id} className="flex items-center justify-between p-4 border rounded">
-                  <div>
-                    <h3 className="font-medium">{article.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      By {article.createdBy} • {article.createdAt.toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`px-2 py-1 text-xs rounded ${
-                        article.status === "published" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {article.status}
-                    </span>
-                  </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{articles.length}</div>
+                <div className="text-sm text-purple-600">Articles</div>
+              </div>
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">
+                  {articles.filter((a) => a.status === "published").length}
                 </div>
-              ))}
+                <div className="text-sm text-orange-600">Published</div>
+              </div>
             </div>
-          </div>
-        </TabsContent>
 
-        <TabsContent value="categories" className="space-y-4">
-          <div className="bg-white p-6 rounded-lg border">
-            <h2 className="text-lg font-semibold mb-4">Category Management</h2>
             <div className="space-y-4">
-              {categories.map((category) => {
-                const articleCount = articles.filter((a) => a.categoryId === category.id).length
-                return (
-                  <div key={category.id} className="flex items-center justify-between p-4 border rounded">
+              <h3 className="text-lg font-semibold">Recent Activity</h3>
+              <div className="space-y-2">
+                {auditLog.slice(0, 5).map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <h3 className="font-medium">{category.name}</h3>
-                      <p className="text-sm text-gray-500">{category.description}</p>
+                      <div className="font-medium">{entry.action}</div>
+                      <div className="text-sm text-gray-600">{entry.details}</div>
                     </div>
-                    <div className="text-sm text-gray-500">{articleCount} articles</div>
+                    <div className="text-sm text-gray-500">{entry.timestamp.toLocaleString()}</div>
                   </div>
-                )
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UserManagement users={users} onUpdateUsers={handleUpdateUsers} currentUser={currentUser} />
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <CategoryManagement categories={categories} onUpdateCategories={handleUpdateCategories} />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <AuditLog auditLog={auditLog} users={users} />
+          </TabsContent>
+
+          <TabsContent value="data">
+            <DataManagement
+              users={users}
+              categories={categories}
+              articles={articles}
+              auditLog={auditLog}
+              onUpdateUsers={handleUpdateUsers}
+              onUpdateCategories={handleUpdateCategories}
+              onUpdateArticles={handleUpdateArticles}
+            />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   )
 }
