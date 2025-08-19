@@ -17,7 +17,6 @@ import { CategoryManagement } from "./components/category-management"
 import { DataManagement } from "./components/data-management"
 import { ArticleManagement } from "./components/article-management"
 import { AuditLog } from "./components/audit-log"
-import { HomeDashboard } from "./components/home-dashboard"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { Navigation } from "./components/navigation"
 
@@ -55,10 +54,11 @@ export default function KnowledgeBase({
     storage.init()
     loadData()
 
-    // Check for existing user session
-    const existingUser = storage.getCurrentUser()
-    if (existingUser) {
-      setCurrentUser(existingUser)
+    // Auto-login as admin (bypass login)
+    const adminUser = storage.getUsers().find((user) => user.role === "admin")
+    if (adminUser) {
+      setCurrentUser(adminUser)
+      storage.setCurrentUser(adminUser)
     }
   }, [])
 
@@ -243,17 +243,14 @@ export default function KnowledgeBase({
 
   const categoriesWithArticles = getCategoriesWithArticles()
 
-  // Show login modal if not authenticated and trying to access protected features
+  // Remove authentication requirement - always allow access
   const requireAuth = (action: () => void) => {
-    if (!currentUser) {
-      setShowLogin(true)
-      return
-    }
     action()
   }
 
-  const isAdmin = currentUser?.role === "admin"
-  const canEdit = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
+  // Always treat user as admin for bypass
+  const isAdmin = true
+  const canEdit = true
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -267,7 +264,7 @@ export default function KnowledgeBase({
 
       <div className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="home" className="flex items-center space-x-2">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
@@ -282,44 +279,28 @@ export default function KnowledgeBase({
                 <span className="hidden sm:inline">Search</span>
               </TabsTrigger>
             )}
-            {canEdit && (
-              <TabsTrigger value="manage" className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Articles</span>
-              </TabsTrigger>
-            )}
-            {isAdmin && (
-              <>
-                <TabsTrigger value="admin" className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4" />
-                  <span className="hidden sm:inline">Admin</span>
-                </TabsTrigger>
-                <TabsTrigger value="data" className="flex items-center space-x-2">
-                  <Database className="h-4 w-4" />
-                  <span className="hidden sm:inline">Data</span>
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger value="manage" className="flex items-center space-x-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Articles</span>
+            </TabsTrigger>
+            <TabsTrigger value="admin" className="flex items-center space-x-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Admin</span>
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center space-x-2">
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Data</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="home" className="mt-6">
-            {isAdmin ? (
-              <AdminDashboard
-                categories={categoriesWithArticles}
-                articles={articles}
-                users={users}
-                auditLog={auditLog}
-                currentUser={currentUser}
-              />
-            ) : (
-              <HomeDashboard
-                categories={categoriesWithArticles}
-                articles={articles}
-                currentUser={currentUser}
-                onArticleSelect={setSelectedArticle}
-                onCategoryManage={() => requireAuth(() => setActiveTab("admin"))}
-              />
-            )}
+            <AdminDashboard
+              categories={categoriesWithArticles}
+              articles={articles}
+              users={users}
+              auditLog={auditLog}
+              currentUser={currentUser}
+            />
           </TabsContent>
 
           <TabsContent value="browse" className="mt-6">
@@ -331,12 +312,10 @@ export default function KnowledgeBase({
                       <FolderOpen className="h-5 w-5" />
                       <span>Categories</span>
                     </CardTitle>
-                    {canEdit && (
-                      <Button variant="outline" size="sm" onClick={() => requireAuth(() => setShowAddArticle(true))}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Article
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" onClick={() => setShowAddArticle(true)}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Article
+                    </Button>
                   </CardHeader>
                   <CardContent>
                     <CategoryTree
@@ -353,8 +332,8 @@ export default function KnowledgeBase({
                   <ArticleViewer
                     article={selectedArticle}
                     onClose={() => setSelectedArticle(null)}
-                    onEdit={canEdit ? () => setEditingArticle(selectedArticle) : undefined}
-                    onDelete={canEdit ? () => requireAuth(() => handleDeleteArticle(selectedArticle.id)) : undefined}
+                    onEdit={() => setEditingArticle(selectedArticle)}
+                    onDelete={() => handleDeleteArticle(selectedArticle.id)}
                   />
                 ) : (
                   <Card>
@@ -385,69 +364,58 @@ export default function KnowledgeBase({
             </TabsContent>
           )}
 
-          {canEdit && (
-            <TabsContent value="manage" className="mt-6">
-              <ArticleManagement
-                categories={categoriesWithArticles}
-                onEditArticle={setEditingArticle}
-                onDeleteArticle={(articleId) => requireAuth(() => handleDeleteArticle(articleId))}
-              />
-            </TabsContent>
-          )}
+          <TabsContent value="manage" className="mt-6">
+            <ArticleManagement
+              categories={categoriesWithArticles}
+              onEditArticle={setEditingArticle}
+              onDeleteArticle={handleDeleteArticle}
+            />
+          </TabsContent>
 
-          {isAdmin && (
-            <>
-              <TabsContent value="admin" className="mt-6">
-                <Tabs defaultValue="users" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="users" className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <span>Users</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="categories" className="flex items-center space-x-2">
-                      <FolderOpen className="h-4 w-4" />
-                      <span>Categories</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="audit" className="flex items-center space-x-2">
-                      <Activity className="h-4 w-4" />
-                      <span>Audit Log</span>
-                    </TabsTrigger>
-                  </TabsList>
+          <TabsContent value="admin" className="mt-6">
+            <Tabs defaultValue="users" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="users" className="flex items-center space-x-2">
+                  <Users className="h-4 w-4" />
+                  <span>Users</span>
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="flex items-center space-x-2">
+                  <FolderOpen className="h-4 w-4" />
+                  <span>Categories</span>
+                </TabsTrigger>
+                <TabsTrigger value="audit" className="flex items-center space-x-2">
+                  <Activity className="h-4 w-4" />
+                  <span>Audit Log</span>
+                </TabsTrigger>
+              </TabsList>
 
-                  <TabsContent value="users" className="mt-6">
-                    <UserManagement
-                      users={users}
-                      onUsersUpdate={handleUsersUpdate}
-                      onAuditLogUpdate={handleAuditLogUpdate}
-                      auditLog={auditLog}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="categories" className="mt-6">
-                    <CategoryManagement
-                      categories={categories}
-                      onCategoriesUpdate={handleCategoriesUpdate}
-                      currentUser={currentUser}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="audit" className="mt-6">
-                    <AuditLog auditLog={auditLog} users={users} />
-                  </TabsContent>
-                </Tabs>
+              <TabsContent value="users" className="mt-6">
+                <UserManagement users={users} currentUser={currentUser} onUpdateUsers={handleUsersUpdate} />
               </TabsContent>
 
-              <TabsContent value="data" className="mt-6">
-                <DataManagement
-                  users={users}
+              <TabsContent value="categories" className="mt-6">
+                <CategoryManagement
                   categories={categories}
-                  articles={articles}
-                  auditLog={auditLog}
-                  onDataChange={loadData}
+                  currentUser={currentUser}
+                  onUpdateCategories={handleCategoriesUpdate}
                 />
               </TabsContent>
-            </>
-          )}
+
+              <TabsContent value="audit" className="mt-6">
+                <AuditLog auditLog={auditLog} />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="data" className="mt-6">
+            <DataManagement
+              users={users}
+              categories={categories}
+              articles={articles}
+              auditLog={auditLog}
+              onDataChange={loadData}
+            />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -459,7 +427,7 @@ export default function KnowledgeBase({
         onClose={() => setShowAddArticle(false)}
         onSubmit={handleAddArticle}
         categories={categories}
-        currentUser={currentUser!}
+        currentUser={currentUser || ({ id: "admin", username: "admin", role: "admin" } as User)}
       />
 
       {editingArticle && (
