@@ -20,7 +20,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-3">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-8 w-8 object-contain" />
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-12 w-12 object-contain" />
           </div>
 
           {/* Navigation Buttons */}
