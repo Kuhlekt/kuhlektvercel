@@ -6,16 +6,15 @@ import { CategoryTree } from "./components/category-tree"
 import { ArticleList } from "./components/article-list"
 import { ArticleViewer } from "./components/article-viewer"
 import { AddArticleForm } from "./components/add-article-form"
+import { EditArticleForm } from "./components/edit-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { LoginModal } from "./components/login-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, X } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Search, X, Wifi, WifiOff } from "lucide-react"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
-import { storage } from "./utils/storage"
-import { initialCategories } from "./data/initial-data"
-import { initialUsers } from "./data/initial-users"
-import { initialAuditLog } from "./data/initial-audit-log"
+import { database } from "./utils/database"
 
 export default function KnowledgeBase() {
   // State management
@@ -31,82 +30,126 @@ export default function KnowledgeBase() {
   const [currentView, setCurrentView] = useState<"browse" | "add" | "admin">("browse")
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(true)
 
-  // Load initial data
+  // Load initial data and set up real-time subscriptions
   useEffect(() => {
+    let categoriesSubscription: any
+    let auditSubscription: any
+
     const loadData = async () => {
       try {
-        console.log("Loading data...")
+        setIsLoading(true)
+        setError(null)
 
-        // Load categories
-        let loadedCategories = storage.getCategories()
-        if (!loadedCategories || loadedCategories.length === 0) {
-          console.log("No categories found, using initial data")
-          loadedCategories = initialCategories
-          storage.saveCategories(loadedCategories)
-        }
+        console.log("Loading data from database...")
+
+        // Load all data in parallel
+        const [loadedCategories, loadedUsers, loadedAuditLog] = await Promise.all([
+          database.getCategories(),
+          database.getUsers(),
+          database.getAuditLog(),
+        ])
+
         console.log("Loaded categories:", loadedCategories)
-        setCategories(loadedCategories)
-
-        // Load users
-        let loadedUsers = storage.getUsers()
-        if (!loadedUsers || loadedUsers.length === 0) {
-          console.log("No users found, using initial data")
-          loadedUsers = initialUsers
-          storage.saveUsers(loadedUsers)
-        }
         console.log("Loaded users:", loadedUsers)
-        setUsers(loadedUsers)
-
-        // Load audit log
-        let loadedAuditLog = storage.getAuditLog()
-        if (!loadedAuditLog || loadedAuditLog.length === 0) {
-          console.log("No audit log found, using initial data")
-          loadedAuditLog = initialAuditLog
-          storage.saveAuditLog(loadedAuditLog)
-        }
         console.log("Loaded audit log:", loadedAuditLog)
+
+        setCategories(loadedCategories)
+        setUsers(loadedUsers)
         setAuditLog(loadedAuditLog)
 
+        // Increment page visits
+        await database.incrementPageVisits()
+
+        // Set up real-time subscriptions
+        categoriesSubscription = database.subscribeToCategories(async () => {
+          console.log("Categories changed, reloading...")
+          try {
+            const updatedCategories = await database.getCategories()
+            setCategories(updatedCategories)
+          } catch (error) {
+            console.error("Error reloading categories:", error)
+          }
+        })
+
+        auditSubscription = database.subscribeToAuditLog(async () => {
+          console.log("Audit log changed, reloading...")
+          try {
+            const updatedAuditLog = await database.getAuditLog()
+            setAuditLog(updatedAuditLog)
+          } catch (error) {
+            console.error("Error reloading audit log:", error)
+          }
+        })
+
+        setIsOnline(true)
         console.log("Data loaded successfully")
       } catch (error) {
         console.error("Error loading data:", error)
-        // Fallback to initial data
-        setCategories(initialCategories)
-        setUsers(initialUsers)
-        setAuditLog(initialAuditLog)
+        setError("Failed to load data from database. Please check your connection.")
+        setIsOnline(false)
       } finally {
         setIsLoading(false)
       }
     }
 
     loadData()
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      if (categoriesSubscription) {
+        categoriesSubscription.unsubscribe()
+      }
+      if (auditSubscription) {
+        auditSubscription.unsubscribe()
+      }
+    }
+  }, [])
+
+  // Handle online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
   }, [])
 
   // Handle login
-  const handleLogin = (username: string, password: string): boolean => {
-    console.log("Attempting login with:", username, password)
-    console.log("Available users:", users)
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    try {
+      console.log("Attempting login with:", username)
 
-    const user = users.find((u) => u.username === username && u.password === password)
-    console.log("Found user:", user)
+      const user = users.find((u) => u.username === username && u.password === password)
 
-    if (user) {
-      const updatedUser = { ...user, lastLogin: new Date() }
-      setCurrentUser(updatedUser)
+      if (user) {
+        // Update last login time in database
+        const updatedUser = await database.updateUser(user.id, { lastLogin: new Date() })
+        setCurrentUser(updatedUser)
 
-      // Update users array with last login time
-      const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
-      setUsers(updatedUsers)
-      storage.saveUsers(updatedUsers)
+        // Refresh users list
+        const updatedUsers = await database.getUsers()
+        setUsers(updatedUsers)
 
-      console.log("Login successful, user set:", updatedUser)
-      setShowLoginModal(false)
-      return true
+        console.log("Login successful")
+        setShowLoginModal(false)
+        return true
+      }
+
+      console.log("Login failed - invalid credentials")
+      return false
+    } catch (error) {
+      console.error("Login error:", error)
+      setError("Login failed. Please try again.")
+      return false
     }
-
-    console.log("Login failed - no matching user found")
-    return false
   }
 
   // Handle logout
@@ -122,10 +165,7 @@ export default function KnowledgeBase() {
     const allArticles: Article[] = []
 
     categories.forEach((category) => {
-      // Add category articles
       allArticles.push(...category.articles)
-
-      // Add subcategory articles
       category.subcategories.forEach((subcategory) => {
         allArticles.push(...subcategory.articles)
       })
@@ -144,13 +184,11 @@ export default function KnowledgeBase() {
 
     categories.forEach((category) => {
       if (category.id === selectedCategory) {
-        // Add all articles from this category
         allArticles.push(...category.articles)
         category.subcategories.forEach((subcategory) => {
           allArticles.push(...subcategory.articles)
         })
       } else {
-        // Check if selected category is a subcategory
         category.subcategories.forEach((subcategory) => {
           if (subcategory.id === selectedCategory) {
             allArticles.push(...subcategory.articles)
@@ -201,99 +239,126 @@ export default function KnowledgeBase() {
   // Handle back to articles
   const handleBackToArticles = () => {
     setSelectedArticle(null)
+    setEditingArticle(null)
   }
 
   // Handle add article
-  const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
-    const newArticle: Article = {
-      ...articleData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  const handleAddArticle = async (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
+    try {
+      setError(null)
+
+      const newArticle = await database.saveArticle(articleData)
+
+      // Add audit log entry
+      await database.addAuditEntry({
+        action: "article_created",
+        articleId: newArticle.id,
+        articleTitle: newArticle.title,
+        categoryId: newArticle.categoryId,
+        performedBy: currentUser?.username || "anonymous",
+        details: `Created article: ${newArticle.title}`,
+      })
+
+      // Data will be updated via real-time subscription
+      setCurrentView("browse")
+    } catch (error) {
+      console.error("Error adding article:", error)
+      setError("Failed to add article. Please try again.")
     }
-
-    const updatedCategories = categories.map((category) => {
-      if (category.id === articleData.categoryId) {
-        if (articleData.subcategoryId) {
-          // Add to subcategory
-          return {
-            ...category,
-            subcategories: category.subcategories.map((subcategory) =>
-              subcategory.id === articleData.subcategoryId
-                ? { ...subcategory, articles: [...subcategory.articles, newArticle] }
-                : subcategory,
-            ),
-          }
-        } else {
-          // Add to main category
-          return {
-            ...category,
-            articles: [...category.articles, newArticle],
-          }
-        }
-      }
-      return category
-    })
-
-    setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-
-    // Add audit log entry
-    const newAuditEntry: AuditLogEntry = {
-      id: Date.now().toString(),
-      action: "article_created",
-      entityType: "article",
-      entityId: newArticle.id,
-      details: `Created article: ${newArticle.title}`,
-      userId: currentUser?.id || "unknown",
-      timestamp: new Date(),
-    }
-
-    const updatedAuditLog = [newAuditEntry, ...auditLog]
-    setAuditLog(updatedAuditLog)
-    storage.saveAuditLog(updatedAuditLog)
-
-    setCurrentView("browse")
   }
 
   // Handle edit article
   const handleEditArticle = (article: Article) => {
     setEditingArticle(article)
-    // For now, just log - would implement edit form
-    console.log("Edit article:", article)
+  }
+
+  // Handle update article
+  const handleUpdateArticle = async (updatedArticle: Omit<Article, "createdAt">) => {
+    try {
+      setError(null)
+
+      await database.updateArticle(updatedArticle.id, updatedArticle)
+
+      // Add audit log entry
+      await database.addAuditEntry({
+        action: "article_updated",
+        articleId: updatedArticle.id,
+        articleTitle: updatedArticle.title,
+        categoryId: updatedArticle.categoryId,
+        performedBy: currentUser?.username || "anonymous",
+        details: `Updated article: ${updatedArticle.title}`,
+      })
+
+      // Data will be updated via real-time subscription
+      setEditingArticle(null)
+      setSelectedArticle(null)
+    } catch (error) {
+      console.error("Error updating article:", error)
+      setError("Failed to update article. Please try again.")
+    }
   }
 
   // Handle delete article
-  const handleDeleteArticle = (articleId: string) => {
-    if (window.confirm("Are you sure you want to delete this article?")) {
-      const updatedCategories = categories.map((category) => ({
-        ...category,
-        articles: category.articles.filter((a) => a.id !== articleId),
-        subcategories: category.subcategories.map((sub) => ({
-          ...sub,
-          articles: sub.articles.filter((a) => a.id !== articleId),
-        })),
-      }))
+  const handleDeleteArticle = async (articleId: string) => {
+    if (!window.confirm("Are you sure you want to delete this article?")) {
+      return
+    }
 
-      setCategories(updatedCategories)
-      storage.saveCategories(updatedCategories)
+    try {
+      setError(null)
+
+      const article = getAllArticles().find((a) => a.id === articleId)
+
+      await database.deleteArticle(articleId)
 
       // Add audit log entry
-      const newAuditEntry: AuditLogEntry = {
-        id: Date.now().toString(),
-        action: "article_deleted",
-        entityType: "article",
-        entityId: articleId,
-        details: `Deleted article`,
-        userId: currentUser?.id || "unknown",
-        timestamp: new Date(),
+      if (article) {
+        await database.addAuditEntry({
+          action: "article_deleted",
+          articleId: articleId,
+          articleTitle: article.title,
+          categoryId: article.categoryId,
+          performedBy: currentUser?.username || "anonymous",
+          details: `Deleted article: ${article.title}`,
+        })
       }
 
-      const updatedAuditLog = [newAuditEntry, ...auditLog]
-      setAuditLog(updatedAuditLog)
-      storage.saveAuditLog(updatedAuditLog)
-
+      // Data will be updated via real-time subscription
       setSelectedArticle(null)
+    } catch (error) {
+      console.error("Error deleting article:", error)
+      setError("Failed to delete article. Please try again.")
+    }
+  }
+
+  // Handle category management
+  const handleCategoriesUpdate = async () => {
+    try {
+      const updatedCategories = await database.getCategories()
+      setCategories(updatedCategories)
+    } catch (error) {
+      console.error("Error updating categories:", error)
+      setError("Failed to update categories.")
+    }
+  }
+
+  const handleUsersUpdate = async () => {
+    try {
+      const updatedUsers = await database.getUsers()
+      setUsers(updatedUsers)
+    } catch (error) {
+      console.error("Error updating users:", error)
+      setError("Failed to update users.")
+    }
+  }
+
+  const handleAuditLogUpdate = async () => {
+    try {
+      const updatedAuditLog = await database.getAuditLog()
+      setAuditLog(updatedAuditLog)
+    } catch (error) {
+      console.error("Error updating audit log:", error)
+      setError("Failed to update audit log.")
     }
   }
 
@@ -312,7 +377,6 @@ export default function KnowledgeBase() {
     }
 
     if (selectedCategory) {
-      // Find category name
       for (const category of categories) {
         if (category.id === selectedCategory) {
           return category.name
@@ -334,6 +398,7 @@ export default function KnowledgeBase() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading knowledge base...</p>
+          <p className="text-sm text-gray-500 mt-2">Connecting to database...</p>
         </div>
       </div>
     )
@@ -350,6 +415,30 @@ export default function KnowledgeBase() {
         currentView={currentView}
       />
 
+      {/* Connection Status */}
+      {!isOnline && (
+        <div className="bg-red-100 border-b border-red-200 px-4 py-2">
+          <div className="container mx-auto flex items-center space-x-2 text-red-800">
+            <WifiOff className="h-4 w-4" />
+            <span className="text-sm">You are offline. Some features may not work.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="container mx-auto px-4 pt-4">
+          <Alert variant="destructive">
+            <AlertDescription className="flex items-center justify-between">
+              {error}
+              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {currentView === "browse" && (
@@ -363,6 +452,10 @@ export default function KnowledgeBase() {
               />
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
               <p className="text-gray-600">Find answers, guides, and documentation</p>
+              <div className="flex items-center justify-center space-x-2 mt-2 text-sm text-gray-500">
+                <Wifi className="h-4 w-4 text-green-500" />
+                <span>Live database - changes sync in real-time</span>
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -400,7 +493,7 @@ export default function KnowledgeBase() {
             {/* Main Content Area */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Sidebar - Categories */}
-              {!selectedArticle && (
+              {!selectedArticle && !editingArticle && (
                 <div className="lg:col-span-1">
                   <CategoryTree
                     categories={categories}
@@ -411,8 +504,16 @@ export default function KnowledgeBase() {
               )}
 
               {/* Content Area */}
-              <div className={selectedArticle ? "lg:col-span-4" : "lg:col-span-3"}>
-                {selectedArticle ? (
+              <div className={selectedArticle || editingArticle ? "lg:col-span-4" : "lg:col-span-3"}>
+                {editingArticle ? (
+                  <EditArticleForm
+                    article={editingArticle}
+                    categories={categories}
+                    currentUser={currentUser}
+                    onSubmit={handleUpdateArticle}
+                    onCancel={() => setEditingArticle(null)}
+                  />
+                ) : selectedArticle ? (
                   <ArticleViewer
                     article={selectedArticle}
                     categories={categories}
@@ -447,9 +548,9 @@ export default function KnowledgeBase() {
             categories={categories}
             users={users}
             auditLog={auditLog}
-            onCategoriesUpdate={setCategories}
-            onUsersUpdate={setUsers}
-            onAuditLogUpdate={setAuditLog}
+            onCategoriesUpdate={handleCategoriesUpdate}
+            onUsersUpdate={handleUsersUpdate}
+            onAuditLogUpdate={handleAuditLogUpdate}
           />
         )}
       </div>
