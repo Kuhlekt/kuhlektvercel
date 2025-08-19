@@ -224,11 +224,22 @@ class Storage {
     }
   }
 
+  clearArticlesAndCategories() {
+    if (typeof window === "undefined") return
+    localStorage.removeItem(this.CATEGORIES_KEY)
+    localStorage.removeItem(this.ARTICLES_KEY)
+
+    // Reinitialize with empty data
+    localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify([]))
+    localStorage.setItem(this.ARTICLES_KEY, JSON.stringify([]))
+
+    console.log("🗑️ Articles and categories data cleared")
+  }
+
   clearAll() {
     if (typeof window === "undefined") return
     localStorage.removeItem(this.USERS_KEY)
-    localStorage.removeItem(this.CATEGORIES_KEY)
-    localStorage.removeItem(this.ARTICLES_KEY)
+    this.clearArticlesAndCategories()
     localStorage.removeItem(this.CURRENT_USER_KEY)
     localStorage.removeItem(this.AUDIT_LOG_KEY)
     console.log("🗑️ All data cleared")

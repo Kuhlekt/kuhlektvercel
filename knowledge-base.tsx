@@ -132,6 +132,32 @@ export default function KnowledgeBase() {
     console.log("✏️ Edit article functionality will be implemented")
   }
 
+  const clearAllData = () => {
+    storage.clearArticlesAndCategories()
+    setCategories([])
+    setArticles([])
+    setSelectedArticleId(null)
+    setSelectedCategoryId(null)
+
+    if (currentUser) {
+      storage.addAuditEntry({
+        performedBy: currentUser.id,
+        action: "CLEAR_DATA",
+        details: "Cleared all articles and categories data",
+      })
+      setAuditLog(storage.getAuditLog())
+    }
+
+    console.log("🧹 All articles and categories cleared from UI")
+  }
+
+  // Call this function immediately after initialization to ensure clean state
+  useEffect(() => {
+    if (isInitialized) {
+      clearAllData()
+    }
+  }, [isInitialized])
+
   if (!isInitialized) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
