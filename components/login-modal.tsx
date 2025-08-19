@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
 
 interface LoginModalProps {
@@ -23,33 +22,53 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    console.log("🔐 Login attempt:", { username, password: "***" })
+    // Simple hardcoded authentication for demo
+    const validUsers = [
+      {
+        id: "1",
+        username: "admin",
+        password: "admin123",
+        role: "admin" as const,
+        email: "admin@kuhlekt.com",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "2",
+        username: "editor",
+        password: "editor123",
+        role: "editor" as const,
+        email: "editor@kuhlekt.com",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "3",
+        username: "viewer",
+        password: "viewer123",
+        role: "viewer" as const,
+        email: "viewer@kuhlekt.com",
+        createdAt: new Date().toISOString(),
+      },
+    ]
 
-    try {
-      const user = storage.authenticateUser(username, password)
+    const user = validUsers.find((u) => u.username === username && u.password === password)
 
+    setTimeout(() => {
       if (user) {
-        console.log("✅ Login successful:", user)
-        storage.setCurrentUser(user)
-        onLogin(user)
+        const userWithLogin = { ...user, lastLogin: new Date().toISOString() }
+        onLogin(userWithLogin)
         onClose()
         setUsername("")
         setPassword("")
       } else {
-        console.log("❌ Login failed: Invalid credentials")
         setError("Invalid username or password")
       }
-    } catch (err) {
-      console.error("💥 Login error:", err)
-      setError("An error occurred during login")
-    } finally {
       setIsLoading(false)
-    }
+    }, 500)
   }
 
   const handleClose = () => {

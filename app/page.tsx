@@ -1,5 +1,5 @@
 import KnowledgeBase from "../knowledge-base"
 
-export default function Home() {
+export default function Page() {
   return <KnowledgeBase />
 }

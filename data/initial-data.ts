@@ -12,7 +12,7 @@ export const initialCategories: Category[] = [
   {
     id: "2",
     name: "Technical Documentation",
-    description: "Technical guides and API documentation",
+    description: "Detailed technical guides and references",
     createdAt: new Date().toISOString(),
     subcategories: [],
     articles: [],
@@ -23,7 +23,7 @@ export const initialArticles: Article[] = [
   {
     id: "1",
     title: "Welcome to Kuhlekt KB",
-    content: "This is your knowledge base. Start by exploring the categories or creating new articles.",
+    content: "This is your knowledge base. Start by exploring the categories on the left.",
     categoryId: "1",
     authorId: "1",
     createdBy: "admin",
