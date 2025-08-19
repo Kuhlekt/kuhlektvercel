@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Users, FileText, FolderTree, Plus, Folder, Trash2 } from "lucide-react"
 import { ArticleManagement } from "./article-management"
+import { DataManagement } from "./data-management"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
@@ -158,11 +159,12 @@ export function AdminDashboard({
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="articles">Articles</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -382,6 +384,17 @@ export function AdminDashboard({
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="data">
+          <DataManagement
+            categories={categories}
+            users={users}
+            auditLog={auditLog}
+            onCategoriesUpdate={onCategoriesUpdate}
+            onUsersUpdate={onUsersUpdate}
+            onAuditLogUpdate={onAuditLogUpdate}
+          />
         </TabsContent>
       </Tabs>
     </div>

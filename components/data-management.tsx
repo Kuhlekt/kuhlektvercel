@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive } from "lucide-react"
+import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive, AlertTriangle } from "lucide-react"
 import { storage, dataManager } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -63,9 +63,10 @@ export function DataManagement({
     setMessage(null)
 
     try {
-      dataManager.exportData()
-      setMessage({ type: "success", text: "Data exported successfully!" })
+      dataManager.exportData(categories, users, auditLog)
+      setMessage({ type: "success", text: "Data exported successfully! Check your downloads folder." })
     } catch (error) {
+      console.error("Export error:", error)
       setMessage({ type: "error", text: "Failed to export data. Please try again." })
     } finally {
       setIsExporting(false)
@@ -95,13 +96,19 @@ export function DataManagement({
         localStorage.setItem("kb_page_visits", importedData.pageVisits.toString())
       }
 
-      setMessage({ type: "success", text: "Data imported successfully!" })
+      setMessage({ type: "success", text: "Data imported successfully! The page will refresh to load the new data." })
       setImportFile(null)
 
       // Reset file input
       const fileInput = document.getElementById("import-file") as HTMLInputElement
       if (fileInput) fileInput.value = ""
+
+      // Refresh page after a short delay to load new data
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     } catch (error) {
+      console.error("Import error:", error)
       setMessage({
         type: "error",
         text: error instanceof Error ? error.message : "Failed to import data. Please check the file format.",
@@ -117,7 +124,12 @@ export function DataManagement({
     onUsersUpdate([])
     onAuditLogUpdate([])
     setShowClearDialog(false)
-    setMessage({ type: "success", text: "All data cleared successfully!" })
+    setMessage({ type: "success", text: "All data cleared successfully! The page will refresh." })
+
+    // Refresh page after clearing data
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
   }
 
   const stats = [
@@ -199,6 +211,20 @@ export function DataManagement({
               Download a complete backup of all your knowledge base data including articles, categories, users, and
               audit logs.
             </p>
+            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+              <p>
+                <strong>Export includes:</strong>
+              </p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>{totalArticles} articles with full content</li>
+                <li>
+                  {categories.length} categories and {totalSubcategories} subcategories
+                </li>
+                <li>{users.length} user accounts</li>
+                <li>{auditLog.length} audit log entries</li>
+                <li>All metadata and timestamps</li>
+              </ul>
+            </div>
             <Button onClick={handleExport} disabled={isExporting} className="w-full">
               <Download className="h-4 w-4 mr-2" />
               {isExporting ? "Exporting..." : "Export Data"}
@@ -218,8 +244,15 @@ export function DataManagement({
             <p className="text-sm text-gray-600">
               Restore your knowledge base from a previously exported backup file. This will replace all current data.
             </p>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Warning:</strong> Importing will completely replace all existing data. Make sure to export your
+                current data first if you want to keep it.
+              </AlertDescription>
+            </Alert>
             <div>
-              <Label htmlFor="import-file">Select Backup File</Label>
+              <Label htmlFor="import-file">Select Backup File (.json)</Label>
               <Input
                 id="import-file"
                 type="file"
@@ -228,6 +261,19 @@ export function DataManagement({
                 disabled={isImporting}
               />
             </div>
+            {importFile && (
+              <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <p>
+                  <strong>Selected file:</strong> {importFile.name}
+                </p>
+                <p>
+                  <strong>Size:</strong> {(importFile.size / 1024).toFixed(2)} KB
+                </p>
+                <p>
+                  <strong>Modified:</strong> {new Date(importFile.lastModified).toLocaleString()}
+                </p>
+              </div>
+            )}
             <Button onClick={handleImport} disabled={!importFile || isImporting} className="w-full">
               <Upload className="h-4 w-4 mr-2" />
               {isImporting ? "Importing..." : "Import Data"}
@@ -262,10 +308,10 @@ export function DataManagement({
 
       {/* Clear Confirmation Dialog */}
       <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <DialogContent aria-describedby="clear-data-description">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Clear All Data</DialogTitle>
-            <DialogDescription id="clear-data-description">
+            <DialogDescription>
               Are you absolutely sure you want to delete all data? This will permanently remove:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>{totalArticles} articles</li>

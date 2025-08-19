@@ -272,22 +272,35 @@ export const storage = {
 // Export/Import utilities for file operations
 export const dataManager = {
   // Export all data as JSON file
-  exportData: () => {
+  exportData: (categories: Category[], users: User[], auditLog: AuditLogEntry[]) => {
     try {
       const data = {
-        categories: storage.getCategories(),
-        users: storage.getUsers(),
-        auditLog: storage.getAuditLog(),
+        categories,
+        users,
+        auditLog,
         pageVisits: storage.getPageVisits(),
         exportedAt: new Date().toISOString(),
         version: "1.0",
+        metadata: {
+          totalArticles: categories.reduce((total, cat) => {
+            return (
+              total +
+              cat.articles.length +
+              cat.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+            )
+          }, 0),
+          totalCategories: categories.length,
+          totalSubcategories: categories.reduce((total, cat) => total + cat.subcategories.length, 0),
+          totalUsers: users.length,
+          totalAuditEntries: auditLog.length,
+        },
       }
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
+      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
