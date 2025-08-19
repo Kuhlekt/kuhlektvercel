@@ -17,18 +17,11 @@ import type { Category, Article, User } from "../types/knowledge-base"
 interface CategoryManagementProps {
   categories: Category[]
   articles: Article[]
+  onCategoriesUpdate: (categories: Category[]) => void
   currentUser: User
-  onUpdateCategories: (categories: Category[]) => void
-  onUpdateArticles: (articles: Article[]) => void
 }
 
-export function CategoryManagement({
-  categories,
-  articles,
-  currentUser,
-  onUpdateCategories,
-  onUpdateArticles,
-}: CategoryManagementProps) {
+export function CategoryManagement({ categories, articles, onCategoriesUpdate, currentUser }: CategoryManagementProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
@@ -56,15 +49,14 @@ export function CategoryManagement({
 
   const handleDeleteCategory = (categoryId: string) => {
     const categoryArticles = articles.filter((a) => a.categoryId === categoryId)
-
     if (categoryArticles.length > 0) {
-      setError(`Cannot delete category with ${categoryArticles.length} articles`)
+      setError(`Cannot delete category: it contains ${categoryArticles.length} article(s)`)
       return
     }
 
     if (confirm("Are you sure you want to delete this category?")) {
       const updatedCategories = categories.filter((c) => c.id !== categoryId)
-      onUpdateCategories(updatedCategories)
+      onCategoriesUpdate(updatedCategories)
       storage.saveCategories(updatedCategories)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -90,11 +82,11 @@ export function CategoryManagement({
           ? {
               ...c,
               name: formData.name.trim(),
-              description: formData.description.trim() || undefined,
+              description: formData.description.trim(),
             }
           : c,
       )
-      onUpdateCategories(updatedCategories)
+      onCategoriesUpdate(updatedCategories)
       storage.saveCategories(updatedCategories)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -104,7 +96,8 @@ export function CategoryManagement({
       setIsEditModalOpen(false)
     } else {
       // Add new category
-      if (categories.some((c) => c.name === formData.name.trim())) {
+      const existingCategory = categories.find((c) => c.name === formData.name.trim())
+      if (existingCategory) {
         setError("Category name already exists")
         return
       }
@@ -112,13 +105,13 @@ export function CategoryManagement({
       const newCategory: Category = {
         id: Date.now().toString(),
         name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
+        description: formData.description.trim(),
         createdAt: new Date(),
         createdBy: currentUser.username,
       }
 
       const updatedCategories = [...categories, newCategory]
-      onUpdateCategories(updatedCategories)
+      onCategoriesUpdate(updatedCategories)
       storage.saveCategories(updatedCategories)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -157,18 +150,18 @@ export function CategoryManagement({
             const articleCount = getCategoryArticleCount(category.id)
             return (
               <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <Folder className="h-4 w-4 text-blue-500" />
-                    <span className="font-medium">{category.name}</span>
-                    <span className="text-sm text-gray-500">({articleCount} articles)</span>
+                <div className="flex items-center space-x-3">
+                  <Folder className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="font-medium">{category.name}</p>
+                    {category.description && <p className="text-sm text-gray-500">{category.description}</p>}
+                    <p className="text-xs text-gray-400">
+                      {articleCount} article(s) • Created by {category.createdBy} on{" "}
+                      {category.createdAt.toLocaleDateString()}
+                    </p>
                   </div>
-                  {category.description && <p className="text-sm text-gray-600 mt-1">{category.description}</p>}
-                  <p className="text-xs text-gray-400">
-                    Created: {category.createdAt.toLocaleDateString()} by {category.createdBy}
-                  </p>
                 </div>
-                <div className="flex space-x-1">
+                <div className="flex space-x-2">
                   <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -195,7 +188,7 @@ export function CategoryManagement({
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Category Name</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -230,7 +223,7 @@ export function CategoryManagement({
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">Category Name</Label>
               <Input
                 id="edit-name"
                 value={formData.name}

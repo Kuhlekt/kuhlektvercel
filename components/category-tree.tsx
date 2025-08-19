@@ -55,12 +55,7 @@ export function CategoryTree({
             return (
               <div key={category.id} className="mb-1">
                 <div className="flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleCategory(category.id)}
-                    className="p-1 h-6 w-6 mr-1"
-                  >
+                  <Button variant="ghost" size="sm" className="p-1 h-6 w-6" onClick={() => toggleCategory(category.id)}>
                     {categoryArticles.length > 0 ? (
                       isExpanded ? (
                         <ChevronDown className="h-4 w-4" />
@@ -74,10 +69,10 @@ export function CategoryTree({
 
                   <Button
                     variant="ghost"
-                    onClick={() => onCategorySelect(category.id)}
-                    className={`flex-1 justify-start p-2 h-8 ${
+                    className={`flex-1 justify-start h-8 px-2 ${
                       isSelected ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
                     }`}
+                    onClick={() => onCategorySelect(category.id)}
                   >
                     {isExpanded ? (
                       <FolderOpen className="h-4 w-4 mr-2 text-blue-500" />
@@ -92,15 +87,15 @@ export function CategoryTree({
                 </div>
 
                 {isExpanded && categoryArticles.length > 0 && (
-                  <div className="ml-7 mt-1 space-y-1">
+                  <div className="ml-6 mt-1 space-y-1">
                     {categoryArticles.map((article) => (
                       <Button
                         key={article.id}
                         variant="ghost"
-                        onClick={() => onArticleSelect(article.id)}
-                        className={`w-full justify-start p-2 h-8 text-sm ${
+                        className={`w-full justify-start h-8 px-2 text-sm ${
                           selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
                         }`}
+                        onClick={() => onArticleSelect(article.id)}
                       >
                         <FileText className="h-3 w-3 mr-2 text-gray-400" />
                         <span className="truncate">{article.title}</span>

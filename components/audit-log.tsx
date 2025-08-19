@@ -2,22 +2,18 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import type { AuditLogEntry, User } from "../types/knowledge-base"
+import { Calendar, User, Activity } from "lucide-react"
+import type { AuditLogEntry } from "../types/knowledge-base"
 
 interface AuditLogProps {
   auditLog: AuditLogEntry[]
-  users: User[]
 }
 
-export function AuditLogComponent({ auditLog, users }: AuditLogProps) {
-  const getUserName = (userId: string) => {
-    const user = users.find((u) => u.id === userId)
-    return user ? user.username : "Unknown User"
-  }
-
+export function AuditLogComponent({ auditLog }: AuditLogProps) {
   const getActionBadgeVariant = (action: string) => {
     switch (action) {
       case "LOGIN":
+        return "default"
       case "LOGOUT":
         return "secondary"
       case "CREATE_ARTICLE":
@@ -41,25 +37,38 @@ export function AuditLogComponent({ auditLog, users }: AuditLogProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Audit Log</h3>
+      <div className="flex items-center space-x-2">
+        <Activity className="h-5 w-5" />
+        <h3 className="text-lg font-semibold">Audit Log</h3>
+        <Badge variant="outline">{auditLog.length} entries</Badge>
+      </div>
 
       <ScrollArea className="h-96">
         <div className="space-y-2">
           {sortedLog.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No audit entries found</p>
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No audit log entries yet</p>
+            </div>
           ) : (
             sortedLog.map((entry) => (
-              <div key={entry.id} className="p-3 border rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={getActionBadgeVariant(entry.action)}>{entry.action}</Badge>
-                    <span className="text-sm font-medium">{getUserName(entry.userId)}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {entry.timestamp.toLocaleDateString()} {entry.timestamp.toLocaleTimeString()}
-                  </span>
+              <div key={entry.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                <div className="flex-shrink-0 mt-1">
+                  <Badge variant={getActionBadgeVariant(entry.action)}>{entry.action}</Badge>
                 </div>
-                <p className="text-sm text-gray-600">{entry.details}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{entry.details}</p>
+                  <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-3 w-3" />
+                      <span>User ID: {entry.userId}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{entry.timestamp.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))
           )}

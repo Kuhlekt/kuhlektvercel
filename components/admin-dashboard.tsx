@@ -48,30 +48,37 @@ export function AdminDashboard({
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
-            <TabsTrigger value="data">Data</TabsTrigger>
+            <TabsTrigger value="data">Data Management</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-hidden">
             <TabsContent value="users" className="h-full">
-              <UserManagement users={users} currentUser={currentUser} onUpdateUsers={onUpdateUsers} />
+              <UserManagement users={users} onUsersUpdate={onUpdateUsers} currentUser={currentUser} />
             </TabsContent>
 
             <TabsContent value="categories" className="h-full">
               <CategoryManagement
                 categories={categories}
                 articles={articles}
+                onCategoriesUpdate={onUpdateCategories}
                 currentUser={currentUser}
-                onUpdateCategories={onUpdateCategories}
-                onUpdateArticles={onUpdateArticles}
               />
             </TabsContent>
 
             <TabsContent value="audit" className="h-full">
-              <AuditLog auditLog={auditLog} users={users} />
+              <AuditLog auditLog={auditLog} />
             </TabsContent>
 
             <TabsContent value="data" className="h-full">
-              <DataManagement />
+              <DataManagement
+                users={users}
+                categories={categories}
+                articles={articles}
+                auditLog={auditLog}
+                onUpdateUsers={onUpdateUsers}
+                onUpdateCategories={onUpdateCategories}
+                onUpdateArticles={onUpdateArticles}
+              />
             </TabsContent>
           </div>
         </Tabs>

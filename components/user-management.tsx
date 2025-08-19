@@ -17,11 +17,11 @@ import type { User } from "../types/knowledge-base"
 
 interface UserManagementProps {
   users: User[]
+  onUsersUpdate: (users: User[]) => void
   currentUser: User
-  onUpdateUsers: (users: User[]) => void
 }
 
-export function UserManagement({ users, currentUser, onUpdateUsers }: UserManagementProps) {
+export function UserManagement({ users, onUsersUpdate, currentUser }: UserManagementProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -53,13 +53,13 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
 
   const handleDeleteUser = (userId: string) => {
     if (userId === currentUser.id) {
-      setError("Cannot delete your own account")
+      setError("You cannot delete your own account")
       return
     }
 
     if (confirm("Are you sure you want to delete this user?")) {
       const updatedUsers = users.filter((u) => u.id !== userId)
-      onUpdateUsers(updatedUsers)
+      onUsersUpdate(updatedUsers)
       storage.saveUsers(updatedUsers)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -91,7 +91,7 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
             }
           : u,
       )
-      onUpdateUsers(updatedUsers)
+      onUsersUpdate(updatedUsers)
       storage.saveUsers(updatedUsers)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -101,7 +101,8 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
       setIsEditModalOpen(false)
     } else {
       // Add new user
-      if (users.some((u) => u.username === formData.username.trim())) {
+      const existingUser = users.find((u) => u.username === formData.username.trim())
+      if (existingUser) {
         setError("Username already exists")
         return
       }
@@ -116,7 +117,7 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
       }
 
       const updatedUsers = [...users, newUser]
-      onUpdateUsers(updatedUsers)
+      onUsersUpdate(updatedUsers)
       storage.saveUsers(updatedUsers)
       storage.addAuditEntry({
         userId: currentUser.id,
@@ -135,6 +136,8 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
         return "destructive"
       case "editor":
         return "default"
+      case "viewer":
+        return "secondary"
       default:
         return "secondary"
     }
@@ -155,25 +158,30 @@ export function UserManagement({ users, currentUser, onUpdateUsers }: UserManage
           {users.map((user) => (
             <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">{user.username}</span>
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <p className="font-medium">{user.username}</p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                  </div>
                   <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
                 </div>
-                <p className="text-sm text-gray-500">{user.email}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mt-1">
                   Created: {user.createdAt.toLocaleDateString()}
                   {user.lastLogin && ` • Last login: ${user.lastLogin.toLocaleDateString()}`}
                 </p>
               </div>
-              <div className="flex space-x-1">
+              <div className="flex space-x-2">
                 <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                {user.id !== currentUser.id && (
-                  <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteUser(user.id)}
+                  disabled={user.id === currentUser.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}
