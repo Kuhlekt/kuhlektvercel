@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRight, ChevronDown, FileText, Folder } from "lucide-react"
+import { ChevronRight, ChevronDown, Folder, FileText } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Category, Article } from "../types/knowledge-base"
 
@@ -22,7 +22,7 @@ export function CategoryTree({
   onArticleSelect,
 }: CategoryTreeProps) {
   const getCategoryArticles = (categoryId: string) => {
-    return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
+    return articles.filter((article) => article.categoryId === categoryId)
   }
 
   return (
@@ -41,12 +41,12 @@ export function CategoryTree({
               <div key={category.id} className="mb-2">
                 <button
                   onClick={() => onCategorySelect(category.id)}
-                  className={`w-full flex items-center px-3 py-2 text-left rounded-lg hover:bg-gray-100 transition-colors ${
+                  className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-left hover:bg-gray-100 transition-colors ${
                     isExpanded ? "bg-blue-50 text-blue-700" : "text-gray-700"
                   }`}
                 >
-                  {isExpanded ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronRight className="h-4 w-4 mr-2" />}
-                  <Folder className="h-4 w-4 mr-2" />
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <Folder className="w-4 h-4" />
                   <span className="font-medium">{category.name}</span>
                   <span className="ml-auto text-xs text-gray-500">{categoryArticles.length}</span>
                 </button>
@@ -57,11 +57,11 @@ export function CategoryTree({
                       <button
                         key={article.id}
                         onClick={() => onArticleSelect(article.id)}
-                        className={`w-full flex items-center px-3 py-2 text-left rounded-lg hover:bg-gray-100 transition-colors ${
-                          selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : "text-gray-600"
+                        className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-left hover:bg-gray-100 transition-colors ${
+                          selectedArticleId === article.id ? "bg-blue-100 text-blue-700" : "text-gray-600"
                         }`}
                       >
-                        <FileText className="h-4 w-4 mr-2" />
+                        <FileText className="w-4 h-4" />
                         <span className="text-sm truncate">{article.title}</span>
                       </button>
                     ))}

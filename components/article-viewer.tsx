@@ -23,14 +23,13 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
       <div className="border-b border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <Button onClick={onBack} variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Categories
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
           </Button>
-
           {canEdit && (
             <Button onClick={onEdit} size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Article
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
             </Button>
           )}
         </div>
@@ -39,29 +38,29 @@ export function ArticleViewer({ article, category, author, currentUser, onEdit, 
 
         <div className="flex items-center space-x-6 text-sm text-gray-600">
           {category && (
-            <div className="flex items-center">
-              <Tag className="h-4 w-4 mr-1" />
-              {category.name}
+            <div className="flex items-center space-x-1">
+              <Tag className="w-4 h-4" />
+              <span>{category.name}</span>
             </div>
           )}
-
           {author && (
-            <div className="flex items-center">
-              <User className="h-4 w-4 mr-1" />
-              {author.username}
+            <div className="flex items-center space-x-1">
+              <User className="w-4 h-4" />
+              <span>{author.username}</span>
             </div>
           )}
-
-          <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-1" />
-            {article.createdAt.toLocaleDateString()}
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-4 h-4" />
+            <span>{article.createdAt.toLocaleDateString()}</span>
           </div>
+          <Badge variant={article.status === "published" ? "default" : "secondary"}>{article.status}</Badge>
         </div>
 
         {article.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex items-center space-x-2 mt-4">
+            <span className="text-sm text-gray-600">Tags:</span>
             {article.tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
+              <Badge key={tag} variant="outline">
                 {tag}
               </Badge>
             ))}

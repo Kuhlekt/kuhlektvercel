@@ -31,7 +31,7 @@ export function AdminDashboard({
 }: AdminDashboardProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Admin Dashboard</DialogTitle>
         </DialogHeader>
@@ -63,50 +63,63 @@ export function AdminDashboard({
 
           <TabsContent value="users" className="space-y-4">
             <div className="space-y-2">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{user.username}</p>
-                    <p className="text-sm text-gray-600">{user.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium capitalize">{user.role}</p>
-                    <p className="text-xs text-gray-500">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
-                    </p>
-                  </div>
+              <h3 className="font-semibold">User Management</h3>
+              <div className="border rounded-lg">
+                <div className="grid grid-cols-4 gap-4 p-3 bg-gray-50 font-medium">
+                  <div>Username</div>
+                  <div>Email</div>
+                  <div>Role</div>
+                  <div>Last Login</div>
                 </div>
-              ))}
+                {users.map((user) => (
+                  <div key={user.id} className="grid grid-cols-4 gap-4 p-3 border-t">
+                    <div>{user.username}</div>
+                    <div>{user.email}</div>
+                    <div className="capitalize">{user.role}</div>
+                    <div>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-4">
             <div className="space-y-2">
-              {categories.map((category) => (
-                <div key={category.id} className="p-3 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium">{category.name}</h4>
-                  <p className="text-sm text-gray-600">{category.description}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {articles.filter((a) => a.categoryId === category.id).length} articles
-                  </p>
+              <h3 className="font-semibold">Category Management</h3>
+              <div className="border rounded-lg">
+                <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 font-medium">
+                  <div>Name</div>
+                  <div>Description</div>
+                  <div>Articles</div>
                 </div>
-              ))}
+                {categories.map((category) => (
+                  <div key={category.id} className="grid grid-cols-3 gap-4 p-3 border-t">
+                    <div>{category.name}</div>
+                    <div>{category.description}</div>
+                    <div>{articles.filter((a) => a.categoryId === category.id).length}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="audit" className="space-y-4">
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {auditLog.map((entry) => (
-                <div key={entry.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{entry.action}</p>
-                      <p className="text-sm text-gray-600">{entry.details}</p>
-                    </div>
-                    <p className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</p>
-                  </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold">Audit Log</h3>
+              <div className="border rounded-lg max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50 font-medium sticky top-0">
+                  <div>Action</div>
+                  <div>Details</div>
+                  <div>Timestamp</div>
                 </div>
-              ))}
+                {auditLog.map((entry) => (
+                  <div key={entry.id} className="grid grid-cols-3 gap-4 p-3 border-t">
+                    <div className="font-medium">{entry.action}</div>
+                    <div>{entry.details}</div>
+                    <div>{new Date(entry.timestamp).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
         </Tabs>

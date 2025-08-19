@@ -14,7 +14,7 @@ import type { Category, User } from "../types/knowledge-base"
 interface AddArticleFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (article: {
+  onSubmit: (data: {
     title: string
     content: string
     categoryId: string
@@ -35,20 +35,14 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title.trim() || !content.trim() || !categoryId) {
-      return
-    }
-
-    const tagArray = tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
-
     onSubmit({
-      title: title.trim(),
-      content: content.trim(),
+      title,
+      content,
       categoryId,
-      tags: tagArray,
+      tags: tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
       status,
     })
 
@@ -71,13 +65,13 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
@@ -88,7 +82,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
               <SelectTrigger>
@@ -104,7 +98,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             </Select>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <Textarea
               id="content"
@@ -116,12 +110,12 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="tags">Tags (comma-separated)</Label>
             <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2, tag3" />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select value={status} onValueChange={(value: "draft" | "published") => setStatus(value)}>
               <SelectTrigger>
