@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, FileText, Settings, Database, LogIn, UserIcon, Eye } from "lucide-react"
+import { Search, FileText, Database, LogIn, UserIcon, Eye, Plus, Users } from "lucide-react"
 
 import { CategoryTree } from "./components/category-tree"
 import { ArticleViewer } from "./components/article-viewer"
 import { DataManagement } from "./components/data-management"
 import { LoginModal } from "./components/login-modal"
+import { AddArticleForm } from "./components/add-article-form"
+import { AdminDashboard } from "./components/admin-dashboard"
 
 import { storage } from "./utils/storage"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
@@ -188,6 +190,71 @@ export default function KnowledgeBase() {
     setActiveTab("browse")
   }
 
+  const handleAddArticle = (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
+    const newArticle: Article = {
+      ...articleData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const updatedCategories = categories.map((category) => {
+      if (category.id === articleData.categoryId) {
+        if (articleData.subcategoryId) {
+          // Add to subcategory
+          return {
+            ...category,
+            subcategories: category.subcategories.map((sub) =>
+              sub.id === articleData.subcategoryId ? { ...sub, articles: [...(sub.articles || []), newArticle] } : sub,
+            ),
+          }
+        } else {
+          // Add to main category
+          return {
+            ...category,
+            articles: [...(category.articles || []), newArticle],
+          }
+        }
+      }
+      return category
+    })
+
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+
+    // Add audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      action: "article_created",
+      entityType: "article",
+      entityId: newArticle.id,
+      performedBy: currentUser?.username || "unknown",
+      timestamp: new Date(),
+      details: `Created article: ${newArticle.title}`,
+    }
+    const updatedAuditLog = [auditEntry, ...auditLog]
+    setAuditLog(updatedAuditLog)
+    storage.saveAuditLog(updatedAuditLog)
+
+    setActiveTab("browse")
+    setSelectedArticle(newArticle)
+  }
+
+  const handleUsersUpdate = (updatedUsers: User[]) => {
+    setUsers(updatedUsers)
+    storage.saveUsers(updatedUsers)
+  }
+
+  const handleAuditLogUpdate = (updatedAuditLog: AuditLogEntry[]) => {
+    setAuditLog(updatedAuditLog)
+    storage.saveAuditLog(updatedAuditLog)
+  }
+
+  const handleCategoriesUpdate = (updatedCategories: Category[]) => {
+    setCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -263,19 +330,29 @@ export default function KnowledgeBase() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="browse" className="flex items-center space-x-2">
               <FileText className="h-4 w-4" />
               <span>Browse ({getTotalArticles()})</span>
             </TabsTrigger>
-            <TabsTrigger value="admin" className="flex items-center space-x-2" disabled={!currentUser}>
-              <Settings className="h-4 w-4" />
-              <span>Admin</span>
-            </TabsTrigger>
-            <TabsTrigger value="data" className="flex items-center space-x-2" disabled={!currentUser}>
-              <Database className="h-4 w-4" />
-              <span>Data</span>
-            </TabsTrigger>
+            {currentUser && (
+              <TabsTrigger value="add" className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Add Article</span>
+              </TabsTrigger>
+            )}
+            {currentUser?.role === "admin" && (
+              <TabsTrigger value="admin" className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>Admin</span>
+              </TabsTrigger>
+            )}
+            {currentUser && (
+              <TabsTrigger value="data" className="flex items-center space-x-2">
+                <Database className="h-4 w-4" />
+                <span>Data</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="browse" className="mt-6">
@@ -327,16 +404,39 @@ export default function KnowledgeBase() {
             </div>
           </TabsContent>
 
-          <TabsContent value="data" className="mt-6">
-            {currentUser && (
+          {currentUser && (
+            <TabsContent value="add" className="mt-6">
+              <AddArticleForm
+                categories={categories}
+                onSubmit={handleAddArticle}
+                onCancel={() => setActiveTab("browse")}
+              />
+            </TabsContent>
+          )}
+
+          {currentUser?.role === "admin" && (
+            <TabsContent value="admin" className="mt-6">
+              <AdminDashboard
+                categories={categories}
+                users={users}
+                auditLog={auditLog}
+                onCategoriesUpdate={handleCategoriesUpdate}
+                onUsersUpdate={handleUsersUpdate}
+                onAuditLogUpdate={handleAuditLogUpdate}
+              />
+            </TabsContent>
+          )}
+
+          {currentUser && (
+            <TabsContent value="data" className="mt-6">
               <DataManagement
                 categories={categories}
                 users={users}
                 auditLog={auditLog}
                 onDataImported={handleDataImported}
               />
-            )}
-          </TabsContent>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

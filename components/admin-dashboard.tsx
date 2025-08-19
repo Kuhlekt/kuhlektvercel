@@ -5,9 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, Activity, Database, Settings, Shield } from "lucide-react"
+import { Users, FileText, Activity, Database, Shield } from "lucide-react"
 import { UserManagement } from "./user-management"
-import { DataManagement } from "./data-management"
 import { AuditLog } from "./audit-log"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
@@ -54,11 +53,6 @@ export function AdminDashboard({
 
   const recentAuditEntries = auditLog.slice(0, 5)
 
-  const handleDataImported = () => {
-    // Refresh all data after import
-    window.location.reload()
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -73,7 +67,7 @@ export function AdminDashboard({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <Database className="h-4 w-4" />
             <span>Overview</span>
@@ -81,10 +75,6 @@ export function AdminDashboard({
           <TabsTrigger value="users" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span>Users</span>
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span>Data</span>
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center space-x-2">
             <Activity className="h-4 w-4" />
@@ -181,20 +171,12 @@ export function AdminDashboard({
               <CardDescription>Common administrative tasks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button variant="outline" onClick={() => setActiveTab("users")} className="h-auto p-4">
                   <div className="text-center">
                     <Users className="h-6 w-6 mx-auto mb-2" />
                     <div className="font-medium">Manage Users</div>
                     <div className="text-sm text-gray-600">Add, edit, or remove users</div>
-                  </div>
-                </Button>
-
-                <Button variant="outline" onClick={() => setActiveTab("data")} className="h-auto p-4">
-                  <div className="text-center">
-                    <Database className="h-6 w-6 mx-auto mb-2" />
-                    <div className="font-medium">Import/Export</div>
-                    <div className="text-sm text-gray-600">Backup and restore data</div>
                   </div>
                 </Button>
 
@@ -212,10 +194,6 @@ export function AdminDashboard({
 
         <TabsContent value="users">
           <UserManagement users={users} onUsersUpdate={onUsersUpdate} />
-        </TabsContent>
-
-        <TabsContent value="data">
-          <DataManagement onDataImported={handleDataImported} />
         </TabsContent>
 
         <TabsContent value="audit">

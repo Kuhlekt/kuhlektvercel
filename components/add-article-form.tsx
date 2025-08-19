@@ -10,8 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RichTextEditor } from "./rich-text-editor"
-import { EnhancedRichEditor } from "./enhanced-rich-editor"
+import { Textarea } from "@/components/ui/textarea"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
@@ -27,7 +26,6 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [subcategoryId, setSubcategoryId] = useState("none")
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
-  const [editorType, setEditorType] = useState<"rich" | "enhanced">("rich")
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
@@ -166,45 +164,17 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </div>
             </div>
 
-            {/* Editor Type Selection */}
-            <div className="space-y-2">
-              <Label>Editor Type</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={editorType === "rich" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditorType("rich")}
-                >
-                  Rich Text Editor
-                </Button>
-                <Button
-                  type="button"
-                  variant={editorType === "enhanced" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditorType("enhanced")}
-                >
-                  Enhanced Editor
-                </Button>
-              </div>
-            </div>
-
             {/* Content Editor */}
             <div className="space-y-2">
               <Label htmlFor="content">Content *</Label>
-              {editorType === "rich" ? (
-                <RichTextEditor
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Write your article content here..."
-                />
-              ) : (
-                <EnhancedRichEditor
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Write your article content here..."
-                />
-              )}
+              <Textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your article content here..."
+                className="min-h-[300px]"
+                required
+              />
             </div>
 
             {/* Form Actions */}

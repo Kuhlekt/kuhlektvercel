@@ -51,18 +51,20 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
+    password: "",
     role: "viewer" as "admin" | "editor" | "viewer",
   })
 
   const [editUser, setEditUser] = useState({
     username: "",
     email: "",
+    password: "",
     role: "viewer" as "admin" | "editor" | "viewer",
   })
 
   const handleCreateUser = () => {
-    if (!newUser.username.trim() || !newUser.email.trim()) {
-      setStatus({ type: "error", message: "Username and email are required" })
+    if (!newUser.username.trim() || !newUser.email.trim() || !newUser.password.trim()) {
+      setStatus({ type: "error", message: "Username, email, and password are required" })
       return
     }
 
@@ -83,6 +85,7 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
         id: Date.now().toString(),
         username: newUser.username.trim(),
         email: newUser.email.trim(),
+        password: newUser.password.trim(),
         role: newUser.role,
         createdAt: new Date(),
         lastLogin: undefined,
@@ -103,7 +106,7 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
       })
 
       setStatus({ type: "success", message: "User created successfully" })
-      setNewUser({ username: "", email: "", role: "viewer" })
+      setNewUser({ username: "", email: "", password: "", role: "viewer" })
       setIsCreateDialogOpen(false)
 
       setTimeout(() => setStatus({ type: null, message: "" }), 3000)
@@ -138,6 +141,7 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
               ...user,
               username: editUser.username.trim(),
               email: editUser.email.trim(),
+              password: editUser.password.trim() || user.password,
               role: editUser.role,
             }
           : user,
@@ -203,6 +207,7 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
     setEditUser({
       username: user.username,
       email: user.email,
+      password: "",
       role: user.role,
     })
     setIsEditDialogOpen(true)
@@ -271,6 +276,16 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   placeholder="Enter email address"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="Enter password"
                 />
               </div>
               <div className="space-y-2">
@@ -412,6 +427,16 @@ export function UserManagement({ users = [], onUsersUpdate }: UserManagementProp
                 value={editUser.email}
                 onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
                 placeholder="Enter email address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editUser.password}
+                onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                placeholder="Enter new password"
               />
             </div>
             <div className="space-y-2">

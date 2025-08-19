@@ -3,19 +3,19 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { User, AlertCircle } from "lucide-react"
-import type { User as KnowledgeBaseUser } from "../types/knowledge-base"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LogIn, AlertCircle } from "lucide-react"
+import type { User } from "../types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  users: KnowledgeBaseUser[]
-  onLogin: (user: KnowledgeBaseUser) => void
+  users: User[]
+  onLogin: (user: User) => void
 }
 
 export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
@@ -30,60 +30,59 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setIsLoading(true)
 
     try {
-      if (!username.trim()) {
-        setError("Please enter a username")
-        return
-      }
-
-      if (!password.trim()) {
-        setError("Please enter a password")
-        return
-      }
-
-      const user = users.find((u) => u.username === username && u.password === password)
+      // Find user by username
+      const user = users.find((u) => u.username === username)
 
       if (!user) {
         setError("Invalid username or password")
         return
       }
 
+      // Check password
+      if (user.password !== password) {
+        setError("Invalid username or password")
+        return
+      }
+
+      // Successful login
       onLogin(user)
       setUsername("")
       setPassword("")
     } catch (err) {
       setError("Login failed. Please try again.")
-      console.error("Login error:", err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDemoLogin = (demoUser: KnowledgeBaseUser) => {
-    onLogin(demoUser)
-    setUsername("")
-    setPassword("")
-    setError("")
-  }
-
-  const handleClose = () => {
-    setUsername("")
-    setPassword("")
-    setError("")
-    onClose()
+  const handleDemoLogin = () => {
+    const adminUser = users.find((u) => u.username === "admin")
+    if (adminUser) {
+      onLogin(adminUser)
+      setUsername("")
+      setPassword("")
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
+            <LogIn className="h-5 w-5" />
             <span>Login to Knowledge Base</span>
           </DialogTitle>
-          <DialogDescription id="login-description">Enter your credentials to access admin features.</DialogDescription>
+          <DialogDescription>Enter your credentials to access the knowledge base system.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -92,8 +91,8 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
+              required
               disabled={isLoading}
-              autoComplete="username"
             />
           </div>
 
@@ -105,50 +104,30 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
+              required
               disabled={isLoading}
-              autoComplete="current-password"
             />
           </div>
 
-          {error && (
-            <div className="flex items-center space-x-2 text-red-600 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()}>
+          <div className="flex flex-col space-y-2">
+            <Button type="submit" disabled={isLoading || !username || !password}>
               {isLoading ? "Logging in..." : "Login"}
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Demo Account</span>
+              </div>
+            </div>
+
+            <Button type="button" variant="outline" onClick={handleDemoLogin} disabled={isLoading}>
+              Login as Admin (admin/admin123)
             </Button>
           </div>
         </form>
-
-        {/* Demo Accounts */}
-        {Array.isArray(users) && users.length > 0 && (
-          <div className="mt-6 pt-4 border-t">
-            <h4 className="text-sm font-medium mb-3">Demo Account</h4>
-            <div className="space-y-2">
-              {users.slice(0, 1).map((user) => (
-                <Button
-                  key={user.id}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin(user)}
-                  disabled={isLoading}
-                  className="w-full justify-between"
-                >
-                  <span>{user.username}</span>
-                  <Badge variant="secondary">{user.role}</Badge>
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Click to login with demo credentials</p>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   )
