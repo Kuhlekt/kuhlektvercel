@@ -1,12 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Settings, LogIn, LogOut, User } from "lucide-react"
-import type { User as UserType } from "../types/knowledge-base"
+import { LogIn, LogOut, Plus, Settings, Home } from "lucide-react"
+import type { User } from "../types/knowledge-base"
 
 interface NavigationProps {
-  currentUser: UserType | null
+  currentUser: User | null
   onLogin: () => void
   onLogout: () => void
   onViewChange: (view: "browse" | "add" | "edit" | "admin") => void
@@ -15,34 +14,31 @@ interface NavigationProps {
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
   return (
-    <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo and Title */}
+    <nav className="bg-white shadow-sm border-b h-20">
+      <div className="container mx-auto px-4 h-full">
+        <div className="flex items-center justify-between h-full">
+          {/* Logo */}
           <div className="flex items-center space-x-3">
             <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-16 object-contain" />
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Navigation Items */}
           <div className="flex items-center space-x-4">
             <Button
               variant={currentView === "browse" ? "default" : "ghost"}
-              size="sm"
               onClick={() => onViewChange("browse")}
-              className="flex items-center space-x-1"
+              className="flex items-center space-x-2"
             >
-              <Plus className="h-4 w-4" />
+              <Home className="h-4 w-4" />
               <span>Browse</span>
             </Button>
 
-            {/* Show admin features only if user is logged in */}
             {currentUser && (
               <>
                 <Button
                   variant={currentView === "add" ? "default" : "ghost"}
-                  size="sm"
                   onClick={() => onViewChange("add")}
-                  className="flex items-center space-x-1"
+                  className="flex items-center space-x-2"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Add Article</span>
@@ -50,9 +46,8 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
 
                 <Button
                   variant={currentView === "admin" ? "default" : "ghost"}
-                  size="sm"
                   onClick={() => onViewChange("admin")}
-                  className="flex items-center space-x-1"
+                  className="flex items-center space-x-2"
                 >
                   <Settings className="h-4 w-4" />
                   <span>Admin</span>
@@ -60,41 +55,23 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
               </>
             )}
 
-            {/* User Info */}
-            {currentUser && (
-              <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">{currentUser.username}</span>
-                <Badge variant={currentUser.role === "admin" ? "default" : "secondary"} className="text-xs">
-                  {currentUser.role}
-                </Badge>
-              </div>
-            )}
-
-            {/* Login/Logout Button */}
-            {!currentUser && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onLogin}
-                className="flex items-center space-x-1 bg-transparent"
-              >
-                <LogIn className="h-4 w-4" />
-                <span>Login</span>
-              </Button>
-            )}
-
-            {currentUser && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onLogout}
-                className="flex items-center space-x-1 bg-transparent"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </Button>
-            )}
+            {/* User Actions */}
+            <div className="flex items-center space-x-2 border-l pl-4">
+              {currentUser ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">Welcome, {currentUser.username}</span>
+                  <Button variant="outline" onClick={onLogout} className="flex items-center space-x-2 bg-transparent">
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={onLogin} className="flex items-center space-x-2">
+                  <LogIn className="h-4 w-4" />
+                  <span>Login</span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
