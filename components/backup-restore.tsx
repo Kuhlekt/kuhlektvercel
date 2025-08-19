@@ -100,6 +100,13 @@ export function BackupRestore({
         },
       }
 
+      console.log("📦 Creating backup with data:", {
+        users: backupData.data.users.length,
+        categories: backupData.data.categories.length,
+        articles: backupData.data.articles.length,
+        auditLog: backupData.data.auditLog.length,
+      })
+
       const blob = new Blob([JSON.stringify(backupData, null, 2)], {
         type: "application/json",
       })
@@ -185,8 +192,10 @@ export function BackupRestore({
             },
           }
           setBackupPreview(convertedData)
+          console.log("✅ Legacy format converted. Articles found:", convertedData.data.articles.length)
         } else {
           setBackupPreview(backupData)
+          console.log("✅ New format loaded. Articles found:", backupData.data?.articles.length || 0)
         }
 
         setRestoreStatus({
@@ -242,6 +251,25 @@ Are you sure you want to continue?`
 
     try {
       console.log("🔄 Starting backup restoration...")
+      console.log("📊 Backup data to restore:", {
+        users: backupPreview.data.users.length,
+        categories: backupPreview.data.categories.length,
+        articles: backupPreview.data.articles.length,
+        auditLog: backupPreview.data.auditLog.length,
+      })
+
+      // Log sample articles from backup
+      if (backupPreview.data.articles.length > 0) {
+        console.log("📝 Sample articles from backup:")
+        backupPreview.data.articles.slice(0, 3).forEach((article, index) => {
+          console.log(`  ${index + 1}. "${article.title}"`, {
+            id: article.id,
+            status: article.status,
+            categoryId: article.categoryId,
+            createdAt: article.createdAt,
+          })
+        })
+      }
 
       // Restore users (but keep current admin password if exists)
       const restoredUsers = backupPreview.data.users.map((user) => {
@@ -294,7 +322,7 @@ Are you sure you want to continue?`
         timestamp: new Date(entry.timestamp),
       }))
 
-      console.log("💾 Saving restored data...")
+      console.log("💾 Saving restored data to localStorage...")
       console.log("- Users:", restoredUsers.length)
       console.log("- Categories:", restoredCategories.length)
       console.log("- Articles:", restoredArticles.length)

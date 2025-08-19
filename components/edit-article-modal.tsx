@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { X, Plus, Save, AlertTriangle } from "lucide-react"
-import type { Category, Article, User } from "../types/knowledge-base"
+import type { Article, Category, User } from "../types/knowledge-base"
 
 interface EditArticleModalProps {
   isOpen: boolean
@@ -42,12 +42,12 @@ export function EditArticleModal({
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("draft")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [newTag, setNewTag] = useState("")
   const [error, setError] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Initialize form with article data when modal opens
+  // Reset form when article changes or modal opens
   useEffect(() => {
     if (isOpen && article) {
       setTitle(article.title)
@@ -55,8 +55,9 @@ export function EditArticleModal({
       setCategoryId(article.categoryId)
       setTags([...article.tags])
       setStatus(article.status)
-      setError("")
       setNewTag("")
+      setError("")
+      setIsSubmitting(false)
     }
   }, [isOpen, article])
 
@@ -110,18 +111,9 @@ export function EditArticleModal({
         tags,
         status,
       })
-
-      // Reset form
-      setTitle("")
-      setContent("")
-      setCategoryId("")
-      setTags([])
-      setStatus("draft")
-      setNewTag("")
+      onClose()
     } catch (error) {
       setError("Failed to update article. Please try again.")
-      console.error("Error updating article:", error)
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -136,7 +128,10 @@ export function EditArticleModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Article</DialogTitle>
+          <DialogTitle className="flex items-center space-x-2">
+            <Save className="h-5 w-5" />
+            <span>Edit Article</span>
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -146,6 +141,26 @@ export function EditArticleModal({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* Article Metadata */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Article ID</Label>
+              <p className="text-sm text-gray-800">{article.id}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Created By</Label>
+              <p className="text-sm text-gray-800">{article.createdBy}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Created</Label>
+              <p className="text-sm text-gray-800">{article.createdAt.toLocaleString()}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Last Updated</Label>
+              <p className="text-sm text-gray-800">{article.updatedAt.toLocaleString()}</p>
+            </div>
+          </div>
 
           {/* Title */}
           <div>
@@ -200,12 +215,24 @@ export function EditArticleModal({
           <div>
             <Label>Tags</Label>
             <div className="mt-1 space-y-2">
-              {/* Existing Tags */}
+              <div className="flex space-x-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a tag..."
+                  disabled={isSubmitting}
+                  className="flex-1"
+                />
+                <Button type="button" onClick={handleAddTag} disabled={!newTag.trim() || isSubmitting} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
+                    <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                      <span>{tag}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
@@ -218,27 +245,6 @@ export function EditArticleModal({
                   ))}
                 </div>
               )}
-
-              {/* Add New Tag */}
-              <div className="flex gap-2">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Add a tag..."
-                  disabled={isSubmitting}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddTag}
-                  disabled={!newTag.trim() || isSubmitting}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -255,27 +261,8 @@ export function EditArticleModal({
             />
           </div>
 
-          {/* Article Info */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Article Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-              <div>
-                <span className="font-medium">Created:</span> {article.createdAt.toLocaleString()}
-              </div>
-              <div>
-                <span className="font-medium">Last Updated:</span> {article.updatedAt.toLocaleString()}
-              </div>
-              <div>
-                <span className="font-medium">Author:</span> {article.createdBy}
-              </div>
-              <div>
-                <span className="font-medium">Article ID:</span> {article.id}
-              </div>
-            </div>
-          </div>
-
           {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
+          <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
