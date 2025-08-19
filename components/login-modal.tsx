@@ -3,24 +3,23 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LogIn, AlertCircle } from "lucide-react"
-import type { User } from "../types/knowledge-base"
+import { Eye, EyeOff } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  users: User[]
-  onLogin: (user: User) => void
+  onLogin: (username: string, password: string) => boolean
 }
 
-export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -29,30 +28,19 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     setError("")
     setIsLoading(true)
 
+    console.log("Login attempt:", { username: username.trim(), passwordLength: password.length })
+
     try {
-      if (!username.trim()) {
-        setError("Please enter a username")
-        return
-      }
+      const success = onLogin(username.trim(), password)
+      console.log("Login result:", success)
 
-      if (!password.trim()) {
-        setError("Please enter a password")
-        return
-      }
-
-      // Find user by username and password
-      const user = users.find((u) => u.username === username.trim() && u.password === password.trim())
-
-      if (!user) {
+      if (success) {
+        setUsername("")
+        setPassword("")
+        onClose()
+      } else {
         setError("Invalid username or password")
-        return
       }
-
-      // Successful login
-      onLogin(user)
-      setUsername("")
-      setPassword("")
-      setError("")
     } catch (err) {
       console.error("Login error:", err)
       setError("Login failed. Please try again.")
@@ -61,44 +49,24 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
     }
   }
 
-  const handleDemoLogin = () => {
-    const adminUser = users.find((u) => u.username === "admin")
-    if (adminUser) {
-      onLogin(adminUser)
-      setUsername("")
-      setPassword("")
-      setError("")
-    } else {
-      setError("Admin user not found")
-    }
-  }
-
   const handleClose = () => {
     setUsername("")
     setPassword("")
     setError("")
+    setShowPassword(false)
     onClose()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <LogIn className="h-5 w-5" />
-            <span>Login to Knowledge Base</span>
-          </DialogTitle>
-          <DialogDescription>Enter your credentials to access the knowledge base system.</DialogDescription>
+          <DialogTitle>Admin Login</DialogTitle>
         </DialogHeader>
-
+        <div id="login-description" className="sr-only">
+          Enter your admin credentials to access the knowledge base administration panel
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -106,43 +74,47 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Enter username"
               required
               disabled={isLoading}
-              autoComplete="username"
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              disabled={isLoading}
-              autoComplete="current-password"
-            />
-          </div>
-
-          <div className="flex flex-col space-y-2">
-            <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()}>
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-
             <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Demo Account</span>
-              </div>
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                required
+                disabled={isLoading}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
             </div>
-
-            <Button type="button" variant="outline" onClick={handleDemoLogin} disabled={isLoading}>
-              Login as Admin
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </div>
         </form>

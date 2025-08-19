@@ -1,372 +1,442 @@
 "use client"
-
-import type React from "react"
-
 import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Folder, AlertCircle } from "lucide-react"
-import type { Category, AuditLogEntry } from "../types/knowledge-base"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { FolderOpen, Plus, MoreHorizontal, Edit, Trash2, FolderPlus, Folder } from "lucide-react"
+import type { Category, Subcategory, Article } from "@/types/knowledge-base"
 
 interface CategoryManagementProps {
   categories: Category[]
-  onCategoriesUpdate: (categories: Category[]) => void
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
-  auditLog: AuditLogEntry[]
+  articles: Article[]
+  onAddCategory: (category: Omit<Category, "id">) => void
+  onUpdateCategory: (id: string, updates: Partial<Category>) => void
+  onDeleteCategory: (id: string) => void
+  onAddSubcategory: (categoryId: string, subcategory: Omit<Subcategory, "id">) => void
+  onUpdateSubcategory: (categoryId: string, subcategoryId: string, updates: Partial<Subcategory>) => void
+  onDeleteSubcategory: (categoryId: string, subcategoryId: string) => void
 }
 
 export function CategoryManagement({
   categories,
-  onCategoriesUpdate,
-  onAuditLogUpdate,
-  auditLog,
+  articles,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory,
+  onAddSubcategory,
+  onUpdateSubcategory,
+  onDeleteSubcategory,
 }: CategoryManagementProps) {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [showAddCategory, setShowAddCategory] = useState(false)
+  const [showAddSubcategory, setShowAddSubcategory] = useState<string | null>(null)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [formData, setFormData] = useState({
+  const [editingSubcategory, setEditingSubcategory] = useState<{
+    categoryId: string
+    subcategory: Subcategory
+  } | null>(null)
+
+  const [newCategory, setNewCategory] = useState({
+    name: "",
+    description: "",
+    color: "#3b82f6",
+  })
+
+  const [newSubcategory, setNewSubcategory] = useState({
     name: "",
     description: "",
   })
-  const [error, setError] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
+  const getArticleCount = (categoryId: string, subcategoryId?: string) => {
+    return articles.filter(
+      (article) =>
+        article.categoryId === categoryId &&
+        (subcategoryId ? article.subcategoryId === subcategoryId : !article.subcategoryId),
+    ).length
+  }
+
+  const handleAddCategory = () => {
+    if (!newCategory.name.trim()) return
+
+    onAddCategory({
+      name: newCategory.name.trim(),
+      description: newCategory.description.trim(),
+      color: newCategory.color,
+      subcategories: [],
     })
-    setError("")
+
+    setNewCategory({ name: "", description: "", color: "#3b82f6" })
+    setShowAddCategory(false)
   }
 
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsSubmitting(true)
+  const handleUpdateCategory = () => {
+    if (!editingCategory) return
 
-    try {
-      if (!formData.name.trim()) {
-        setError("Category name is required")
-        return
-      }
-
-      if (categories.some((cat) => cat.name.toLowerCase() === formData.name.trim().toLowerCase())) {
-        setError("Category name already exists")
-        return
-      }
-
-      const newCategory: Category = {
-        id: Date.now().toString(),
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        articles: [],
-        subcategories: [],
-        createdAt: new Date(),
-      }
-
-      const updatedCategories = [...categories, newCategory]
-      onCategoriesUpdate(updatedCategories)
-
-      // Add audit log entry
-      const auditEntry: AuditLogEntry = {
-        id: Date.now().toString(),
-        action: "category_created",
-        entityType: "category",
-        entityId: newCategory.id,
-        performedBy: "admin", // This should come from current user
-        timestamp: new Date(),
-        details: `Created category: ${newCategory.name}`,
-      }
-      onAuditLogUpdate([auditEntry, ...auditLog])
-
-      resetForm()
-      setIsAddDialogOpen(false)
-    } catch (err) {
-      setError("Failed to create category")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleEditCategory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsSubmitting(true)
-
-    try {
-      if (!editingCategory || !formData.name.trim()) {
-        setError("Category name is required")
-        return
-      }
-
-      if (
-        categories.some(
-          (cat) => cat.id !== editingCategory.id && cat.name.toLowerCase() === formData.name.trim().toLowerCase(),
-        )
-      ) {
-        setError("Category name already exists")
-        return
-      }
-
-      const updatedCategory: Category = {
-        ...editingCategory,
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        updatedAt: new Date(),
-      }
-
-      const updatedCategories = categories.map((cat) => (cat.id === editingCategory.id ? updatedCategory : cat))
-      onCategoriesUpdate(updatedCategories)
-
-      // Add audit log entry
-      const auditEntry: AuditLogEntry = {
-        id: Date.now().toString(),
-        action: "category_updated",
-        entityType: "category",
-        entityId: updatedCategory.id,
-        performedBy: "admin", // This should come from current user
-        timestamp: new Date(),
-        details: `Updated category: ${updatedCategory.name}`,
-      }
-      onAuditLogUpdate([auditEntry, ...auditLog])
-
-      resetForm()
-      setIsEditDialogOpen(false)
-      setEditingCategory(null)
-    } catch (err) {
-      setError("Failed to update category")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDeleteCategory = (category: Category) => {
-    const articleCount =
-      (category.articles?.length || 0) +
-      (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0)
-
-    if (articleCount > 0) {
-      alert(`Cannot delete category "${category.name}" because it contains ${articleCount} articles.`)
-      return
-    }
-
-    if (confirm(`Are you sure you want to delete category "${category.name}"?`)) {
-      const updatedCategories = categories.filter((cat) => cat.id !== category.id)
-      onCategoriesUpdate(updatedCategories)
-
-      // Add audit log entry
-      const auditEntry: AuditLogEntry = {
-        id: Date.now().toString(),
-        action: "category_deleted",
-        entityType: "category",
-        entityId: category.id,
-        performedBy: "admin", // This should come from current user
-        timestamp: new Date(),
-        details: `Deleted category: ${category.name}`,
-      }
-      onAuditLogUpdate([auditEntry, ...auditLog])
-    }
-  }
-
-  const openEditDialog = (category: Category) => {
-    setEditingCategory(category)
-    setFormData({
-      name: category.name,
-      description: category.description || "",
+    onUpdateCategory(editingCategory.id, {
+      name: editingCategory.name,
+      description: editingCategory.description,
+      color: editingCategory.color,
     })
-    setError("")
-    setIsEditDialogOpen(true)
+    setEditingCategory(null)
   }
 
-  const getCategoryArticleCount = (category: Category) => {
-    const mainArticles = category.articles?.length || 0
-    const subArticles = category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0
-    return mainArticles + subArticles
+  const handleAddSubcategory = () => {
+    if (!showAddSubcategory || !newSubcategory.name.trim()) return
+
+    onAddSubcategory(showAddSubcategory, {
+      name: newSubcategory.name.trim(),
+      description: newSubcategory.description.trim(),
+    })
+
+    setNewSubcategory({ name: "", description: "" })
+    setShowAddSubcategory(null)
   }
+
+  const handleUpdateSubcategory = () => {
+    if (!editingSubcategory) return
+
+    onUpdateSubcategory(editingSubcategory.categoryId, editingSubcategory.subcategory.id, {
+      name: editingSubcategory.subcategory.name,
+      description: editingSubcategory.subcategory.description,
+    })
+    setEditingSubcategory(null)
+  }
+
+  const totalSubcategories = categories.reduce((sum, cat) => sum + (cat.subcategories?.length || 0), 0)
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Category Management</h3>
-          <p className="text-sm text-gray-600">Organize your knowledge base with categories and subcategories</p>
+          <h2 className="text-3xl font-bold tracking-tight">Category Management</h2>
+          <p className="text-muted-foreground">Organize your knowledge base with categories and subcategories</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Category</DialogTitle>
-              <DialogDescription>Create a new category to organize your articles.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddCategory} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="add-name">Category Name</Label>
-                <Input
-                  id="add-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter category name"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-description">Description (Optional)</Label>
-                <Input
-                  id="add-description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter category description"
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Category"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowAddCategory(true)} className="flex items-center gap-2">
+          <FolderPlus className="h-4 w-4" />
+          Add Category
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Categories</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{categories.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Subcategories</CardTitle>
+            <Folder className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalSubcategories}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Articles</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{articles.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Categories List */}
+      <div className="space-y-4">
         {categories.map((category) => (
           <Card key={category.id}>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Folder className="h-5 w-5" />
-                  <span className="truncate">{category.name}</span>
-                </div>
-                <Badge variant="outline">{getCategoryArticleCount(category)} articles</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {category.description && <p className="text-sm text-gray-600 line-clamp-2">{category.description}</p>}
-
-                <div className="text-xs text-gray-500">
-                  Created: {new Date(category.createdAt).toLocaleDateString()}
-                  {category.updatedAt && <div>Updated: {new Date(category.updatedAt).toLocaleDateString()}</div>}
-                </div>
-
-                {category.subcategories && category.subcategories.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
                   <div>
-                    <div className="text-sm font-medium mb-1">Subcategories:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {category.subcategories.map((sub) => (
-                        <Badge key={sub.id} variant="secondary" className="text-xs">
-                          {sub.name} ({sub.articles?.length || 0})
-                        </Badge>
-                      ))}
-                    </div>
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <CardDescription>{category.description}</CardDescription>
                   </div>
-                )}
-
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(category)}>
-                    <Edit className="h-4 w-4" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{getArticleCount(category.id)} articles</Badge>
+                  <Button variant="outline" size="sm" onClick={() => setShowAddSubcategory(category.id)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Subcategory
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingCategory(category)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDeleteCategory(category.id)} className="text-red-600">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            </CardContent>
+            </CardHeader>
+            {category.subcategories && category.subcategories.length > 0 && (
+              <CardContent>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Subcategories</h4>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {category.subcategories.map((subcategory) => (
+                      <div key={subcategory.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{subcategory.name}</p>
+                          <p className="text-sm text-muted-foreground">{subcategory.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getArticleCount(category.id, subcategory.id)} articles
+                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setEditingSubcategory({
+                                    categoryId: category.id,
+                                    subcategory,
+                                  })
+                                }
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onDeleteSubcategory(category.id, subcategory.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            )}
           </Card>
         ))}
       </div>
 
-      {categories.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <Folder className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-gray-500">No categories found. Create your first category to get started.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Edit Category Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+      {/* Add Category Dialog */}
+      <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+        <DialogContent aria-describedby="add-category-description">
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>Update category information.</DialogDescription>
+            <DialogTitle>Add New Category</DialogTitle>
+            <DialogDescription id="add-category-description">
+              Create a new category to organize your articles
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditCategory} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Category Name</Label>
+              <Label htmlFor="category-name">Name</Label>
               <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                id="category-name"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                 placeholder="Enter category name"
-                required
-                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description (Optional)</Label>
-              <Input
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              <Label htmlFor="category-description">Description</Label>
+              <Textarea
+                id="category-description"
+                value={newCategory.description}
+                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                 placeholder="Enter category description"
-                disabled={isSubmitting}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-color">Color</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  id="category-color"
+                  value={newCategory.color}
+                  onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                  className="w-12 h-8 rounded border"
+                />
+                <Input
+                  value={newCategory.color}
+                  onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                  placeholder="#3b82f6"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowAddCategory(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddCategory}>Add Category</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Subcategory Dialog */}
+      <Dialog open={!!showAddSubcategory} onOpenChange={() => setShowAddSubcategory(null)}>
+        <DialogContent aria-describedby="add-subcategory-description">
+          <DialogHeader>
+            <DialogTitle>Add New Subcategory</DialogTitle>
+            <DialogDescription id="add-subcategory-description">
+              Create a new subcategory within the selected category
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subcategory-name">Name</Label>
+              <Input
+                id="subcategory-name"
+                value={newSubcategory.name}
+                onChange={(e) => setNewSubcategory({ ...newSubcategory, name: e.target.value })}
+                placeholder="Enter subcategory name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subcategory-description">Description</Label>
+              <Textarea
+                id="subcategory-description"
+                value={newSubcategory.description}
+                onChange={(e) => setNewSubcategory({ ...newSubcategory, description: e.target.value })}
+                placeholder="Enter subcategory description"
+                rows={3}
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-                disabled={isSubmitting}
-              >
+              <Button variant="outline" onClick={() => setShowAddSubcategory(null)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Category"}
-              </Button>
+              <Button onClick={handleAddSubcategory}>Add Subcategory</Button>
             </div>
-          </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
+        <DialogContent aria-describedby="edit-category-description">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription id="edit-category-description">Update category information</DialogDescription>
+          </DialogHeader>
+          {editingCategory && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-name">Name</Label>
+                <Input
+                  id="edit-category-name"
+                  value={editingCategory.name}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-description">Description</Label>
+                <Textarea
+                  id="edit-category-description"
+                  value={editingCategory.description}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category-color">Color</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    id="edit-category-color"
+                    value={editingCategory.color}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
+                    className="w-12 h-8 rounded border"
+                  />
+                  <Input
+                    value={editingCategory.color}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditingCategory(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateCategory}>Update Category</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subcategory Dialog */}
+      <Dialog open={!!editingSubcategory} onOpenChange={() => setEditingSubcategory(null)}>
+        <DialogContent aria-describedby="edit-subcategory-description">
+          <DialogHeader>
+            <DialogTitle>Edit Subcategory</DialogTitle>
+            <DialogDescription id="edit-subcategory-description">Update subcategory information</DialogDescription>
+          </DialogHeader>
+          {editingSubcategory && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-subcategory-name">Name</Label>
+                <Input
+                  id="edit-subcategory-name"
+                  value={editingSubcategory.subcategory.name}
+                  onChange={(e) =>
+                    setEditingSubcategory({
+                      ...editingSubcategory,
+                      subcategory: { ...editingSubcategory.subcategory, name: e.target.value },
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-subcategory-description">Description</Label>
+                <Textarea
+                  id="edit-subcategory-description"
+                  value={editingSubcategory.subcategory.description}
+                  onChange={(e) =>
+                    setEditingSubcategory({
+                      ...editingSubcategory,
+                      subcategory: { ...editingSubcategory.subcategory, description: e.target.value },
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditingSubcategory(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateSubcategory}>Update Subcategory</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
