@@ -4,8 +4,8 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Users, FileText, FolderOpen, Activity } from "lucide-react"
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 
@@ -94,7 +94,7 @@ export function AdminDashboard({
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Draft Articles</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.draftArticles}</div>
@@ -110,8 +110,11 @@ export function AdminDashboard({
                 <div className="space-y-2">
                   {auditLog.slice(0, 5).map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm">{entry.details}</span>
-                      <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</span>
+                      <div>
+                        <span className="font-medium">{entry.action}</span>
+                        <p className="text-sm text-gray-600">{entry.details}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleDateString()}</span>
                     </div>
                   ))}
                 </div>
@@ -130,12 +133,10 @@ export function AdminDashboard({
                     <div key={user.id} className="flex items-center justify-between p-4 border rounded">
                       <div>
                         <div className="font-medium">{user.username}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                        {user.lastLogin && (
-                          <div className="text-xs text-gray-400">
-                            Last login: {new Date(user.lastLogin).toLocaleString()}
-                          </div>
-                        )}
+                        <div className="text-sm text-gray-600">{user.email}</div>
+                        <div className="text-xs text-gray-500">
+                          Created: {new Date(user.createdAt).toLocaleDateString()}
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
@@ -158,8 +159,8 @@ export function AdminDashboard({
                     <div key={category.id} className="flex items-center justify-between p-4 border rounded">
                       <div>
                         <div className="font-medium">{category.name}</div>
-                        <div className="text-sm text-gray-500">{category.description}</div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-sm text-gray-600">{category.description}</div>
+                        <div className="text-xs text-gray-500">
                           Articles: {articles.filter((a) => a.categoryId === category.id).length}
                         </div>
                       </div>
@@ -178,10 +179,13 @@ export function AdminDashboard({
               <CardContent>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {auditLog.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <div className="text-sm font-medium">{entry.action}</div>
-                        <div className="text-xs text-gray-600">{entry.details}</div>
+                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <Activity className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium">{entry.action}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{entry.details}</p>
                       </div>
                       <div className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</div>
                     </div>

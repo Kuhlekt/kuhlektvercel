@@ -57,7 +57,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   }
 
   const handleAddTag = () => {
-    const tag = tagInput.trim()
+    const tag = tagInput.trim().toLowerCase()
     if (tag && !tags.includes(tag)) {
       setTags([...tags, tag])
       setTagInput("")
@@ -68,7 +68,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault()
       handleAddTag()
@@ -81,7 +81,6 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
@@ -129,8 +128,8 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 id="tags"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Add a tag and press Enter"
+                onKeyPress={handleTagInputKeyPress}
+                placeholder="Add tags"
               />
               <Button type="button" onClick={handleAddTag}>
                 Add
@@ -141,7 +140,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
-                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
@@ -167,7 +166,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Create Article</Button>
+            <Button type="submit">Add Article</Button>
           </div>
         </form>
       </DialogContent>

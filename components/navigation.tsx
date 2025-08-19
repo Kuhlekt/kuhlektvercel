@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, LogIn, LogOut, Plus, Settings, User } from "lucide-react"
-import type { User as UserType } from "../types/knowledge-base"
+import { Search, Plus, Settings, LogIn, LogOut } from "lucide-react"
+import type { KnowledgeBaseUser } from "../types/knowledge-base"
 
 interface NavigationProps {
-  currentUser: UserType | null
+  currentUser: KnowledgeBaseUser | null
   searchTerm: string
   onSearchChange: (term: string) => void
   onAddArticle: () => void
@@ -52,31 +52,32 @@ export function Navigation({
             {currentUser ? (
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary" className="flex items-center space-x-1">
-                  <User className="h-3 w-3" />
                   <span>{currentUser.username}</span>
                   <span className="text-xs">({currentUser.role})</span>
                 </Badge>
 
-                <Button variant="outline" size="sm" onClick={onAddArticle}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Article
-                </Button>
+                {(currentUser.role === "admin" || currentUser.role === "editor") && (
+                  <Button variant="outline" size="sm" onClick={onAddArticle}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Article
+                  </Button>
+                )}
 
                 {currentUser.role === "admin" && (
                   <Button variant="outline" size="sm" onClick={onAdminPanel}>
-                    <Settings className="h-4 w-4 mr-1" />
+                    <Settings className="h-4 w-4 mr-2" />
                     Admin
                   </Button>
                 )}
 
                 <Button variant="outline" size="sm" onClick={onLogout}>
-                  <LogOut className="h-4 w-4 mr-1" />
+                  <LogOut className="h-4 w-4 mr-2" />
                   Logout
                 </Button>
               </div>
             ) : (
               <Button variant="outline" size="sm" onClick={onLogin}>
-                <LogIn className="h-4 w-4 mr-1" />
+                <LogIn className="h-4 w-4 mr-2" />
                 Login
               </Button>
             )}
