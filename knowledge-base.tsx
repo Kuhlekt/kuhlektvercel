@@ -1,397 +1,134 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Navigation } from "./components/navigation"
-import { CategoryTree } from "./components/category-tree"
-import { ArticleViewer } from "./components/article-viewer"
-import { HomeDashboard } from "./components/home-dashboard"
-import { LoginModal } from "./components/login-modal"
-import { AddArticleForm } from "./components/add-article-form"
-import { EditArticleModal } from "./components/edit-article-modal"
-import { AdminDashboard } from "./components/admin-dashboard"
-import { StorageDebugSimple } from "./components/storage-debug-simple"
-import { StorageDebugDetailed } from "./components/storage-debug-detailed"
-import { storage } from "./utils/storage"
-import type { User, Category, Article, AuditLog } from "./types/knowledge-base"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { UserManagement } from "@/components/user-management"
+import { CategoryManagement } from "@/components/category-management"
+import { ArticleManagement } from "@/components/article-management"
+import { DataManagement } from "@/components/data-management"
+import { BackupRestore } from "@/components/backup-restore"
+import { StorageDebugDetailed } from "@/components/storage-debug-detailed"
+import { StorageDebugSimple } from "@/components/storage-debug-simple"
+import { StorageDebug } from "@/components/storage-debug"
+import { LoginDebug } from "@/components/login-debug"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
+import { storage } from "@/utils/storage"
+import type { User, Category, Article, AuditLog } from "@/types/knowledge-base"
 
-export default function KnowledgeBase() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [articles, setArticles] = useState<Article[]>([])
-  const [auditLog, setAuditLog] = useState<AuditLog[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
-  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null)
-  const [currentView, setCurrentView] = useState<"home" | "category" | "article">("home")
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
-  const [isEditArticleModalOpen, setIsEditArticleModalOpen] = useState(false)
-  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
+interface KnowledgeBaseProps {
+  initialUsers: User[]
+  initialCategories: Category[]
+  initialArticles: Article[]
+  initialAuditLog: AuditLog[]
+}
 
-  const loadAllData = () => {
-    console.log("🔄 Loading all data from storage...")
-
-    const loadedUsers = storage.getUsers()
-    const loadedCategories = storage.getCategories()
-    const loadedArticles = storage.getArticles()
-    const loadedAuditLog = storage.getAuditLog()
-
-    console.log("📊 Raw data loaded from storage:", {
-      users: loadedUsers.length,
-      categories: loadedCategories.length,
-      articles: loadedArticles.length,
-      auditLog: loadedAuditLog.length,
-    })
-
-    // Log article details for debugging
-    if (loadedArticles.length > 0) {
-      console.log("📝 Detailed article data:")
-      loadedArticles.forEach((article, index) => {
-        console.log(`  ${index + 1}. "${article.title}"`, {
-          id: article.id,
-          status: article.status,
-          categoryId: article.categoryId,
-          authorId: article.authorId,
-          createdBy: article.createdBy,
-          createdAt: article.createdAt,
-          updatedAt: article.updatedAt,
-          contentLength: article.content.length,
-          tags: article.tags,
-        })
-      })
-    } else {
-      console.log("📝 No articles found in storage")
-    }
-
-    // Update state
-    setUsers(loadedUsers)
-    setCategories(loadedCategories)
-    setArticles(loadedArticles)
-    setAuditLog(loadedAuditLog)
-
-    console.log("✅ State updated with loaded data")
-  }
+export function KnowledgeBase({
+  initialUsers,
+  initialCategories,
+  initialArticles,
+  initialAuditLog,
+}: KnowledgeBaseProps) {
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>(initialUsers)
+  const [categories, setCategories] = useState<Category[]>(initialCategories)
+  const [articles, setArticles] = useState<Article[]>(initialArticles)
+  const [auditLog, setAuditLog] = useState<AuditLog[]>(initialAuditLog)
+  const [currentUser, setCurrentUser] = useState<User | null>(storage.getCurrentUser())
+  const { toast } = useToast()
 
   useEffect(() => {
-    console.log("🚀 Initializing Knowledge Base...")
-
-    // Initialize storage
     storage.init()
-
-    // Load all data
-    loadAllData()
-
-    // Check for existing user session
-    const existingUser = storage.getCurrentUser()
-    if (existingUser) {
-      console.log("👤 Found existing user session:", existingUser.username)
-      setCurrentUser(existingUser)
-    }
-
-    setIsInitialized(true)
-    console.log("✅ Knowledge Base initialized")
+    setUsers(storage.getUsers())
+    setCategories(storage.getCategories())
+    setArticles(storage.getArticles())
+    setAuditLog(storage.getAuditLog())
+    setCurrentUser(storage.getCurrentUser())
   }, [])
 
-  // Debug effect to track state changes
   useEffect(() => {
-    console.log("🔄 State changed - Articles:", {
-      count: articles.length,
-      published: articles.filter((a) => a.status === "published").length,
-      draft: articles.filter((a) => a.status === "draft").length,
-      sample: articles.slice(0, 2).map((a) => ({ title: a.title, status: a.status })),
-    })
-  }, [articles])
-
-  const handleLogin = (user: User) => {
-    console.log("🎉 User logged in:", user.username)
-    setCurrentUser(user)
-    setIsLoginModalOpen(false)
-
-    // Refresh audit log after login
+    setUsers(storage.getUsers())
+    setCategories(storage.getCategories())
+    setArticles(storage.getArticles())
     setAuditLog(storage.getAuditLog())
-  }
-
-  const handleLogout = () => {
-    console.log("👋 User logged out")
-    if (currentUser) {
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "LOGOUT",
-        details: `User ${currentUser.username} logged out`,
-      })
-      setAuditLog(storage.getAuditLog())
-    }
-
-    storage.setCurrentUser(null)
-    setCurrentUser(null)
-    setSelectedArticleId(null)
-    setSelectedCategoryId(null)
-    setCurrentView("home")
-  }
-
-  const handleAddArticle = (articleData: {
-    title: string
-    content: string
-    categoryId: string
-    tags: string[]
-    status: "draft" | "published"
-  }) => {
-    if (!currentUser) return
-
-    const newArticle: Article = {
-      id: Date.now().toString(),
-      ...articleData,
-      authorId: currentUser.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: currentUser.username,
-    }
-
-    console.log("📝 Creating new article:", newArticle)
-
-    const updatedArticles = [...articles, newArticle]
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "CREATE_ARTICLE",
-      details: `Created article "${articleData.title}"`,
-    })
-    setAuditLog(storage.getAuditLog())
-
-    setIsAddArticleModalOpen(false)
-    console.log("✅ Article created successfully:", newArticle.title)
-  }
-
-  const handleEditArticle = (articleData: {
-    id: string
-    title: string
-    content: string
-    categoryId: string
-    tags: string[]
-    status: "draft" | "published"
-  }) => {
-    if (!currentUser) return
-
-    console.log("✏️ Editing article:", articleData.id)
-
-    const updatedArticles = articles.map((article) =>
-      article.id === articleData.id
-        ? {
-            ...article,
-            title: articleData.title,
-            content: articleData.content,
-            categoryId: articleData.categoryId,
-            tags: articleData.tags,
-            status: articleData.status,
-            updatedAt: new Date(),
-          }
-        : article,
-    )
-
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "UPDATE_ARTICLE",
-      details: `Updated article "${articleData.title}"`,
-    })
-    setAuditLog(storage.getAuditLog())
-
-    setIsEditArticleModalOpen(false)
-    console.log("✅ Article updated successfully:", articleData.title)
-  }
+  }, [currentUser])
 
   const handleDataRestored = () => {
-    console.log("🔄 Data restored, reloading all data...")
-
-    // Clear current state first
-    setUsers([])
-    setCategories([])
-    setArticles([])
-    setAuditLog([])
-
-    // Force a small delay to ensure state is cleared
-    setTimeout(() => {
-      loadAllData()
-
-      // Update current user from storage
-      const restoredUser = storage.getCurrentUser()
-      setCurrentUser(restoredUser)
-
-      console.log("✅ Data restoration complete")
-    }, 100)
+    toast({
+      title: "Backup Restored",
+      description: "The knowledge base has been restored from backup.",
+    })
+    router.refresh()
   }
 
-  const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null
-  const selectedCategory = selectedCategoryId ? categories.find((c) => c.id === selectedCategoryId) : null
-  const selectedAuthor = selectedArticle ? users.find((u) => u.id === selectedArticle.authorId) : undefined
-
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategoryId(categoryId === selectedCategoryId ? null : categoryId)
-    setSelectedArticleId(null)
-    setCurrentView("category")
-  }
-
-  const handleArticleSelect = (articleId: string) => {
-    console.log("📖 Selecting article:", articleId)
-    setSelectedArticleId(articleId)
-    setCurrentView("article")
-  }
-
-  const handleBackToHome = () => {
-    setSelectedArticleId(null)
-    setSelectedCategoryId(null)
-    setCurrentView("home")
-    setSearchTerm("")
-  }
-
-  const handleBackFromArticle = () => {
-    setSelectedArticleId(null)
-    if (selectedCategoryId) {
-      setCurrentView("category")
-    } else {
-      setCurrentView("home")
-    }
-  }
-
-  const handleOpenEditArticle = () => {
-    if (selectedArticle && currentUser && (currentUser.role === "admin" || currentUser.role === "editor")) {
-      console.log("✏️ Opening edit modal for article:", selectedArticle.id)
-      setIsEditArticleModalOpen(true)
-    }
-  }
-
-  if (!isInitialized) {
+  if (!currentUser) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Knowledge Base...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-lg font-semibold">Please log in to access the Knowledge Base.</p>
       </div>
     )
-  }
-
-  const renderMainContent = () => {
-    switch (currentView) {
-      case "article":
-        return (
-          <ArticleViewer
-            article={selectedArticle}
-            category={selectedCategory}
-            author={selectedAuthor}
-            currentUser={currentUser}
-            onEdit={handleOpenEditArticle}
-            onBack={handleBackFromArticle}
-          />
-        )
-      case "category":
-        // For now, show home dashboard with category filter
-        return (
-          <HomeDashboard
-            categories={categories}
-            articles={articles}
-            users={users}
-            currentUser={currentUser}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onCategorySelect={handleCategorySelect}
-            onArticleSelect={handleArticleSelect}
-            onAddArticle={() => setIsAddArticleModalOpen(true)}
-          />
-        )
-      default:
-        return (
-          <HomeDashboard
-            categories={categories}
-            articles={articles}
-            users={users}
-            currentUser={currentUser}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onCategorySelect={handleCategorySelect}
-            onArticleSelect={handleArticleSelect}
-            onAddArticle={() => setIsAddArticleModalOpen(true)}
-          />
-        )
-    }
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <Navigation
-        currentUser={currentUser}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onAddArticle={() => setIsAddArticleModalOpen(true)}
-        onAdminPanel={() => setIsAdminDashboardOpen(true)}
-        onLogin={() => setIsLoginModalOpen(true)}
-        onLogout={handleLogout}
-        onHomeClick={handleBackToHome}
-      />
-
-      <div className="flex-1 flex overflow-hidden">
-        {/* Show category tree only when not on home */}
-        {currentView !== "home" && (
-          <CategoryTree
-            categories={categories}
-            articles={articles}
-            selectedCategoryId={selectedCategoryId}
-            selectedArticleId={selectedArticleId}
-            onCategorySelect={handleCategorySelect}
-            onArticleSelect={handleArticleSelect}
-          />
-        )}
-
-        <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
-      </div>
-
-      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
-
-      {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
-        <AddArticleForm
-          isOpen={isAddArticleModalOpen}
-          onClose={() => setIsAddArticleModalOpen(false)}
-          onSubmit={handleAddArticle}
+    <Tabs defaultValue="articles" className="w-[100%]">
+      <TabsList>
+        <TabsTrigger value="articles">Articles</TabsTrigger>
+        <TabsTrigger value="categories">Categories</TabsTrigger>
+        <TabsTrigger value="users">Users</TabsTrigger>
+        <TabsTrigger value="data">Data</TabsTrigger>
+        <TabsTrigger value="backup">Backup</TabsTrigger>
+        <TabsTrigger value="storage-debug">Storage Debug</TabsTrigger>
+      </TabsList>
+      <TabsContent value="articles">
+        <ArticleManagement
+          articles={articles}
           categories={categories}
           currentUser={currentUser}
+          onUpdateArticles={(updatedArticles) => {
+            setArticles(updatedArticles)
+            storage.saveArticles(updatedArticles)
+          }}
         />
-      )}
-
-      {selectedArticle && currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
-        <EditArticleModal
-          isOpen={isEditArticleModalOpen}
-          onClose={() => setIsEditArticleModalOpen(false)}
-          onSubmit={handleEditArticle}
-          article={selectedArticle}
+      </TabsContent>
+      <TabsContent value="categories">
+        <CategoryManagement
           categories={categories}
           currentUser={currentUser}
+          onUpdateCategories={(updatedCategories) => {
+            setCategories(updatedCategories)
+            storage.saveCategories(updatedCategories)
+          }}
         />
-      )}
-
-      {currentUser && currentUser.role === "admin" && (
-        <AdminDashboard
-          isOpen={isAdminDashboardOpen}
-          onClose={() => setIsAdminDashboardOpen(false)}
+      </TabsContent>
+      <TabsContent value="users">
+        <UserManagement
+          users={users}
           currentUser={currentUser}
+          onUpdateUsers={(updatedUsers) => {
+            setUsers(updatedUsers)
+            storage.saveUsers(updatedUsers)
+          }}
+        />
+      </TabsContent>
+      <TabsContent value="data">
+        <DataManagement />
+      </TabsContent>
+      <TabsContent value="backup">
+        <BackupRestore
           users={users}
           categories={categories}
           articles={articles}
           auditLog={auditLog}
-          onUpdateUsers={setUsers}
-          onUpdateCategories={setCategories}
-          onUpdateArticles={setArticles}
+          currentUser={currentUser}
           onDataRestored={handleDataRestored}
         />
-      )}
-
-      <StorageDebugSimple />
-      <StorageDebugDetailed />
-    </div>
+      </TabsContent>
+      <TabsContent value="storage-debug">
+        <StorageDebugDetailed />
+        <StorageDebugSimple />
+        <StorageDebug />
+        <LoginDebug />
+      </TabsContent>
+    </Tabs>
   )
 }

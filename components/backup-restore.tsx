@@ -321,7 +321,7 @@ Are you sure you want to continue?`
         id: `restore-${Date.now()}`,
         performedBy: currentUser.id,
         action: "RESTORE_BACKUP",
-        details: `Restored backup from ${new Date(backupPreview.timestamp || new Date()).toLocaleString()}${
+        details: `Restored backup from ${new Date(backupPreview.timestamp || backupPreview.exportDate || new Date()).toLocaleString()}${
           backupPreview.metadata?.description ? ` - ${backupPreview.metadata.description}` : ""
         }`,
         timestamp: new Date(),
