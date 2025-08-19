@@ -207,20 +207,45 @@ class Storage {
 
   importData(data: any) {
     if (data.users) {
-      this.saveUsers(data.users)
-      console.log("📥 Users imported")
+      // Ensure proper date parsing for users
+      const parsedUsers = data.users.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+      }))
+      this.saveUsers(parsedUsers)
+      console.log("📥 Users imported:", parsedUsers.length)
     }
+
     if (data.categories) {
-      this.saveCategories(data.categories)
-      console.log("📥 Categories imported")
+      // Ensure proper date parsing for categories
+      const parsedCategories = data.categories.map((category: any) => ({
+        ...category,
+        createdAt: new Date(category.createdAt),
+      }))
+      this.saveCategories(parsedCategories)
+      console.log("📥 Categories imported:", parsedCategories.length)
     }
+
     if (data.articles) {
-      this.saveArticles(data.articles)
-      console.log("📥 Articles imported")
+      // Ensure proper date parsing for articles
+      const parsedArticles = data.articles.map((article: any) => ({
+        ...article,
+        createdAt: new Date(article.createdAt),
+        updatedAt: new Date(article.updatedAt),
+      }))
+      this.saveArticles(parsedArticles)
+      console.log("📥 Articles imported:", parsedArticles.length)
     }
+
     if (data.auditLog) {
-      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(data.auditLog))
-      console.log("📥 Audit log imported")
+      // Ensure proper date parsing for audit log
+      const parsedAuditLog = data.auditLog.map((entry: any) => ({
+        ...entry,
+        timestamp: new Date(entry.timestamp),
+      }))
+      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(parsedAuditLog))
+      console.log("📥 Audit log imported:", parsedAuditLog.length)
     }
   }
 

@@ -35,7 +35,15 @@ export function HomeDashboard({
   const [selectedFilter, setSelectedFilter] = useState<"all" | "recent" | "popular">("all")
 
   // Get published articles only
-  const publishedArticles = articles.filter((article) => article.status === "published")
+  const publishedArticles = useMemo(() => {
+    const published = articles.filter((article) => article.status === "published")
+    console.log("📊 Published articles:", {
+      total: articles.length,
+      published: published.length,
+      sample: published.slice(0, 2).map((a) => ({ id: a.id, title: a.title, status: a.status })),
+    })
+    return published
+  }, [articles])
 
   // Calculate statistics
   const stats = useMemo(() => {

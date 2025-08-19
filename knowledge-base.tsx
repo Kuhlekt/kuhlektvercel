@@ -28,22 +28,40 @@ export default function KnowledgeBase() {
   const [isInitialized, setIsInitialized] = useState(false)
 
   const loadAllData = () => {
+    console.log("🔄 Loading all data from storage...")
+
     const loadedUsers = storage.getUsers()
     const loadedCategories = storage.getCategories()
     const loadedArticles = storage.getArticles()
     const loadedAuditLog = storage.getAuditLog()
+
+    console.log("📊 Raw data loaded:", {
+      users: loadedUsers.length,
+      categories: loadedCategories.length,
+      articles: loadedArticles.length,
+      auditLog: loadedAuditLog.length,
+    })
+
+    // Log article details for debugging
+    if (loadedArticles.length > 0) {
+      console.log(
+        "📝 Sample articles:",
+        loadedArticles.slice(0, 3).map((a) => ({
+          id: a.id,
+          title: a.title,
+          status: a.status,
+          categoryId: a.categoryId,
+          createdAt: a.createdAt,
+        })),
+      )
+    }
 
     setUsers(loadedUsers)
     setCategories(loadedCategories)
     setArticles(loadedArticles)
     setAuditLog(loadedAuditLog)
 
-    console.log("📊 Data loaded:", {
-      users: loadedUsers.length,
-      categories: loadedCategories.length,
-      articles: loadedArticles.length,
-      auditLog: loadedAuditLog.length,
-    })
+    console.log("✅ State updated with loaded data")
   }
 
   useEffect(() => {
@@ -128,11 +146,23 @@ export default function KnowledgeBase() {
 
   const handleDataRestored = () => {
     console.log("🔄 Data restored, reloading all data...")
-    loadAllData()
 
-    // Update current user from storage
-    const restoredUser = storage.getCurrentUser()
-    setCurrentUser(restoredUser)
+    // Clear current state first
+    setUsers([])
+    setCategories([])
+    setArticles([])
+    setAuditLog([])
+
+    // Force a small delay to ensure state is cleared
+    setTimeout(() => {
+      loadAllData()
+
+      // Update current user from storage
+      const restoredUser = storage.getCurrentUser()
+      setCurrentUser(restoredUser)
+
+      console.log("✅ Data restoration complete")
+    }, 100)
   }
 
   const selectedArticle = selectedArticleId ? articles.find((a) => a.id === selectedArticleId) : null

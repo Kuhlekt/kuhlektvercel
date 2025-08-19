@@ -210,11 +210,15 @@ Are you sure you want to continue?`
           return {
             ...user,
             password: currentAdmin?.password || "admin123", // Keep current admin password
+            createdAt: new Date(user.createdAt),
+            lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
           }
         }
         return {
           ...user,
           password: "default123", // Set default password for other users
+          createdAt: new Date(user.createdAt),
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
         }
       })
 
@@ -230,14 +234,31 @@ Are you sure you want to continue?`
         })
       }
 
-      // Restore data to storage
-      storage.saveUsers(restoredUsers)
-      storage.saveCategories(backupPreview.data.categories)
-      storage.saveArticles(backupPreview.data.articles)
+      // Restore categories with proper date parsing
+      const restoredCategories = backupPreview.data.categories.map((category) => ({
+        ...category,
+        createdAt: new Date(category.createdAt),
+      }))
 
-      // Restore audit log and add restore entry
+      // Restore articles with proper date parsing
+      const restoredArticles = backupPreview.data.articles.map((article) => ({
+        ...article,
+        createdAt: new Date(article.createdAt),
+        updatedAt: new Date(article.updatedAt),
+      }))
+
+      // Use the storage import method for proper handling
+      storage.importData({
+        users: restoredUsers,
+        categories: restoredCategories,
+        articles: restoredArticles,
+        auditLog: backupPreview.data.auditLog,
+      })
+
+      // Add restore entry to audit log
+      const currentAuditLog = storage.getAuditLog()
       const restoredAuditLog = [
-        ...backupPreview.data.auditLog,
+        ...currentAuditLog,
         {
           id: Date.now().toString(),
           performedBy: currentUser.id,
@@ -256,13 +277,15 @@ Are you sure you want to continue?`
         message: "Backup restored successfully! The page will reload to apply changes.",
       })
 
+      console.log("✅ Backup restored successfully")
+
       // Reload page after short delay
       setTimeout(() => {
         onDataRestored()
         window.location.reload()
       }, 2000)
     } catch (error) {
-      console.error("Restore error:", error)
+      console.error("❌ Restore error:", error)
       setRestoreStatus({
         type: "error",
         message: "Failed to restore backup. Please try again.",
