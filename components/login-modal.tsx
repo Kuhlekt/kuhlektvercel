@@ -3,10 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { storage } from "../utils/storage"
 import type { User } from "../types/knowledge-base"
@@ -30,8 +30,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
     try {
       const user = storage.authenticateUser(username, password)
-
       if (user) {
+        storage.addAuditEntry({
+          userId: user.id,
+          action: "LOGIN",
+          details: `User ${user.username} logged in`,
+        })
         onLogin(user)
         onClose()
         setUsername("")
@@ -103,18 +107,18 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </div>
         </form>
 
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Demo Credentials:</p>
-          <div className="text-xs space-y-1">
-            <div>
+        <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
+          <p className="font-medium mb-2">Demo Credentials:</p>
+          <div className="space-y-1 text-xs">
+            <p>
               <strong>Admin:</strong> admin / admin123
-            </div>
-            <div>
+            </p>
+            <p>
               <strong>Editor:</strong> editor / editor123
-            </div>
-            <div>
+            </p>
+            <p>
               <strong>Viewer:</strong> viewer / viewer123
-            </div>
+            </p>
           </div>
         </div>
       </DialogContent>

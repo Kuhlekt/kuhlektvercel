@@ -1,7 +1,9 @@
 "use client"
 
-import { ChevronRight, ChevronDown, Folder, FileText } from "lucide-react"
+import { useState } from "react"
+import { ChevronDown, ChevronRight, Folder, FileText } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -21,57 +23,91 @@ export function CategoryTree({
   selectedCategory,
   searchQuery,
 }: CategoryTreeProps) {
-  const getCategoryArticles = (categoryId: string) => {
-    return articles.filter((article) => article.categoryId === categoryId && article.status === "published")
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["1"]))
+
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories)
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId)
+    } else {
+      newExpanded.add(categoryId)
+    }
+    setExpandedCategories(newExpanded)
+  }
+
+  const getArticlesForCategory = (categoryId: string) => {
+    return articles.filter((article) => article.categoryId === categoryId)
   }
 
   const filteredCategories = categories.filter((category) => {
-    if (searchQuery === "") return true
+    if (!searchQuery) return true
 
-    const categoryArticles = getCategoryArticles(category.id)
-    return categoryArticles.length > 0
+    const categoryMatches =
+      category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.description.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const hasMatchingArticles = getArticlesForCategory(category.id).length > 0
+
+    return categoryMatches || hasMatchingArticles
   })
 
   return (
-    <div className="h-full bg-white border-r border-gray-200">
+    <div className="h-full bg-gray-50 border-r border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-900">Categories</h2>
-        {searchQuery && <p className="text-xs text-gray-500 mt-1">Showing results for "{searchQuery}"</p>}
+        <p className="text-sm text-gray-600 mt-1">
+          {articles.length} articles in {categories.length} categories
+        </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2">
           {filteredCategories.map((category) => {
-            const categoryArticles = getCategoryArticles(category.id)
-            const isExpanded = selectedCategory === category.id
-
-            if (categoryArticles.length === 0) return null
+            const categoryArticles = getArticlesForCategory(category.id)
+            const isExpanded = expandedCategories.has(category.id)
+            const isSelected = selectedCategory === category.id
 
             return (
-              <div key={category.id} className="mb-1">
-                <button
-                  onClick={() => onCategorySelect(category.id)}
-                  className={`w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg hover:bg-gray-100 transition-colors ${
-                    isExpanded ? "bg-blue-50 text-blue-700" : "text-gray-700"
+              <div key={category.id} className="mb-2">
+                <div
+                  className={`flex items-center space-x-2 p-2 rounded-lg cursor-pointer hover:bg-gray-100 ${
+                    isSelected ? "bg-blue-50 border border-blue-200" : ""
                   }`}
+                  onClick={() => {
+                    onCategorySelect(category.id)
+                    toggleCategory(category.id)
+                  }}
                 >
-                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  <Folder className="w-4 h-4" />
-                  <span className="font-medium">{category.name}</span>
-                  <span className="ml-auto text-xs text-gray-500">{categoryArticles.length}</span>
-                </button>
+                  <button className="flex-shrink-0">
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    )}
+                  </button>
+                  <Folder className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <span className="font-medium text-gray-900 flex-1 truncate">{category.name}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryArticles.length}
+                  </Badge>
+                </div>
 
-                {isExpanded && (
+                {isExpanded && categoryArticles.length > 0 && (
                   <div className="ml-6 mt-1 space-y-1">
                     {categoryArticles.map((article) => (
-                      <button
+                      <div
                         key={article.id}
+                        className="flex items-center space-x-2 p-2 rounded-lg cursor-pointer hover:bg-gray-100 group"
                         onClick={() => onArticleSelect(article)}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
                       >
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm truncate">{article.title}</span>
-                      </button>
+                        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 flex-1 truncate group-hover:text-gray-900">
+                          {article.title}
+                        </span>
+                        <Badge variant={article.status === "published" ? "default" : "secondary"} className="text-xs">
+                          {article.status}
+                        </Badge>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -80,9 +116,10 @@ export function CategoryTree({
           })}
 
           {filteredCategories.length === 0 && (
-            <div className="p-4 text-center text-gray-500">
-              <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No articles found</p>
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No categories found</p>
+              {searchQuery && <p className="text-xs mt-1">Try adjusting your search terms</p>}
             </div>
           )}
         </div>

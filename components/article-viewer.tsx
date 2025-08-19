@@ -14,7 +14,7 @@ interface ArticleViewerProps {
 export function ArticleViewer({ article, articles, categories }: ArticleViewerProps) {
   if (!article) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-white">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-blue-600" />
