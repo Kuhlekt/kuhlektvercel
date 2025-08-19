@@ -10,42 +10,42 @@ import { Search, FileText, Folder, Calendar, User, Clock, BookOpen, Plus, ArrowR
 import type { Category, Article, User as UserType } from "../types/knowledge-base"
 
 interface HomeDashboardProps {
-  categories: Category[]
-  articles: Article[]
-  users: UserType[]
-  currentUser: UserType | null
-  searchTerm: string
-  onSearchChange: (term: string) => void
-  onCategorySelect: (categoryId: string) => void
-  onArticleSelect: (articleId: string) => void
-  onAddArticle: () => void
+  categories?: Category[]
+  articles?: Article[]
+  users?: UserType[]
+  currentUser?: UserType | null
+  searchTerm?: string
+  onSearchChange?: (term: string) => void
+  onCategorySelect?: (categoryId: string) => void
+  onArticleSelect?: (articleId: string) => void
+  onAddArticle?: () => void
 }
 
 export function HomeDashboard({
-  categories,
-  articles,
-  users,
-  currentUser,
-  searchTerm,
-  onSearchChange,
-  onCategorySelect,
-  onArticleSelect,
-  onAddArticle,
+  categories = [],
+  articles = [],
+  users = [],
+  currentUser = null,
+  searchTerm = "",
+  onSearchChange = () => {},
+  onCategorySelect = () => {},
+  onArticleSelect = () => {},
+  onAddArticle = () => {},
 }: HomeDashboardProps) {
   const [selectedFilter, setSelectedFilter] = useState<"all" | "recent" | "popular">("all")
 
   // Debug logging
   useEffect(() => {
     console.log("🏠 HomeDashboard render:", {
-      totalArticles: articles.length,
-      totalCategories: categories.length,
-      totalUsers: users.length,
-      currentUser: currentUser?.username,
+      totalArticles: articles?.length || 0,
+      totalCategories: categories?.length || 0,
+      totalUsers: users?.length || 0,
+      currentUser: currentUser?.username || "none",
       searchTerm,
       selectedFilter,
     })
 
-    if (articles.length > 0) {
+    if (articles && articles.length > 0) {
       console.log(
         "📝 Sample articles in HomeDashboard:",
         articles.slice(0, 3).map((a) => ({
@@ -61,6 +61,11 @@ export function HomeDashboard({
 
   // Get published articles only
   const publishedArticles = useMemo(() => {
+    if (!articles || !Array.isArray(articles)) {
+      console.log("📄 No articles array provided")
+      return []
+    }
+
     const published = articles.filter((article) => {
       console.log(`📄 Checking article "${article.title}": status=${article.status}`)
       return article.status === "published"
@@ -77,17 +82,19 @@ export function HomeDashboard({
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const totalArticles = publishedArticles.length
-    const totalCategories = categories.length
-    const recentArticles = publishedArticles.filter(
-      (article) => Date.now() - article.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000,
-    ).length
+    const totalArticles = publishedArticles?.length || 0
+    const totalCategories = categories?.length || 0
+    const totalUsers = users?.length || 0
+    const recentArticles =
+      publishedArticles?.filter(
+        (article) => Date.now() - new Date(article.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
+      ).length || 0
 
     const statsData = {
       totalArticles,
       totalCategories,
       recentArticles,
-      totalUsers: users.length,
+      totalUsers,
     }
 
     console.log("📊 Dashboard stats:", statsData)
@@ -96,9 +103,13 @@ export function HomeDashboard({
 
   // Get recent articles (last 7 days)
   const recentArticles = useMemo(() => {
+    if (!publishedArticles || !Array.isArray(publishedArticles)) {
+      return []
+    }
+
     const recent = publishedArticles
-      .filter((article) => Date.now() - article.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .filter((article) => Date.now() - new Date(article.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5)
 
     console.log("🕒 Recent articles:", recent.length)
@@ -107,7 +118,13 @@ export function HomeDashboard({
 
   // Get latest articles
   const latestArticles = useMemo(() => {
-    const latest = publishedArticles.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 8)
+    if (!publishedArticles || !Array.isArray(publishedArticles)) {
+      return []
+    }
+
+    const latest = publishedArticles
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 8)
 
     console.log("📰 Latest articles:", latest.length)
     return latest
@@ -115,30 +132,36 @@ export function HomeDashboard({
 
   // Filter articles based on search and filter
   const filteredArticles = useMemo(() => {
-    let filtered = publishedArticles
+    if (!publishedArticles || !Array.isArray(publishedArticles)) {
+      return []
+    }
+
+    let filtered = [...publishedArticles]
 
     // Apply search filter
-    if (searchTerm.trim()) {
+    if (searchTerm && searchTerm.trim()) {
       const query = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (article) =>
           article.title.toLowerCase().includes(query) ||
           article.content.toLowerCase().includes(query) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query)),
+          (article.tags && article.tags.some((tag) => tag.toLowerCase().includes(query))),
       )
     }
 
     // Apply category/type filter
     switch (selectedFilter) {
       case "recent":
-        filtered = filtered.filter((article) => Date.now() - article.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000)
+        filtered = filtered.filter(
+          (article) => Date.now() - new Date(article.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
+        )
         break
       case "popular":
         // For now, just show most recent as "popular"
-        filtered = filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        filtered = filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         break
       default:
-        filtered = filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        filtered = filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     }
 
     const result = filtered.slice(0, 12) // Limit to 12 articles
@@ -154,18 +177,25 @@ export function HomeDashboard({
 
   // Get category name
   const getCategoryName = (categoryId: string) => {
+    if (!categories || !Array.isArray(categories)) {
+      return "Uncategorized"
+    }
     const category = categories.find((c) => c.id === categoryId)
     return category?.name || "Uncategorized"
   }
 
   // Get author name
   const getAuthorName = (authorId: string, createdBy: string) => {
+    if (!users || !Array.isArray(users)) {
+      return createdBy || "Unknown"
+    }
     const author = users.find((u) => u.id === authorId)
     return author?.username || createdBy || "Unknown"
   }
 
   // Extract preview text from content
   const getPreviewText = (content: string, maxLength = 120) => {
+    if (!content) return ""
     // Remove HTML tags and get plain text
     const plainText = content
       .replace(/<[^>]*>/g, "")
@@ -265,8 +295,9 @@ export function HomeDashboard({
             <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
               <div className="font-medium text-yellow-800 mb-1">Debug Info:</div>
               <div className="text-yellow-700">
-                Total Articles: {articles.length} | Published: {publishedArticles.length} | Recent:{" "}
-                {recentArticles.length} | Latest: {latestArticles.length} | Filtered: {filteredArticles.length}
+                Total Articles: {articles?.length || 0} | Published: {publishedArticles?.length || 0} | Recent:{" "}
+                {recentArticles?.length || 0} | Latest: {latestArticles?.length || 0} | Filtered:{" "}
+                {filteredArticles?.length || 0}
               </div>
             </div>
           </div>
@@ -276,13 +307,13 @@ export function HomeDashboard({
         <ScrollArea className="flex-1">
           <div className="max-w-7xl mx-auto p-6">
             {/* Show different content based on search */}
-            {searchTerm.trim() ? (
+            {searchTerm && searchTerm.trim() ? (
               /* Search Results */
               <div>
                 <h2 className="text-lg font-semibold mb-4">
-                  Search Results for "{searchTerm}" ({filteredArticles.length})
+                  Search Results for "{searchTerm}" ({filteredArticles?.length || 0})
                 </h2>
-                {filteredArticles.length === 0 ? (
+                {!filteredArticles || filteredArticles.length === 0 ? (
                   <Card>
                     <CardContent className="p-8 text-center">
                       <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -314,10 +345,10 @@ export function HomeDashboard({
                                 </div>
                                 <div className="flex items-center space-x-1">
                                   <Calendar className="h-3 w-3" />
-                                  <span>{article.createdAt.toLocaleDateString()}</span>
+                                  <span>{new Date(article.createdAt).toLocaleDateString()}</span>
                                 </div>
                               </div>
-                              {article.tags.length > 0 && (
+                              {article.tags && article.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {article.tags.slice(0, 3).map((tag) => (
                                     <Badge key={tag} variant="outline" className="text-xs">
@@ -344,7 +375,7 @@ export function HomeDashboard({
               /* Home Content */
               <div className="space-y-8">
                 {/* Recent Articles */}
-                {recentArticles.length > 0 && (
+                {recentArticles && recentArticles.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-lg font-semibold flex items-center space-x-2">
@@ -371,7 +402,7 @@ export function HomeDashboard({
                                   <span>•</span>
                                   <span>{getAuthorName(article.authorId, article.createdBy)}</span>
                                   <span>•</span>
-                                  <span>{article.createdAt.toLocaleDateString()}</span>
+                                  <span>{new Date(article.createdAt).toLocaleDateString()}</span>
                                 </div>
                               </div>
                               <Badge variant="secondary" className="text-xs">
@@ -394,7 +425,7 @@ export function HomeDashboard({
                     </h2>
                   </div>
 
-                  {latestArticles.length === 0 ? (
+                  {!latestArticles || latestArticles.length === 0 ? (
                     <Card>
                       <CardContent className="p-8 text-center">
                         <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -425,9 +456,11 @@ export function HomeDashboard({
                                 <span>•</span>
                                 <span>{getAuthorName(article.authorId, article.createdBy)}</span>
                               </div>
-                              <div className="text-xs text-gray-500">{article.createdAt.toLocaleDateString()}</div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(article.createdAt).toLocaleDateString()}
+                              </div>
                             </div>
-                            {article.tags.length > 0 && (
+                            {article.tags && article.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
                                 {article.tags.slice(0, 2).map((tag) => (
                                   <Badge key={tag} variant="outline" className="text-xs">
@@ -449,7 +482,7 @@ export function HomeDashboard({
                 </div>
 
                 {/* Categories Overview */}
-                {categories.length > 0 && (
+                {categories && categories.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-lg font-semibold flex items-center space-x-2">
@@ -459,9 +492,8 @@ export function HomeDashboard({
                     </div>
                     <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {categories.slice(0, 8).map((category) => {
-                        const categoryArticleCount = publishedArticles.filter(
-                          (article) => article.categoryId === category.id,
-                        ).length
+                        const categoryArticleCount =
+                          publishedArticles?.filter((article) => article.categoryId === category.id).length || 0
 
                         return (
                           <Card
