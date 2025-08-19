@@ -38,7 +38,7 @@ export interface User {
   lastLogin?: Date
 }
 
-export interface AuditLogEntry {
+export interface AuditLog {
   id: string
   performedBy: string
   action: string
@@ -46,11 +46,9 @@ export interface AuditLogEntry {
   timestamp: Date
 }
 
-export type AuditLog = AuditLogEntry
-
 export interface UserManagementProps {
   users: User[]
   onUsersUpdate: (users: User[]) => void
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
-  auditLog: AuditLogEntry[]
+  onAuditLogUpdate: (auditLog: AuditLog[]) => void
+  auditLog: AuditLog[]
 }

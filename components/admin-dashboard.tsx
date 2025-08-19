@@ -48,11 +48,11 @@ export function AdminDashboard({
             <TabsTrigger value="data">Data Management</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="mt-6">
+          <TabsContent value="users" className="mt-4">
             <UserManagement users={users} currentUser={currentUser} onUpdateUsers={onUpdateUsers} />
           </TabsContent>
 
-          <TabsContent value="categories" className="mt-6">
+          <TabsContent value="categories" className="mt-4">
             <CategoryManagement
               categories={categories}
               currentUser={currentUser}
@@ -60,12 +60,12 @@ export function AdminDashboard({
             />
           </TabsContent>
 
-          <TabsContent value="audit" className="mt-6">
-            <AuditLog auditLog={auditLog} />
+          <TabsContent value="audit" className="mt-4">
+            <AuditLog auditLog={auditLog} users={users} />
           </TabsContent>
 
-          <TabsContent value="data" className="mt-6">
-            <DataManagement users={users} categories={categories} articles={articles} auditLog={auditLog} />
+          <TabsContent value="data" className="mt-4">
+            <DataManagement />
           </TabsContent>
         </Tabs>
       </DialogContent>

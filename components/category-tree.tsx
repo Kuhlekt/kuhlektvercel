@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import type { Category, Article } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -23,7 +23,7 @@ export function CategoryTree({
   onCategorySelect,
   onArticleSelect,
 }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["1"]))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -46,70 +46,48 @@ export function CategoryTree({
   const renderCategory = (category: Category, level = 0) => {
     const childCategories = getChildCategories(category.id)
     const categoryArticles = getCategoryArticles(category.id)
+    const hasChildren = childCategories.length > 0 || categoryArticles.length > 0
     const isExpanded = expandedCategories.has(category.id)
     const isSelected = selectedCategoryId === category.id
-    const hasChildren = childCategories.length > 0 || categoryArticles.length > 0
 
     return (
       <div key={category.id}>
         <div
-          className={`flex items-center space-x-2 px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-            isSelected ? "bg-blue-50 border-r-2 border-blue-500" : ""
+          className={`flex items-center space-x-1 py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
+            isSelected ? "bg-blue-50 text-blue-700" : ""
           }`}
-          style={{ paddingLeft: `${12 + level * 16}px` }}
-          onClick={() => {
-            onCategorySelect(category.id)
-            if (hasChildren) {
-              toggleCategory(category.id)
-            }
-          }}
+          style={{ paddingLeft: `${level * 16 + 8}px` }}
         >
           {hasChildren && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleCategory(category.id)
-              }}
-              className="p-0.5 hover:bg-gray-200 rounded"
-            >
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
+            <Button variant="ghost" size="sm" className="h-4 w-4 p-0" onClick={() => toggleCategory(category.id)}>
+              {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            </Button>
           )}
-          {!hasChildren && <div className="w-5" />}
+          {!hasChildren && <div className="w-4" />}
 
-          {isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600" /> : <Folder className="h-4 w-4 text-gray-600" />}
-
-          <span className="flex-1 text-sm font-medium">{category.name}</span>
-
-          {categoryArticles.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {categoryArticles.length}
-            </Badge>
-          )}
+          <div className="flex items-center space-x-2 flex-1" onClick={() => onCategorySelect(category.id)}>
+            {isExpanded ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+            <span className="text-sm font-medium">{category.name}</span>
+          </div>
         </div>
 
         {isExpanded && (
-          <div>
+          <>
             {childCategories.map((child) => renderCategory(child, level + 1))}
             {categoryArticles.map((article) => (
               <div
                 key={article.id}
-                className={`flex items-center space-x-2 px-3 py-2 cursor-pointer hover:bg-gray-100 ${
-                  selectedArticleId === article.id ? "bg-green-50 border-r-2 border-green-500" : ""
+                className={`flex items-center space-x-2 py-1 px-2 rounded cursor-pointer hover:bg-gray-100 ${
+                  selectedArticleId === article.id ? "bg-blue-50 text-blue-700" : ""
                 }`}
-                style={{ paddingLeft: `${28 + level * 16}px` }}
+                style={{ paddingLeft: `${(level + 1) * 16 + 24}px` }}
                 onClick={() => onArticleSelect(article.id)}
               >
-                <FileText className="h-4 w-4 text-gray-500" />
-                <span className="flex-1 text-sm">{article.title}</span>
-                {article.status === "draft" && (
-                  <Badge variant="outline" className="text-xs">
-                    Draft
-                  </Badge>
-                )}
+                <FileText className="h-4 w-4" />
+                <span className="text-sm">{article.title}</span>
               </div>
             ))}
-          </div>
+          </>
         )}
       </div>
     )
@@ -118,12 +96,23 @@ export function CategoryTree({
   const rootCategories = getChildCategories()
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200">
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-900">Categories</h2>
       </div>
+
       <ScrollArea className="flex-1">
-        <div className="py-2">{rootCategories.map((category) => renderCategory(category))}</div>
+        <div className="p-2">
+          {rootCategories.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Folder className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No categories yet</p>
+              <p className="text-xs">Create categories in the Admin Panel</p>
+            </div>
+          ) : (
+            rootCategories.map((category) => renderCategory(category))
+          )}
+        </div>
       </ScrollArea>
     </div>
   )

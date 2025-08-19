@@ -1,6 +1,7 @@
 import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
 import { initialUsers } from "../data/initial-users"
 import { initialCategories, initialArticles } from "../data/initial-data"
+import { initialAuditLog } from "../data/initial-audit-log"
 
 class Storage {
   private readonly USERS_KEY = "kb_users"
@@ -22,20 +23,20 @@ class Storage {
 
     // Initialize categories
     if (!localStorage.getItem(this.CATEGORIES_KEY)) {
-      console.log("📁 No categories found, initializing with default categories")
+      console.log("📁 No categories found, initializing with empty categories")
       localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(initialCategories))
     }
 
     // Initialize articles
     if (!localStorage.getItem(this.ARTICLES_KEY)) {
-      console.log("📄 No articles found, initializing with default articles")
+      console.log("📄 No articles found, initializing with empty articles")
       localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(initialArticles))
     }
 
     // Initialize audit log
     if (!localStorage.getItem(this.AUDIT_LOG_KEY)) {
       console.log("📋 No audit log found, initializing empty audit log")
-      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify([]))
+      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(initialAuditLog))
     }
 
     console.log("✅ Storage initialization complete")
@@ -75,6 +76,7 @@ class Storage {
       const updatedUser = { ...user, lastLogin: new Date() }
       const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
       this.saveUsers(updatedUsers)
+      this.setCurrentUser(updatedUser)
       this.addAuditEntry({
         performedBy: user.id,
         action: "LOGIN",
@@ -150,7 +152,7 @@ class Storage {
   }
 
   getAuditLog(): AuditLog[] {
-    if (typeof window === "undefined") return []
+    if (typeof window === "undefined") return initialAuditLog
     const log = localStorage.getItem(this.AUDIT_LOG_KEY)
     if (log) {
       const parsed = JSON.parse(log)
@@ -159,7 +161,7 @@ class Storage {
         timestamp: new Date(entry.timestamp),
       }))
     }
-    return []
+    return initialAuditLog
   }
 
   addAuditEntry(entry: { performedBy: string; action: string; details: string }) {

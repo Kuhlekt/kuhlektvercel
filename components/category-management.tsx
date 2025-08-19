@@ -9,8 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Plus, Edit, Trash2, Folder } from "lucide-react"
 import { storage } from "../utils/storage"
 import type { Category, User } from "../types/knowledge-base"
@@ -30,68 +28,62 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
     parentId: "",
   })
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      parentId: "",
-    })
-  }
-
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name.trim()) {
-      const newCategory: Category = {
-        id: Date.now().toString(),
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-        parentId: formData.parentId || undefined,
-        createdAt: new Date(),
-        createdBy: currentUser.username,
-      }
+    if (!formData.name.trim()) return
 
-      const updatedCategories = [...categories, newCategory]
-      onUpdateCategories(updatedCategories)
-      storage.saveCategories(updatedCategories)
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "CREATE_CATEGORY",
-        details: `Created category "${newCategory.name}"`,
-      })
-
-      resetForm()
-      setIsAddCategoryOpen(false)
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      parentId: formData.parentId || undefined,
+      createdAt: new Date(),
+      createdBy: currentUser.username,
     }
+
+    const updatedCategories = [...categories, newCategory]
+    onUpdateCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+
+    storage.addAuditEntry({
+      performedBy: currentUser.id,
+      action: "CREATE_CATEGORY",
+      details: `Created category "${newCategory.name}"`,
+    })
+
+    setFormData({ name: "", description: "", parentId: "" })
+    setIsAddCategoryOpen(false)
   }
 
   const handleEditCategory = (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingCategory && formData.name.trim()) {
-      const updatedCategory: Category = {
-        ...editingCategory,
-        name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
-        parentId: formData.parentId || undefined,
-      }
+    if (!editingCategory || !formData.name.trim()) return
 
-      const updatedCategories = categories.map((c) => (c.id === editingCategory.id ? updatedCategory : c))
-      onUpdateCategories(updatedCategories)
-      storage.saveCategories(updatedCategories)
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "UPDATE_CATEGORY",
-        details: `Updated category "${updatedCategory.name}"`,
-      })
-
-      resetForm()
-      setEditingCategory(null)
+    const updatedCategory: Category = {
+      ...editingCategory,
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      parentId: formData.parentId || undefined,
     }
+
+    const updatedCategories = categories.map((c) => (c.id === editingCategory.id ? updatedCategory : c))
+    onUpdateCategories(updatedCategories)
+    storage.saveCategories(updatedCategories)
+
+    storage.addAuditEntry({
+      performedBy: currentUser.id,
+      action: "UPDATE_CATEGORY",
+      details: `Updated category "${updatedCategory.name}"`,
+    })
+
+    setEditingCategory(null)
+    setFormData({ name: "", description: "", parentId: "" })
   }
 
   const handleDeleteCategory = (category: Category) => {
     const hasChildren = categories.some((c) => c.parentId === category.id)
     if (hasChildren) {
-      alert("Cannot delete category with subcategories. Please delete or move subcategories first.")
+      alert("Cannot delete category with subcategories. Please delete subcategories first.")
       return
     }
 
@@ -99,6 +91,7 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
       const updatedCategories = categories.filter((c) => c.id !== category.id)
       onUpdateCategories(updatedCategories)
       storage.saveCategories(updatedCategories)
+
       storage.addAuditEntry({
         performedBy: currentUser.id,
         action: "DELETE_CATEGORY",
@@ -116,27 +109,20 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
     })
   }
 
-  const getCategoryPath = (category: Category): string => {
-    if (!category.parentId) return category.name
-    const parent = categories.find((c) => c.id === category.parentId)
-    return parent ? `${getCategoryPath(parent)} > ${category.name}` : category.name
+  const getParentCategoryName = (parentId?: string) => {
+    if (!parentId) return "Root"
+    const parent = categories.find((c) => c.id === parentId)
+    return parent ? parent.name : "Unknown"
   }
 
-  const rootCategories = categories.filter((c) => !c.parentId)
-  const getChildCount = (categoryId: string) => categories.filter((c) => c.parentId === categoryId).length
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Folder className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Category Management</h3>
-          <Badge variant="outline">{categories.length} categories</Badge>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Category Management</h3>
         <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-1" />
               Add Category
             </Button>
           </DialogTrigger>
@@ -160,7 +146,6 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Optional description"
                 />
               </div>
               <div>
@@ -173,57 +158,61 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
                     <SelectValue placeholder="Select parent category (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No parent (root category)</SelectItem>
+                    <SelectItem value="root">Root (No parent)</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {getCategoryPath(category)}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)} className="flex-1">
                   Cancel
                 </Button>
-                <Button type="submit">Create Category</Button>
+                <Button type="submit" className="flex-1">
+                  Create Category
+                </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <ScrollArea className="h-96">
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3">
-                  <h4 className="font-medium">{category.name}</h4>
-                  {getChildCount(category.id) > 0 && (
-                    <Badge variant="secondary">{getChildCount(category.id)} subcategories</Badge>
-                  )}
-                </div>
-                {category.description && <p className="text-sm text-gray-600 mt-1">{category.description}</p>}
-                <p className="text-xs text-gray-500 mt-1">
-                  Created: {category.createdAt.toLocaleDateString()} by {category.createdBy}
-                  {category.parentId && (
-                    <span> • Parent: {categories.find((c) => c.id === category.parentId)?.name}</span>
-                  )}
-                </p>
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => startEdit(category)}>
-                  <Edit className="h-4 w-4" />
+      <div className="border rounded-lg">
+        <div className="grid grid-cols-5 gap-4 p-4 font-semibold border-b bg-gray-50">
+          <div>Name</div>
+          <div>Description</div>
+          <div>Parent</div>
+          <div>Created</div>
+          <div>Actions</div>
+        </div>
+        {categories.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <Folder className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>No categories created yet</p>
+            <p className="text-sm">Create your first category to organize articles</p>
+          </div>
+        ) : (
+          categories.map((category) => (
+            <div key={category.id} className="grid grid-cols-5 gap-4 p-4 border-b last:border-b-0">
+              <div className="font-medium">{category.name}</div>
+              <div className="text-gray-600">{category.description || "No description"}</div>
+              <div className="text-sm text-gray-500">{getParentCategoryName(category.parentId)}</div>
+              <div className="text-sm text-gray-500">{category.createdAt.toLocaleDateString()}</div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => startEdit(category)}>
+                  <Edit className="h-3 w-3" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category)}>
-                  <Trash2 className="h-4 w-4" />
+                <Button size="sm" variant="outline" onClick={() => handleDeleteCategory(category)}>
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </ScrollArea>
+          ))
+        )}
+      </div>
 
       {editingCategory && (
         <Dialog open={!!editingCategory} onOpenChange={() => setEditingCategory(null)}>
@@ -247,7 +236,6 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Optional description"
                 />
               </div>
               <div>
@@ -260,22 +248,24 @@ export function CategoryManagement({ categories, currentUser, onUpdateCategories
                     <SelectValue placeholder="Select parent category (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No parent (root category)</SelectItem>
+                    <SelectItem value="root">Root (No parent)</SelectItem>
                     {categories
                       .filter((c) => c.id !== editingCategory.id)
                       .map((category) => (
                         <SelectItem key={category.id} value={category.id}>
-                          {getCategoryPath(category)}
+                          {category.name}
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditingCategory(null)} className="flex-1">
                   Cancel
                 </Button>
-                <Button type="submit">Update Category</Button>
+                <Button type="submit" className="flex-1">
+                  Update Category
+                </Button>
               </div>
             </form>
           </DialogContent>

@@ -28,8 +28,10 @@ export function Navigation({
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
-          <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
+          <div className="flex items-center space-x-2">
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
+            <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+          </div>
         </div>
 
         <div className="flex-1 max-w-md mx-8">
@@ -54,7 +56,7 @@ export function Navigation({
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">{currentUser.role}</span>
               </div>
 
-              {(currentUser.role === "editor" || currentUser.role === "admin") && (
+              {(currentUser.role === "admin" || currentUser.role === "editor") && (
                 <Button onClick={onAddArticle} size="sm">
                   <Plus className="h-4 w-4 mr-1" />
                   Add Article
