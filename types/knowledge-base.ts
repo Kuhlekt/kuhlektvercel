@@ -1,21 +1,16 @@
-export interface Article {
+export interface User {
   id: string
-  title: string
-  content: string
-  categoryId: string
-  authorId: string
-  createdBy: string
-  tags: string[]
-  status: "draft" | "published"
+  username: string
+  email: string
+  role: "admin" | "editor" | "viewer"
   createdAt: Date
-  updatedAt: Date
+  lastLogin?: Date
 }
 
 export interface Subcategory {
   id: string
   name: string
   description?: string
-  categoryId: string
   articles: Article[]
 }
 
@@ -23,34 +18,44 @@ export interface Category {
   id: string
   name: string
   description?: string
-  parentId?: string
-  createdAt: Date
-  createdBy: string
+  articles: Article[]
+  subcategories: Subcategory[]
 }
 
-export interface User {
+export interface Article {
   id: string
-  username: string
-  email: string
-  password: string
-  role: "admin" | "editor" | "viewer"
+  title: string
+  content: string
+  categoryId: string
+  subcategoryId?: string
+  tags: string[]
   createdAt: Date
-  lastLogin?: Date
+  updatedAt: Date
+  createdBy: string
+  editCount?: number
+  lastEditedBy?: string
 }
 
 export interface AuditLogEntry {
   id: string
+  action:
+    | "article_created"
+    | "article_updated"
+    | "article_deleted"
+    | "category_created"
+    | "category_updated"
+    | "category_deleted"
+    | "user_created"
+    | "user_updated"
+    | "user_deleted"
+  articleId?: string
+  articleTitle?: string
+  categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
+  username?: string
   performedBy: string
-  action: string
-  details: string
   timestamp: Date
-}
-
-export type AuditLog = AuditLogEntry
-
-export interface UserManagementProps {
-  users: User[]
-  onUsersUpdate: (users: User[]) => void
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
-  auditLog: AuditLogEntry[]
+  details?: string
 }

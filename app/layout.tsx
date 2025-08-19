@@ -1,13 +1,20 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
-
-const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Kuhlekt Knowledge Base",
-  description: "A comprehensive knowledge management system",
+  description: "Comprehensive knowledge base for Kuhlekt platform",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.gif",
+        type: "image/gif",
+      },
+    ],
+    shortcut: "/favicon.gif",
+    apple: "/favicon.gif",
+  },
     generator: 'v0.app'
 }
 
@@ -18,7 +25,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <head>
+        <link rel="icon" href="/favicon.gif" type="image/gif" />
+        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
+        <link rel="apple-touch-icon" href="/favicon.gif" />
+      </head>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   )
 }

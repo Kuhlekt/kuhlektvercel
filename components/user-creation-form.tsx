@@ -18,8 +18,8 @@ interface UserCreationFormProps {
 
 export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps) {
   const [username, setUsername] = useState("")
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
   const [formError, setFormError] = useState("")
 
@@ -27,28 +27,31 @@ export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps)
     e.preventDefault()
     setFormError("")
 
-    if (!username.trim() || !name.trim()) {
-      setFormError("Username and name are required")
+    if (!username.trim() || !password.trim()) {
+      setFormError("Username and password are required")
       return
     }
 
-    if (email && !email.includes("@")) {
-      setFormError("Please enter a valid email address")
+    if (password !== confirmPassword) {
+      setFormError("Passwords do not match")
+      return
+    }
+
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters long")
       return
     }
 
     onCreateUser({
       username: username.trim(),
-      name: name.trim(),
-      email: email.trim() || `${username}@example.com`,
+      password,
       role,
-      password: "default123", // Hidden from UI but still stored
     })
 
     // Reset form
     setUsername("")
-    setName("")
-    setEmail("")
+    setPassword("")
+    setConfirmPassword("")
     setRole("viewer")
   }
 
@@ -77,24 +80,26 @@ export function UserCreationForm({ onCreateUser, error }: UserCreationFormProps)
           </div>
 
           <div>
-            <Label htmlFor="new-name">Full Name</Label>
+            <Label htmlFor="new-password">Password</Label>
             <Input
-              id="new-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter full name"
+              id="new-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password (min 6 characters)"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="new-email">Email (optional)</Label>
+            <Label htmlFor="confirm-password">Confirm Password</Label>
             <Input
-              id="new-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email address"
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              required
             />
           </div>
 

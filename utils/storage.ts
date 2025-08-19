@@ -1,280 +1,372 @@
-import type { User, Category, Article, AuditLog } from "../types/knowledge-base"
-import { initialUsers } from "../data/initial-users"
-import { initialCategories, initialArticles } from "../data/initial-data"
+import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
-class Storage {
-  private readonly USERS_KEY = "kb_users"
-  private readonly CATEGORIES_KEY = "kb_categories"
-  private readonly ARTICLES_KEY = "kb_articles"
-  private readonly CURRENT_USER_KEY = "kb_current_user"
-  private readonly AUDIT_LOG_KEY = "kb_audit_log"
+const STORAGE_KEYS = {
+  CATEGORIES: "kb_categories",
+  USERS: "kb_users",
+  AUDIT_LOG: "kb_audit_log",
+  PAGE_VISITS: "kb_page_visits",
+}
 
-  init() {
-    if (typeof window === "undefined") return
+// Helper function to safely parse dates
+const parseDate = (dateValue: any): Date => {
+  if (dateValue instanceof Date) return dateValue
+  if (typeof dateValue === "string") return new Date(dateValue)
+  if (typeof dateValue === "number") return new Date(dateValue)
+  return new Date()
+}
 
-    console.log("🔧 Initializing storage...")
-
-    // Initialize users - always ensure admin user exists
-    const existingUsers = localStorage.getItem(this.USERS_KEY)
-    if (!existingUsers) {
-      console.log("👥 No users found, initializing with admin user")
-      localStorage.setItem(this.USERS_KEY, JSON.stringify(initialUsers))
-    } else {
-      // Ensure admin user exists
-      const users = JSON.parse(existingUsers)
-      const hasAdmin = users.some((user: User) => user.username === "admin")
-      if (!hasAdmin) {
-        console.log("👥 Adding admin user to existing users")
-        const updatedUsers = [...users, ...initialUsers]
-        localStorage.setItem(this.USERS_KEY, JSON.stringify(updatedUsers))
-      }
-    }
-
-    // Initialize categories (empty by default)
-    if (!localStorage.getItem(this.CATEGORIES_KEY)) {
-      console.log("📁 Initializing empty categories")
-      localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(initialCategories))
-    }
-
-    // Initialize articles (empty by default)
-    if (!localStorage.getItem(this.ARTICLES_KEY)) {
-      console.log("📄 Initializing empty articles")
-      localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(initialArticles))
-    }
-
-    // Initialize audit log
-    if (!localStorage.getItem(this.AUDIT_LOG_KEY)) {
-      console.log("📋 Initializing empty audit log")
-      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify([]))
-    }
-
-    console.log("✅ Storage initialization complete")
-  }
-
-  getUsers(): User[] {
-    if (typeof window === "undefined") return initialUsers
-    const users = localStorage.getItem(this.USERS_KEY)
-    if (users) {
-      const parsed = JSON.parse(users)
-      return parsed.map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-      }))
-    }
-    return initialUsers
-  }
-
-  saveUsers(users: User[]) {
-    if (typeof window === "undefined") return
-    localStorage.setItem(this.USERS_KEY, JSON.stringify(users))
-    console.log("💾 Users saved:", users.length)
-  }
-
-  authenticateUser(username: string, password: string): User | null {
-    console.log("🔐 Authenticating user:", username)
-    const users = this.getUsers()
-    console.log(
-      "👥 Available users:",
-      users.map((u) => ({ username: u.username, role: u.role })),
-    )
-
-    const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password)
-
-    if (user) {
-      console.log("✅ Authentication successful for:", user.username)
-      const updatedUser = { ...user, lastLogin: new Date() }
-      const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
-      this.saveUsers(updatedUsers)
-      this.setCurrentUser(updatedUser)
-      this.addAuditEntry({
-        performedBy: user.id,
-        action: "LOGIN",
-        details: `User ${user.username} logged in`,
-      })
-      return updatedUser
-    }
-
-    console.log("❌ Authentication failed for:", username)
-    return null
-  }
-
-  getCurrentUser(): User | null {
-    if (typeof window === "undefined") return null
-    const user = localStorage.getItem(this.CURRENT_USER_KEY)
-    if (user) {
-      try {
-        const parsed = JSON.parse(user)
-        return {
-          ...parsed,
-          createdAt: new Date(parsed.createdAt),
-          lastLogin: parsed.lastLogin ? new Date(parsed.lastLogin) : undefined,
-        }
-      } catch (error) {
-        console.error("Error parsing current user:", error)
-        localStorage.removeItem(this.CURRENT_USER_KEY)
-        return null
-      }
-    }
-    return null
-  }
-
-  setCurrentUser(user: User | null) {
-    if (typeof window === "undefined") return
-    if (user) {
-      console.log("💾 Setting current user:", user.username)
-      localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user))
-    } else {
-      console.log("🗑️ Clearing current user")
-      localStorage.removeItem(this.CURRENT_USER_KEY)
-    }
-  }
-
-  getCategories(): Category[] {
-    if (typeof window === "undefined") return initialCategories
-    const categories = localStorage.getItem(this.CATEGORIES_KEY)
-    if (categories) {
-      const parsed = JSON.parse(categories)
-      return parsed.map((cat: any) => ({
-        ...cat,
-        createdAt: new Date(cat.createdAt),
-      }))
-    }
-    return initialCategories
-  }
-
-  saveCategories(categories: Category[]) {
-    if (typeof window === "undefined") return
-    localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(categories))
-    console.log("💾 Categories saved:", categories.length)
-  }
-
-  getArticles(): Article[] {
-    if (typeof window === "undefined") return initialArticles
-    const articles = localStorage.getItem(this.ARTICLES_KEY)
-    if (articles) {
-      const parsed = JSON.parse(articles)
-      return parsed.map((article: any) => ({
-        ...article,
-        createdAt: new Date(article.createdAt),
-        updatedAt: new Date(article.updatedAt),
-      }))
-    }
-    return initialArticles
-  }
-
-  saveArticles(articles: Article[]) {
-    if (typeof window === "undefined") return
-    localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(articles))
-    console.log("💾 Articles saved:", articles.length)
-  }
-
-  getAuditLog(): AuditLog[] {
-    if (typeof window === "undefined") return []
-    const log = localStorage.getItem(this.AUDIT_LOG_KEY)
-    if (log) {
-      const parsed = JSON.parse(log)
-      return parsed.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      }))
-    }
-    return []
-  }
-
-  addAuditEntry(entry: { performedBy: string; action: string; details: string }) {
-    if (typeof window === "undefined") return
-    const log = this.getAuditLog()
-    const newEntry: AuditLog = {
-      id: Date.now().toString(),
-      ...entry,
-      timestamp: new Date(),
-    }
-    log.push(newEntry)
-    localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(log))
-    console.log("📋 Audit entry added:", newEntry.action)
-  }
-
-  exportData() {
-    return {
-      users: this.getUsers(),
-      categories: this.getCategories(),
-      articles: this.getArticles(),
-      auditLog: this.getAuditLog(),
-      exportDate: new Date().toISOString(),
-    }
-  }
-
-  importData(data: any) {
-    if (data.users) {
-      // Ensure proper date parsing for users
-      const parsedUsers = data.users.map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-      }))
-      this.saveUsers(parsedUsers)
-      console.log("📥 Users imported:", parsedUsers.length)
-    }
-
-    if (data.categories) {
-      // Ensure proper date parsing for categories
-      const parsedCategories = data.categories.map((category: any) => ({
-        ...category,
-        createdAt: new Date(category.createdAt),
-      }))
-      this.saveCategories(parsedCategories)
-      console.log("📥 Categories imported:", parsedCategories.length)
-    }
-
-    if (data.articles) {
-      // Ensure proper date parsing for articles
-      const parsedArticles = data.articles.map((article: any) => ({
-        ...article,
-        createdAt: new Date(article.createdAt),
-        updatedAt: new Date(article.updatedAt),
-      }))
-      this.saveArticles(parsedArticles)
-      console.log("📥 Articles imported:", parsedArticles.length)
-    }
-
-    if (data.auditLog) {
-      // Ensure proper date parsing for audit log
-      const parsedAuditLog = data.auditLog.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      }))
-      localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(parsedAuditLog))
-      console.log("📥 Audit log imported:", parsedAuditLog.length)
-    }
-  }
-
-  clearArticlesAndCategories() {
-    if (typeof window === "undefined") return
-    localStorage.removeItem(this.CATEGORIES_KEY)
-    localStorage.removeItem(this.ARTICLES_KEY)
-
-    // Reinitialize with empty data
-    localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify([]))
-    localStorage.setItem(this.ARTICLES_KEY, JSON.stringify([]))
-
-    console.log("🗑️ Articles and categories data cleared")
-  }
-
-  clearAll() {
-    if (typeof window === "undefined") return
-    localStorage.removeItem(this.USERS_KEY)
-    this.clearArticlesAndCategories()
-    localStorage.removeItem(this.CURRENT_USER_KEY)
-    localStorage.removeItem(this.AUDIT_LOG_KEY)
-    console.log("🗑️ All data cleared")
-  }
-
-  resetToDefaults() {
-    this.clearAll()
-    this.init()
-    console.log("🔄 Reset to defaults complete")
+// Helper function to safely parse JSON
+const safeJSONParse = (value: string | null, fallback: any = []) => {
+  if (!value) return fallback
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : fallback
+  } catch {
+    return fallback
   }
 }
 
-export const storage = new Storage()
+export const storage = {
+  // Categories
+  getCategories(): Category[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES)
+      console.log("Raw stored categories:", stored)
+
+      const categories = safeJSONParse(stored, [])
+      console.log("Parsed categories:", categories)
+
+      if (!Array.isArray(categories)) {
+        console.warn("Categories is not an array, returning empty array")
+        return []
+      }
+
+      // Convert date strings back to Date objects with proper null checks
+      const processedCategories = categories.map((category: any, index: number) => {
+        console.log(`Processing category ${index}:`, category)
+
+        if (!category || typeof category !== "object") {
+          console.warn(`Category ${index} is invalid:`, category)
+          return {
+            id: `invalid-${index}`,
+            name: `Invalid Category ${index}`,
+            articles: [],
+            subcategories: [],
+            expanded: false,
+          }
+        }
+
+        const articles = Array.isArray(category.articles) ? category.articles : []
+        const subcategories = Array.isArray(category.subcategories) ? category.subcategories : []
+
+        return {
+          ...category,
+          articles: articles.map((article: any) => {
+            if (!article || typeof article !== "object") {
+              console.warn("Invalid article:", article)
+              return {
+                id: `invalid-${Date.now()}`,
+                title: "Invalid Article",
+                content: "",
+                categoryId: category.id || "",
+                tags: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                createdBy: "system",
+              }
+            }
+            return {
+              ...article,
+              createdAt: parseDate(article.createdAt),
+              updatedAt: parseDate(article.updatedAt),
+            }
+          }),
+          subcategories: subcategories.map((subcategory: any) => {
+            if (!subcategory || typeof subcategory !== "object") {
+              console.warn("Invalid subcategory:", subcategory)
+              return {
+                id: `invalid-sub-${Date.now()}`,
+                name: "Invalid Subcategory",
+                articles: [],
+              }
+            }
+
+            const subArticles = Array.isArray(subcategory.articles) ? subcategory.articles : []
+
+            return {
+              ...subcategory,
+              articles: subArticles.map((article: any) => {
+                if (!article || typeof article !== "object") {
+                  console.warn("Invalid subcategory article:", article)
+                  return {
+                    id: `invalid-${Date.now()}`,
+                    title: "Invalid Article",
+                    content: "",
+                    categoryId: category.id || "",
+                    subcategoryId: subcategory.id || "",
+                    tags: [],
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    createdBy: "system",
+                  }
+                }
+                return {
+                  ...article,
+                  createdAt: parseDate(article.createdAt),
+                  updatedAt: parseDate(article.updatedAt),
+                }
+              }),
+            }
+          }),
+        }
+      })
+
+      console.log("Final processed categories:", processedCategories)
+      return processedCategories
+    } catch (error) {
+      console.error("Error in getCategories:", error)
+      // Clear corrupted data and return empty array
+      localStorage.removeItem(STORAGE_KEYS.CATEGORIES)
+      return []
+    }
+  },
+
+  saveCategories(categories: Category[]): void {
+    try {
+      // Ensure all categories have the required structure
+      const sanitizedCategories = categories.map((category) => ({
+        ...category,
+        articles: Array.isArray(category.articles) ? category.articles : [],
+        subcategories: Array.isArray(category.subcategories)
+          ? category.subcategories.map((subcategory) => ({
+              ...subcategory,
+              articles: Array.isArray(subcategory.articles) ? subcategory.articles : [],
+            }))
+          : [],
+      }))
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(sanitizedCategories))
+    } catch (error) {
+      console.error("Error saving categories:", error)
+    }
+  },
+
+  // Users
+  getUsers(): User[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.USERS)
+      const users = safeJSONParse(stored, [])
+
+      if (!Array.isArray(users)) {
+        return []
+      }
+
+      // Convert date strings back to Date objects
+      return users.map((user: any) => ({
+        ...user,
+        createdAt: parseDate(user.createdAt),
+        lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined,
+      }))
+    } catch (error) {
+      console.error("Error in getUsers:", error)
+      localStorage.removeItem(STORAGE_KEYS.USERS)
+      return []
+    }
+  },
+
+  saveUsers(users: User[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users))
+    } catch (error) {
+      console.error("Error saving users:", error)
+    }
+  },
+
+  // Audit Log
+  getAuditLog(): AuditLogEntry[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.AUDIT_LOG)
+      const auditLog = safeJSONParse(stored, [])
+
+      if (!Array.isArray(auditLog)) {
+        return []
+      }
+
+      // Convert date strings back to Date objects
+      return auditLog.map((entry: any) => ({
+        ...entry,
+        timestamp: parseDate(entry.timestamp),
+      }))
+    } catch (error) {
+      console.error("Error in getAuditLog:", error)
+      localStorage.removeItem(STORAGE_KEYS.AUDIT_LOG)
+      return []
+    }
+  },
+
+  saveAuditLog(auditLog: AuditLogEntry[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(auditLog))
+    } catch (error) {
+      console.error("Error saving audit log:", error)
+    }
+  },
+
+  addAuditEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): void {
+    try {
+      const currentLog = this.getAuditLog()
+      const newEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        ...entry,
+      }
+      const updatedLog = [newEntry, ...currentLog]
+      this.saveAuditLog(updatedLog)
+    } catch (error) {
+      console.error("Error adding audit entry:", error)
+    }
+  },
+
+  // Page Visits
+  getPageVisits(): number {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.PAGE_VISITS)
+      return stored ? Number.parseInt(stored, 10) || 0 : 0
+    } catch (error) {
+      console.error("Error getting page visits:", error)
+      return 0
+    }
+  },
+
+  incrementPageVisits(): number {
+    try {
+      const current = this.getPageVisits()
+      const newCount = current + 1
+      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, newCount.toString())
+      return newCount
+    } catch (error) {
+      console.error("Error incrementing page visits:", error)
+      return 0
+    }
+  },
+
+  resetPageVisits(): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PAGE_VISITS, "0")
+    } catch (error) {
+      console.error("Error resetting page visits:", error)
+    }
+  },
+
+  // Clear all data
+  clearAll(): void {
+    try {
+      Object.values(STORAGE_KEYS).forEach((key) => {
+        localStorage.removeItem(key)
+      })
+    } catch (error) {
+      console.error("Error clearing all data:", error)
+    }
+  },
+}
+
+// Export/Import utilities for file operations
+export const dataManager = {
+  // Export all data as JSON file
+  exportData: () => {
+    try {
+      const data = {
+        categories: storage.getCategories(),
+        users: storage.getUsers(),
+        auditLog: storage.getAuditLog(),
+        pageVisits: storage.getPageVisits(),
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
+      }
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      throw new Error("Failed to export data")
+    }
+  },
+
+  // Import data from JSON file
+  importData: (
+    file: File,
+  ): Promise<{ categories: Category[]; users: User[]; auditLog: AuditLogEntry[]; pageVisits?: number }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target?.result as string)
+
+          // Validate data structure
+          if (!data.categories || !Array.isArray(data.categories)) {
+            throw new Error("Invalid backup file: missing or invalid categories")
+          }
+          if (!data.users || !Array.isArray(data.users)) {
+            throw new Error("Invalid backup file: missing or invalid users")
+          }
+          if (!data.auditLog || !Array.isArray(data.auditLog)) {
+            throw new Error("Invalid backup file: missing or invalid audit log")
+          }
+
+          // Convert date strings back to Date objects with safe parsing
+          const categories = data.categories.map((cat: any) => ({
+            ...cat,
+            articles: (cat.articles || []).map((article: any) => ({
+              ...article,
+              createdAt: parseDate(article.createdAt),
+              updatedAt: parseDate(article.updatedAt),
+            })),
+            subcategories: (cat.subcategories || []).map((sub: any) => ({
+              ...sub,
+              articles: (sub.articles || []).map((article: any) => ({
+                ...article,
+                createdAt: parseDate(article.createdAt),
+                updatedAt: parseDate(article.updatedAt),
+              })),
+            })),
+          }))
+
+          const users = data.users.map((user: any) => ({
+            ...user,
+            createdAt: parseDate(user.createdAt),
+            lastLogin: user.lastLogin ? parseDate(user.lastLogin) : undefined,
+          }))
+
+          const auditLog = data.auditLog.map((entry: any) => ({
+            ...entry,
+            timestamp: parseDate(entry.timestamp),
+          }))
+
+          resolve({
+            categories,
+            users,
+            auditLog,
+            pageVisits: data.pageVisits || 0,
+          })
+        } catch (error) {
+          console.error("Error parsing backup file:", error)
+          reject(new Error(`Failed to parse backup file: ${error instanceof Error ? error.message : "Unknown error"}`))
+        }
+      }
+
+      reader.onerror = () => {
+        console.error("Error reading file")
+        reject(new Error("Failed to read file"))
+      }
+
+      reader.readAsText(file)
+    })
+  },
+}

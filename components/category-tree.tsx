@@ -1,24 +1,31 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { Category, Article } from "../types/knowledge-base"
+import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react'
+import type { Category } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
-  categories?: Category[]
-  onArticleSelect?: (article: Article) => void
-  selectedArticleId?: string
+  categories: Category[]
+  selectedCategories: Set<string>
+  selectedSubcategories: Set<string>
+  onCategoryToggle: (categoryId: string) => void
+  onSubcategoryToggle: (subcategoryId: string) => void
 }
 
-export function CategoryTree({ categories = [], onArticleSelect, selectedArticleId }: CategoryTreeProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+export function CategoryTree({
+  categories,
+  selectedCategories,
+  selectedSubcategories,
+  onCategoryToggle,
+  onSubcategoryToggle,
+}: CategoryTreeProps) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(categories.filter(cat => cat.expanded).map(cat => cat.id))
+  )
 
-  // Ensure categories is always an array
-  const safeCategories = Array.isArray(categories) ? categories : []
-
-  const toggleCategory = (categoryId: string) => {
+  const toggleExpanded = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
     if (newExpanded.has(categoryId)) {
       newExpanded.delete(categoryId)
@@ -28,125 +35,78 @@ export function CategoryTree({ categories = [], onArticleSelect, selectedArticle
     setExpandedCategories(newExpanded)
   }
 
-  const handleArticleClick = (article: Article) => {
-    if (onArticleSelect) {
-      onArticleSelect(article)
-    }
-  }
-
-  if (safeCategories.length === 0) {
-    return (
-      <div className="p-4 text-center text-gray-500">
-        <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No categories available</p>
-        <p className="text-xs text-gray-400 mt-1">Create categories in the Admin section</p>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-2">
-      {safeCategories.map((category) => {
+      {categories.map((category) => {
         const isExpanded = expandedCategories.has(category.id)
-        const categoryArticles = Array.isArray(category.articles) ? category.articles : []
-        const subcategories = Array.isArray(category.subcategories) ? category.subcategories : []
+        const isSelected = selectedCategories.has(category.id)
+        const hasSubcategories = category.subcategories.length > 0
+        
+        // Only count direct articles in the category, not subcategory articles
+        const directArticleCount = category.articles.length
 
         return (
           <div key={category.id} className="space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => toggleCategory(category.id)}
-              className="w-full justify-start px-2 py-1 h-auto text-left"
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 mr-1 flex-shrink-0" />
+            <div className="flex items-center space-x-2">
+              {hasSubcategories ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => toggleExpanded(category.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
               ) : (
-                <ChevronRight className="h-4 w-4 mr-1 flex-shrink-0" />
+                <div className="w-6" />
               )}
-              {isExpanded ? (
-                <FolderOpen className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600" />
-              ) : (
-                <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-gray-600" />
-              )}
-              <span className="truncate flex-1">{category.name}</span>
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {categoryArticles.length +
-                  subcategories.reduce((acc, sub) => acc + (Array.isArray(sub.articles) ? sub.articles.length : 0), 0)}
-              </Badge>
-            </Button>
+              
+              <Button
+                variant={isSelected ? "default" : "ghost"}
+                size="sm"
+                className="flex-1 justify-start h-8"
+                onClick={() => onCategoryToggle(category.id)}
+              >
+                {isExpanded ? (
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                ) : (
+                  <Folder className="h-4 w-4 mr-2" />
+                )}
+                <span className="truncate">{category.name}</span>
+                {directArticleCount > 0 && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {directArticleCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
 
-            {isExpanded && (
-              <div className="ml-4 space-y-1">
-                {/* Category Articles */}
-                {categoryArticles.map((article) => (
-                  <Button
-                    key={article.id}
-                    variant={selectedArticleId === article.id ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => handleArticleClick(article)}
-                    className="w-full justify-start px-2 py-1 h-auto text-left"
-                  >
-                    <FileText className="h-3 w-3 mr-2 flex-shrink-0 text-green-600" />
-                    <span className="truncate flex-1 text-sm">{article.title}</span>
-                    <Badge variant={article.status === "published" ? "default" : "outline"} className="ml-2 text-xs">
-                      {article.status}
-                    </Badge>
-                  </Button>
-                ))}
-
-                {/* Subcategories */}
-                {subcategories.map((subcategory) => {
-                  const subArticles = Array.isArray(subcategory.articles) ? subcategory.articles : []
-                  const isSubExpanded = expandedCategories.has(subcategory.id)
+            {isExpanded && hasSubcategories && (
+              <div className="ml-8 space-y-1">
+                {category.subcategories.map((subcategory) => {
+                  const isSubSelected = selectedSubcategories.has(subcategory.id)
+                  const subcategoryArticleCount = subcategory.articles.length
 
                   return (
-                    <div key={subcategory.id} className="space-y-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCategory(subcategory.id)}
-                        className="w-full justify-start px-2 py-1 h-auto text-left"
-                      >
-                        {isSubExpanded ? (
-                          <ChevronDown className="h-3 w-3 mr-1 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 mr-1 flex-shrink-0" />
-                        )}
-                        {isSubExpanded ? (
-                          <FolderOpen className="h-3 w-3 mr-2 flex-shrink-0 text-blue-500" />
-                        ) : (
-                          <Folder className="h-3 w-3 mr-2 flex-shrink-0 text-gray-500" />
-                        )}
-                        <span className="truncate flex-1 text-sm">{subcategory.name}</span>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {subArticles.length}
+                    <Button
+                      key={subcategory.id}
+                      variant={isSubSelected ? "default" : "ghost"}
+                      size="sm"
+                      className="w-full justify-start h-8"
+                      onClick={() => onSubcategoryToggle(subcategory.id)}
+                    >
+                      <Folder className="h-4 w-4 mr-2" />
+                      <span className="truncate">{subcategory.name}</span>
+                      {subcategoryArticleCount > 0 && (
+                        <Badge variant="outline" className="ml-auto">
+                          {subcategoryArticleCount}
                         </Badge>
-                      </Button>
-
-                      {isSubExpanded && (
-                        <div className="ml-4 space-y-1">
-                          {subArticles.map((article) => (
-                            <Button
-                              key={article.id}
-                              variant={selectedArticleId === article.id ? "secondary" : "ghost"}
-                              size="sm"
-                              onClick={() => handleArticleClick(article)}
-                              className="w-full justify-start px-2 py-1 h-auto text-left"
-                            >
-                              <FileText className="h-3 w-3 mr-2 flex-shrink-0 text-green-600" />
-                              <span className="truncate flex-1 text-sm">{article.title}</span>
-                              <Badge
-                                variant={article.status === "published" ? "default" : "outline"}
-                                className="ml-2 text-xs"
-                              >
-                                {article.status}
-                              </Badge>
-                            </Button>
-                          ))}
-                        </div>
                       )}
-                    </div>
+                    </Button>
                   )
                 })}
               </div>
