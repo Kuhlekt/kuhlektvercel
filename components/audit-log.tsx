@@ -9,7 +9,7 @@ interface AuditLogProps {
   auditLog: AuditLogEntry[]
 }
 
-export function AuditLogComponent({ auditLog }: AuditLogProps) {
+export function AuditLog({ auditLog }: AuditLogProps) {
   const getActionBadgeVariant = (action: string) => {
     switch (action) {
       case "LOGIN":
@@ -61,7 +61,7 @@ export function AuditLogComponent({ auditLog }: AuditLogProps) {
                   <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
                       <User className="h-3 w-3" />
-                      <span>User ID: {entry.userId}</span>
+                      <span>User ID: {entry.performedBy}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
