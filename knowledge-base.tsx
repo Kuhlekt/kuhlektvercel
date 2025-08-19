@@ -18,6 +18,7 @@ import { AdminDashboard } from "./components/admin-dashboard"
 import { storage } from "./utils/storage"
 import { initialCategories } from "./data/initial-data"
 import { initialUsers } from "./data/initial-users"
+import { initialAuditLog } from "./data/initial-audit-log"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 
 export default function KnowledgeBase() {
@@ -57,8 +58,12 @@ export default function KnowledgeBase() {
       }
       setUsers(loadedUsers)
 
-      // Load audit log
-      const loadedAuditLog = storage.getAuditLog() || []
+      // Load audit log with fallback to initial audit log
+      let loadedAuditLog = storage.getAuditLog()
+      if (!loadedAuditLog || loadedAuditLog.length === 0) {
+        loadedAuditLog = initialAuditLog
+        storage.saveAuditLog(loadedAuditLog)
+      }
       setAuditLog(loadedAuditLog)
 
       // Load and increment page visits
@@ -78,7 +83,7 @@ export default function KnowledgeBase() {
       // Fallback to initial data
       setCategories(initialCategories)
       setUsers(initialUsers)
-      setAuditLog([])
+      setAuditLog(initialAuditLog)
       setPageVisits(1)
     } finally {
       setIsLoading(false)

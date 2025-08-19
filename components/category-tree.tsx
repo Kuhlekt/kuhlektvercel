@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen } from "lucide-react"
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from "lucide-react"
 import type { Category, Article, Subcategory } from "../types/knowledge-base"
 
 interface CategoryTreeProps {
@@ -34,51 +34,51 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
     setExpandedSubcategories(newExpanded)
   }
 
-  const renderArticle = (article: Article, level = 0) => (
-    <div
-      key={article.id}
-      className={`flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded ${
-        selectedArticle?.id === article.id ? "bg-blue-50 border-l-4 border-blue-500" : ""
-      }`}
-      style={{ paddingLeft: `${(level + 1) * 16}px` }}
-      onClick={() => onSelectArticle(article)}
-    >
-      <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
-      <span className="text-sm truncate">{article.title}</span>
-    </div>
-  )
+  const renderArticle = (article: Article, level = 0) => {
+    const isSelected = selectedArticle?.id === article.id
+    const paddingLeft = `${(level + 1) * 20}px`
+
+    return (
+      <div
+        key={article.id}
+        className={`flex items-center space-x-2 py-2 px-2 cursor-pointer hover:bg-gray-50 rounded ${
+          isSelected ? "bg-blue-50 border-l-4 border-blue-500" : ""
+        }`}
+        style={{ paddingLeft }}
+        onClick={() => onSelectArticle(article)}
+      >
+        <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+        <span className="text-sm truncate">{article.title}</span>
+      </div>
+    )
+  }
 
   const renderSubcategory = (subcategory: Subcategory, categoryId: string) => {
     const isExpanded = expandedSubcategories.has(subcategory.id)
     const hasArticles = subcategory.articles && subcategory.articles.length > 0
 
     return (
-      <div key={subcategory.id}>
+      <div key={subcategory.id} className="ml-4">
         <div
-          className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded"
-          style={{ paddingLeft: "32px" }}
+          className="flex items-center space-x-2 py-2 px-2 cursor-pointer hover:bg-gray-50 rounded"
           onClick={() => hasArticles && toggleSubcategory(subcategory.id)}
         >
           {hasArticles ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <ChevronDown className="h-4 w-4 text-gray-500" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-gray-500" />
             )
           ) : (
-            <div className="h-4 w-4 flex-shrink-0" />
+            <div className="w-4 h-4" />
           )}
-          {isExpanded ? (
-            <FolderOpen className="h-4 w-4 text-blue-500 flex-shrink-0" />
-          ) : (
-            <Folder className="h-4 w-4 text-blue-500 flex-shrink-0" />
-          )}
+          {isExpanded ? <FolderOpen className="h-4 w-4 text-blue-500" /> : <Folder className="h-4 w-4 text-blue-500" />}
           <span className="text-sm font-medium">{subcategory.name}</span>
           {hasArticles && <span className="text-xs text-gray-500 ml-auto">({subcategory.articles.length})</span>}
         </div>
 
         {isExpanded && hasArticles && (
-          <div className="space-y-1">{subcategory.articles.map((article) => renderArticle(article, 2))}</div>
+          <div className="ml-4">{subcategory.articles.map((article) => renderArticle(article, 1))}</div>
         )}
       </div>
     )
@@ -97,35 +97,30 @@ export function CategoryTree({ categories, onSelectArticle, selectedArticle }: C
     return (
       <div key={category.id} className="mb-2">
         <div
-          className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer rounded font-medium"
+          className="flex items-center space-x-2 py-2 px-2 cursor-pointer hover:bg-gray-50 rounded"
           onClick={() => hasContent && toggleCategory(category.id)}
         >
           {hasContent ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <ChevronDown className="h-4 w-4 text-gray-500" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <ChevronRight className="h-4 w-4 text-gray-500" />
             )
           ) : (
-            <div className="h-4 w-4 flex-shrink-0" />
+            <div className="w-4 h-4" />
           )}
-          {isExpanded ? (
-            <FolderOpen className="h-4 w-4 text-blue-600 flex-shrink-0" />
-          ) : (
-            <Folder className="h-4 w-4 text-blue-600 flex-shrink-0" />
-          )}
-          <span className="text-sm">{category.name}</span>
+          {isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600" /> : <Folder className="h-4 w-4 text-blue-600" />}
+          <span className="font-medium">{category.name}</span>
           {totalArticles > 0 && <span className="text-xs text-gray-500 ml-auto">({totalArticles})</span>}
         </div>
 
         {isExpanded && (
-          <div className="space-y-1 mt-1">
-            {/* Render category articles */}
-            {category.articles && category.articles.map((article) => renderArticle(article, 1))}
+          <div className="ml-4">
+            {/* Render direct articles */}
+            {category.articles?.map((article) => renderArticle(article))}
 
             {/* Render subcategories */}
-            {category.subcategories &&
-              category.subcategories.map((subcategory) => renderSubcategory(subcategory, category.id))}
+            {category.subcategories?.map((subcategory) => renderSubcategory(subcategory, category.id))}
           </div>
         )}
       </div>

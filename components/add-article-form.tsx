@@ -27,8 +27,9 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
   const [author, setAuthor] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const selectedCategory = categories.find((c) => c.id === categoryId)
+  const selectedCategory = categories.find((cat) => cat.id === categoryId)
   const availableSubcategories = selectedCategory?.subcategories || []
 
   const handleAddTag = () => {
@@ -42,34 +43,40 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddTag()
+    }
+  }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!title.trim() || !content.trim() || !categoryId) {
       return
     }
 
-    onSubmit({
-      title: title.trim(),
-      content: content.trim(),
-      categoryId,
-      subcategoryId: subcategoryId || undefined,
-      tags,
-      author: author.trim() || undefined,
-    })
+    setIsSubmitting(true)
+    try {
+      const articleData: Omit<Article, "id" | "createdAt" | "updatedAt"> = {
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+        categoryId,
+        subcategoryId: subcategoryId || undefined,
+        author: author.trim() || undefined,
+      }
 
-    // Reset form
-    setTitle("")
-    setContent("")
-    setCategoryId("")
-    setSubcategoryId("")
-    setTags([])
-    setNewTag("")
-    setAuthor("")
+      onSubmit(articleData)
+    } catch (error) {
+      console.error("Error submitting article:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleCategoryChange = (value: string) => {
-    setCategoryId(value)
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId)
     setSubcategoryId("") // Reset subcategory when category changes
   }
 
@@ -120,24 +127,40 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </Select>
             </div>
 
-            {availableSubcategories.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategory</Label>
-                <Select value={subcategoryId || "none"} onValueChange={setSubcategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subcategory (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {availableSubcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="subcategory">Subcategory</Label>
+              <Select
+                value={subcategoryId}
+                onValueChange={setSubcategoryId}
+                disabled={!categoryId || availableSubcategories.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a subcategory (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSubcategories.map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="content">Content *</Label>
+            <Textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Enter article content (supports basic markdown)"
+              className="min-h-[300px]"
+              required
+            />
+            <p className="text-xs text-gray-500">
+              Supports basic markdown: # Headers, ## Subheaders, - Lists, ```code blocks```
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -147,17 +170,17 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 id="tags"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={handleKeyPress}
                 placeholder="Add a tag"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
               />
-              <Button type="button" onClick={handleAddTag} size="sm">
+              <Button type="button" onClick={handleAddTag} variant="outline" size="sm">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center space-x-1">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>
                     <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
                       <X className="h-3 w-3" />
@@ -168,28 +191,12 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="content">Content *</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter article content..."
-              rows={12}
-              required
-              className="resize-none"
-            />
-            <p className="text-sm text-gray-500">
-              You can use basic markdown formatting (# for headers, ** for bold, - for lists)
-            </p>
-          </div>
-
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || !content.trim() || !categoryId}>
-              Add Article
+            <Button type="submit" disabled={isSubmitting || !title.trim() || !content.trim() || !categoryId}>
+              {isSubmitting ? "Adding..." : "Add Article"}
             </Button>
           </div>
         </form>

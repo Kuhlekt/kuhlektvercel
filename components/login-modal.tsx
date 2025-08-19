@@ -35,18 +35,27 @@ export function LoginModal({ isOpen, onClose, users, onLogin }: LoginModalProps)
         return
       }
 
+      console.log("Attempting login with:", { username: username.trim(), password: password.trim() })
+      console.log(
+        "Available users:",
+        users.map((u) => ({ username: u.username, password: u.password })),
+      )
+
       const user = users.find((u) => u.username === username.trim() && u.password === password.trim())
 
       if (user) {
+        console.log("Login successful for user:", user)
         onLogin(user)
         setUsername("")
         setPassword("")
         setError("")
         onClose()
       } else {
+        console.log("Login failed - no matching user found")
         setError("Invalid username or password")
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
