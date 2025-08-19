@@ -2,409 +2,212 @@
 
 import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Users, Search, Plus, Home, Database, FileText, FolderOpen, Shield, Activity } from "lucide-react"
+import { BookOpen, Users, Settings, Database, LogOut, User } from "lucide-react"
 
-import { LoginModal } from "./components/login-modal"
-import { CategoryTree } from "./components/category-tree"
-import { ArticleViewer } from "./components/article-viewer"
-import { SearchResults } from "./components/search-results"
-import { AddArticleForm } from "./components/add-article-form"
-import { EditArticleForm } from "./components/edit-article-form"
+import { storage } from "./utils/storage"
+import type { User as UserType, Category, Article, AuditLog } from "./types/knowledge-base"
+
+import { HomeDashboard } from "./components/home-dashboard"
+import { ArticleManagement } from "./components/article-management"
 import { UserManagement } from "./components/user-management"
 import { CategoryManagement } from "./components/category-management"
 import { DataManagement } from "./components/data-management"
-import { ArticleManagement } from "./components/article-management"
-import { AuditLog } from "./components/audit-log"
-import { AdminDashboard } from "./components/admin-dashboard"
-import { Navigation } from "./components/navigation"
+import { AuditLog as AuditLogComponent } from "./components/audit-log"
+import { LoginModal } from "./components/login-modal"
 
-import { storage } from "./utils/storage"
-import type { User, Category, Article, AuditLog as AuditLogType } from "./types/knowledge-base"
-
-interface KnowledgeBaseProps {
-  initialUsers?: User[]
-  initialCategories?: Category[]
-  initialArticles?: Article[]
-  initialAuditLog?: AuditLogType[]
-}
-
-export default function KnowledgeBase({
-  initialUsers = [],
-  initialCategories = [],
-  initialArticles = [],
-  initialAuditLog = [],
-}: KnowledgeBaseProps) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [showLogin, setShowLogin] = useState(false)
+export default function KnowledgeBase() {
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null)
+  const [users, setUsers] = useState<UserType[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [articles, setArticles] = useState<Article[]>([])
-  const [auditLog, setAuditLog] = useState<AuditLogType[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
-  const [editingArticle, setEditingArticle] = useState<Article | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Article[]>([])
-  const [showAddArticle, setShowAddArticle] = useState(false)
-  const [activeTab, setActiveTab] = useState("home")
+  const [auditLog, setAuditLog] = useState<AuditLog[]>([])
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Initialize storage and load data
+  // Initialize storage and auto-login as admin
   useEffect(() => {
-    storage.init()
-    loadData()
+    const initializeApp = async () => {
+      try {
+        console.log("🚀 Initializing Knowledge Base...")
 
-    // Auto-login as admin (bypass login)
-    const adminUser = storage.getUsers().find((user) => user.role === "admin")
-    if (adminUser) {
-      setCurrentUser(adminUser)
-      storage.setCurrentUser(adminUser)
+        // Initialize storage
+        storage.init()
+
+        // Load data
+        const loadedUsers = storage.getUsers()
+        const loadedCategories = storage.getCategories()
+        const loadedArticles = storage.getArticles()
+        const loadedAuditLog = storage.getAuditLog()
+
+        setUsers(loadedUsers)
+        setCategories(loadedCategories)
+        setArticles(loadedArticles)
+        setAuditLog(loadedAuditLog)
+
+        // Auto-login as admin (bypass login)
+        const adminUser = loadedUsers.find((user) => user.role === "admin")
+        if (adminUser) {
+          console.log("🔓 Auto-logging in as admin:", adminUser.username)
+          setCurrentUser(adminUser)
+          storage.setCurrentUser(adminUser)
+        } else {
+          console.log("⚠️ No admin user found, creating default admin")
+          // Create a default admin user if none exists
+          const defaultAdmin: UserType = {
+            id: "admin-default",
+            username: "admin",
+            email: "admin@kuhlekt.com",
+            password: "admin",
+            role: "admin",
+            createdAt: new Date(),
+            lastLogin: new Date(),
+          }
+          const updatedUsers = [...loadedUsers, defaultAdmin]
+          setUsers(updatedUsers)
+          storage.saveUsers(updatedUsers)
+          setCurrentUser(defaultAdmin)
+          storage.setCurrentUser(defaultAdmin)
+        }
+
+        console.log("✅ Knowledge Base initialized successfully")
+      } catch (error) {
+        console.error("❌ Error initializing app:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    initializeApp()
   }, [])
 
-  const loadData = () => {
+  const refreshData = () => {
+    console.log("🔄 Refreshing data...")
+    const loadedUsers = storage.getUsers()
     const loadedCategories = storage.getCategories()
     const loadedArticles = storage.getArticles()
-    const loadedUsers = storage.getUsers()
     const loadedAuditLog = storage.getAuditLog()
 
-    // Ensure dates are properly converted
-    const processedArticles = loadedArticles.map((article) => ({
-      ...article,
-      createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
-      updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
-    }))
-
-    setCategories(loadedCategories)
-    setArticles(processedArticles)
     setUsers(loadedUsers)
+    setCategories(loadedCategories)
+    setArticles(loadedArticles)
     setAuditLog(loadedAuditLog)
   }
 
-  const handleLogin = (user: User) => {
+  const handleLogin = (user: UserType) => {
     setCurrentUser(user)
-    setShowLogin(false)
-    loadData() // Refresh data after login
+    setShowLoginModal(false)
+    refreshData()
   }
 
   const handleLogout = () => {
-    if (currentUser) {
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "LOGOUT",
-        details: `User ${currentUser.username} logged out`,
-      })
-    }
     storage.setCurrentUser(null)
     setCurrentUser(null)
-    setActiveTab("home")
-    setSelectedArticle(null)
-    setEditingArticle(null)
-    setSearchQuery("")
-    setSearchResults([])
+    setShowLoginModal(true)
   }
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    if (query.trim()) {
-      const results = articles.filter(
-        (article) =>
-          article.title.toLowerCase().includes(query.toLowerCase()) ||
-          article.content.toLowerCase().includes(query.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase())),
-      )
-      setSearchResults(results)
-      setActiveTab("search")
-    } else {
-      setSearchResults([])
-    }
-  }
-
-  const handleAddArticle = (articleData: {
-    title: string
-    content: string
-    categoryId: string
-    tags: string[]
-    status: "draft" | "published"
-  }) => {
-    if (!currentUser) return
-
-    const newArticle: Article = {
-      id: Date.now().toString(),
-      ...articleData,
-      authorId: currentUser.id,
-      createdBy: currentUser.username,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    const updatedArticles = [...articles, newArticle]
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "CREATE_ARTICLE",
-      details: `Created article: ${newArticle.title}`,
-    })
-
-    setShowAddArticle(false)
-    loadData() // Refresh audit log
-  }
-
-  const handleEditArticle = (updatedArticle: Omit<Article, "createdAt">) => {
-    if (!currentUser) return
-
-    const articleWithDates: Article = {
-      ...updatedArticle,
-      createdAt: editingArticle?.createdAt || new Date(),
-      updatedAt: new Date(),
-    }
-
-    const updatedArticles = articles.map((article) => (article.id === updatedArticle.id ? articleWithDates : article))
-
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
-
-    storage.addAuditEntry({
-      performedBy: currentUser.id,
-      action: "UPDATE_ARTICLE",
-      details: `Updated article: ${updatedArticle.title}`,
-    })
-
-    setEditingArticle(null)
-    loadData() // Refresh audit log
-  }
-
-  const handleDeleteArticle = (articleId: string) => {
-    if (!currentUser) return
-
-    const articleToDelete = articles.find((a) => a.id === articleId)
-    const updatedArticles = articles.filter((article) => article.id !== articleId)
-
-    setArticles(updatedArticles)
-    storage.saveArticles(updatedArticles)
-
-    if (articleToDelete) {
-      storage.addAuditEntry({
-        performedBy: currentUser.id,
-        action: "DELETE_ARTICLE",
-        details: `Deleted article: ${articleToDelete.title}`,
-      })
-    }
-
-    if (selectedArticle?.id === articleId) {
-      setSelectedArticle(null)
-    }
-
-    loadData() // Refresh audit log
-  }
-
-  const handleCategoriesUpdate = (updatedCategories: Category[]) => {
-    setCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    loadData() // Refresh audit log
-  }
-
-  const handleUsersUpdate = (updatedUsers: User[]) => {
-    setUsers(updatedUsers)
-    storage.saveUsers(updatedUsers)
-    loadData() // Refresh audit log
-  }
-
-  const handleAuditLogUpdate = (updatedAuditLog: AuditLogType[]) => {
-    setAuditLog(updatedAuditLog)
-  }
-
-  // Get articles for categories (with proper date handling)
-  const getCategoriesWithArticles = (): Category[] => {
-    return categories.map((category) => ({
-      ...category,
-      articles: articles
-        .filter((article) => article.categoryId === category.id && !article.subcategoryId)
-        .map((article) => ({
-          ...article,
-          createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
-          updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
-        })),
-      subcategories:
-        category.subcategories?.map((subcategory) => ({
-          ...subcategory,
-          articles: articles
-            .filter((article) => article.subcategoryId === subcategory.id)
-            .map((article) => ({
-              ...article,
-              createdAt: article.createdAt instanceof Date ? article.createdAt : new Date(article.createdAt),
-              updatedAt: article.updatedAt instanceof Date ? article.updatedAt : new Date(article.updatedAt),
-            })),
-        })) || [],
-    }))
-  }
-
-  const categoriesWithArticles = getCategoriesWithArticles()
-
-  // Remove authentication requirement - always allow access
   const requireAuth = (action: () => void) => {
+    // Always allow action since we bypassed login
     action()
   }
 
-  // Always treat user as admin for bypass
-  const isAdmin = true
-  const canEdit = true
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>Loading Knowledge Base...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Always show the main interface (bypassed login)
+  const isAdmin = true // Always admin
+  const canEdit = true // Always can edit
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation
-        currentUser={currentUser}
-        onLogin={() => setShowLogin(true)}
-        onLogout={handleLogout}
-        onSearch={handleSearch}
-        searchQuery={searchQuery}
-      />
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <BookOpen className="h-8 w-8 text-blue-600" />
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Kuhlekt Knowledge Base</h1>
+                <p className="text-sm text-gray-500">Centralized Information Management</p>
+              </div>
+            </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+            <div className="flex items-center space-x-4">
+              {currentUser && (
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">{currentUser.username}</span>
+                  <Badge variant={currentUser.role === "admin" ? "default" : "secondary"}>{currentUser.role}</Badge>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs defaultValue="home" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="home" className="flex items-center space-x-2">
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="browse" className="flex items-center space-x-2">
               <BookOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Browse</span>
+              <span>Home</span>
             </TabsTrigger>
-            {searchQuery && (
-              <TabsTrigger value="search" className="flex items-center space-x-2">
-                <Search className="h-4 w-4" />
-                <span className="hidden sm:inline">Search</span>
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="manage" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Articles</span>
+            <TabsTrigger value="articles" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Articles</span>
             </TabsTrigger>
             <TabsTrigger value="admin" className="flex items-center space-x-2">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Admin</span>
+              <Users className="h-4 w-4" />
+              <span>Admin</span>
             </TabsTrigger>
             <TabsTrigger value="data" className="flex items-center space-x-2">
               <Database className="h-4 w-4" />
-              <span className="hidden sm:inline">Data</span>
+              <span>Data</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="home" className="mt-6">
-            <AdminDashboard
-              categories={categoriesWithArticles}
-              articles={articles}
-              users={users}
-              auditLog={auditLog}
+            <HomeDashboard
               currentUser={currentUser}
+              users={users}
+              categories={categories}
+              articles={articles}
+              auditLog={auditLog}
+              onRefresh={refreshData}
             />
           </TabsContent>
 
-          <TabsContent value="browse" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                    <CardTitle className="flex items-center space-x-2">
-                      <FolderOpen className="h-5 w-5" />
-                      <span>Categories</span>
-                    </CardTitle>
-                    <Button variant="outline" size="sm" onClick={() => setShowAddArticle(true)}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Article
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <CategoryTree
-                      categories={categoriesWithArticles}
-                      onArticleSelect={setSelectedArticle}
-                      selectedArticleId={selectedArticle?.id}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="lg:col-span-2">
-                {selectedArticle ? (
-                  <ArticleViewer
-                    article={selectedArticle}
-                    onClose={() => setSelectedArticle(null)}
-                    onEdit={() => setEditingArticle(selectedArticle)}
-                    onDelete={() => handleDeleteArticle(selectedArticle.id)}
-                  />
-                ) : (
-                  <Card>
-                    <CardContent className="flex items-center justify-center h-96">
-                      <div className="text-center text-gray-500">
-                        <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Select an article from the categories to view its content</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          {searchQuery && (
-            <TabsContent value="search" className="mt-6">
-              <SearchResults
-                results={searchResults}
-                query={searchQuery}
-                onArticleSelect={setSelectedArticle}
-                onClearSearch={() => {
-                  setSearchQuery("")
-                  setSearchResults([])
-                  setActiveTab("browse")
-                }}
-              />
-            </TabsContent>
-          )}
-
-          <TabsContent value="manage" className="mt-6">
-            <ArticleManagement
-              categories={categoriesWithArticles}
-              onEditArticle={setEditingArticle}
-              onDeleteArticle={handleDeleteArticle}
-            />
+          <TabsContent value="articles" className="mt-6">
+            <ArticleManagement currentUser={currentUser} categories={categories} onRefresh={refreshData} />
           </TabsContent>
 
           <TabsContent value="admin" className="mt-6">
-            <Tabs defaultValue="users" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="users" className="flex items-center space-x-2">
-                  <Users className="h-4 w-4" />
-                  <span>Users</span>
-                </TabsTrigger>
-                <TabsTrigger value="categories" className="flex items-center space-x-2">
-                  <FolderOpen className="h-4 w-4" />
-                  <span>Categories</span>
-                </TabsTrigger>
-                <TabsTrigger value="audit" className="flex items-center space-x-2">
-                  <Activity className="h-4 w-4" />
-                  <span>Audit Log</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="users" className="mt-6">
-                <UserManagement users={users} currentUser={currentUser} onUpdateUsers={handleUsersUpdate} />
-              </TabsContent>
-
-              <TabsContent value="categories" className="mt-6">
-                <CategoryManagement
-                  categories={categories}
-                  currentUser={currentUser}
-                  onUpdateCategories={handleCategoriesUpdate}
-                />
-              </TabsContent>
-
-              <TabsContent value="audit" className="mt-6">
-                <AuditLog auditLog={auditLog} />
-              </TabsContent>
-            </Tabs>
+            <div className="space-y-6">
+              <UserManagement onRefresh={refreshData} />
+              <CategoryManagement onRefresh={refreshData} />
+              <AuditLogComponent auditLog={auditLog} users={users} />
+            </div>
           </TabsContent>
 
           <TabsContent value="data" className="mt-6">
@@ -413,36 +216,13 @@ export default function KnowledgeBase({
               categories={categories}
               articles={articles}
               auditLog={auditLog}
-              onDataChange={loadData}
+              onDataChange={refreshData}
             />
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
 
-      {/* Modals */}
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onLogin={handleLogin} />
-
-      <AddArticleForm
-        isOpen={showAddArticle}
-        onClose={() => setShowAddArticle(false)}
-        onSubmit={handleAddArticle}
-        categories={categories}
-        currentUser={currentUser || ({ id: "admin", username: "admin", role: "admin" } as User)}
-      />
-
-      {editingArticle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <EditArticleForm
-              article={editingArticle}
-              categories={categories}
-              currentUser={currentUser}
-              onSubmit={handleEditArticle}
-              onCancel={() => setEditingArticle(null)}
-            />
-          </div>
-        </div>
-      )}
+      {showLoginModal && <LoginModal onLogin={handleLogin} onClose={() => setShowLoginModal(false)} />}
     </div>
   )
 }

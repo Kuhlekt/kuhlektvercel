@@ -84,21 +84,54 @@ export function DataManagement({
       const text = await file.text()
       const data = JSON.parse(text)
 
-      // Validate the data structure
-      if (!data.users || !data.categories || !data.articles || !data.auditLog) {
-        throw new Error("Invalid backup file format")
+      console.log("Import data structure:", data)
+
+      // More flexible validation - check if it's an object and has at least some expected properties
+      if (typeof data !== "object" || data === null) {
+        throw new Error("Invalid file format - not a valid JSON object")
       }
 
-      storage.importData(data)
-      setImportStatus("Data imported successfully!")
+      // Check if it has at least one of the expected properties
+      const hasValidStructure =
+        data.users ||
+        data.categories ||
+        data.articles ||
+        data.auditLog ||
+        data.exportDate ||
+        Array.isArray(data.users) ||
+        Array.isArray(data.categories) ||
+        Array.isArray(data.articles) ||
+        Array.isArray(data.auditLog)
+
+      if (!hasValidStructure) {
+        throw new Error("Invalid backup file - missing expected data structure")
+      }
+
+      // Ensure arrays exist with defaults
+      const importData = {
+        users: Array.isArray(data.users) ? data.users : [],
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        articles: Array.isArray(data.articles) ? data.articles : [],
+        auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
+        exportDate: data.exportDate || new Date().toISOString(),
+      }
+
+      console.log("Processed import data:", importData)
+
+      storage.importData(importData)
+      setImportStatus(
+        `Data imported successfully! Imported ${importData.users.length} users, ${importData.categories.length} categories, ${importData.articles.length} articles, and ${importData.auditLog.length} audit entries.`,
+      )
 
       // Refresh the parent component
       if (onDataChange) {
-        onDataChange()
+        setTimeout(() => {
+          onDataChange()
+        }, 100)
       }
     } catch (error) {
       console.error("Import error:", error)
-      setImportStatus("Import failed. Please check the file format.")
+      setImportStatus(`Import failed: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsImporting(false)
       // Reset the input
