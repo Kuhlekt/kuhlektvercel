@@ -7,6 +7,7 @@ import { ArticleViewer } from "./components/article-viewer"
 import { HomeDashboard } from "./components/home-dashboard"
 import { LoginModal } from "./components/login-modal"
 import { AddArticleForm } from "./components/add-article-form"
+import { EditArticleModal } from "./components/edit-article-modal"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { StorageDebugSimple } from "./components/storage-debug-simple"
 import { storage } from "./utils/storage"
@@ -24,6 +25,7 @@ export default function KnowledgeBase() {
   const [currentView, setCurrentView] = useState<"home" | "category" | "article">("home")
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAddArticleModalOpen, setIsAddArticleModalOpen] = useState(false)
+  const [isEditArticleModalOpen, setIsEditArticleModalOpen] = useState(false)
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -144,6 +146,44 @@ export default function KnowledgeBase() {
     console.log("📝 Article created:", newArticle.title)
   }
 
+  const handleEditArticle = (articleData: {
+    id: string
+    title: string
+    content: string
+    categoryId: string
+    tags: string[]
+    status: "draft" | "published"
+  }) => {
+    if (!currentUser) return
+
+    const updatedArticles = articles.map((article) =>
+      article.id === articleData.id
+        ? {
+            ...article,
+            title: articleData.title,
+            content: articleData.content,
+            categoryId: articleData.categoryId,
+            tags: articleData.tags,
+            status: articleData.status,
+            updatedAt: new Date(),
+          }
+        : article,
+    )
+
+    setArticles(updatedArticles)
+    storage.saveArticles(updatedArticles)
+
+    storage.addAuditEntry({
+      performedBy: currentUser.id,
+      action: "UPDATE_ARTICLE",
+      details: `Updated article "${articleData.title}"`,
+    })
+    setAuditLog(storage.getAuditLog())
+
+    setIsEditArticleModalOpen(false)
+    console.log("✏️ Article updated:", articleData.title)
+  }
+
   const handleDataRestored = () => {
     console.log("🔄 Data restored, reloading all data...")
 
@@ -196,8 +236,10 @@ export default function KnowledgeBase() {
     }
   }
 
-  const handleEditArticle = () => {
-    console.log("✏️ Edit article functionality will be implemented")
+  const handleOpenEditArticle = () => {
+    if (selectedArticle && currentUser && (currentUser.role === "admin" || currentUser.role === "editor")) {
+      setIsEditArticleModalOpen(true)
+    }
   }
 
   if (!isInitialized) {
@@ -220,7 +262,7 @@ export default function KnowledgeBase() {
             category={selectedCategory}
             author={selectedAuthor}
             currentUser={currentUser}
-            onEdit={handleEditArticle}
+            onEdit={handleOpenEditArticle}
             onBack={handleBackFromArticle}
           />
         )
@@ -292,6 +334,17 @@ export default function KnowledgeBase() {
           isOpen={isAddArticleModalOpen}
           onClose={() => setIsAddArticleModalOpen(false)}
           onSubmit={handleAddArticle}
+          categories={categories}
+          currentUser={currentUser}
+        />
+      )}
+
+      {selectedArticle && currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
+        <EditArticleModal
+          isOpen={isEditArticleModalOpen}
+          onClose={() => setIsEditArticleModalOpen(false)}
+          onSubmit={handleEditArticle}
+          article={selectedArticle}
           categories={categories}
           currentUser={currentUser}
         />
