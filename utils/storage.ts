@@ -19,6 +19,7 @@ class Storage {
     // Initialize users if not exists
     if (!localStorage.getItem(this.USERS_KEY)) {
       localStorage.setItem(this.USERS_KEY, JSON.stringify(initialUsers))
+      console.log("Initialized users:", initialUsers)
     }
 
     // Initialize categories if not exists
@@ -41,7 +42,9 @@ class Storage {
   getUsers(): User[] {
     if (typeof window === "undefined") return initialUsers
     const users = localStorage.getItem(this.USERS_KEY)
-    return users ? JSON.parse(users) : initialUsers
+    const result = users ? JSON.parse(users) : initialUsers
+    console.log("Getting users:", result)
+    return result
   }
 
   saveUsers(users: User[]): void {
@@ -107,8 +110,10 @@ class Storage {
     if (typeof window === "undefined") return
     if (user) {
       localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user))
+      console.log("Set current user:", user)
     } else {
       localStorage.removeItem(this.CURRENT_USER_KEY)
+      console.log("Cleared current user")
     }
   }
 

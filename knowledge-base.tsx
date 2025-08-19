@@ -28,11 +28,13 @@ export default function KnowledgeBase() {
   // Load data on component mount
   useEffect(() => {
     const loadData = () => {
+      console.log("Loading data...")
       setCurrentUser(storage.getCurrentUser())
       setUsers(storage.getUsers())
       setCategories(storage.getCategories())
       setArticles(storage.getArticles())
       setAuditLog(storage.getAuditLog())
+      console.log("Data loaded")
     }
 
     loadData()
@@ -46,6 +48,7 @@ export default function KnowledgeBase() {
   }, [categories, selectedCategoryId])
 
   const handleLogin = (user: User) => {
+    console.log("Handling login for user:", user)
     setCurrentUser(user)
     setUsers(storage.getUsers()) // Refresh users to get updated lastLogin
   }

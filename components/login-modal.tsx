@@ -36,7 +36,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         users.map((u) => ({ username: u.username, password: u.password })),
       )
 
-      const user = users.find((u) => u.username === username && u.password === password)
+      const user = users.find((u) => u.username.trim() === username.trim() && u.password === password)
       console.log("Found user:", user)
 
       if (user) {

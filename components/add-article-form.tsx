@@ -33,7 +33,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
   const [categoryId, setCategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
-  const [status, setStatus] = useState<"draft" | "published">("published")
+  const [status, setStatus] = useState<"draft" | "published">("draft")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleAddTag = () => {
@@ -66,7 +66,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
       setCategoryId("")
       setTags([])
       setTagInput("")
-      setStatus("published")
+      setStatus("draft")
     } catch (error) {
       console.error("Error creating article:", error)
     } finally {
@@ -80,7 +80,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
     setCategoryId("")
     setTags([])
     setTagInput("")
-    setStatus("published")
+    setStatus("draft")
     onClose()
   }
 
@@ -90,12 +90,12 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
         <DialogHeader>
           <DialogTitle>Add New Article</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter article title"
@@ -136,7 +136,6 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
             <div className="flex space-x-2">
               <Input
                 id="tags"
-                type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder="Add a tag"
@@ -152,7 +151,7 @@ export function AddArticleForm({ isOpen, onClose, onSubmit, categories, currentU
               </Button>
             </div>
             {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
                     <span>{tag}</span>

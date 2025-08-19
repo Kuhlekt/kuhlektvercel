@@ -1,4 +1,6 @@
 "use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Folder, FileText } from "lucide-react"
 import type { Category, Article } from "../types/knowledge-base"
@@ -29,10 +31,12 @@ export function CategoryTree({
   }
 
   return (
-    <aside className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Categories</h2>
-        <div className="space-y-2">
+    <aside className="w-80 bg-white border-r overflow-y-auto">
+      <Card className="m-4">
+        <CardHeader>
+          <CardTitle className="text-lg">Categories</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
           {categories.map((category) => {
             const articleCount = getArticleCount(category.id)
             const categoryArticles = getCategoryArticles(category.id)
@@ -41,16 +45,14 @@ export function CategoryTree({
             return (
               <div key={category.id} className="space-y-1">
                 <div
-                  onClick={() => onCategorySelect(category.id)}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                    isSelected ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"
+                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-50 ${
+                    isSelected ? "bg-blue-50 border border-blue-200" : ""
                   }`}
+                  onClick={() => onCategorySelect(category.id)}
                 >
                   <div className="flex items-center space-x-2">
-                    <Folder className={`h-4 w-4 ${isSelected ? "text-blue-600" : "text-gray-500"}`} />
-                    <span className={`font-medium ${isSelected ? "text-blue-900" : "text-gray-900"}`}>
-                      {category.name}
-                    </span>
+                    <Folder className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-sm">{category.name}</span>
                   </div>
                   <Badge variant="secondary" className="text-xs">
                     {articleCount}
@@ -62,15 +64,13 @@ export function CategoryTree({
                     {categoryArticles.map((article) => (
                       <div
                         key={article.id}
-                        onClick={() => onArticleSelect(article.id)}
-                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
-                          selectedArticleId === article.id
-                            ? "bg-blue-100 text-blue-900"
-                            : "hover:bg-gray-50 text-gray-700"
+                        className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-gray-50 ${
+                          selectedArticleId === article.id ? "bg-blue-50 border border-blue-200" : ""
                         }`}
+                        onClick={() => onArticleSelect(article.id)}
                       >
-                        <FileText className="h-3 w-3" />
-                        <span className="text-sm truncate">{article.title}</span>
+                        <FileText className="h-3 w-3 text-gray-500" />
+                        <span className="text-sm text-gray-700 truncate">{article.title}</span>
                       </div>
                     ))}
                   </div>
@@ -78,8 +78,8 @@ export function CategoryTree({
               </div>
             )
           })}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </aside>
   )
 }
