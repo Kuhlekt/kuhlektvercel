@@ -21,7 +21,7 @@ export function DataManagement() {
     }, 3000)
   }
 
-  const handleExport = () => {
+  const handleExportData = () => {
     try {
       const data = storage.exportData()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
@@ -39,7 +39,7 @@ export function DataManagement() {
     }
   }
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -54,9 +54,10 @@ export function DataManagement() {
       }
     }
     reader.readAsText(file)
+    event.target.value = ""
   }
 
-  const handleClearAll = () => {
+  const handleClearAllData = () => {
     if (confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
       storage.clearAll()
       showMessage("All data cleared. Please refresh the page.", "success")
@@ -74,37 +75,41 @@ export function DataManagement() {
       )}
 
       <div className="space-y-4">
-        <div className="border rounded-lg p-4">
+        <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Export Data</h4>
-          <p className="text-sm text-gray-600 mb-4">Download a backup of all your knowledge base data.</p>
-          <Button onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Data
+          <p className="text-sm text-gray-600 mb-3">
+            Download a backup of all your knowledge base data including users, categories, articles, and audit logs.
+          </p>
+          <Button onClick={handleExportData} className="flex items-center space-x-1">
+            <Download className="h-4 w-4" />
+            <span>Export Data</span>
           </Button>
         </div>
 
-        <div className="border rounded-lg p-4">
+        <div className="p-4 border rounded-lg">
           <h4 className="font-medium mb-2">Import Data</h4>
-          <p className="text-sm text-gray-600 mb-4">Upload a previously exported backup file to restore your data.</p>
+          <p className="text-sm text-gray-600 mb-3">
+            Import data from a previously exported backup file. This will merge with existing data.
+          </p>
           <div className="flex items-center space-x-2">
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" id="import-file" />
-            <Button asChild>
+            <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-file" />
+            <Button asChild variant="outline" className="flex items-center space-x-1 bg-transparent">
               <label htmlFor="import-file" className="cursor-pointer">
-                <Upload className="h-4 w-4 mr-2" />
-                Import Data
+                <Upload className="h-4 w-4" />
+                <span>Import Data</span>
               </label>
             </Button>
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 border-red-200">
+        <div className="p-4 border rounded-lg border-red-200">
           <h4 className="font-medium mb-2 text-red-700">Clear All Data</h4>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 mb-3">
             Permanently delete all data from the knowledge base. This action cannot be undone.
           </p>
-          <Button variant="destructive" onClick={handleClearAll}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All Data
+          <Button onClick={handleClearAllData} variant="destructive" className="flex items-center space-x-1">
+            <Trash2 className="h-4 w-4" />
+            <span>Clear All Data</span>
           </Button>
         </div>
       </div>

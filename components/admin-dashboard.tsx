@@ -1,4 +1,6 @@
 "use client"
+
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserManagement } from "./user-management"
@@ -32,40 +34,46 @@ export function AdminDashboard({
   onUpdateCategories,
   onUpdateArticles,
 }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState("users")
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Admin Dashboard</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
-            <TabsTrigger value="data">Data Management</TabsTrigger>
+            <TabsTrigger value="data">Data</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="mt-4">
-            <UserManagement users={users} onUpdateUsers={onUpdateUsers} currentUser={currentUser} />
-          </TabsContent>
+          <div className="flex-1 overflow-hidden">
+            <TabsContent value="users" className="h-full">
+              <UserManagement users={users} currentUser={currentUser} onUpdateUsers={onUpdateUsers} />
+            </TabsContent>
 
-          <TabsContent value="categories" className="mt-4">
-            <CategoryManagement
-              categories={categories}
-              onUpdateCategories={onUpdateCategories}
-              currentUser={currentUser}
-            />
-          </TabsContent>
+            <TabsContent value="categories" className="h-full">
+              <CategoryManagement
+                categories={categories}
+                articles={articles}
+                currentUser={currentUser}
+                onUpdateCategories={onUpdateCategories}
+                onUpdateArticles={onUpdateArticles}
+              />
+            </TabsContent>
 
-          <TabsContent value="audit" className="mt-4">
-            <AuditLog auditLog={auditLog} users={users} />
-          </TabsContent>
+            <TabsContent value="audit" className="h-full">
+              <AuditLog auditLog={auditLog} users={users} />
+            </TabsContent>
 
-          <TabsContent value="data" className="mt-4">
-            <DataManagement />
-          </TabsContent>
+            <TabsContent value="data" className="h-full">
+              <DataManagement />
+            </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>

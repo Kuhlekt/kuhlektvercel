@@ -1,8 +1,8 @@
 "use client"
 
+import { Search, Plus, Settings, LogIn, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Plus, Settings, LogOut, User } from "lucide-react"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
@@ -25,11 +25,13 @@ export function Navigation({
   onLogout,
 }: NavigationProps) {
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-4">
+    <nav className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
-          <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
+          <div className="flex items-center space-x-2">
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
+            <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+          </div>
         </div>
 
         <div className="flex-1 max-w-md mx-8">
@@ -45,7 +47,7 @@ export function Navigation({
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           {currentUser ? (
             <>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -54,27 +56,40 @@ export function Navigation({
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded">{currentUser.role}</span>
               </div>
 
-              {(currentUser.role === "editor" || currentUser.role === "admin") && (
-                <Button onClick={onAddArticle} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Article
+              {(currentUser.role === "admin" || currentUser.role === "editor") && (
+                <Button onClick={onAddArticle} size="sm" className="flex items-center space-x-1">
+                  <Plus className="h-4 w-4" />
+                  <span>Add Article</span>
                 </Button>
               )}
 
               {currentUser.role === "admin" && (
-                <Button onClick={onAdminPanel} variant="outline" size="sm">
-                  <Settings className="h-4 w-4 mr-1" />
-                  Admin
+                <Button
+                  onClick={onAdminPanel}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-1 bg-transparent"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Admin</span>
                 </Button>
               )}
 
-              <Button onClick={onLogout} variant="outline" size="sm">
-                <LogOut className="h-4 w-4 mr-1" />
-                Logout
+              <Button
+                onClick={onLogout}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-1 bg-transparent"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
               </Button>
             </>
           ) : (
-            <Button onClick={onLogin}>Login</Button>
+            <Button onClick={onLogin} size="sm" className="flex items-center space-x-1">
+              <LogIn className="h-4 w-4" />
+              <span>Login</span>
+            </Button>
           )}
         </div>
       </div>

@@ -14,21 +14,25 @@ class Storage {
 
     console.log("🔧 Initializing storage...")
 
+    // Initialize users
     if (!localStorage.getItem(this.USERS_KEY)) {
       console.log("👥 No users found, initializing with default users")
       localStorage.setItem(this.USERS_KEY, JSON.stringify(initialUsers))
     }
 
+    // Initialize categories
     if (!localStorage.getItem(this.CATEGORIES_KEY)) {
       console.log("📁 No categories found, initializing with default categories")
       localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(initialCategories))
     }
 
+    // Initialize articles
     if (!localStorage.getItem(this.ARTICLES_KEY)) {
       console.log("📄 No articles found, initializing with default articles")
       localStorage.setItem(this.ARTICLES_KEY, JSON.stringify(initialArticles))
     }
 
+    // Initialize audit log
     if (!localStorage.getItem(this.AUDIT_LOG_KEY)) {
       console.log("📋 No audit log found, initializing empty audit log")
       localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify([]))
@@ -40,7 +44,15 @@ class Storage {
   getUsers(): User[] {
     if (typeof window === "undefined") return initialUsers
     const users = localStorage.getItem(this.USERS_KEY)
-    return users ? JSON.parse(users) : initialUsers
+    if (users) {
+      const parsed = JSON.parse(users)
+      return parsed.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+      }))
+    }
+    return initialUsers
   }
 
   saveUsers(users: User[]) {
@@ -179,6 +191,15 @@ class Storage {
     if (data.auditLog) {
       localStorage.setItem(this.AUDIT_LOG_KEY, JSON.stringify(data.auditLog))
     }
+  }
+
+  clearAll() {
+    if (typeof window === "undefined") return
+    localStorage.removeItem(this.USERS_KEY)
+    localStorage.removeItem(this.CATEGORIES_KEY)
+    localStorage.removeItem(this.ARTICLES_KEY)
+    localStorage.removeItem(this.CURRENT_USER_KEY)
+    localStorage.removeItem(this.AUDIT_LOG_KEY)
   }
 }
 

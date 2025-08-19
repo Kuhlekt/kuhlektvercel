@@ -1,182 +1,261 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Trash2, Plus, Edit } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Plus, Edit, Trash2, Folder } from "lucide-react"
 import { storage } from "../utils/storage"
-import type { Category, User } from "../types/knowledge-base"
+import type { Category, Article, User } from "../types/knowledge-base"
 
 interface CategoryManagementProps {
   categories: Category[]
-  onUpdateCategories: (categories: Category[]) => void
+  articles: Article[]
   currentUser: User
+  onUpdateCategories: (categories: Category[]) => void
+  onUpdateArticles: (articles: Article[]) => void
 }
 
-export function CategoryManagement({ categories, onUpdateCategories, currentUser }: CategoryManagementProps) {
-  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
+export function CategoryManagement({
+  categories,
+  articles,
+  currentUser,
+  onUpdateCategories,
+  onUpdateArticles,
+}: CategoryManagementProps) {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [newCategory, setNewCategory] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
   })
+  const [error, setError] = useState("")
 
   const handleAddCategory = () => {
-    if (!newCategory.name || !newCategory.description) return
+    setFormData({ name: "", description: "" })
+    setError("")
+    setIsAddModalOpen(true)
+  }
 
-    const category: Category = {
-      id: Date.now().toString(),
-      ...newCategory,
-      createdAt: new Date(),
-      createdBy: currentUser.username,
-    }
-
-    const updatedCategories = [...categories, category]
-    onUpdateCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    storage.addAuditEntry({
-      userId: currentUser.id,
-      action: "CREATE_CATEGORY",
-      details: `Created category ${category.name}`,
+  const handleEditCategory = (category: Category) => {
+    setFormData({
+      name: category.name,
+      description: category.description || "",
     })
-
-    setNewCategory({ name: "", description: "" })
-    setIsAddCategoryOpen(false)
+    setEditingCategory(category)
+    setError("")
+    setIsEditModalOpen(true)
   }
 
   const handleDeleteCategory = (categoryId: string) => {
-    const updatedCategories = categories.filter((c) => c.id !== categoryId)
-    onUpdateCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    storage.addAuditEntry({
-      userId: currentUser.id,
-      action: "DELETE_CATEGORY",
-      details: `Deleted category ${categories.find((c) => c.id === categoryId)?.name}`,
-    })
+    const categoryArticles = articles.filter((a) => a.categoryId === categoryId)
+
+    if (categoryArticles.length > 0) {
+      setError(`Cannot delete category with ${categoryArticles.length} articles`)
+      return
+    }
+
+    if (confirm("Are you sure you want to delete this category?")) {
+      const updatedCategories = categories.filter((c) => c.id !== categoryId)
+      onUpdateCategories(updatedCategories)
+      storage.saveCategories(updatedCategories)
+      storage.addAuditEntry({
+        userId: currentUser.id,
+        action: "DELETE_CATEGORY",
+        details: `Deleted category with ID ${categoryId}`,
+      })
+    }
   }
 
-  const handleUpdateCategory = () => {
-    if (!editingCategory) return
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
 
-    const updatedCategories = categories.map((c) => (c.id === editingCategory.id ? editingCategory : c))
-    onUpdateCategories(updatedCategories)
-    storage.saveCategories(updatedCategories)
-    storage.addAuditEntry({
-      userId: currentUser.id,
-      action: "UPDATE_CATEGORY",
-      details: `Updated category ${editingCategory.name}`,
-    })
+    if (!formData.name.trim()) {
+      setError("Category name is required")
+      return
+    }
+
+    if (editingCategory) {
+      // Edit existing category
+      const updatedCategories = categories.map((c) =>
+        c.id === editingCategory.id
+          ? {
+              ...c,
+              name: formData.name.trim(),
+              description: formData.description.trim() || undefined,
+            }
+          : c,
+      )
+      onUpdateCategories(updatedCategories)
+      storage.saveCategories(updatedCategories)
+      storage.addAuditEntry({
+        userId: currentUser.id,
+        action: "UPDATE_CATEGORY",
+        details: `Updated category ${formData.name}`,
+      })
+      setIsEditModalOpen(false)
+    } else {
+      // Add new category
+      if (categories.some((c) => c.name === formData.name.trim())) {
+        setError("Category name already exists")
+        return
+      }
+
+      const newCategory: Category = {
+        id: Date.now().toString(),
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        createdAt: new Date(),
+        createdBy: currentUser.username,
+      }
+
+      const updatedCategories = [...categories, newCategory]
+      onUpdateCategories(updatedCategories)
+      storage.saveCategories(updatedCategories)
+      storage.addAuditEntry({
+        userId: currentUser.id,
+        action: "CREATE_CATEGORY",
+        details: `Created category ${newCategory.name}`,
+      })
+      setIsAddModalOpen(false)
+    }
 
     setEditingCategory(null)
+  }
+
+  const getCategoryArticleCount = (categoryId: string) => {
+    return articles.filter((a) => a.categoryId === categoryId).length
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Category Management</h3>
-        <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Category</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={newCategory.description}
-                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddCategory}>Add Category</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleAddCategory} className="flex items-center space-x-1">
+          <Plus className="h-4 w-4" />
+          <span>Add Category</span>
+        </Button>
       </div>
 
-      <div className="border rounded-lg">
-        <div className="grid grid-cols-4 gap-4 p-4 font-medium border-b bg-gray-50">
-          <div>Name</div>
-          <div>Description</div>
-          <div>Created</div>
-          <div>Actions</div>
-        </div>
-        {categories.map((category) => (
-          <div key={category.id} className="grid grid-cols-4 gap-4 p-4 border-b last:border-b-0">
-            <div className="font-medium">{category.name}</div>
-            <div className="text-gray-600">{category.description}</div>
-            <div className="text-gray-600">{category.createdAt.toLocaleDateString()}</div>
-            <div className="flex space-x-2">
-              <Dialog
-                open={editingCategory?.id === category.id}
-                onOpenChange={(open) => !open && setEditingCategory(null)}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={() => setEditingCategory(category)}>
-                    <Edit className="h-3 w-3" />
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <ScrollArea className="h-96">
+        <div className="space-y-2">
+          {categories.map((category) => {
+            const articleCount = getCategoryArticleCount(category.id)
+            return (
+              <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <Folder className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium">{category.name}</span>
+                    <span className="text-sm text-gray-500">({articleCount} articles)</span>
+                  </div>
+                  {category.description && <p className="text-sm text-gray-600 mt-1">{category.description}</p>}
+                  <p className="text-xs text-gray-400">
+                    Created: {category.createdAt.toLocaleDateString()} by {category.createdBy}
+                  </p>
+                </div>
+                <div className="flex space-x-1">
+                  <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
+                    <Edit className="h-4 w-4" />
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Edit Category</DialogTitle>
-                  </DialogHeader>
-                  {editingCategory && (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="edit-name">Name</Label>
-                        <Input
-                          id="edit-name"
-                          value={editingCategory.name}
-                          onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-description">Description</Label>
-                        <Textarea
-                          id="edit-description"
-                          value={editingCategory.description}
-                          onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={() => setEditingCategory(null)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleUpdateCategory}>Update Category</Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
-              <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteCategory(category.id)}
+                    disabled={articleCount > 0}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </ScrollArea>
+
+      {/* Add Category Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
             </div>
-          </div>
-        ))}
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Add Category</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Update Category</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

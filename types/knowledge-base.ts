@@ -22,7 +22,7 @@ export interface Subcategory {
 export interface Category {
   id: string
   name: string
-  description: string
+  description?: string
   parentId?: string
   createdAt: Date
   createdBy: string
