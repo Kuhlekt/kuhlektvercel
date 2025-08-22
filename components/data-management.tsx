@@ -13,10 +13,10 @@ import { database } from "@/utils/database"
 
 interface ImportStats {
   categories: number
-  articles: number
   users: number
   auditLog: number
   pageVisits: number
+  totalArticles?: number
 }
 
 export function DataManagement() {
@@ -102,10 +102,16 @@ export function DataManagement() {
       const backupData = JSON.parse(text)
       setImportProgress(40)
 
-      // Validate structure
-      if (!backupData.categories || !backupData.users || !backupData.auditLog) {
-        throw new Error("Invalid backup file structure. Missing required data sections.")
+      // Validate structure - be more flexible with validation
+      if (!backupData.categories && !backupData.users && !backupData.auditLog) {
+        throw new Error("Invalid backup file: no valid data found")
       }
+
+      // Ensure arrays exist even if empty
+      backupData.categories = Array.isArray(backupData.categories) ? backupData.categories : []
+      backupData.users = Array.isArray(backupData.users) ? backupData.users : []
+      backupData.auditLog = Array.isArray(backupData.auditLog) ? backupData.auditLog : []
+
       setImportProgress(60)
 
       // Import data
@@ -113,44 +119,34 @@ export function DataManagement() {
       setImportProgress(80)
 
       // Calculate stats - count articles properly
-      let totalArticles = 0
-      if (backupData.categories) {
-        backupData.categories.forEach((cat: any) => {
-          // Count articles in category
-          if (cat.articles) {
-            totalArticles += cat.articles.length
-          }
-          // Count articles in subcategories
-          if (cat.subcategories) {
-            cat.subcategories.forEach((sub: any) => {
-              if (sub.articles) {
-                totalArticles += sub.articles.length
-              }
-            })
-          }
-        })
-      }
+      const totalArticles = backupData.categories.reduce((total: number, cat: any) => {
+        const categoryArticles = Array.isArray(cat.articles) ? cat.articles.length : 0
+        const subcategoryArticles = Array.isArray(cat.subcategories)
+          ? cat.subcategories.reduce(
+              (subTotal: number, sub: any) => subTotal + (Array.isArray(sub.articles) ? sub.articles.length : 0),
+              0,
+            )
+          : 0
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
 
       const stats: ImportStats = {
-        categories: backupData.categories?.length || 0,
-        articles: totalArticles,
-        users: backupData.users?.length || 0,
-        auditLog: backupData.auditLog?.length || 0,
-        pageVisits: backupData.settings?.pageVisits || 0,
+        categories: backupData.categories.length,
+        users: backupData.users.length,
+        auditLog: backupData.auditLog.length,
+        pageVisits: backupData.pageVisits || backupData.settings?.pageVisits || 0,
+        totalArticles,
       }
       setImportStats(stats)
       setImportProgress(100)
 
-      setSuccess("Data imported successfully!")
+      setSuccess(
+        `Data imported successfully! Imported ${totalArticles} articles across ${stats.categories} categories.`,
+      )
       setSelectedFile(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
-
-      // Refresh page to show imported data
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import data")
     } finally {
@@ -178,11 +174,6 @@ export function DataManagement() {
       await database.clearAllData()
       setSuccess("All data cleared successfully!")
       setImportStats(null)
-
-      // Refresh page to show cleared state
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to clear data")
     } finally {
@@ -322,16 +313,18 @@ export function DataManagement() {
                 <div className="text-2xl font-bold text-blue-600">{importStats.categories}</div>
                 <div className="text-sm text-gray-600">Categories</div>
               </div>
+              {importStats.totalArticles !== undefined && (
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-indigo-600">{importStats.totalArticles}</div>
+                  <div className="text-sm text-gray-600">Articles</div>
+                </div>
+              )}
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{importStats.articles}</div>
-                <div className="text-sm text-gray-600">Articles</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{importStats.users}</div>
+                <div className="text-2xl font-bold text-green-600">{importStats.users}</div>
                 <div className="text-sm text-gray-600">Users</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{importStats.auditLog}</div>
+                <div className="text-2xl font-bold text-purple-600">{importStats.auditLog}</div>
                 <div className="text-sm text-gray-600">Audit Entries</div>
               </div>
               <div className="text-center">
