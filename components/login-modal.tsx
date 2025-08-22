@@ -8,182 +8,140 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent } from "@/components/ui/card"
-import { User, Lock, AlertCircle } from "lucide-react"
-import type { User as UserType } from "../types/knowledge-base"
-import { apiDatabase } from "../utils/api-database"
-import Image from "next/image"
+import { Eye, EyeOff, User, Lock } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onLogin: (user: UserType) => void
+  onLogin: (username: string, password: string) => Promise<boolean>
 }
 
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password")
+      return
+    }
+
     setIsLoading(true)
+    setError("")
 
     try {
-      const users = await apiDatabase.getUsers()
-      const user = users.find((u) => u.username === username && u.password === password)
-
-      if (user) {
-        // Update last login
-        await apiDatabase.updateUser(users, user.id, { lastLogin: new Date() })
-        onLogin({ ...user, lastLogin: new Date() })
-        setUsername("")
-        setPassword("")
-      } else {
+      const success = await onLogin(username.trim(), password)
+      if (!success) {
         setError("Invalid username or password")
       }
     } catch (error) {
-      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDemoLogin = async (demoUsername: string, demoPassword: string) => {
-    setUsername(demoUsername)
-    setPassword(demoPassword)
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
     setError("")
-    setIsLoading(true)
-
-    try {
-      const users = await apiDatabase.getUsers()
-      const user = users.find((u) => u.username === demoUsername && u.password === demoPassword)
-
-      if (user) {
-        await apiDatabase.updateUser(users, user.id, { lastLogin: new Date() })
-        onLogin({ ...user, lastLogin: new Date() })
-        setUsername("")
-        setPassword("")
-      } else {
-        setError("Demo account not found")
-      }
-    } catch (error) {
-      console.error("Demo login error:", error)
-      setError("Demo login failed. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
+    setShowPassword(false)
+    onClose()
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex flex-col items-center space-y-4">
-            <Image src="/images/kuhlekt-logo.png" alt="Kuhlekt Logo" width={48} height={48} className="h-12 w-auto" />
-            <DialogTitle className="text-center">Login to Knowledge Base</DialogTitle>
+        <DialogHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src="/images/kuhlekt-logo.png" alt="Kuhlekt Logo" className="h-12 w-auto object-contain" />
           </div>
+          <DialogTitle className="text-2xl font-bold">Sign In</DialogTitle>
+          <p className="text-gray-600">Access the Kuhlekt Knowledge Base</p>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Demo Accounts */}
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <h4 className="font-medium text-blue-900 mb-3">Demo Accounts</h4>
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("admin", "admin123")}
-                  disabled={isLoading}
-                  className="w-full justify-start text-left"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  <div>
-                    <div className="font-medium">Admin</div>
-                    <div className="text-xs text-gray-600">admin / admin123</div>
-                  </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("editor", "editor123")}
-                  disabled={isLoading}
-                  className="w-full justify-start text-left"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  <div>
-                    <div className="font-medium">Editor</div>
-                    <div className="text-xs text-gray-600">editor / editor123</div>
-                  </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("viewer", "viewer123")}
-                  disabled={isLoading}
-                  className="w-full justify-start text-left"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  <div>
-                    <div className="font-medium">Viewer</div>
-                    <div className="text-xs text-gray-600">viewer / viewer123</div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-          {/* Manual Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  className="pl-10"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="pl-10"
+                disabled={isLoading}
+              />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="pl-10"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10 pr-10"
+                disabled={isLoading}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
             </div>
+          </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+          <div className="flex space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1 bg-transparent"
+              disabled={isLoading}
+            >
+              Cancel
             </Button>
-          </form>
+            <Button type="submit" className="flex-1" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium text-sm text-gray-900 mb-2">Demo Accounts:</h4>
+          <div className="space-y-1 text-xs text-gray-600">
+            <div>
+              <strong>Admin:</strong> admin / admin123
+            </div>
+            <div>
+              <strong>Editor:</strong> editor / editor123
+            </div>
+            <div>
+              <strong>Viewer:</strong> viewer / viewer123
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -28,6 +28,7 @@
     "path": "latest",
     "react": "^18",
     "react-dom": "^18",
+    "recharts": "latest",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {

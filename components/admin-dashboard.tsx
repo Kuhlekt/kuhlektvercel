@@ -2,18 +2,13 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, FileText, FolderTree, Plus, Folder, Trash2, AlertTriangle } from "lucide-react"
-import { ArticleManagement } from "./article-management"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CategoryManagement } from "./category-management"
 import { AuditLog } from "./audit-log"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { Activity, Users, FileText, FolderTree, TrendingUp } from "lucide-react"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
-import { apiDatabase } from "../utils/api-database"
 
 interface AdminDashboardProps {
   categories: Category[]
@@ -32,485 +27,253 @@ export function AdminDashboard({
   onUsersUpdate,
   onAuditLogUpdate,
 }: AdminDashboardProps) {
-  const [newCategoryName, setNewCategoryName] = useState("")
-  const [newSubcategoryName, setNewSubcategoryName] = useState("")
-  const [selectedParentCategory, setSelectedParentCategory] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("overview")
 
-  const getTotalArticles = () => {
-    return categories.reduce((total, category) => {
-      const categoryArticles = category.articles.length
-      const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
-      return total + categoryArticles + subcategoryArticles
-    }, 0)
+  // Calculate statistics
+  const totalArticles = categories.reduce((total, category) => {
+    const categoryArticles = category.articles?.length || 0
+    const subcategoryArticles =
+      category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
+    return total + categoryArticles + subcategoryArticles
+  }, 0)
+
+  const totalCategories = categories.length
+  const totalSubcategories = categories.reduce((total, category) => total + (category.subcategories?.length || 0), 0)
+
+  // Get recent activity
+  const recentActivity = auditLog.slice(0, 10)
+
+  // Get article creation data for chart
+  const getArticleCreationData = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      return {
+        date: date.toISOString().split("T")[0],
+        articles: 0,
+      }
+    }).reverse()
+
+    // Count articles created in the last 7 days
+    categories.forEach((category) => {
+      category.articles?.forEach((article) => {
+        const articleDate = new Date(article.createdAt).toISOString().split("T")[0]
+        const dayData = last7Days.find((day) => day.date === articleDate)
+        if (dayData) {
+          dayData.articles++
+        }
+      })
+
+      category.subcategories?.forEach((subcategory) => {
+        subcategory.articles?.forEach((article) => {
+          const articleDate = new Date(article.createdAt).toISOString().split("T")[0]
+          const dayData = last7Days.find((day) => day.date === articleDate)
+          if (dayData) {
+            dayData.articles++
+          }
+        })
+      })
+    })
+
+    return last7Days.map((day) => ({
+      ...day,
+      date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    }))
   }
 
-  const getTotalSubcategories = () => {
-    return categories.reduce((total, category) => total + category.subcategories.length, 0)
+  // Get user role distribution
+  const getUserRoleData = () => {
+    const roleCounts = users.reduce(
+      (acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    return Object.entries(roleCounts).map(([role, count]) => ({
+      name: role.charAt(0).toUpperCase() + role.slice(1),
+      value: count,
+      color: role === "admin" ? "#ef4444" : role === "editor" ? "#3b82f6" : "#10b981",
+    }))
   }
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.addCategory(categories, newCategoryName.trim())
-      setNewCategoryName("")
-      onCategoriesUpdate()
-    } catch (error) {
-      console.error("Error adding category:", error)
-      setError("Failed to add category. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleAddSubcategory = async () => {
-    if (!newSubcategoryName.trim() || !selectedParentCategory) return
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.addSubcategory(categories, selectedParentCategory, newSubcategoryName.trim())
-      setNewSubcategoryName("")
-      setSelectedParentCategory("")
-      onCategoriesUpdate()
-    } catch (error) {
-      console.error("Error adding subcategory:", error)
-      setError("Failed to add subcategory. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!window.confirm("Are you sure you want to delete this category? All articles in it will be lost.")) {
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.deleteCategory(categories, categoryId)
-      onCategoriesUpdate()
-    } catch (error) {
-      console.error("Error deleting category:", error)
-      setError("Failed to delete category. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string) => {
-    if (!window.confirm("Are you sure you want to delete this subcategory? All articles in it will be lost.")) {
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.deleteSubcategory(categories, categoryId, subcategoryId)
-      onCategoriesUpdate()
-    } catch (error) {
-      console.error("Error deleting subcategory:", error)
-      setError("Failed to delete subcategory. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleExportData = async () => {
-    try {
-      setError(null)
-      await apiDatabase.exportData()
-    } catch (error) {
-      console.error("Error exporting data:", error)
-      setError("Failed to export data. Please try again.")
-    }
-  }
-
-  const handleImportData = async (file: File) => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.importData(file)
-
-      // Refresh all data
-      onCategoriesUpdate()
-      onUsersUpdate()
-      onAuditLogUpdate()
-
-      alert("Data imported successfully!")
-    } catch (error) {
-      console.error("Error importing data:", error)
-      setError(error instanceof Error ? error.message : "Failed to import data.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleClearAllData = async () => {
-    if (!window.confirm("Are you sure you want to clear ALL data? This cannot be undone!")) {
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      await apiDatabase.clearAllData()
-
-      // Refresh all data
-      onCategoriesUpdate()
-      onUsersUpdate()
-      onAuditLogUpdate()
-
-      alert("All data cleared successfully!")
-    } catch (error) {
-      console.error("Error clearing data:", error)
-      setError("Failed to clear data. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const stats = [
-    {
-      title: "Total Articles",
-      value: getTotalArticles(),
-      icon: FileText,
-      color: "text-blue-600",
-    },
-    {
-      title: "Categories",
-      value: categories.length,
-      icon: FolderTree,
-      color: "text-green-600",
-    },
-    {
-      title: "Subcategories",
-      value: getTotalSubcategories(),
-      icon: Folder,
-      color: "text-purple-600",
-    },
-    {
-      title: "Users",
-      value: users.length,
-      icon: Users,
-      color: "text-orange-600",
-    },
-  ]
+  const articleCreationData = getArticleCreationData()
+  const userRoleData = getUserRoleData()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-2">Manage your knowledge base and monitor activity</p>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
+          <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {auditLog.slice(0, 5).map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <p className="text-sm font-medium">{entry.action}</p>
-                        <p className="text-xs text-gray-600">{entry.details}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {new Date(entry.timestamp).toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  ))}
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Articles</p>
+                    <p className="text-2xl font-bold text-blue-600">{totalArticles}</p>
+                  </div>
+                  <FileText className="h-8 w-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Category Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {categories.slice(0, 5).map((category) => {
-                    const totalArticles =
-                      category.articles.length +
-                      category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)
-
-                    return (
-                      <div key={category.id} className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{category.name}</span>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{totalArticles} articles</Badge>
-                          <Badge variant="outline">{category.subcategories.length} subs</Badge>
-                        </div>
-                      </div>
-                    )
-                  })}
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Categories</p>
+                    <p className="text-2xl font-bold text-green-600">{totalCategories}</p>
+                  </div>
+                  <FolderTree className="h-8 w-8 text-green-600" />
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
 
-        <TabsContent value="categories" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Add Category */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Plus className="h-5 w-5" />
-                  <span>Add New Category</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="categoryName">Category Name</Label>
-                  <Input
-                    id="categoryName"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Enter category name"
-                    disabled={isLoading}
-                  />
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Subcategories</p>
+                    <p className="text-2xl font-bold text-purple-600">{totalSubcategories}</p>
+                  </div>
+                  <FolderTree className="h-8 w-8 text-purple-600" />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full" disabled={!newCategoryName.trim() || isLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {isLoading ? "Adding..." : "Add Category"}
-                </Button>
               </CardContent>
             </Card>
 
-            {/* Add Subcategory */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Plus className="h-5 w-5" />
-                  <span>Add New Subcategory</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="parentCategory">Parent Category</Label>
-                  <Select value={selectedParentCategory} onValueChange={setSelectedParentCategory} disabled={isLoading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select parent category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Users</p>
+                    <p className="text-2xl font-bold text-orange-600">{users.length}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-orange-600" />
                 </div>
-                <div>
-                  <Label htmlFor="subcategoryName">Subcategory Name</Label>
-                  <Input
-                    id="subcategoryName"
-                    value={newSubcategoryName}
-                    onChange={(e) => setNewSubcategoryName(e.target.value)}
-                    placeholder="Enter subcategory name"
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button
-                  onClick={handleAddSubcategory}
-                  className="w-full"
-                  disabled={!newSubcategoryName.trim() || !selectedParentCategory || isLoading}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {isLoading ? "Adding..." : "Add Subcategory"}
-                </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Category Overview */}
+          {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle>Category Overview</CardTitle>
+              <CardTitle className="flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                Recent Activity
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {categories.map((category) => {
-                  const totalArticles =
-                    category.articles.length + category.subcategories.reduce((sum, sub) => sum + sub.articles.length, 0)
-
-                  return (
-                    <div key={category.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Folder className="h-5 w-5 text-blue-600" />
-                          <span className="font-medium">{category.name}</span>
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          {entry.action.includes("article") ? (
+                            <FileText className="h-5 w-5 text-blue-600" />
+                          ) : entry.action.includes("user") ? (
+                            <Users className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Activity className="h-5 w-5 text-gray-600" />
+                          )}
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{totalArticles} total</Badge>
-                          <Badge variant="outline">{category.articles.length} direct</Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="text-red-600 hover:text-red-700"
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {entry.details || entry.action.replace(/_/g, " ")}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            by {entry.performedBy} • {new Date(entry.timestamp).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
-
-                      {category.subcategories.length > 0 && (
-                        <div className="ml-6 space-y-1">
-                          {category.subcategories.map((sub) => (
-                            <div key={sub.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">• {sub.name}</span>
-                              <div className="flex items-center space-x-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {sub.articles.length}
-                                </Badge>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteSubcategory(category.id, sub.id)}
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                  disabled={isLoading}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {entry.action.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                  )
-                })}
+                  ))
+                ) : (
+                  <p className="text-gray-600 text-center py-4">No recent activity</p>
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="articles">
-          <ArticleManagement
-            categories={categories}
-            onEditArticle={(article) => console.log("Edit article:", article)}
-            onDeleteArticle={(articleId) => console.log("Delete article:", articleId)}
-          />
+        <TabsContent value="categories">
+          <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
         </TabsContent>
 
-        <TabsContent value="audit">
+        <TabsContent value="activity">
           <AuditLog auditLog={auditLog} />
         </TabsContent>
 
-        <TabsContent value="data" className="space-y-6">
-          {/* Export/Import */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Export */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Export Data</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600">Download a complete backup of all your knowledge base data.</p>
-                <Button onClick={handleExportData} className="w-full" disabled={isLoading}>
-                  Export Data
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Import */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Import Data</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Restore your knowledge base from a backup file. This will replace all current data.
-                </p>
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Warning:</strong> Importing will completely replace all existing data.
-                  </AlertDescription>
-                </Alert>
-                <Input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      handleImportData(file)
-                    }
-                  }}
-                  disabled={isLoading}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Danger Zone */}
-          <Card className="border-red-200">
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Article Creation Chart */}
+          <Card>
             <CardHeader>
-              <CardTitle className="text-red-600">Danger Zone</CardTitle>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Article Creation (Last 7 Days)
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-red-800">Clear All Data</h4>
-                  <p className="text-sm text-red-600">
-                    Permanently delete all articles, categories, and audit logs. This action cannot be undone.
-                  </p>
-                </div>
-                <Button variant="destructive" onClick={handleClearAllData} disabled={isLoading}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isLoading ? "Clearing..." : "Clear All"}
-                </Button>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={articleCreationData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="articles" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* User Role Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                User Role Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={userRoleData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {userRoleData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
