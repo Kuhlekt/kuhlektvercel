@@ -20,9 +20,9 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
           {/* Logo */}
           <div className="flex items-center">
             <img
-              src="/images/kuhlekt-logo.jpg"
+              src="/images/kuhlekt-logo.png"
               alt="Kuhlekt Logo"
-              className="h-24 w-24 object-contain cursor-pointer"
+              className="h-24 w-auto object-contain cursor-pointer"
               onClick={() => onViewChange("browse")}
             />
           </div>

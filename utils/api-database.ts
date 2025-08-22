@@ -1,12 +1,8 @@
-import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"
-
 interface DatabaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  settings: {
-    pageVisits: number
-  }
+  settings: { pageVisits: number }
 }
 
 class ApiDatabase {
@@ -49,47 +45,7 @@ class ApiDatabase {
     }
   }
 
-  async getCategories(): Promise<Category[]> {
-    const data = await this.loadData()
-    return data.categories
-  }
-
-  async saveCategories(categories: Category[]): Promise<void> {
-    const data = await this.loadData()
-    await this.saveData({ ...data, categories })
-  }
-
-  async getUsers(): Promise<User[]> {
-    const data = await this.loadData()
-    return data.users
-  }
-
-  async saveUsers(users: User[]): Promise<void> {
-    const data = await this.loadData()
-    await this.saveData({ ...data, users })
-  }
-
-  async getAuditLog(): Promise<AuditLogEntry[]> {
-    const data = await this.loadData()
-    return data.auditLog
-  }
-
-  async saveAuditLog(auditLog: AuditLogEntry[]): Promise<void> {
-    const data = await this.loadData()
-    await this.saveData({ ...data, auditLog })
-  }
-
-  async getSettings(): Promise<{ pageVisits: number }> {
-    const data = await this.loadData()
-    return data.settings
-  }
-
-  async saveSettings(settings: { pageVisits: number }): Promise<void> {
-    const data = await this.loadData()
-    await this.saveData({ ...data, settings })
-  }
-
-  async incrementPageVisits(): Promise<void> {
+  async incrementPageVisits(): Promise<number> {
     try {
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
@@ -97,6 +53,8 @@ class ApiDatabase {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+      const data = await response.json()
+      return data.pageVisits
     } catch (error) {
       console.error("Error incrementing page visits:", error)
       throw error
@@ -110,82 +68,76 @@ class ApiDatabase {
     const newArticle: Article = {
       ...articleData,
       id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
     const updatedCategories = categories.map((category) => {
       if (category.id === articleData.categoryId) {
         return {
           ...category,
-          articles: [...category.articles, newArticle],
+          articles: [...(category.articles || []), newArticle],
         }
       }
-      // Check subcategories
-      const updatedSubcategories = category.subcategories.map((subcategory) => {
-        if (subcategory.id === articleData.categoryId) {
-          return {
-            ...subcategory,
-            articles: [...subcategory.articles, newArticle],
-          }
-        }
-        return subcategory
-      })
-      return {
-        ...category,
-        subcategories: updatedSubcategories,
-      }
+      return category
     })
 
-    await this.saveCategories(updatedCategories)
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
     return newArticle
   }
 
   async updateArticle(
     categories: Category[],
     articleId: string,
-    updatedData: Omit<Article, "createdAt">,
+    updatedArticle: Omit<Article, "createdAt">,
   ): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => {
-      const updatedArticles = category.articles.map((article) =>
-        article.id === articleId ? { ...article, ...updatedData, updatedAt: new Date() } : article,
-      )
+    const updatedCategories = categories.map((category) => ({
+      ...category,
+      articles: (category.articles || []).map((article) =>
+        article.id === articleId
+          ? { ...updatedArticle, createdAt: article.createdAt, updatedAt: new Date().toISOString() }
+          : article,
+      ),
+    }))
 
-      const updatedSubcategories = category.subcategories.map((subcategory) => ({
-        ...subcategory,
-        articles: subcategory.articles.map((article) =>
-          article.id === articleId ? { ...article, ...updatedData, updatedAt: new Date() } : article,
-        ),
-      }))
-
-      return {
-        ...category,
-        articles: updatedArticles,
-        subcategories: updatedSubcategories,
-      }
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
     })
 
-    await this.saveCategories(updatedCategories)
     return updatedCategories
   }
 
   async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
     const updatedCategories = categories.map((category) => ({
       ...category,
-      articles: category.articles.filter((article) => article.id !== articleId),
-      subcategories: category.subcategories.map((subcategory) => ({
-        ...subcategory,
-        articles: subcategory.articles.filter((article) => article.id !== articleId),
-      })),
+      articles: (category.articles || []).filter((article) => article.id !== articleId),
     }))
 
-    await this.saveCategories(updatedCategories)
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
     return updatedCategories
   }
 
   async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
     const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
-    await this.saveUsers(updatedUsers)
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      users: updatedUsers,
+    })
+
     return updatedUsers
   }
 
@@ -196,12 +148,22 @@ class ApiDatabase {
     const newEntry: AuditLogEntry = {
       ...entry,
       id: Date.now().toString(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
+
     const updatedAuditLog = [newEntry, ...auditLog]
-    await this.saveAuditLog(updatedAuditLog)
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      auditLog: updatedAuditLog,
+    })
+
     return updatedAuditLog
   }
 }
 
 export const apiDatabase = new ApiDatabase()
+
+// Import types
+import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"

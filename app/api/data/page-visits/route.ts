@@ -5,17 +5,20 @@ import path from "path"
 const DATA_DIR = path.join(process.cwd(), "data")
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json")
 
+async function ensureDataDir() {
+  try {
+    await fs.access(DATA_DIR)
+  } catch {
+    await fs.mkdir(DATA_DIR, { recursive: true })
+  }
+}
+
 export async function POST() {
   try {
-    // Ensure data directory exists
-    try {
-      await fs.access(DATA_DIR)
-    } catch {
-      await fs.mkdir(DATA_DIR, { recursive: true })
-    }
+    await ensureDataDir()
 
-    // Read current settings
     let settings = { pageVisits: 0 }
+
     try {
       const settingsData = await fs.readFile(SETTINGS_FILE, "utf-8")
       settings = JSON.parse(settingsData)
@@ -23,10 +26,8 @@ export async function POST() {
       // File doesn't exist, use default
     }
 
-    // Increment page visits
     settings.pageVisits = (settings.pageVisits || 0) + 1
 
-    // Write back to file
     await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2))
 
     return NextResponse.json({ pageVisits: settings.pageVisits })

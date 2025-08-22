@@ -408,12 +408,12 @@ export default function KnowledgeBase() {
       <div className="container mx-auto px-4 py-8">
         {currentView === "browse" && (
           <>
-            {/* Header with much larger logo */}
+            {/* Header with PNG logo */}
             <div className="text-center mb-8">
               <img
-                src="/images/kuhlekt-logo.jpg"
+                src="/images/kuhlekt-logo.png"
                 alt="Kuhlekt Logo"
-                className="h-64 w-64 mx-auto mb-6 object-contain shadow-lg rounded-lg"
+                className="h-64 w-auto mx-auto mb-6 object-contain shadow-lg rounded-lg bg-white p-4"
               />
               <h1 className="text-4xl font-bold text-gray-900 mb-3">Knowledge Base</h1>
               <p className="text-lg text-gray-600 mb-4">Find answers, guides, and documentation</p>

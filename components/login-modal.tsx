@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,9 +61,9 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <img
-                  src="/images/kuhlekt-logo.jpg"
+                  src="/images/kuhlekt-logo.png"
                   alt="Kuhlekt Logo"
-                  className="h-20 w-20 mx-auto mb-4 object-contain"
+                  className="h-20 w-auto mx-auto mb-4 object-contain"
                 />
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>Access the knowledge base management system</CardDescription>
