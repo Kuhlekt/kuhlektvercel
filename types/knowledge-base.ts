@@ -4,10 +4,13 @@ export interface Article {
   content: string
   categoryId: string
   subcategoryId?: string
-  tags?: string[]
+  tags: string[]
   author?: string
   createdAt: Date
   updatedAt: Date
+  createdBy?: string
+  lastEditedBy?: string
+  editCount?: number
   isPublished?: boolean
   views?: number
 }
@@ -15,8 +18,8 @@ export interface Article {
 export interface Subcategory {
   id: string
   name: string
-  description?: string
-  articles?: Article[]
+  description: string
+  articles: Article[]
   createdAt: Date
   updatedAt?: Date
 }
@@ -24,11 +27,11 @@ export interface Subcategory {
 export interface Category {
   id: string
   name: string
-  description?: string
+  description: string
   icon?: string
   color?: string
-  articles?: Article[]
-  subcategories?: Subcategory[]
+  articles: Article[]
+  subcategories: Subcategory[]
   createdAt: Date
   updatedAt?: Date
 }
@@ -39,10 +42,9 @@ export interface User {
   password: string
   email: string
   role: "admin" | "editor" | "viewer"
-  isActive: boolean
+  isActive?: boolean
   createdAt: Date
-  lastLogin: Date | null
-  updatedAt?: Date
+  lastLogin?: Date | null
 }
 
 export interface AuditLogEntry {
@@ -51,21 +53,29 @@ export interface AuditLogEntry {
   articleId?: string
   articleTitle?: string
   categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
+  username?: string
   performedBy: string
   timestamp: Date
   details: string
-  ipAddress?: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits?: number
+  pageVisits: number
   lastUpdated?: Date
 }
 
-export interface PageVisits {
-  count: number
-  lastVisit: Date
+export interface SearchResult {
+  type: "article" | "category" | "subcategory"
+  id: string
+  title: string
+  content?: string
+  categoryName?: string
+  subcategoryName?: string
+  relevance: number
 }

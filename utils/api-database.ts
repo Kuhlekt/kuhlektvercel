@@ -4,62 +4,82 @@ import type { KnowledgeBaseData, Category, Article, User, AuditLogEntry } from "
 class ApiDatabase {
   private baseUrl = "/api/data"
 
-  // Load all data from server
-  async loadData(): Promise<KnowledgeBaseData> {
+  // Helper method to make API calls
+  private async apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
     try {
-      console.log("🔄 ApiDatabase.loadData() - Fetching data from API...")
-      const response = await fetch(this.baseUrl, {
-        method: "GET",
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
         headers: {
           "Content-Type": "application/json",
+          ...options.headers,
         },
-        cache: "no-store", // Ensure fresh data
+        ...options,
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`API call failed: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
-      console.log("✅ ApiDatabase.loadData() - Data loaded successfully:", {
-        categories: data.categories?.length || 0,
-        users: data.users?.length || 0,
-        auditLog: data.auditLog?.length || 0,
-      })
-
-      return data
+      return await response.json()
     } catch (error) {
-      console.error("❌ ApiDatabase.loadData() - Error:", error)
+      console.error(`API call error for ${endpoint}:`, error)
       throw error
     }
+  }
+
+  // Load all data from server
+  async loadData(): Promise<KnowledgeBaseData> {
+    console.log("🔍 Loading data from API...")
+    const data = await this.apiCall("")
+    console.log("✅ Data loaded from API:", {
+      categories: data.categories?.length || 0,
+      users: data.users?.length || 0,
+      auditLog: data.auditLog?.length || 0,
+    })
+    return data
   }
 
   // Save all data to server
   async saveData(data: Partial<KnowledgeBaseData>): Promise<void> {
-    try {
-      console.log("💾 ApiDatabase.saveData() - Saving data to API...")
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
+    console.log("💾 Saving data to API...")
+    await this.apiCall("", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+    console.log("✅ Data saved to API")
+  }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+  // Categories
+  async getCategories(): Promise<Category[]> {
+    const data = await this.loadData()
+    return data.categories || []
+  }
 
-      const result = await response.json()
-      console.log("✅ ApiDatabase.saveData() - Data saved successfully:", result)
-    } catch (error) {
-      console.error("❌ ApiDatabase.saveData() - Error:", error)
-      throw error
-    }
+  async saveCategories(categories: Category[]): Promise<void> {
+    await this.saveData({ categories })
+  }
+
+  // Users
+  async getUsers(): Promise<User[]> {
+    const data = await this.loadData()
+    return data.users || []
+  }
+
+  async saveUsers(users: User[]): Promise<void> {
+    await this.saveData({ users })
+  }
+
+  // Audit Log
+  async getAuditLog(): Promise<AuditLogEntry[]> {
+    const data = await this.loadData()
+    return data.auditLog || []
+  }
+
+  async saveAuditLog(auditLog: AuditLogEntry[]): Promise<void> {
+    await this.saveData({ auditLog })
   }
 
   // Increment page visits
-  async incrementPageVisits(): Promise<void> {
+  async incrementPageVisits(): Promise<number> {
     try {
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
@@ -69,11 +89,61 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        console.warn("Failed to increment page visits")
+        throw new Error("Failed to increment page visits")
       }
+
+      const data = await response.json()
+      return data.pageVisits || 0
     } catch (error) {
-      console.warn("Error incrementing page visits:", error)
+      console.error("Error incrementing page visits:", error)
+      return 0
     }
+  }
+
+  // Authentication
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    const users = await this.getUsers()
+    const user = users.find((u) => u.username === username && u.password === password && u.isActive)
+
+    if (user) {
+      // Update last login
+      const updatedUsers = users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date() } : u))
+      await this.saveUsers(updatedUsers)
+
+      // Add audit log entry
+      const auditLog = await this.getAuditLog()
+      const newEntry: AuditLogEntry = {
+        id: `audit_${Date.now()}`,
+        action: "User Login",
+        userId: user.id,
+        username: user.username,
+        performedBy: user.username,
+        timestamp: new Date(),
+        details: `User ${user.username} logged in`,
+      }
+      auditLog.unshift(newEntry)
+      await this.saveAuditLog(auditLog)
+    }
+
+    return user
+  }
+
+  // Data management
+  async exportData(): Promise<any> {
+    return await this.loadData()
+  }
+
+  async importData(data: any): Promise<void> {
+    await this.saveData(data)
+  }
+
+  async clearAllData(): Promise<void> {
+    await this.saveData({
+      categories: [],
+      users: [],
+      auditLog: [],
+      pageVisits: 0,
+    })
   }
 
   // Add article

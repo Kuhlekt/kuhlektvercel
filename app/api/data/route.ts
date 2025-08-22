@@ -100,6 +100,7 @@ That's it! You're ready to start using the platform effectively.`,
           views: 0,
         },
       ],
+      subcategories: [],
       createdAt: new Date("2024-01-01"),
     },
     {
@@ -394,6 +395,7 @@ If none of these solutions work:
           views: 0,
         },
       ],
+      subcategories: [],
       createdAt: new Date("2024-01-01"),
     },
   ],
@@ -468,9 +470,15 @@ async function loadData(): Promise<KnowledgeBaseData> {
       return obj
     }
 
-    return convertDates(parsedData)
+    const result = convertDates(parsedData)
+    console.log("📁 Data loaded from file:", {
+      categories: result.categories?.length || 0,
+      users: result.users?.length || 0,
+      auditLog: result.auditLog?.length || 0,
+    })
+    return result
   } catch (error) {
-    console.log("📁 No existing data file found, creating default data...")
+    console.log("🔧 No existing data file found, creating default data...")
     const defaultData = getDefaultData()
     await saveData(defaultData)
     return defaultData
@@ -509,15 +517,18 @@ export async function GET() {
   try {
     console.log("📖 API: Loading knowledge base data...")
     const data = await loadData()
-    console.log("✅ API: Data loaded successfully", {
-      categories: data.categories?.length || 0,
-      users: data.users?.length || 0,
-      auditLog: data.auditLog?.length || 0,
+    console.log("✅ API: Data loaded successfully")
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
     })
-    return NextResponse.json(data)
   } catch (error) {
     console.error("❌ API: Error loading data:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+    const fallbackData = getDefaultData()
+    return NextResponse.json(fallbackData, { status: 200 })
   }
 }
 

@@ -10,17 +10,48 @@ const ensureDate = (date: any): Date => {
 
 // Mock database for local storage
 class Database {
-  private getStorageKey(key: string): string {
-    return `kb_${key}`
+  private isClient = typeof window !== "undefined"
+
+  // Initialize database with default data
+  async initialize(): Promise<void> {
+    if (!this.isClient) return
+
+    console.log("🔧 Initializing database...")
+
+    try {
+      // Initialize storage with defaults
+      storage.initializeDefaults()
+
+      // Add initial audit log entry
+      const auditLog = storage.getAuditLog()
+      if (auditLog.length === 0) {
+        await this.addAuditEntry({
+          action: "System Initialized",
+          performedBy: "System",
+          details: "Knowledge base initialized with default data",
+        })
+      }
+
+      console.log("✅ Database initialized successfully")
+    } catch (error) {
+      console.error("❌ Error initializing database:", error)
+    }
   }
 
   // Load data from localStorage
   loadData() {
+    if (!this.isClient)
+      return {
+        categories: [],
+        users: [],
+        auditLog: [],
+        pageVisits: 0,
+      }
     try {
-      const categories = JSON.parse(localStorage.getItem(this.getStorageKey("categories")) || "[]")
-      const users = JSON.parse(localStorage.getItem(this.getStorageKey("users")) || "[]")
-      const auditLog = JSON.parse(localStorage.getItem(this.getStorageKey("auditLog")) || "[]")
-      const pageVisits = Number.parseInt(localStorage.getItem(this.getStorageKey("pageVisits")) || "0", 10)
+      const categories = JSON.parse(localStorage.getItem("kb_categories") || "[]")
+      const users = JSON.parse(localStorage.getItem("kb_users") || "[]")
+      const auditLog = JSON.parse(localStorage.getItem("kb_auditLog") || "[]")
+      const pageVisits = Number.parseInt(localStorage.getItem("kb_pageVisits") || "0", 10)
 
       // Convert date strings back to Date objects with proper error handling
       const processedCategories = categories.map((cat: any) => ({
@@ -78,18 +109,19 @@ class Database {
     auditLog?: AuditLogEntry[]
     pageVisits?: number
   }) {
+    if (!this.isClient) throw new Error("Not available on server")
     try {
       if (data.categories) {
-        localStorage.setItem(this.getStorageKey("categories"), JSON.stringify(data.categories))
+        localStorage.setItem("kb_categories", JSON.stringify(data.categories))
       }
       if (data.users) {
-        localStorage.setItem(this.getStorageKey("users"), JSON.stringify(data.users))
+        localStorage.setItem("kb_users", JSON.stringify(data.users))
       }
       if (data.auditLog) {
-        localStorage.setItem(this.getStorageKey("auditLog"), JSON.stringify(data.auditLog))
+        localStorage.setItem("kb_auditLog", JSON.stringify(data.auditLog))
       }
       if (data.pageVisits !== undefined) {
-        localStorage.setItem(this.getStorageKey("pageVisits"), data.pageVisits.toString())
+        localStorage.setItem("kb_pageVisits", data.pageVisits.toString())
       }
     } catch (error) {
       console.error("Error saving data:", error)
@@ -99,19 +131,21 @@ class Database {
 
   // Categories
   async getCategories(): Promise<Category[]> {
+    if (!this.isClient) return []
     return storage.getCategories()
   }
 
   async saveCategory(name: string, description: string): Promise<string> {
-    const categories = await this.getCategories()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const categories = storage.getCategories()
     const newCategory: Category = {
-      id: Date.now().toString(),
+      id: `cat_${Date.now()}`,
       name,
       description,
       articles: [],
       subcategories: [],
       createdAt: new Date(),
-      updatedAt: new Date(),
     }
 
     categories.push(newCategory)
@@ -129,7 +163,9 @@ class Database {
   }
 
   async saveSubcategory(categoryId: string, name: string, description: string): Promise<string> {
-    const categories = await this.getCategories()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const categories = storage.getCategories()
     const category = categories.find((c) => c.id === categoryId)
 
     if (!category) {
@@ -137,12 +173,11 @@ class Database {
     }
 
     const newSubcategory = {
-      id: Date.now().toString(),
+      id: `sub_${Date.now()}`,
       name,
       description,
       articles: [],
       createdAt: new Date(),
-      updatedAt: new Date(),
     }
 
     category.subcategories.push(newSubcategory)
@@ -172,7 +207,9 @@ class Database {
     lastEditedBy: string
     editCount: number
   }): Promise<string> {
-    const categories = await this.getCategories()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const categories = storage.getCategories()
     const category = categories.find((c) => c.id === articleData.categoryId)
 
     if (!category) {
@@ -180,15 +217,19 @@ class Database {
     }
 
     const newArticle: Article = {
-      id: Date.now().toString(),
+      id: `art_${Date.now()}`,
       title: articleData.title,
       content: articleData.content,
+      categoryId: articleData.categoryId,
+      subcategoryId: articleData.subcategoryId,
       tags: articleData.tags,
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: articleData.createdBy,
       lastEditedBy: articleData.lastEditedBy,
       editCount: articleData.editCount,
+      isPublished: true,
+      views: 0,
     }
 
     if (articleData.subcategoryId) {
@@ -220,8 +261,104 @@ class Database {
     return newArticle.id
   }
 
+  async updateArticle(articleId: string, updates: Partial<Article>): Promise<void> {
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const categories = storage.getCategories()
+    let found = false
+
+    for (const category of categories) {
+      // Check category articles
+      const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+      if (articleIndex !== -1) {
+        category.articles[articleIndex] = {
+          ...category.articles[articleIndex],
+          ...updates,
+          updatedAt: new Date(),
+        }
+        found = true
+        break
+      }
+
+      // Check subcategory articles
+      for (const subcategory of category.subcategories) {
+        const subArticleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+        if (subArticleIndex !== -1) {
+          subcategory.articles[subArticleIndex] = {
+            ...subcategory.articles[subArticleIndex],
+            ...updates,
+            updatedAt: new Date(),
+          }
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
+
+    if (!found) {
+      throw new Error("Article not found")
+    }
+
+    storage.saveCategories(categories)
+
+    await this.addAuditEntry({
+      action: "Article Updated",
+      articleId,
+      articleTitle: updates.title || "Unknown",
+      performedBy: updates.lastEditedBy || "System",
+      details: `Updated article: ${updates.title || articleId}`,
+    })
+  }
+
+  async deleteArticle(articleId: string): Promise<void> {
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const categories = storage.getCategories()
+    let found = false
+    let articleTitle = ""
+
+    for (const category of categories) {
+      // Check category articles
+      const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+      if (articleIndex !== -1) {
+        articleTitle = category.articles[articleIndex].title
+        category.articles.splice(articleIndex, 1)
+        found = true
+        break
+      }
+
+      // Check subcategory articles
+      for (const subcategory of category.subcategories) {
+        const subArticleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+        if (subArticleIndex !== -1) {
+          articleTitle = subcategory.articles[subArticleIndex].title
+          subcategory.articles.splice(subArticleIndex, 1)
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
+
+    if (!found) {
+      throw new Error("Article not found")
+    }
+
+    storage.saveCategories(categories)
+
+    await this.addAuditEntry({
+      action: "Article Deleted",
+      articleId,
+      articleTitle,
+      performedBy: "System",
+      details: `Deleted article: ${articleTitle}`,
+    })
+  }
+
   // Users
   async getUsers(): Promise<User[]> {
+    if (!this.isClient) return []
     return storage.getUsers()
   }
 
@@ -229,10 +366,12 @@ class Database {
     username: string
     password: string
     email: string
-    role: "admin" | "user"
+    role: "admin" | "editor" | "viewer"
     lastLogin: Date | null
   }): Promise<string> {
-    const users = await this.getUsers()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const users = storage.getUsers()
 
     // Check if username already exists
     if (users.some((u) => u.username === userData.username)) {
@@ -240,11 +379,12 @@ class Database {
     }
 
     const newUser: User = {
-      id: Date.now().toString(),
+      id: `user_${Date.now()}`,
       username: userData.username,
       password: userData.password,
       email: userData.email,
       role: userData.role,
+      isActive: true,
       createdAt: new Date(),
       lastLogin: userData.lastLogin,
     }
@@ -264,7 +404,9 @@ class Database {
   }
 
   async updateUser(userId: string, updates: Partial<User>): Promise<void> {
-    const users = await this.getUsers()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const users = storage.getUsers()
     const userIndex = users.findIndex((u) => u.id === userId)
 
     if (userIndex === -1) {
@@ -284,7 +426,9 @@ class Database {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    const users = await this.getUsers()
+    if (!this.isClient) throw new Error("Not available on server")
+
+    const users = storage.getUsers()
     const user = users.find((u) => u.id === userId)
 
     if (!user) {
@@ -305,6 +449,7 @@ class Database {
 
   // Audit Log
   async getAuditLog(): Promise<AuditLogEntry[]> {
+    if (!this.isClient) return []
     return storage.getAuditLog()
   }
 
@@ -320,10 +465,12 @@ class Database {
     performedBy: string
     details: string
   }): Promise<void> {
-    const auditLog = await this.getAuditLog()
+    if (!this.isClient) return
+
+    const auditLog = storage.getAuditLog()
 
     const newEntry: AuditLogEntry = {
-      id: Date.now().toString(),
+      id: `audit_${Date.now()}`,
       timestamp: new Date(),
       ...entry,
     }
@@ -338,11 +485,61 @@ class Database {
     storage.saveAuditLog(auditLog)
   }
 
+  // Authentication
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    if (!this.isClient) return null
+
+    const users = storage.getUsers()
+    const user = users.find((u) => u.username === username && u.password === password && u.isActive)
+
+    if (user) {
+      // Update last login
+      await this.updateUser(user.id, { lastLogin: new Date() })
+
+      // Set current user
+      storage.setCurrentUser(user)
+
+      await this.addAuditEntry({
+        action: "User Login",
+        userId: user.id,
+        username: user.username,
+        performedBy: user.username,
+        details: `User ${user.username} logged in`,
+      })
+    }
+
+    return user
+  }
+
+  async logoutUser(): Promise<void> {
+    if (!this.isClient) return
+
+    const currentUser = storage.getCurrentUser()
+    if (currentUser) {
+      await this.addAuditEntry({
+        action: "User Logout",
+        userId: currentUser.id,
+        username: currentUser.username,
+        performedBy: currentUser.username,
+        details: `User ${currentUser.username} logged out`,
+      })
+    }
+
+    storage.setCurrentUser(null)
+  }
+
+  getCurrentUser(): User | null {
+    if (!this.isClient) return null
+    return storage.getCurrentUser()
+  }
+
   // Data Management
   async exportData(): Promise<any> {
+    if (!this.isClient) return {}
+
     const [categories, users, auditLog] = await Promise.all([this.getCategories(), this.getUsers(), this.getAuditLog()])
 
-    const pageVisits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
+    const pageVisits = storage.getPageVisits()
 
     return {
       categories,
@@ -357,13 +554,15 @@ class Database {
   }
 
   async importData(data: any): Promise<void> {
+    if (!this.isClient) throw new Error("Not available on server")
+
     // Process categories with proper article structure
     if (data.categories) {
       const processedCategories = data.categories.map((cat: any) => ({
         ...cat,
         articles: (cat.articles || []).map((article: any) => ({
           ...article,
-          id: article.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: article.id || `art_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           createdAt: ensureDate(article.createdAt),
           updatedAt: ensureDate(article.updatedAt),
           // Ensure required fields
@@ -378,7 +577,7 @@ class Database {
           ...sub,
           articles: (sub.articles || []).map((article: any) => ({
             ...article,
-            id: article.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: article.id || `art_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             createdAt: ensureDate(article.createdAt),
             updatedAt: ensureDate(article.updatedAt),
             // Ensure required fields
@@ -399,14 +598,15 @@ class Database {
     if (data.users) {
       const processedUsers = data.users.map((user: any) => ({
         ...user,
-        id: user.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: user.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         createdAt: ensureDate(user.createdAt),
-        lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : undefined,
+        lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : null,
         // Ensure required fields
         username: user.username || "unknown",
         password: user.password || "temp123",
         email: user.email || "unknown@example.com",
         role: user.role || "viewer",
+        isActive: user.isActive !== false,
       }))
 
       storage.saveUsers(processedUsers)
@@ -416,7 +616,7 @@ class Database {
     if (data.auditLog) {
       const processedAuditLog = data.auditLog.map((entry: any) => ({
         ...entry,
-        id: entry.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: entry.id || `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: ensureDate(entry.timestamp),
         // Ensure required fields
         action: entry.action || "unknown_action",
@@ -427,10 +627,14 @@ class Database {
     }
 
     if (data.settings?.pageVisits) {
-      localStorage.setItem("kb_page_visits", data.settings.pageVisits.toString())
+      if (typeof window !== "undefined") {
+        localStorage.setItem("kb_pageVisits", data.settings.pageVisits.toString())
+      }
     } else if (data.pageVisits) {
       // Handle direct pageVisits field
-      localStorage.setItem("kb_page_visits", data.pageVisits.toString())
+      if (typeof window !== "undefined") {
+        localStorage.setItem("kb_pageVisits", data.pageVisits.toString())
+      }
     }
 
     await this.addAuditEntry({
@@ -441,7 +645,12 @@ class Database {
   }
 
   async clearAllData(): Promise<void> {
+    if (!this.isClient) throw new Error("Not available on server")
+
     storage.clearAll()
+
+    // Reinitialize with defaults
+    await this.initialize()
 
     // Keep a record of the clear action
     await this.addAuditEntry({
