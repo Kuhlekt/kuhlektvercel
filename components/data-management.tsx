@@ -13,6 +13,7 @@ import { database } from "@/utils/database"
 
 interface ImportStats {
   categories: number
+  articles: number
   users: number
   auditLog: number
   pageVisits: number
@@ -103,7 +104,7 @@ export function DataManagement() {
 
       // Validate structure
       if (!backupData.categories || !backupData.users || !backupData.auditLog) {
-        throw new Error("Invalid backup file structure")
+        throw new Error("Invalid backup file structure. Missing required data sections.")
       }
       setImportProgress(60)
 
@@ -111,9 +112,28 @@ export function DataManagement() {
       await database.importData(backupData)
       setImportProgress(80)
 
-      // Calculate stats
+      // Calculate stats - count articles properly
+      let totalArticles = 0
+      if (backupData.categories) {
+        backupData.categories.forEach((cat: any) => {
+          // Count articles in category
+          if (cat.articles) {
+            totalArticles += cat.articles.length
+          }
+          // Count articles in subcategories
+          if (cat.subcategories) {
+            cat.subcategories.forEach((sub: any) => {
+              if (sub.articles) {
+                totalArticles += sub.articles.length
+              }
+            })
+          }
+        })
+      }
+
       const stats: ImportStats = {
         categories: backupData.categories?.length || 0,
+        articles: totalArticles,
         users: backupData.users?.length || 0,
         auditLog: backupData.auditLog?.length || 0,
         pageVisits: backupData.settings?.pageVisits || 0,
@@ -126,6 +146,11 @@ export function DataManagement() {
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
+
+      // Refresh page to show imported data
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import data")
     } finally {
@@ -153,6 +178,11 @@ export function DataManagement() {
       await database.clearAllData()
       setSuccess("All data cleared successfully!")
       setImportStats(null)
+
+      // Refresh page to show cleared state
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to clear data")
     } finally {
@@ -287,17 +317,21 @@ export function DataManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{importStats.categories}</div>
                 <div className="text-sm text-gray-600">Categories</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{importStats.users}</div>
+                <div className="text-2xl font-bold text-green-600">{importStats.articles}</div>
+                <div className="text-sm text-gray-600">Articles</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{importStats.users}</div>
                 <div className="text-sm text-gray-600">Users</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{importStats.auditLog}</div>
+                <div className="text-2xl font-bold text-red-600">{importStats.auditLog}</div>
                 <div className="text-sm text-gray-600">Audit Entries</div>
               </div>
               <div className="text-center">

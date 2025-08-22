@@ -229,8 +229,8 @@ class Database {
     username: string
     password: string
     email: string
-    role: "admin" | "user"
-    lastLogin: Date | null
+    role: "admin" | "editor" | "viewer"
+    lastLogin?: Date
   }): Promise<string> {
     const users = await this.getUsers()
 
@@ -345,39 +345,111 @@ class Database {
     const pageVisits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
 
     return {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
       categories,
       users,
       auditLog,
       settings: {
         pageVisits,
-        exportedAt: new Date().toISOString(),
-        version: "1.0",
       },
     }
   }
 
   async importData(data: any): Promise<void> {
-    if (data.categories) {
-      storage.saveCategories(data.categories)
-    }
+    try {
+      // Validate and process categories with proper structure
+      if (data.categories && Array.isArray(data.categories)) {
+        const processedCategories = data.categories.map((cat: any) => ({
+          id: cat.id || Date.now().toString(),
+          name: cat.name || "Unnamed Category",
+          description: cat.description || "",
+          articles: (cat.articles || []).map((article: any) => ({
+            id: article.id || Date.now().toString(),
+            title: article.title || "Untitled Article",
+            content: article.content || "",
+            categoryId: cat.id,
+            subcategoryId: article.subcategoryId,
+            tags: Array.isArray(article.tags) ? article.tags : [],
+            createdAt: ensureDate(article.createdAt),
+            updatedAt: ensureDate(article.updatedAt),
+            createdBy: article.createdBy || "Unknown",
+            lastEditedBy: article.lastEditedBy || "Unknown",
+            editCount: article.editCount || 0,
+          })),
+          subcategories: (cat.subcategories || []).map((sub: any) => ({
+            id: sub.id || Date.now().toString(),
+            name: sub.name || "Unnamed Subcategory",
+            description: sub.description || "",
+            articles: (sub.articles || []).map((article: any) => ({
+              id: article.id || Date.now().toString(),
+              title: article.title || "Untitled Article",
+              content: article.content || "",
+              categoryId: cat.id,
+              subcategoryId: sub.id,
+              tags: Array.isArray(article.tags) ? article.tags : [],
+              createdAt: ensureDate(article.createdAt),
+              updatedAt: ensureDate(article.updatedAt),
+              createdBy: article.createdBy || "Unknown",
+              lastEditedBy: article.lastEditedBy || "Unknown",
+              editCount: article.editCount || 0,
+            })),
+          })),
+        }))
 
-    if (data.users) {
-      storage.saveUsers(data.users)
-    }
+        storage.saveCategories(processedCategories)
+      }
 
-    if (data.auditLog) {
-      storage.saveAuditLog(data.auditLog)
-    }
+      // Process users
+      if (data.users && Array.isArray(data.users)) {
+        const processedUsers = data.users.map((user: any) => ({
+          id: user.id || Date.now().toString(),
+          username: user.username || "Unknown User",
+          password: user.password || "",
+          email: user.email || "",
+          role: user.role || "viewer",
+          createdAt: ensureDate(user.createdAt),
+          lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : undefined,
+        }))
 
-    if (data.settings?.pageVisits) {
-      localStorage.setItem("kb_page_visits", data.settings.pageVisits.toString())
-    }
+        storage.saveUsers(processedUsers)
+      }
 
-    await this.addAuditEntry({
-      action: "Data Imported",
-      performedBy: "System",
-      details: "Imported data from backup file",
-    })
+      // Process audit log
+      if (data.auditLog && Array.isArray(data.auditLog)) {
+        const processedAuditLog = data.auditLog.map((entry: any) => ({
+          id: entry.id || Date.now().toString(),
+          action: entry.action || "Unknown Action",
+          articleId: entry.articleId,
+          articleTitle: entry.articleTitle,
+          categoryId: entry.categoryId,
+          categoryName: entry.categoryName,
+          subcategoryName: entry.subcategoryName,
+          userId: entry.userId,
+          username: entry.username,
+          performedBy: entry.performedBy || "Unknown",
+          timestamp: ensureDate(entry.timestamp),
+          details: entry.details || "",
+        }))
+
+        storage.saveAuditLog(processedAuditLog)
+      }
+
+      // Process settings
+      if (data.settings?.pageVisits) {
+        localStorage.setItem("kb_page_visits", data.settings.pageVisits.toString())
+      }
+
+      // Add audit entry for import
+      await this.addAuditEntry({
+        action: "Data Imported",
+        performedBy: "System",
+        details: "Imported data from backup file",
+      })
+    } catch (error) {
+      console.error("Import error:", error)
+      throw new Error("Failed to import data: " + (error instanceof Error ? error.message : "Unknown error"))
+    }
   }
 
   async clearAllData(): Promise<void> {
