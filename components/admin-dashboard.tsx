@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CategoryManagement } from "./category-management"
 import { AuditLog } from "./audit-log"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { Activity, Users, FileText, FolderTree, TrendingUp } from "lucide-react"
+import { Activity, Users, FileText, FolderTree } from "lucide-react"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
@@ -43,64 +42,6 @@ export function AdminDashboard({
   // Get recent activity
   const recentActivity = auditLog.slice(0, 10)
 
-  // Get article creation data for chart
-  const getArticleCreationData = () => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      return {
-        date: date.toISOString().split("T")[0],
-        articles: 0,
-      }
-    }).reverse()
-
-    // Count articles created in the last 7 days
-    categories.forEach((category) => {
-      category.articles?.forEach((article) => {
-        const articleDate = new Date(article.createdAt).toISOString().split("T")[0]
-        const dayData = last7Days.find((day) => day.date === articleDate)
-        if (dayData) {
-          dayData.articles++
-        }
-      })
-
-      category.subcategories?.forEach((subcategory) => {
-        subcategory.articles?.forEach((article) => {
-          const articleDate = new Date(article.createdAt).toISOString().split("T")[0]
-          const dayData = last7Days.find((day) => day.date === articleDate)
-          if (dayData) {
-            dayData.articles++
-          }
-        })
-      })
-    })
-
-    return last7Days.map((day) => ({
-      ...day,
-      date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    }))
-  }
-
-  // Get user role distribution
-  const getUserRoleData = () => {
-    const roleCounts = users.reduce(
-      (acc, user) => {
-        acc[user.role] = (acc[user.role] || 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    )
-
-    return Object.entries(roleCounts).map(([role, count]) => ({
-      name: role.charAt(0).toUpperCase() + role.slice(1),
-      value: count,
-      color: role === "admin" ? "#ef4444" : role === "editor" ? "#3b82f6" : "#10b981",
-    }))
-  }
-
-  const articleCreationData = getArticleCreationData()
-  const userRoleData = getUserRoleData()
-
   return (
     <div className="space-y-6">
       <div>
@@ -109,11 +50,10 @@ export function AdminDashboard({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="activity">Activity Log</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -219,64 +159,6 @@ export function AdminDashboard({
 
         <TabsContent value="activity">
           <AuditLog auditLog={auditLog} />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          {/* Article Creation Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Article Creation (Last 7 Days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={articleCreationData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="articles" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* User Role Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                User Role Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={userRoleData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {userRoleData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

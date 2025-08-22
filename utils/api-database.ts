@@ -235,6 +235,131 @@ export class ApiDatabase {
 
     return updatedAuditLog
   }
+
+  async addCategory(categories: Category[], name: string, description?: string): Promise<Category[]> {
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name,
+      description,
+      articles: [],
+      subcategories: [],
+    }
+
+    const updatedCategories = [...categories, newCategory]
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async addSubcategory(
+    categories: Category[],
+    categoryId: string,
+    name: string,
+    description?: string,
+  ): Promise<Category[]> {
+    const updatedCategories = categories.map((category) => {
+      if (category.id === categoryId) {
+        const newSubcategory = {
+          id: Date.now().toString(),
+          name,
+          description,
+          articles: [],
+        }
+        return {
+          ...category,
+          subcategories: [...(category.subcategories || []), newSubcategory],
+        }
+      }
+      return category
+    })
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async deleteCategory(categories: Category[], categoryId: string): Promise<Category[]> {
+    const updatedCategories = categories.filter((category) => category.id !== categoryId)
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async deleteSubcategory(categories: Category[], categoryId: string, subcategoryId: string): Promise<Category[]> {
+    const updatedCategories = categories.map((category) => {
+      if (category.id === categoryId) {
+        return {
+          ...category,
+          subcategories: (category.subcategories || []).filter((sub) => sub.id !== subcategoryId),
+        }
+      }
+      return category
+    })
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async addUser(users: User[], userData: Omit<User, "id" | "createdAt">): Promise<User[]> {
+    const newUser: User = {
+      ...userData,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    }
+
+    const updatedUsers = [...users, newUser]
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      users: updatedUsers,
+    })
+
+    return updatedUsers
+  }
+
+  async updateUser(users: User[], userId: string, updates: Partial<User>): Promise<User[]> {
+    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, ...updates } : user))
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      users: updatedUsers,
+    })
+
+    return updatedUsers
+  }
+
+  async deleteUser(users: User[], userId: string): Promise<User[]> {
+    const updatedUsers = users.filter((user) => user.id !== userId)
+
+    const data = await this.loadData()
+    await this.saveData({
+      ...data,
+      users: updatedUsers,
+    })
+
+    return updatedUsers
+  }
 }
 
 export const apiDatabase = new ApiDatabase()

@@ -2,167 +2,153 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Save, ArrowLeft, Clock, Edit, User, Hash } from "lucide-react"
-import type { Article, Category } from "../types/knowledge-base"
-import { WysiwygEditor } from "./wysiwyg-editor"
-import type { ImageData } from "./wysiwyg-editor"
+import { Badge } from "@/components/ui/badge"
+import { Plus, X, Save, ArrowLeft, AlertTriangle } from "lucide-react"
+import type { Category, Article, User } from "../types/knowledge-base"
 
 interface EditArticleFormProps {
   article: Article
   categories: Category[]
-  currentUser?: { username: string } | null
-  onSubmit: (articleData: Omit<Article, "createdAt">) => void
+  currentUser: User | null
+  onSubmit: (article: Omit<Article, "createdAt">) => void
   onCancel: () => void
 }
 
 export function EditArticleForm({ article, categories, currentUser, onSubmit, onCancel }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title)
   const [content, setContent] = useState(article.content)
-  const [selectedCategoryId, setSelectedCategoryId] = useState(article.categoryId)
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(article.subcategoryId || "none")
-  const [tags, setTags] = useState(article.tags.join(", "))
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [images, setImages] = useState<ImageData[]>([])
+  const [categoryId, setCategoryId] = useState(article.categoryId)
+  const [tags, setTags] = useState<string[]>(article.tags || [])
+  const [newTag, setNewTag] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
-
-  // Initialize content and extract existing images
-  useEffect(() => {
-    console.log("Initializing edit form with article:", article.title)
-
-    // Extract existing images from content
-    const existingImages: ImageData[] = []
-    let processedContent = article.content
-
-    // Look for existing img tags and convert them to our format
-    processedContent = processedContent.replace(
-      /<img[^>]+src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>/gi,
-      (match, src, alt) => {
-        const id = Date.now().toString() + Math.random().toString(36).substr(2, 5)
-        const filename = alt || "image"
-
-        existingImages.push({
-          id,
-          dataUrl: src,
-          name: filename,
-          placeholder: `[IMAGE:${id}:${filename}]`,
-        })
-
-        return match // Keep the original img tag for WYSIWYG editor
-      },
-    )
-
-    setContent(processedContent)
-    setImages(existingImages)
-
-    // Set global images for other components to access
-    ;(window as any).textareaImages = existingImages
-    ;(window as any).editingImages = existingImages
-
-    console.log("Initialized with images:", existingImages)
-  }, [article])
-
-  // Reset subcategory when category changes
-  useEffect(() => {
-    if (selectedCategoryId !== article.categoryId) {
-      setSelectedSubcategoryId("none")
+  const handleAddTag = () => {
+    const tag = newTag.trim().toLowerCase()
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag])
+      setNewTag("")
     }
-  }, [selectedCategoryId, article.categoryId])
+  }
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddTag()
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title.trim() || !content.trim() || !selectedCategoryId) {
+    if (!title.trim() || !content.trim() || !categoryId) {
+      setError("Please fill in all required fields")
       return
     }
 
-    setIsSubmitting(true)
-
     try {
-      const updatedArticle = {
-        id: article.id,
+      setIsLoading(true)
+      setError(null)
+
+      const updatedArticle: Omit<Article, "createdAt"> = {
+        ...article,
         title: title.trim(),
-        content: content, // Content is already in HTML format from WYSIWYG editor
-        categoryId: selectedCategoryId,
-        subcategoryId: selectedSubcategoryId === "none" ? undefined : selectedSubcategoryId,
-        tags: tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0),
+        content: content.trim(),
+        categoryId,
+        tags: tags.length > 0 ? tags : undefined,
         updatedAt: new Date(),
-        createdBy: article.createdBy,
-        editCount: (article.editCount || 0) + 1,
-        lastEditedBy: currentUser?.username || "anonymous",
       }
 
-      console.log("Submitting updated article:", updatedArticle)
-      onSubmit(updatedArticle)
+      await onSubmit(updatedArticle)
     } catch (error) {
       console.error("Error updating article:", error)
+      setError("Failed to update article. Please try again.")
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
   }
 
-  const handleImagesChange = (newImages: ImageData[]) => {
-    console.log("Images changed in edit form:", newImages)
-    setImages(newImages)
-    ;(window as any).textareaImages = newImages
-    ;(window as any).editingImages = newImages
+  // Get all available categories and subcategories
+  const getAllCategories = () => {
+    const options: { id: string; name: string }[] = []
+
+    categories.forEach((category) => {
+      options.push({ id: category.id, name: category.name })
+
+      if (category.subcategories) {
+        category.subcategories.forEach((subcategory) => {
+          options.push({
+            id: subcategory.id,
+            name: `${category.name} > ${subcategory.name}`,
+          })
+        })
+      }
+    })
+
+    return options
+  }
+
+  const categoryOptions = getAllCategories()
+
+  // Check if user can edit
+  const canEdit = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
+
+  if (!canEdit) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>You don't have permission to edit articles.</AlertDescription>
+        </Alert>
+        <Button variant="ghost" onClick={onCancel}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      </div>
+    )
   }
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle>Edit Article</CardTitle>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Article</h1>
+          <p className="text-gray-600 mt-2">Update the article information</p>
         </div>
-      </CardHeader>
+        <Button variant="ghost" onClick={onCancel}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Cancel
+        </Button>
+      </div>
 
-      <CardContent>
-        <Alert className="mb-6">
-          <Edit className="h-4 w-4" />
-          <AlertDescription>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
-              <div className="flex items-center space-x-1">
-                <Clock className="h-3 w-3" />
-                <span>Created: {article.createdAt.toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Clock className="h-3 w-3" />
-                <span>Last Updated: {article.updatedAt.toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Hash className="h-3 w-3" />
-                <span>Edit Count: {article.editCount || 0}</span>
-              </div>
-              {article.lastEditedBy && (
-                <div className="flex items-center space-x-1">
-                  <User className="h-3 w-3" />
-                  <span>Last Edited By: {article.lastEditedBy}</span>
-                </div>
-              )}
-              <div className="flex items-center space-x-1">
-                <User className="h-3 w-3" />
-                <span>Created By: {article.createdBy}</span>
-              </div>
-            </div>
-          </AlertDescription>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Article Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title */}
             <div>
               <Label htmlFor="title">Title *</Label>
               <Input
@@ -170,80 +156,92 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter article title"
-                required
+                disabled={isLoading}
+                className="mt-1"
               />
             </div>
 
-            <div>
-              <Label htmlFor="tags">Tags</Label>
-              <Input
-                id="tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Enter tags separated by commas"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Category */}
             <div>
               <Label htmlFor="category">Category *</Label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId} required>
-                <SelectTrigger>
+              <Select value={categoryId} onValueChange={setCategoryId} disabled={isLoading}>
+                <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {availableSubcategories.length > 0 && (
-              <div>
-                <Label htmlFor="subcategory">Subcategory</Label>
-                <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subcategory (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {availableSubcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
+            {/* Tags */}
+            <div>
+              <Label htmlFor="tags">Tags</Label>
+              <div className="mt-1 space-y-2">
+                <div className="flex space-x-2">
+                  <Input
+                    id="tags"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Add a tag"
+                    disabled={isLoading}
+                  />
+                  <Button type="button" variant="outline" onClick={handleAddTag} disabled={!newTag.trim() || isLoading}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 hover:text-red-600"
+                          disabled={isLoading}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div>
-            <Label htmlFor="content">Content *</Label>
-            <WysiwygEditor
-              value={content}
-              onChange={setContent}
-              onImagesChange={handleImagesChange}
-              placeholder="Write your article content here..."
-              className="mt-2"
-            />
-          </div>
+            {/* Content */}
+            <div>
+              <Label htmlFor="content">Content *</Label>
+              <Textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your article content here..."
+                disabled={isLoading}
+                className="mt-1 min-h-[300px]"
+              />
+            </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!title.trim() || !content.trim() || !selectedCategoryId || isSubmitting}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            {/* Actions */}
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading || !title.trim() || !content.trim() || !categoryId}>
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? "Updating..." : "Update Article"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

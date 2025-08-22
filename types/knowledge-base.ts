@@ -1,6 +1,7 @@
 export interface User {
   id: string
   username: string
+  password: string
   email: string
   role: "admin" | "editor" | "viewer"
   createdAt: Date
@@ -27,35 +28,18 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  subcategoryId?: string
-  tags: string[]
+  tags?: string[]
   createdAt: Date
   updatedAt: Date
-  createdBy: string
-  editCount?: number
-  lastEditedBy?: string
 }
 
 export interface AuditLogEntry {
   id: string
-  action:
-    | "article_created"
-    | "article_updated"
-    | "article_deleted"
-    | "category_created"
-    | "category_updated"
-    | "category_deleted"
-    | "user_created"
-    | "user_updated"
-    | "user_deleted"
+  action: string
+  performedBy: string
+  timestamp: Date
   articleId?: string
   articleTitle?: string
   categoryId?: string
-  categoryName?: string
-  subcategoryName?: string
-  userId?: string
-  username?: string
-  performedBy: string
-  timestamp: Date
   details?: string
 }
