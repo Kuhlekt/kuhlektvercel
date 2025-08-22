@@ -1,33 +1,35 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { X, AlertCircle } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onLogin: (username: string, password: string) => boolean
+  onLogin: (username: string, password: string) => Promise<boolean>
 }
 
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setIsLoading(true)
+    setError("")
 
     try {
-      const success = onLogin(username, password)
+      const success = await onLogin(username, password)
       if (success) {
         setUsername("")
         setPassword("")
@@ -46,84 +48,101 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setUsername("")
     setPassword("")
     setError("")
+    setShowPassword(false)
     onClose()
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <Card className="border-0 shadow-none">
-          <CardHeader className="relative">
-            <Button variant="ghost" size="sm" onClick={handleClose} className="absolute right-2 top-2 h-8 w-8 p-0">
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="flex flex-col items-center mb-4">
-              <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-auto mb-2" />
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex flex-col items-center space-y-4">
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-auto object-contain" />
+            <DialogTitle className="text-2xl font-bold text-center">Login to Knowledge Base</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                disabled={isLoading}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-400" />
+                )}
+              </Button>
             </div>
-            <CardTitle>Login to Knowledge Base</CardTitle>
-            <CardDescription>Enter your credentials to access admin features</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
+          <div className="flex space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="flex-1 bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+          </div>
+        </form>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-600">
-                <p className="font-medium mb-1">Default Credentials:</p>
-                <p>Username: admin</p>
-                <p>Password: admin123</p>
-              </div>
-
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  className="flex-1 bg-transparent"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" disabled={isLoading}>
-                  {isLoading ? "Logging in..." : "Login"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-semibold text-sm text-gray-700 mb-2">Demo Accounts:</h4>
+          <div className="space-y-1 text-xs text-gray-600">
+            <div>
+              <strong>Admin:</strong> admin / admin123
+            </div>
+            <div>
+              <strong>Editor:</strong> editor / editor123
+            </div>
+            <div>
+              <strong>Viewer:</strong> viewer / viewer123
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

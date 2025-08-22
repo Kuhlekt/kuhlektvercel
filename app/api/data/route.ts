@@ -18,7 +18,7 @@ async function ensureDataDir() {
 }
 
 // Read JSON file with fallback
-async function readJSONFile(filePath: string, fallback: any) {
+async function readJsonFile(filePath: string, fallback: any) {
   try {
     const data = await fs.readFile(filePath, "utf8")
     return JSON.parse(data)
@@ -28,8 +28,8 @@ async function readJSONFile(filePath: string, fallback: any) {
 }
 
 // Write JSON file
-async function writeJSONFile(filePath: string, data: any) {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2))
+async function writeJsonFile(filePath: string, data: any) {
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8")
 }
 
 export async function GET() {
@@ -37,18 +37,38 @@ export async function GET() {
     await ensureDataDir()
 
     const [categories, users, auditLog, settings] = await Promise.all([
-      readJSONFile(CATEGORIES_FILE, []),
-      readJSONFile(USERS_FILE, [
+      readJsonFile(CATEGORIES_FILE, []),
+      readJsonFile(USERS_FILE, [
         {
           id: "1",
           username: "admin",
           password: "admin123",
+          email: "admin@kuhlekt.com",
           role: "admin",
           createdAt: new Date().toISOString(),
+          lastLogin: null,
+        },
+        {
+          id: "2",
+          username: "editor",
+          password: "editor123",
+          email: "editor@kuhlekt.com",
+          role: "editor",
+          createdAt: new Date().toISOString(),
+          lastLogin: null,
+        },
+        {
+          id: "3",
+          username: "viewer",
+          password: "viewer123",
+          email: "viewer@kuhlekt.com",
+          role: "viewer",
+          createdAt: new Date().toISOString(),
+          lastLogin: null,
         },
       ]),
-      readJSONFile(AUDIT_LOG_FILE, []),
-      readJSONFile(SETTINGS_FILE, { pageVisits: 0 }),
+      readJsonFile(AUDIT_LOG_FILE, []),
+      readJsonFile(SETTINGS_FILE, { pageVisits: 0 }),
     ])
 
     return NextResponse.json({
@@ -58,8 +78,8 @@ export async function GET() {
       settings,
     })
   } catch (error) {
-    console.error("Error reading data:", error)
-    return NextResponse.json({ error: "Failed to read data" }, { status: 500 })
+    console.error("Error loading data:", error)
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
   }
 }
 
@@ -68,13 +88,12 @@ export async function POST(request: NextRequest) {
     await ensureDataDir()
 
     const data = await request.json()
-    const { categories, users, auditLog, settings } = data
 
     await Promise.all([
-      writeJSONFile(CATEGORIES_FILE, categories || []),
-      writeJSONFile(USERS_FILE, users || []),
-      writeJSONFile(AUDIT_LOG_FILE, auditLog || []),
-      writeJSONFile(SETTINGS_FILE, settings || { pageVisits: 0 }),
+      writeJsonFile(CATEGORIES_FILE, data.categories || []),
+      writeJsonFile(USERS_FILE, data.users || []),
+      writeJsonFile(AUDIT_LOG_FILE, data.auditLog || []),
+      writeJsonFile(SETTINGS_FILE, data.settings || { pageVisits: 0 }),
     ])
 
     return NextResponse.json({ success: true })
