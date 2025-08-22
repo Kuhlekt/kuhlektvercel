@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Database, Activity, TrendingUp, Shield } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { CategoryManagement } from "./category-management"
-import { ArticleManagement } from "./article-management"
 import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
-import type { User, Category, AuditLogEntry } from "@/types/knowledge-base"
+import { Users, FileText, FolderOpen, Activity, Database, BarChart3 } from "lucide-react"
+import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
   categories: Category[]
@@ -20,6 +20,31 @@ interface AdminDashboardProps {
   onAuditLogUpdate: () => void
 }
 
+// Helper function to safely format dates
+const formatDateTime = (date: any): string => {
+  try {
+    if (!date) return "Unknown"
+
+    let dateObj: Date
+    if (date instanceof Date) {
+      dateObj = date
+    } else if (typeof date === "string") {
+      dateObj = new Date(date)
+    } else {
+      return "Invalid Date"
+    }
+
+    if (isNaN(dateObj.getTime())) {
+      return "Invalid Date"
+    }
+
+    return dateObj.toLocaleDateString()
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return "Date Error"
+  }
+}
+
 export function AdminDashboard({
   categories,
   users,
@@ -28,217 +53,226 @@ export function AdminDashboard({
   onUsersUpdate,
   onAuditLogUpdate,
 }: AdminDashboardProps) {
-  const [stats, setStats] = useState({
-    totalArticles: 0,
-    totalCategories: 0,
-    totalUsers: 0,
-    totalAuditEntries: 0,
-    pageVisits: 0,
-  })
+  const [activeTab, setActiveTab] = useState("overview")
 
-  useEffect(() => {
-    // Calculate stats whenever data changes
-    const totalArticles = categories.reduce((total, category) => {
-      const categoryArticles = category.articles?.length || 0
-      const subcategoryArticles =
-        category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
-      return total + categoryArticles + subcategoryArticles
-    }, 0)
+  // Calculate statistics
+  const stats = useMemo(() => {
+    let totalArticles = 0
+    let totalSubcategories = 0
 
-    const pageVisits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
+    categories.forEach((category) => {
+      if (category.articles) {
+        totalArticles += category.articles.length
+      }
+      if (category.subcategories) {
+        totalSubcategories += category.subcategories.length
+        category.subcategories.forEach((sub) => {
+          if (sub.articles) {
+            totalArticles += sub.articles.length
+          }
+        })
+      }
+    })
 
-    setStats({
-      totalArticles,
+    const recentActivity = auditLog.slice(0, 5)
+    const todayEntries = auditLog.filter((entry) => {
+      try {
+        const entryDate = new Date(entry.timestamp)
+        const today = new Date()
+        return entryDate.toDateString() === today.toDateString()
+      } catch {
+        return false
+      }
+    })
+
+    return {
       totalCategories: categories.length,
+      totalSubcategories,
+      totalArticles,
       totalUsers: users.length,
       totalAuditEntries: auditLog.length,
-      pageVisits,
-    })
+      todayActivity: todayEntries.length,
+      recentActivity,
+    }
   }, [categories, users, auditLog])
 
-  const handleDataUpdate = () => {
-    onCategoriesUpdate()
-    onUsersUpdate()
-    onAuditLogUpdate()
-  }
-
-  const recentActivity = auditLog.slice(0, 5).map((entry) => ({
-    id: entry.id,
-    action: entry.action,
-    user: entry.username || entry.performedBy || "Unknown",
-    target: entry.articleTitle || entry.categoryName || "Unknown",
-    timestamp: entry.timestamp,
-  }))
-
-  const formatDate = (dateValue: any): string => {
-    if (!dateValue) return "Unknown"
-
-    try {
-      const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
-      if (date instanceof Date && !isNaN(date.getTime())) {
-        return date.toLocaleDateString()
-      }
-      return "Invalid Date"
-    } catch {
-      return "Invalid Date"
-    }
-  }
-
-  const formatTime = (dateValue: any): string => {
-    if (!dateValue) return "Unknown"
-
-    try {
-      const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
-      if (date instanceof Date && !isNaN(date.getTime())) {
-        return date.toLocaleTimeString()
-      }
-      return "Invalid Time"
-    } catch {
-      return "Invalid Time"
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-500">Manage your knowledge base</p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Admin Dashboard</h2>
+        <p className="text-gray-600">Manage your knowledge base content, users, and system settings</p>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="articles">Articles</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="audit">Audit Log</TabsTrigger>
-            <TabsTrigger value="data">Data</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
+        </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalArticles}</div>
-                  <p className="text-xs text-muted-foreground">Across all categories</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalCategories}</div>
-                  <p className="text-xs text-muted-foreground">Knowledge base sections</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">Registered accounts</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Page Visits</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.pageVisits}</div>
-                  <p className="text-xs text-muted-foreground">Total page views</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Activity */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5" />
-                  <span>Recent Activity</span>
-                </CardTitle>
-                <CardDescription>Latest actions performed in the system</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                {recentActivity.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-center justify-between py-2 border-b last:border-b-0"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {activity.action} - {activity.target}
-                            </p>
-                            <p className="text-xs text-gray-500">by {activity.user}</p>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-500">{formatTime(activity.timestamp)}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">No recent activity</p>
-                )}
+                <div className="text-2xl font-bold">{stats.totalArticles}</div>
+                <p className="text-xs text-muted-foreground">Across {stats.totalCategories} categories</p>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Categories Tab */}
-          <TabsContent value="categories">
-            <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
-          </TabsContent>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalCategories}</div>
+                <p className="text-xs text-muted-foreground">{stats.totalSubcategories} subcategories</p>
+              </CardContent>
+            </Card>
 
-          {/* Articles Tab */}
-          <TabsContent value="articles">
-            <ArticleManagement categories={categories} onUpdate={onCategoriesUpdate} />
-          </TabsContent>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                <p className="text-xs text-muted-foreground">Registered users</p>
+              </CardContent>
+            </Card>
 
-          {/* Users Tab */}
-          <TabsContent value="users">
-            <UserManagementTable users={users} onUsersUpdate={onUsersUpdate} />
-          </TabsContent>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Activity</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.todayActivity}</div>
+                <p className="text-xs text-muted-foreground">Actions performed today</p>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Audit Log Tab */}
-          <TabsContent value="audit">
-            <AuditLog auditLog={auditLog} onUpdate={onAuditLogUpdate} />
-          </TabsContent>
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest actions performed in the system</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {stats.recentActivity.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between border-b pb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="text-xs">
+                            {entry.action.replace(/_/g, " ").toUpperCase()}
+                          </Badge>
+                          <span className="text-sm font-medium">{entry.performedBy}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{entry.details || `${entry.action} performed`}</p>
+                      </div>
+                      <div className="text-xs text-gray-500">{formatDateTime(entry.timestamp)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No recent activity</p>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Data Management Tab */}
-          <TabsContent value="data">
-            <DataManagement onDataUpdate={handleDataUpdate} />
-          </TabsContent>
-        </Tabs>
-      </div>
+          {/* System Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Database className="h-5 w-5 mr-2" />
+                  System Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Audit Entries:</span>
+                  <span className="text-sm font-medium">{stats.totalAuditEntries}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Database Status:</span>
+                  <Badge variant="outline" className="text-green-600">
+                    Connected
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Last Updated:</span>
+                  <span className="text-sm font-medium">{formatDateTime(new Date())}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Content Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Articles per Category:</span>
+                  <span className="text-sm font-medium">
+                    {stats.totalCategories > 0 ? Math.round(stats.totalArticles / stats.totalCategories) : 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Categories with Subcategories:</span>
+                  <span className="text-sm font-medium">
+                    {categories.filter((cat) => cat.subcategories && cat.subcategories.length > 0).length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Empty Categories:</span>
+                  <span className="text-sm font-medium">
+                    {
+                      categories.filter(
+                        (cat) =>
+                          (!cat.articles || cat.articles.length === 0) &&
+                          (!cat.subcategories || cat.subcategories.length === 0),
+                      ).length
+                    }
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategoryManagement categories={categories} onUpdate={onCategoriesUpdate} />
+        </TabsContent>
+
+        <TabsContent value="users">
+          <UserManagementTable users={users} onUpdate={onUsersUpdate} />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditLog auditLog={auditLog} onUpdate={onAuditLogUpdate} />
+        </TabsContent>
+
+        <TabsContent value="data">
+          <DataManagement onDataUpdate={onAuditLogUpdate} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

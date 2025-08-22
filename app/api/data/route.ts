@@ -14,6 +14,117 @@ async function ensureDataDirectory() {
   }
 }
 
+// Initialize with default data if file doesn't exist
+async function initializeData() {
+  const defaultData = {
+    categories: [
+      {
+        id: "1",
+        name: "Getting Started",
+        description: "Basic information to get you started",
+        articles: [
+          {
+            id: "1",
+            title: "Welcome to the Knowledge Base",
+            content:
+              "This is your first article in the knowledge base. You can edit, delete, or create new articles using the admin interface.",
+            categoryId: "1",
+            tags: ["welcome", "introduction"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        subcategories: [
+          {
+            id: "2",
+            name: "Installation",
+            description: "How to install and set up",
+            articles: [
+              {
+                id: "2",
+                title: "System Requirements",
+                content:
+                  "Before you begin, make sure your system meets the following requirements:\n\n- Node.js 18 or higher\n- Modern web browser\n- Internet connection for initial setup",
+                categoryId: "2",
+                tags: ["requirements", "setup"],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "3",
+        name: "Troubleshooting",
+        description: "Common issues and solutions",
+        articles: [
+          {
+            id: "3",
+            title: "Common Issues",
+            content:
+              "Here are some common issues you might encounter:\n\n1. Login problems - Check your username and password\n2. Slow loading - Clear your browser cache\n3. Missing content - Refresh the page",
+            categoryId: "3",
+            tags: ["troubleshooting", "issues"],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        subcategories: [],
+      },
+    ],
+    users: [
+      {
+        id: "1",
+        username: "admin",
+        password: "admin123",
+        email: "admin@kuhlekt.com",
+        role: "admin",
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      },
+      {
+        id: "2",
+        username: "editor",
+        password: "editor123",
+        email: "editor@kuhlekt.com",
+        role: "editor",
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      },
+      {
+        id: "3",
+        username: "viewer",
+        password: "viewer123",
+        email: "viewer@kuhlekt.com",
+        role: "viewer",
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      },
+    ],
+    auditLog: [
+      {
+        id: "1",
+        action: "article_created",
+        performedBy: "admin",
+        timestamp: new Date().toISOString(),
+        articleId: "1",
+        articleTitle: "Welcome to the Knowledge Base",
+        categoryId: "1",
+        details: "Initial article created during setup",
+      },
+    ],
+    pageVisits: 0,
+  }
+
+  await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
+  console.log(
+    "Initialized default data with users:",
+    defaultData.users.map((u) => ({ username: u.username, role: u.role })),
+  )
+  return defaultData
+}
+
 // Load data from file
 async function loadData() {
   try {
@@ -24,19 +135,15 @@ async function loadData() {
     console.log("Loaded data from file:", {
       categories: parsed.categories?.length || 0,
       users: parsed.users?.length || 0,
+      usernames: parsed.users?.map((u: any) => u.username) || [],
       auditLog: parsed.auditLog?.length || 0,
       pageVisits: parsed.pageVisits || 0,
     })
 
     return parsed
   } catch (error) {
-    console.log("No existing data file found, returning empty data")
-    return {
-      categories: [],
-      users: [],
-      auditLog: [],
-      pageVisits: 0,
-    }
+    console.log("No existing data file found, initializing with default data")
+    return await initializeData()
   }
 }
 
@@ -49,6 +156,7 @@ async function saveData(data: any) {
     console.log("Saved data to file:", {
       categories: data.categories?.length || 0,
       users: data.users?.length || 0,
+      usernames: data.users?.map((u: any) => u.username) || [],
       auditLog: data.auditLog?.length || 0,
       pageVisits: data.pageVisits || 0,
     })
@@ -76,6 +184,7 @@ export async function POST(request: NextRequest) {
     console.log("Received data to save:", {
       categories: body.categories?.length || 0,
       users: body.users?.length || 0,
+      usernames: body.users?.map((u: any) => u.username) || [],
       auditLog: body.auditLog?.length || 0,
       pageVisits: body.pageVisits || 0,
     })

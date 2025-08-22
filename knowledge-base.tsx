@@ -43,7 +43,12 @@ export default function KnowledgeBase() {
 
         const data = await apiDatabase.loadData()
 
-        console.log("Loaded data:", data)
+        console.log("Loaded data:", {
+          categories: data.categories?.length || 0,
+          users: data.users?.length || 0,
+          usernames: data.users?.map((u) => u.username) || [],
+          auditLog: data.auditLog?.length || 0,
+        })
 
         setCategories(data.categories || [])
         setUsers(data.users || [])
@@ -82,10 +87,16 @@ export default function KnowledgeBase() {
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
       console.log("Attempting login with:", username)
+      console.log(
+        "Available users:",
+        users.map((u) => ({ username: u.username, role: u.role })),
+      )
 
       const user = users.find((u) => u.username === username && u.password === password)
 
       if (user) {
+        console.log("Login successful for user:", user.username, "with role:", user.role)
+
         // Update last login time
         const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
         setUsers(updatedUsers)
@@ -93,12 +104,11 @@ export default function KnowledgeBase() {
         const updatedUser = updatedUsers.find((u) => u.id === user.id)
         setCurrentUser(updatedUser || user)
 
-        console.log("Login successful")
         setShowLoginModal(false)
         return true
       }
 
-      console.log("Login failed - invalid credentials")
+      console.log("Login failed - invalid credentials for username:", username)
       return false
     } catch (error) {
       console.error("Login error:", error)
