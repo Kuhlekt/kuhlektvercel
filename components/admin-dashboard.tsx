@@ -1,166 +1,195 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Users, FileText, Activity, Database, Settings, BarChart3 } from "lucide-react"
 import { CategoryManagement } from "./category-management"
+import { ArticleManagement } from "./article-management"
+import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
-import { Activity, Users, FileText, FolderTree } from "lucide-react"
-import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
+import { DataManagement } from "./data-management"
 
 interface AdminDashboardProps {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  onCategoriesUpdate: () => void
-  onUsersUpdate: () => void
-  onAuditLogUpdate: () => void
+  currentUser: {
+    id: string
+    username: string
+    role: string
+  }
+  onLogout: () => void
 }
 
-export function AdminDashboard({
-  categories,
-  users,
-  auditLog,
-  onCategoriesUpdate,
-  onUsersUpdate,
-  onAuditLogUpdate,
-}: AdminDashboardProps) {
+export function AdminDashboard({ currentUser, onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
-  // Calculate statistics
-  const totalArticles = categories.reduce((total, category) => {
-    const categoryArticles = category.articles?.length || 0
-    const subcategoryArticles =
-      category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
-    return total + categoryArticles + subcategoryArticles
-  }, 0)
-
-  const totalCategories = categories.length
-  const totalSubcategories = categories.reduce((total, category) => total + (category.subcategories?.length || 0), 0)
-
-  // Get recent activity
-  const recentActivity = auditLog.slice(0, 10)
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage your knowledge base and monitor activity</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="border-b bg-white">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-muted-foreground">
+                Welcome back, {currentUser.username}
+                <Badge variant="secondary" className="ml-2">
+                  {currentUser.role}
+                </Badge>
+              </p>
+            </div>
+            <button onClick={onLogout} className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
-        </TabsList>
+      <div className="container mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Categories
+            </TabsTrigger>
+            <TabsTrigger value="articles" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Articles
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Audit Log
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Data
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-xs text-muted-foreground">Across all categories</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-xs text-muted-foreground">Including subcategories</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-xs text-muted-foreground">Registered users</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Page Visits</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">--</div>
+                  <p className="text-xs text-muted-foreground">Total visits</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Articles</p>
-                    <p className="text-2xl font-bold text-blue-600">{totalArticles}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-blue-600" />
-                </div>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>Common administrative tasks</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <button
+                  onClick={() => setActiveTab("categories")}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="font-medium">Manage Categories</div>
+                  <div className="text-sm text-muted-foreground">Add, edit, or organize categories</div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("articles")}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="font-medium">Create Article</div>
+                  <div className="text-sm text-muted-foreground">Add new knowledge base content</div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("users")}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="font-medium">User Management</div>
+                  <div className="text-sm text-muted-foreground">Manage user accounts and permissions</div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("audit")}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="font-medium">View Activity</div>
+                  <div className="text-sm text-muted-foreground">Check recent system activity</div>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("data")}
+                  className="p-4 text-left border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="font-medium">Backup Data</div>
+                  <div className="text-sm text-muted-foreground">Export or import knowledge base</div>
+                </button>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Categories</p>
-                    <p className="text-2xl font-bold text-green-600">{totalCategories}</p>
-                  </div>
-                  <FolderTree className="h-8 w-8 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="categories">
+            <CategoryManagement currentUser={currentUser} />
+          </TabsContent>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Subcategories</p>
-                    <p className="text-2xl font-bold text-purple-600">{totalSubcategories}</p>
-                  </div>
-                  <FolderTree className="h-8 w-8 text-purple-600" />
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="articles">
+            <ArticleManagement currentUser={currentUser} />
+          </TabsContent>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Users</p>
-                    <p className="text-2xl font-bold text-orange-600">{users.length}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-orange-600" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <TabsContent value="users">
+            <UserManagementTable currentUser={currentUser} />
+          </TabsContent>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Activity className="h-5 w-5 mr-2" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.length > 0 ? (
-                  recentActivity.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          {entry.action.includes("article") ? (
-                            <FileText className="h-5 w-5 text-blue-600" />
-                          ) : entry.action.includes("user") ? (
-                            <Users className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <Activity className="h-5 w-5 text-gray-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {entry.details || entry.action.replace(/_/g, " ")}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            by {entry.performedBy} • {new Date(entry.timestamp).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {entry.action.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600 text-center py-4">No recent activity</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <TabsContent value="audit">
+            <AuditLog />
+          </TabsContent>
 
-        <TabsContent value="categories">
-          <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
-        </TabsContent>
-
-        <TabsContent value="activity">
-          <AuditLog auditLog={auditLog} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="data">
+            <DataManagement />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
