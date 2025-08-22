@@ -1,250 +1,122 @@
-import type { Category, User, AuditLogEntry, Article } from "../types/knowledge-base"
+import type { Category, User, AuditLogEntry, AppSettings } from "../types/knowledge-base"
 
-interface DatabaseData {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  settings: {
-    pageVisits: number
-  }
-}
-
-class ApiDatabase {
+export class ApiDatabase {
   private baseUrl = "/api/data"
 
-  async loadData(): Promise<DatabaseData> {
+  async getCategories(): Promise<Category[]> {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
+      const response = await fetch(`${this.baseUrl}?type=categories`)
+      if (!response.ok) throw new Error("Failed to fetch categories")
       const data = await response.json()
-
-      // Convert date strings back to Date objects
-      const categories = data.categories.map((category: any) => ({
-        ...category,
-        articles: (category.articles || []).map((article: any) => ({
-          ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt),
-        })),
-        subcategories: (category.subcategories || []).map((sub: any) => ({
-          ...sub,
-          articles: (sub.articles || []).map((article: any) => ({
-            ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt),
-          })),
-        })),
-      }))
-
-      const users = data.users.map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-      }))
-
-      const auditLog = data.auditLog.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      }))
-
-      return {
-        categories,
-        users,
-        auditLog,
-        settings: data.settings || { pageVisits: 0 },
-      }
+      return data.categories || []
     } catch (error) {
-      console.error("Failed to load data from API:", error)
-      // Return default data structure if API fails
-      return {
-        categories: [],
-        users: [
-          {
-            id: "1",
-            username: "admin",
-            password: "admin123",
-            email: "admin@kuhlekt.com",
-            role: "admin",
-            createdAt: new Date(),
-            lastLogin: undefined,
-          },
-        ],
-        auditLog: [],
-        settings: {
-          pageVisits: 0,
-        },
-      }
+      console.error("Error fetching categories:", error)
+      return []
     }
   }
 
-  async saveData(data: DatabaseData): Promise<void> {
+  async saveCategories(categories: Category[]): Promise<void> {
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(`${this.baseUrl}?type=categories`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categories }),
       })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      if (!response.ok) throw new Error("Failed to save categories")
     } catch (error) {
-      console.error("Failed to save data to API:", error)
+      console.error("Error saving categories:", error)
       throw error
     }
   }
 
-  async incrementPageVisits(): Promise<number> {
+  async getUsers(): Promise<User[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/page-visits`, {
+      const response = await fetch(`${this.baseUrl}?type=users`)
+      if (!response.ok) throw new Error("Failed to fetch users")
+      const data = await response.json()
+      return data.users || []
+    } catch (error) {
+      console.error("Error fetching users:", error)
+      return []
+    }
+  }
+
+  async saveUsers(users: User[]): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}?type=users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ users }),
+      })
+      if (!response.ok) throw new Error("Failed to save users")
+    } catch (error) {
+      console.error("Error saving users:", error)
+      throw error
+    }
+  }
+
+  async getAuditLog(): Promise<AuditLogEntry[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}?type=audit-log`)
+      if (!response.ok) throw new Error("Failed to fetch audit log")
+      const data = await response.json()
+      return data.auditLog || []
+    } catch (error) {
+      console.error("Error fetching audit log:", error)
+      return []
+    }
+  }
+
+  async saveAuditLog(auditLog: AuditLogEntry[]): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}?type=audit-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auditLog }),
+      })
+      if (!response.ok) throw new Error("Failed to save audit log")
+    } catch (error) {
+      console.error("Error saving audit log:", error)
+      throw error
+    }
+  }
+
+  async getSettings(): Promise<AppSettings> {
+    try {
+      const response = await fetch(`${this.baseUrl}?type=settings`)
+      if (!response.ok) throw new Error("Failed to fetch settings")
+      const data = await response.json()
+      return data.settings || { pageVisits: 0 }
+    } catch (error) {
+      console.error("Error fetching settings:", error)
+      return { pageVisits: 0 }
+    }
+  }
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}?type=settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings }),
+      })
+      if (!response.ok) throw new Error("Failed to save settings")
+    } catch (error) {
+      console.error("Error saving settings:", error)
+      throw error
+    }
+  }
+
+  async incrementPageVisits(): Promise<void> {
+    try {
+      const response = await fetch("/api/data/page-visits", {
         method: "POST",
       })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      return result.pageVisits
+      if (!response.ok) throw new Error("Failed to increment page visits")
     } catch (error) {
-      console.error("Failed to increment page visits:", error)
-      return 0
+      console.error("Error incrementing page visits:", error)
     }
-  }
-
-  async addArticle(
-    categories: Category[],
-    articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
-  ): Promise<Article> {
-    const newArticle: Article = {
-      ...articleData,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    const updatedCategories = categories.map((category) => {
-      if (category.id === articleData.categoryId) {
-        if (articleData.subcategoryId) {
-          // Add to subcategory
-          return {
-            ...category,
-            subcategories: category.subcategories.map((subcategory) =>
-              subcategory.id === articleData.subcategoryId
-                ? { ...subcategory, articles: [...subcategory.articles, newArticle] }
-                : subcategory,
-            ),
-          }
-        } else {
-          // Add to main category
-          return {
-            ...category,
-            articles: [...category.articles, newArticle],
-          }
-        }
-      }
-      return category
-    })
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return newArticle
-  }
-
-  async updateArticle(categories: Category[], articleId: string, updates: Partial<Article>): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => ({
-      ...category,
-      articles: category.articles.map((article) =>
-        article.id === articleId ? { ...article, ...updates, updatedAt: new Date() } : article,
-      ),
-      subcategories: category.subcategories.map((subcategory) => ({
-        ...subcategory,
-        articles: subcategory.articles.map((article) =>
-          article.id === articleId ? { ...article, ...updates, updatedAt: new Date() } : article,
-        ),
-      })),
-    }))
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => ({
-      ...category,
-      articles: category.articles.filter((article) => article.id !== articleId),
-      subcategories: category.subcategories.map((subcategory) => ({
-        ...subcategory,
-        articles: subcategory.articles.filter((article) => article.id !== articleId),
-      })),
-    }))
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      users: updatedUsers,
-    })
-
-    return updatedUsers
-  }
-
-  async addAuditEntry(
-    auditLog: AuditLogEntry[],
-    entry: Omit<AuditLogEntry, "id" | "timestamp">,
-  ): Promise<AuditLogEntry[]> {
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      timestamp: new Date(),
-    }
-
-    const updatedAuditLog = [newEntry, ...auditLog]
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      auditLog: updatedAuditLog,
-    })
-
-    return updatedAuditLog
   }
 }
 
-// Export the instance
 export const apiDatabase = new ApiDatabase()
-
-// Also export individual functions for backward compatibility
-export const loadFromAPI = () => apiDatabase.loadData()
-export const saveToAPI = (data: any) => apiDatabase.saveData(data)

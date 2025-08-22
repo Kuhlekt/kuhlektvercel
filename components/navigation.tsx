@@ -14,12 +14,12 @@ interface NavigationProps {
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
   return (
-    <nav className="bg-white shadow-sm border-b h-28">
+    <nav className="bg-white shadow-sm border-b h-32">
       <div className="container mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* Logo - Increased size */}
+          {/* Logo - Significantly increased size */}
           <div className="flex items-center space-x-3">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-20 w-20 object-contain" />
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-24 w-24 object-contain" />
           </div>
 
           {/* Navigation Items */}

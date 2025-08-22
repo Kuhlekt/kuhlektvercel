@@ -3,10 +3,6 @@ import { promises as fs } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
-const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json")
-const USERS_FILE = path.join(DATA_DIR, "users.json")
-const AUDIT_LOG_FILE = path.join(DATA_DIR, "audit-log.json")
-const SETTINGS_FILE = path.join(DATA_DIR, "settings.json")
 
 // Ensure data directory exists
 async function ensureDataDir() {
@@ -17,88 +13,91 @@ async function ensureDataDir() {
   }
 }
 
-// Read JSON file with fallback
-async function readJsonFile(filePath: string, fallback: any) {
+// Helper function to read JSON file
+async function readJsonFile(filename: string, defaultValue: any = {}) {
+  await ensureDataDir()
+  const filePath = path.join(DATA_DIR, filename)
   try {
     const data = await fs.readFile(filePath, "utf8")
     return JSON.parse(data)
   } catch {
-    return fallback
+    return defaultValue
   }
 }
 
-// Write JSON file
-async function writeJsonFile(filePath: string, data: any) {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf8")
+// Helper function to write JSON file
+async function writeJsonFile(filename: string, data: any) {
+  await ensureDataDir()
+  const filePath = path.join(DATA_DIR, filename)
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2))
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get("type")
+
   try {
-    await ensureDataDir()
+    switch (type) {
+      case "categories":
+        const categories = await readJsonFile("categories.json", { categories: [] })
+        return NextResponse.json(categories)
 
-    const [categories, users, auditLog, settings] = await Promise.all([
-      readJsonFile(CATEGORIES_FILE, []),
-      readJsonFile(USERS_FILE, [
-        {
-          id: "1",
-          username: "admin",
-          password: "admin123",
-          email: "admin@kuhlekt.com",
-          role: "admin",
-          createdAt: new Date().toISOString(),
-          lastLogin: null,
-        },
-        {
-          id: "2",
-          username: "editor",
-          password: "editor123",
-          email: "editor@kuhlekt.com",
-          role: "editor",
-          createdAt: new Date().toISOString(),
-          lastLogin: null,
-        },
-        {
-          id: "3",
-          username: "viewer",
-          password: "viewer123",
-          email: "viewer@kuhlekt.com",
-          role: "viewer",
-          createdAt: new Date().toISOString(),
-          lastLogin: null,
-        },
-      ]),
-      readJsonFile(AUDIT_LOG_FILE, []),
-      readJsonFile(SETTINGS_FILE, { pageVisits: 0 }),
-    ])
+      case "users":
+        const users = await readJsonFile("users.json", {
+          users: [
+            { id: "1", username: "admin", password: "admin123", role: "admin" },
+            { id: "2", username: "editor", password: "editor123", role: "editor" },
+            { id: "3", username: "viewer", password: "viewer123", role: "viewer" },
+          ],
+        })
+        return NextResponse.json(users)
 
-    return NextResponse.json({
-      categories,
-      users,
-      auditLog,
-      settings,
-    })
+      case "audit-log":
+        const auditLog = await readJsonFile("audit-log.json", { auditLog: [] })
+        return NextResponse.json(auditLog)
+
+      case "settings":
+        const settings = await readJsonFile("settings.json", { settings: { pageVisits: 0 } })
+        return NextResponse.json(settings)
+
+      default:
+        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 })
+    }
   } catch (error) {
-    console.error("Error loading data:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+    console.error("Error in GET /api/data:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get("type")
+
   try {
-    await ensureDataDir()
+    const body = await request.json()
 
-    const data = await request.json()
+    switch (type) {
+      case "categories":
+        await writeJsonFile("categories.json", { categories: body.categories })
+        return NextResponse.json({ success: true })
 
-    await Promise.all([
-      writeJsonFile(CATEGORIES_FILE, data.categories || []),
-      writeJsonFile(USERS_FILE, data.users || []),
-      writeJsonFile(AUDIT_LOG_FILE, data.auditLog || []),
-      writeJsonFile(SETTINGS_FILE, data.settings || { pageVisits: 0 }),
-    ])
+      case "users":
+        await writeJsonFile("users.json", { users: body.users })
+        return NextResponse.json({ success: true })
 
-    return NextResponse.json({ success: true })
+      case "audit-log":
+        await writeJsonFile("audit-log.json", { auditLog: body.auditLog })
+        return NextResponse.json({ success: true })
+
+      case "settings":
+        await writeJsonFile("settings.json", { settings: body.settings })
+        return NextResponse.json({ success: true })
+
+      default:
+        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 })
+    }
   } catch (error) {
-    console.error("Error saving data:", error)
-    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
+    console.error("Error in POST /api/data:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

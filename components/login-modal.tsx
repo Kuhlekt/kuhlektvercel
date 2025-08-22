@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -57,7 +56,8 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex flex-col items-center space-y-4">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-auto object-contain" />
+            {/* Significantly increased logo size */}
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-20 w-20 object-contain" />
             <DialogTitle className="text-2xl font-bold text-center">Login to Knowledge Base</DialogTitle>
           </div>
         </DialogHeader>
