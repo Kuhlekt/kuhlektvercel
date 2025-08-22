@@ -1,310 +1,367 @@
+// API Database utility for handling server communication
+import type { Category, User, AuditLogEntry, Article } from "@/types/knowledge-base"
+
 interface DatabaseData {
-  categories: any[]
-  users: any[]
-  auditLog: any[]
+  categories: Category[]
+  users: User[]
+  auditLog: AuditLogEntry[]
   pageVisits: number
 }
 
 class ApiDatabase {
-  private baseUrl = "/api/data"
+  private baseUrl = "/api"
 
+  // Load all data from server
   async loadData(): Promise<DatabaseData> {
     try {
-      const response = await fetch(this.baseUrl)
+      const response = await fetch(`${this.baseUrl}/data`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+
       const data = await response.json()
-      return data
+      console.log("API loadData response:", data)
+
+      return {
+        categories: data.categories || [],
+        users: data.users || [],
+        auditLog: data.auditLog || [],
+        pageVisits: data.pageVisits || 0,
+      }
     } catch (error) {
-      console.error("Error loading data:", error)
-      throw error
+      console.error("Error loading data from API:", error)
+      throw new Error("Failed to load data from server")
     }
   }
 
-  async saveData(data: DatabaseData): Promise<void> {
+  // Save all data to server
+  async saveData(data: Partial<DatabaseData>): Promise<void> {
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(`${this.baseUrl}/data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       })
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+
+      console.log("Data saved successfully to API")
     } catch (error) {
-      console.error("Error saving data:", error)
-      throw error
+      console.error("Error saving data to API:", error)
+      throw new Error("Failed to save data to server")
     }
   }
 
+  // Increment page visits
   async incrementPageVisits(): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/page-visits`, {
+      const response = await fetch(`${this.baseUrl}/data/page-visits`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       })
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
+
       const data = await response.json()
-      return data.pageVisits
+      return data.pageVisits || 0
     } catch (error) {
       console.error("Error incrementing page visits:", error)
-      throw error
+      return 0
     }
   }
 
-  async addArticle(categories: any[], articleData: any): Promise<any> {
-    const data = await this.loadData()
-
-    const newArticle = {
-      id: Date.now().toString(),
+  // Add article
+  async addArticle(
+    categories: Category[],
+    articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Article> {
+    const newArticle: Article = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       ...articleData,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
 
-    // Find the category and add the article
-    const updatedCategories = data.categories.map((category) => {
-      if (category.id === articleData.categoryId) {
-        return {
-          ...category,
-          articles: [...(category.articles || []), newArticle],
-        }
+    // Find the target category
+    const updatedCategories = [...categories]
+    const targetCategory = updatedCategories.find((cat) => cat.id === articleData.categoryId)
+
+    if (!targetCategory) {
+      throw new Error("Category not found")
+    }
+
+    // Add to category or subcategory
+    if (articleData.subcategoryId) {
+      const subcategory = targetCategory.subcategories?.find((sub) => sub.id === articleData.subcategoryId)
+      if (!subcategory) {
+        throw new Error("Subcategory not found")
       }
-
-      // Check subcategories
-      if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((sub: any) => {
-          if (sub.id === articleData.categoryId) {
-            return {
-              ...sub,
-              articles: [...(sub.articles || []), newArticle],
-            }
-          }
-          return sub
-        })
-
-        if (updatedSubcategories !== category.subcategories) {
-          return {
-            ...category,
-            subcategories: updatedSubcategories,
-          }
-        }
+      if (!subcategory.articles) {
+        subcategory.articles = []
       }
+      subcategory.articles.push(newArticle)
+    } else {
+      if (!targetCategory.articles) {
+        targetCategory.articles = []
+      }
+      targetCategory.articles.push(newArticle)
+    }
 
-      return category
-    })
-
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
+    // Save to server
+    await this.saveData({ categories: updatedCategories })
 
     return newArticle
   }
 
-  async updateArticle(categories: any[], articleId: string, updatedArticle: any): Promise<any[]> {
-    const data = await this.loadData()
+  // Update article
+  async updateArticle(
+    categories: Category[],
+    articleId: string,
+    updatedArticle: Omit<Article, "createdAt">,
+  ): Promise<Category[]> {
+    const updatedCategories = [...categories]
+    let found = false
 
-    const updatedCategories = data.categories.map((category: any) => {
-      // Check main category articles
+    // Find and update the article
+    for (const category of updatedCategories) {
+      // Check category articles
       if (category.articles) {
-        const articleIndex = category.articles.findIndex((a: any) => a.id === articleId)
+        const articleIndex = category.articles.findIndex((article) => article.id === articleId)
         if (articleIndex !== -1) {
-          const newArticles = [...category.articles]
-          newArticles[articleIndex] = { ...updatedArticle, updatedAt: new Date() }
-          return { ...category, articles: newArticles }
+          category.articles[articleIndex] = {
+            ...updatedArticle,
+            createdAt: category.articles[articleIndex].createdAt,
+            updatedAt: new Date(),
+          }
+          found = true
+          break
         }
       }
 
       // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((sub: any) => {
-          if (sub.articles) {
-            const articleIndex = sub.articles.findIndex((a: any) => a.id === articleId)
+        for (const subcategory of category.subcategories) {
+          if (subcategory.articles) {
+            const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
             if (articleIndex !== -1) {
-              const newArticles = [...sub.articles]
-              newArticles[articleIndex] = { ...updatedArticle, updatedAt: new Date() }
-              return { ...sub, articles: newArticles }
+              subcategory.articles[articleIndex] = {
+                ...updatedArticle,
+                createdAt: subcategory.articles[articleIndex].createdAt,
+                updatedAt: new Date(),
+              }
+              found = true
+              break
             }
           }
-          return sub
-        })
-
-        return { ...category, subcategories: updatedSubcategories }
+        }
+        if (found) break
       }
+    }
 
-      return category
-    })
+    if (!found) {
+      throw new Error("Article not found")
+    }
 
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
+    // Save to server
+    await this.saveData({ categories: updatedCategories })
 
     return updatedCategories
   }
 
-  async deleteArticle(categories: any[], articleId: string): Promise<any[]> {
-    const data = await this.loadData()
+  // Delete article
+  async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
+    const updatedCategories = [...categories]
+    let found = false
 
-    const updatedCategories = data.categories.map((category: any) => {
-      // Check main category articles
+    // Find and delete the article
+    for (const category of updatedCategories) {
+      // Check category articles
       if (category.articles) {
-        const filteredArticles = category.articles.filter((a: any) => a.id !== articleId)
-        if (filteredArticles.length !== category.articles.length) {
-          return { ...category, articles: filteredArticles }
+        const articleIndex = category.articles.findIndex((article) => article.id === articleId)
+        if (articleIndex !== -1) {
+          category.articles.splice(articleIndex, 1)
+          found = true
+          break
         }
       }
 
       // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((sub: any) => {
-          if (sub.articles) {
-            const filteredArticles = sub.articles.filter((a: any) => a.id !== articleId)
-            return { ...sub, articles: filteredArticles }
+        for (const subcategory of category.subcategories) {
+          if (subcategory.articles) {
+            const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
+            if (articleIndex !== -1) {
+              subcategory.articles.splice(articleIndex, 1)
+              found = true
+              break
+            }
           }
-          return sub
-        })
-
-        return { ...category, subcategories: updatedSubcategories }
+        }
+        if (found) break
       }
-
-      return category
-    })
-
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async addCategory(categories: any[], name: string, description?: string): Promise<any[]> {
-    const data = await this.loadData()
-
-    const newCategory = {
-      id: Date.now().toString(),
-      name,
-      description,
-      articles: [],
-      subcategories: [],
     }
 
-    const updatedCategories = [...data.categories, newCategory]
-
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async addSubcategory(categories: any[], parentId: string, name: string, description?: string): Promise<any[]> {
-    const data = await this.loadData()
-
-    const newSubcategory = {
-      id: Date.now().toString(),
-      name,
-      description,
-      articles: [],
+    if (!found) {
+      throw new Error("Article not found")
     }
 
-    const updatedCategories = data.categories.map((category: any) => {
-      if (category.id === parentId) {
-        return {
-          ...category,
-          subcategories: [...(category.subcategories || []), newSubcategory],
-        }
-      }
-      return category
-    })
-
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
+    // Save to server
+    await this.saveData({ categories: updatedCategories })
 
     return updatedCategories
   }
 
-  async deleteCategory(categories: any[], categoryId: string): Promise<any[]> {
-    const data = await this.loadData()
+  // Update user last login
+  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
+    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
 
-    const updatedCategories = data.categories.filter((category: any) => category.id !== categoryId)
+    // Save to server
+    await this.saveData({ users: updatedUsers })
 
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
+    return updatedUsers
   }
 
-  async deleteSubcategory(categories: any[], categoryId: string, subcategoryId: string): Promise<any[]> {
-    const data = await this.loadData()
-
-    const updatedCategories = data.categories.map((category: any) => {
-      if (category.id === categoryId && category.subcategories) {
-        return {
-          ...category,
-          subcategories: category.subcategories.filter((sub: any) => sub.id !== subcategoryId),
-        }
-      }
-      return category
-    })
-
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async addAuditEntry(auditLog: any[], entry: any): Promise<any[]> {
-    const data = await this.loadData()
-
-    const newEntry = {
-      id: Date.now().toString(),
-      ...entry,
+  // Add audit entry
+  async addAuditEntry(
+    auditLog: AuditLogEntry[],
+    entry: {
+      action: string
+      articleId?: string
+      articleTitle?: string
+      categoryId?: string
+      categoryName?: string
+      subcategoryName?: string
+      userId?: string
+      username?: string
+      performedBy: string
+      details: string
+    },
+  ): Promise<AuditLogEntry[]> {
+    const newEntry: AuditLogEntry = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date(),
+      ...entry,
     }
 
-    const updatedAuditLog = [newEntry, ...data.auditLog]
+    const updatedAuditLog = [newEntry, ...auditLog]
 
-    await this.saveData({
-      ...data,
-      auditLog: updatedAuditLog,
-    })
+    // Keep only last 1000 entries
+    if (updatedAuditLog.length > 1000) {
+      updatedAuditLog.splice(1000)
+    }
+
+    // Save to server
+    await this.saveData({ auditLog: updatedAuditLog })
 
     return updatedAuditLog
   }
 
-  async updateUserLastLogin(users: any[], userId: string): Promise<any[]> {
-    const data = await this.loadData()
+  // Import data
+  async importData(importData: any): Promise<void> {
+    try {
+      console.log("Importing data to API:", importData)
 
-    const updatedUsers = data.users.map((user: any) => {
-      if (user.id === userId) {
-        return {
-          ...user,
-          lastLogin: new Date(),
-        }
+      // Process and validate the data
+      const processedData = {
+        categories: importData.categories || [],
+        users: importData.users || [],
+        auditLog: importData.auditLog || [],
+        pageVisits: importData.settings?.pageVisits || importData.pageVisits || 0,
       }
-      return user
-    })
 
-    await this.saveData({
-      ...data,
-      users: updatedUsers,
-    })
+      // Ensure proper date handling
+      processedData.categories = processedData.categories.map((cat: any) => ({
+        ...cat,
+        createdAt: new Date(cat.createdAt || Date.now()),
+        updatedAt: new Date(cat.updatedAt || Date.now()),
+        articles: (cat.articles || []).map((article: any) => ({
+          ...article,
+          createdAt: new Date(article.createdAt || Date.now()),
+          updatedAt: new Date(article.updatedAt || Date.now()),
+        })),
+        subcategories: (cat.subcategories || []).map((sub: any) => ({
+          ...sub,
+          createdAt: new Date(sub.createdAt || Date.now()),
+          updatedAt: new Date(sub.updatedAt || Date.now()),
+          articles: (sub.articles || []).map((article: any) => ({
+            ...article,
+            createdAt: new Date(article.createdAt || Date.now()),
+            updatedAt: new Date(article.updatedAt || Date.now()),
+          })),
+        })),
+      }))
 
-    return updatedUsers
+      processedData.users = processedData.users.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt || Date.now()),
+        lastLogin: user.lastLogin ? new Date(user.lastLogin) : null,
+      }))
+
+      processedData.auditLog = processedData.auditLog.map((entry: any) => ({
+        ...entry,
+        timestamp: new Date(entry.timestamp || Date.now()),
+      }))
+
+      // Save all data to server
+      await this.saveData(processedData)
+
+      console.log("Data imported successfully to API")
+    } catch (error) {
+      console.error("Error importing data to API:", error)
+      throw new Error("Failed to import data to server")
+    }
+  }
+
+  // Export data
+  async exportData(): Promise<any> {
+    try {
+      const data = await this.loadData()
+
+      return {
+        categories: data.categories,
+        users: data.users,
+        auditLog: data.auditLog,
+        settings: {
+          pageVisits: data.pageVisits,
+          exportedAt: new Date().toISOString(),
+          version: "1.0",
+        },
+      }
+    } catch (error) {
+      console.error("Error exporting data from API:", error)
+      throw new Error("Failed to export data from server")
+    }
+  }
+
+  // Clear all data
+  async clearAllData(): Promise<void> {
+    try {
+      await this.saveData({
+        categories: [],
+        users: [],
+        auditLog: [],
+        pageVisits: 0,
+      })
+
+      console.log("All data cleared successfully from API")
+    } catch (error) {
+      console.error("Error clearing data from API:", error)
+      throw new Error("Failed to clear data from server")
+    }
   }
 }
 

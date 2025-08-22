@@ -304,7 +304,12 @@ export default function KnowledgeBase() {
   // Handle category management
   const handleCategoriesUpdate = async () => {
     try {
-      await refreshData()
+      console.log("Updating categories...")
+      const data = await apiDatabase.loadData()
+      setCategories(data.categories || [])
+      setUsers(data.users || [])
+      setAuditLog(data.auditLog || [])
+      console.log("Categories updated successfully")
     } catch (error) {
       console.error("Error updating categories:", error)
       setError("Failed to update categories.")
@@ -313,7 +318,12 @@ export default function KnowledgeBase() {
 
   const handleUsersUpdate = async () => {
     try {
-      await refreshData()
+      console.log("Updating users...")
+      const data = await apiDatabase.loadData()
+      setCategories(data.categories || [])
+      setUsers(data.users || [])
+      setAuditLog(data.auditLog || [])
+      console.log("Users updated successfully")
     } catch (error) {
       console.error("Error updating users:", error)
       setError("Failed to update users.")
@@ -322,7 +332,12 @@ export default function KnowledgeBase() {
 
   const handleAuditLogUpdate = async () => {
     try {
-      await refreshData()
+      console.log("Updating audit log...")
+      const data = await apiDatabase.loadData()
+      setCategories(data.categories || [])
+      setUsers(data.users || [])
+      setAuditLog(data.auditLog || [])
+      console.log("Audit log updated successfully")
     } catch (error) {
       console.error("Error updating audit log:", error)
       setError("Failed to update audit log.")

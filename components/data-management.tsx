@@ -134,31 +134,46 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       setError(null)
       setSuccess(null)
 
+      console.log("Starting import process...")
+
       // Simulate progress steps
       setImportProgress(25)
       await new Promise((resolve) => setTimeout(resolve, 500))
 
+      console.log("Importing data via API...")
       setImportProgress(50)
+
+      // Import via API (this will save to the server)
       await database.importData(importData)
 
       setImportProgress(75)
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      // Trigger UI refresh
+      console.log("Triggering UI refresh...")
       setImportProgress(90)
+
+      // Force a complete data refresh
       onDataUpdate()
 
       setImportProgress(100)
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      setSuccess("Data imported successfully!")
+      setSuccess("Data imported successfully! The page will refresh to show the new data.")
+
+      // Clear import state
       setSelectedFile(null)
       setImportData(null)
       setImportStats(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
+
+      // Force page refresh after a short delay to ensure UI updates
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     } catch (err) {
+      console.error("Import failed:", err)
       setError(err instanceof Error ? err.message : "Failed to import data")
     } finally {
       setIsImporting(false)
