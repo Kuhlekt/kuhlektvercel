@@ -255,7 +255,7 @@ export function AdminDashboard({ currentUser, onLogout }: AdminDashboardProps) {
 
           {/* Data Management Tab */}
           <TabsContent value="data">
-            <DataManagement />
+            <DataManagement onDataUpdate={handleDataUpdate} />
           </TabsContent>
         </Tabs>
       </div>
