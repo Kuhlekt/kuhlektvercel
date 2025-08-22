@@ -89,17 +89,19 @@ export function AdminDashboard() {
       setIsLoading(true)
       setError(null)
 
-      const [categoriesData, usersData, auditLogData, settingsData] = await Promise.all([
+      const [categoriesData, usersData, auditLogData] = await Promise.all([
         database.getCategories(),
         database.getUsers(),
         database.getAuditLog(),
-        database.getSettings(),
       ])
+
+      // Get page visits from localStorage
+      const visits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
 
       setCategories(categoriesData)
       setUsers(usersData)
       setAuditLog(auditLogData)
-      setPageVisits(settingsData.pageVisits || 0)
+      setPageVisits(visits)
       setLastUpdated(new Date())
     } catch (err) {
       console.error("Failed to load admin data:", err)
@@ -242,26 +244,35 @@ export function AdminDashboard() {
           {recentAuditEntries.length > 0 ? (
             <div className="space-y-3">
               {recentAuditEntries.map((entry, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                <div
+                  key={entry.id || index}
+                  className="flex items-center justify-between py-2 border-b last:border-b-0"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="flex-shrink-0">
-                      {entry.action.includes("create") && <CheckCircle className="h-4 w-4 text-green-500" />}
-                      {entry.action.includes("update") && <RefreshCw className="h-4 w-4 text-blue-500" />}
-                      {entry.action.includes("delete") && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                      {!entry.action.includes("create") &&
-                        !entry.action.includes("update") &&
-                        !entry.action.includes("delete") && <Activity className="h-4 w-4 text-gray-500" />}
+                      {entry.action.toLowerCase().includes("create") && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      )}
+                      {entry.action.toLowerCase().includes("update") && <RefreshCw className="h-4 w-4 text-blue-500" />}
+                      {entry.action.toLowerCase().includes("delete") && (
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      )}
+                      {!entry.action.toLowerCase().includes("create") &&
+                        !entry.action.toLowerCase().includes("update") &&
+                        !entry.action.toLowerCase().includes("delete") && (
+                          <Activity className="h-4 w-4 text-gray-500" />
+                        )}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{entry.action}</p>
-                      <p className="text-xs text-gray-500">by {entry.user}</p>
+                      <p className="text-xs text-gray-500">by {entry.performedBy || entry.username || "Unknown"}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">{formatDateTime(entry.timestamp)}</p>
                     {entry.details && (
-                      <Badge variant="outline" className="text-xs">
-                        {entry.details}
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {entry.details.length > 30 ? entry.details.substring(0, 30) + "..." : entry.details}
                       </Badge>
                     )}
                   </div>
@@ -302,7 +313,7 @@ export function AdminDashboard() {
               <CardDescription>Manage user accounts and permissions</CardDescription>
             </CardHeader>
             <CardContent>
-              <UserManagementTable users={users} onUserUpdate={handleDataUpdate} />
+              <UserManagementTable users={users} onUsersUpdate={handleDataUpdate} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -314,7 +325,7 @@ export function AdminDashboard() {
               <CardDescription>Organize and manage knowledge base categories</CardDescription>
             </CardHeader>
             <CardContent>
-              <CategoryManagement categories={categories} onCategoryUpdate={handleDataUpdate} />
+              <CategoryManagement categories={categories} onCategoriesUpdate={handleDataUpdate} />
             </CardContent>
           </Card>
         </TabsContent>
