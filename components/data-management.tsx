@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive, AlertTriangle } from "lucide-react"
-import { storage, dataManager } from "../utils/storage"
+import { database } from "../utils/database"
+import { storage } from "../utils/storage" // Import storage
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 import { useToast } from "@/hooks/use-toast"
 
@@ -60,12 +61,22 @@ export function DataManagement({
     return `${sizeInKB} KB`
   }
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     setIsExporting(true)
     setMessage(null)
 
     try {
-      dataManager.exportData(categories, users, auditLog)
+      const exportedData = await database.exportData()
+      const json = JSON.stringify(exportedData, null, 2)
+      const blob = new Blob([json], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `kuhlekt-kb-backup-${new Date().toISOString()}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       setMessage({ type: "success", text: "Data exported successfully! Check your downloads folder." })
     } catch (error) {
       console.error("Export error:", error)
@@ -73,47 +84,66 @@ export function DataManagement({
     } finally {
       setIsExporting(false)
     }
-  }
+  }, [categories, users, auditLog])
 
-  const handleImport = async () => {
+  const handleImport = useCallback(async () => {
     if (!importFile) return
 
     setIsImporting(true)
     setMessage(null)
 
     try {
-      const importedData = await dataManager.importData(importFile)
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const json = e.target?.result
+        if (typeof json === "string") {
+          const importedData = JSON.parse(json)
 
-      // Update all data
-      onCategoriesUpdate(importedData.categories)
-      onUsersUpdate(importedData.users)
-      onAuditLogUpdate(importedData.auditLog)
+          // Basic validation
+          if (!importedData.categories || !importedData.users || !importedData.auditLog) {
+            throw new Error("Invalid backup file format.")
+          }
 
-      // Save to localStorage
-      storage.saveCategories(importedData.categories)
-      storage.saveUsers(importedData.users)
-      storage.saveAuditLog(importedData.auditLog)
+          // Update all data
+          onCategoriesUpdate(importedData.categories)
+          onUsersUpdate(importedData.users)
+          onAuditLogUpdate(importedData.auditLog)
 
-      if (importedData.pageVisits !== undefined) {
-        localStorage.setItem("kb_page_visits", importedData.pageVisits.toString())
+          // Save to localStorage
+          storage.saveCategories(importedData.categories)
+          storage.saveUsers(importedData.users)
+          storage.saveAuditLog(importedData.auditLog)
+
+          if (importedData.pageVisits !== undefined) {
+            localStorage.setItem("kb_page_visits", importedData.pageVisits.toString())
+          }
+
+          setMessage({
+            type: "success",
+            text: "Data imported successfully! The page will refresh to load the new data.",
+          })
+          setImportFile(null)
+
+          // Reset file input
+          const fileInput = document.getElementById("import-file") as HTMLInputElement
+          if (fileInput) fileInput.value = ""
+
+          // Refresh page after a short delay to load new data
+          setTimeout(() => {
+            toast({
+              title: "Import Successful",
+              description: "Data imported successfully. Refreshing page...",
+              duration: 2000,
+            })
+            window.location.reload()
+          }, 2000)
+        }
       }
-
-      setMessage({ type: "success", text: "Data imported successfully! The page will refresh to load the new data." })
-      setImportFile(null)
-
-      // Reset file input
-      const fileInput = document.getElementById("import-file") as HTMLInputElement
-      if (fileInput) fileInput.value = ""
-
-      // Refresh page after a short delay to load new data
-      setTimeout(() => {
-        toast({
-          title: "Import Successful",
-          description: "Data imported successfully. Refreshing page...",
-          duration: 2000,
-        })
-        window.location.reload()
-      }, 2000)
+      reader.onerror = () => {
+        setMessage({ type: "error", text: "Failed to read the file." })
+        setIsImporting(false)
+      }
+      reader.readAsText(importFile)
     } catch (error) {
       console.error("Import error:", error)
       setMessage({
@@ -123,26 +153,34 @@ export function DataManagement({
     } finally {
       setIsImporting(false)
     }
-  }
+  }, [onCategoriesUpdate, onUsersUpdate, onAuditLogUpdate, toast])
 
-  const handleClearAll = () => {
-    storage.clearAll()
-    onCategoriesUpdate([])
-    onUsersUpdate([])
-    onAuditLogUpdate([])
-    setShowClearDialog(false)
-    setMessage({ type: "success", text: "All data cleared successfully! The page will refresh." })
+  const handleClearAll = useCallback(() => {
+    database
+      .clearAllData()
+      .then(() => {
+        storage.clearAll()
+        onCategoriesUpdate([])
+        onUsersUpdate([])
+        onAuditLogUpdate([])
+        setShowClearDialog(false)
+        setMessage({ type: "success", text: "All data cleared successfully! The page will refresh." })
 
-    // Refresh page after clearing data
-    setTimeout(() => {
-      toast({
-        title: "Clear Successful",
-        description: "All data cleared successfully. Refreshing page...",
-        duration: 1500,
+        // Refresh page after clearing data
+        setTimeout(() => {
+          toast({
+            title: "Clear Successful",
+            description: "All data cleared successfully. Refreshing page...",
+            duration: 1500,
+          })
+          window.location.reload()
+        }, 1500)
       })
-      window.location.reload()
-    }, 1500)
-  }
+      .catch((error) => {
+        console.error("Clear data error:", error)
+        setMessage({ type: "error", text: "Failed to clear data. Please try again." })
+      })
+  }, [onCategoriesUpdate, onUsersUpdate, onAuditLogUpdate, toast])
 
   const stats = [
     {

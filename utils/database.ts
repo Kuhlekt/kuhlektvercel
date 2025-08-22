@@ -42,7 +42,7 @@ const convertDatabaseAuditLog = (dbAudit: DatabaseAuditLog): AuditLogEntry => ({
   subcategoryName: dbAudit.subcategory_name,
   userId: dbAudit.user_id,
   username: dbAudit.username,
-  performedBy: dbAudit.performed_by,
+  performed_by: dbAudit.performed_by,
   timestamp: parseDate(dbAudit.timestamp),
   details: dbAudit.details,
 })
@@ -256,7 +256,7 @@ export const database = {
     if (updates.title) updateData.title = updates.title
     if (updates.content) updateData.content = updates.content
     if (updates.categoryId) updateData.category_id = updates.categoryId
-    if (updates.subcategoryId !== undefined) updateData.subcategory_id = updates.subcategoryId
+    if (updates.subcategory_id !== undefined) updateData.subcategory_id = updates.subcategory_id
     if (updates.tags) updateData.tags = updates.tags
     if (updates.lastEditedBy) updateData.last_edited_by = updates.lastEditedBy
     if (updates.editCount !== undefined) updateData.edit_count = updates.editCount
