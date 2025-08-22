@@ -1,14 +1,3 @@
-export interface User {
-  id: string
-  username: string
-  password: string
-  email: string
-  role: "admin" | "editor" | "viewer"
-  isActive?: boolean
-  createdAt: Date | string
-  lastLogin?: Date | string | null
-}
-
 export interface Article {
   id: string
   title: string
@@ -16,8 +5,8 @@ export interface Article {
   categoryId: string
   subcategoryId?: string
   tags?: string[]
-  createdAt: Date | string
-  updatedAt: Date | string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Subcategory {
@@ -25,8 +14,8 @@ export interface Subcategory {
   name: string
   description?: string
   articles?: Article[]
-  createdAt?: Date | string
-  updatedAt?: Date | string
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface Category {
@@ -35,8 +24,19 @@ export interface Category {
   description?: string
   articles?: Article[]
   subcategories?: Subcategory[]
-  createdAt?: Date | string
-  updatedAt?: Date | string
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export interface User {
+  id: string
+  username: string
+  password: string
+  email: string
+  role: "admin" | "editor" | "viewer"
+  isActive?: boolean
+  createdAt: Date
+  lastLogin?: Date | null
 }
 
 export interface AuditLogEntry {
@@ -44,14 +44,14 @@ export interface AuditLogEntry {
   action: string
   performedBy: string
   username?: string
-  timestamp: Date | string
+  timestamp: Date
   articleId?: string
   articleTitle?: string
   categoryId?: string
   categoryName?: string
   subcategoryName?: string
   userId?: string
-  details?: string
+  details: string
 }
 
 export interface KnowledgeBaseData {

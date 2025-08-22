@@ -22,6 +22,8 @@ async function initializeData() {
         id: "1",
         name: "Getting Started",
         description: "Basic information to get you started",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         articles: [
           {
             id: "1",
@@ -39,6 +41,8 @@ async function initializeData() {
             id: "2",
             name: "Installation",
             description: "How to install and set up",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             articles: [
               {
                 id: "2",
@@ -46,6 +50,7 @@ async function initializeData() {
                 content:
                   "Before you begin, make sure your system meets the following requirements:\n\n- Node.js 18 or higher\n- Modern web browser\n- Internet connection for initial setup\n\nThis knowledge base runs entirely in your browser with data stored locally.",
                 categoryId: "2",
+                subcategoryId: "2",
                 tags: ["requirements", "setup", "installation"],
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -58,6 +63,8 @@ async function initializeData() {
         id: "3",
         name: "Troubleshooting",
         description: "Common issues and solutions",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         articles: [
           {
             id: "3",
@@ -129,18 +136,30 @@ async function initializeData() {
     pageVisits: 0,
   }
 
-  await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
-  console.log(
-    "✅ Initialized default data with users:",
-    defaultData.users.map((u) => ({ username: u.username, role: u.role })),
-  )
-  return defaultData
+  try {
+    await ensureDataDirectory()
+    await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
+    console.log("✅ Initialized default data successfully")
+    return defaultData
+  } catch (error) {
+    console.error("❌ Error initializing default data:", error)
+    throw error
+  }
 }
 
 // Load data from file
 async function loadData() {
   try {
     await ensureDataDirectory()
+
+    // Check if file exists
+    try {
+      await fs.access(DATA_FILE)
+    } catch {
+      console.log("🔄 No existing data file found, initializing with default data")
+      return await initializeData()
+    }
+
     const data = await fs.readFile(DATA_FILE, "utf8")
     const parsed = JSON.parse(data)
 
@@ -152,9 +171,18 @@ async function loadData() {
       pageVisits: parsed.pageVisits || 0,
     })
 
-    return parsed
+    // Ensure all required fields exist
+    const validatedData = {
+      categories: parsed.categories || [],
+      users: parsed.users || [],
+      auditLog: parsed.auditLog || [],
+      pageVisits: parsed.pageVisits || 0,
+    }
+
+    return validatedData
   } catch (error) {
-    console.log("🔄 No existing data file found, initializing with default data")
+    console.error("❌ Error loading data from file:", error)
+    console.log("🔄 Falling back to default data initialization")
     return await initializeData()
   }
 }
@@ -163,14 +191,23 @@ async function loadData() {
 async function saveData(data: any) {
   try {
     await ensureDataDirectory()
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf8")
+
+    // Validate data structure
+    const validatedData = {
+      categories: data.categories || [],
+      users: data.users || [],
+      auditLog: data.auditLog || [],
+      pageVisits: data.pageVisits || 0,
+    }
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(validatedData, null, 2), "utf8")
 
     console.log("💾 Saved data to file:", {
-      categories: data.categories?.length || 0,
-      users: data.users?.length || 0,
-      usernames: data.users?.map((u: any) => u.username) || [],
-      auditLog: data.auditLog?.length || 0,
-      pageVisits: data.pageVisits || 0,
+      categories: validatedData.categories?.length || 0,
+      users: validatedData.users?.length || 0,
+      usernames: validatedData.users?.map((u: any) => u.username) || [],
+      auditLog: validatedData.auditLog?.length || 0,
+      pageVisits: validatedData.pageVisits || 0,
     })
   } catch (error) {
     console.error("❌ Error saving data to file:", error)
@@ -184,10 +221,43 @@ export async function GET() {
     console.log("🔍 GET /api/data - Loading data...")
     const data = await loadData()
     console.log("✅ GET /api/data - Data loaded successfully")
-    return NextResponse.json(data)
+
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    })
   } catch (error) {
     console.error("❌ Error in GET /api/data:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+
+    // Return minimal fallback data instead of error
+    const fallbackData = {
+      categories: [],
+      users: [
+        {
+          id: "1",
+          username: "admin",
+          password: "admin123",
+          email: "admin@kuhlekt.com",
+          role: "admin",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+        },
+      ],
+      auditLog: [],
+      pageVisits: 0,
+    }
+
+    return NextResponse.json(fallbackData, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    })
   }
 }
 
@@ -222,6 +292,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("❌ Error in POST /api/data:", error)
-    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to save data", details: error.message }, { status: 500 })
   }
 }

@@ -3,13 +3,13 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent } from "@/components/ui/card"
-import { User, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Eye, EyeOff, User, Lock, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -26,7 +26,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!username.trim() || !password.trim()) {
       setError("Please enter both username and password")
       return
@@ -36,21 +35,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
 
     try {
-      console.log("🔐 LoginModal - Attempting login for:", username)
-      const success = await onLogin(username, password)
-
-      if (success) {
-        console.log("✅ LoginModal - Login successful")
-        setUsername("")
-        setPassword("")
-        setError("")
-        onClose()
-      } else {
-        console.log("❌ LoginModal - Login failed")
+      const success = await onLogin(username.trim(), password)
+      if (!success) {
         setError("Invalid username or password")
       }
     } catch (error) {
-      console.error("❌ LoginModal - Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -65,24 +54,69 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     onClose()
   }
 
-  const defaultCredentials = [
-    { username: "admin", password: "admin123", role: "Administrator" },
-    { username: "editor", password: "editor123", role: "Editor" },
-    { username: "viewer", password: "viewer123", role: "Viewer" },
-  ]
+  const fillCredentials = (user: string, pass: string) => {
+    setUsername(user)
+    setPassword(pass)
+    setError("")
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <span>Sign In</span>
+          <DialogTitle className="flex items-center">
+            <User className="h-5 w-5 mr-2" />
+            Login to Knowledge Base
           </DialogTitle>
-          <DialogDescription>Enter your credentials to access the knowledge base administration</DialogDescription>
+          <DialogDescription>
+            Enter your credentials to access the knowledge base management features.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              disabled={isLoading}
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={isLoading}
+                autoComplete="current-password"
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-400" />
+                )}
+              </Button>
+            </div>
+          </div>
+
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -90,72 +124,65 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-                className="pl-10"
-                autoFocus
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                className="pl-10 pr-10"
-                disabled={isLoading}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex space-x-2">
-            <Button type="submit" className="flex-1" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-              Cancel
-            </Button>
-          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Signing in...
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4 mr-2" />
+                Sign In
+              </>
+            )}
+          </Button>
         </form>
 
-        {/* Default Credentials Help */}
+        {/* Default Credentials */}
         <Card className="mt-4">
-          <CardContent className="pt-4">
-            <h4 className="text-sm font-medium mb-2">Default Credentials:</h4>
-            <div className="space-y-1 text-xs">
-              {defaultCredentials.map((cred) => (
-                <div key={cred.username} className="flex justify-between items-center">
-                  <span className="font-mono">
-                    {cred.username}/{cred.password}
-                  </span>
-                  <span className="text-gray-500">({cred.role})</span>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Default Credentials</CardTitle>
+            <CardDescription className="text-xs">Click on any credential set to auto-fill the form</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start h-auto p-2 bg-transparent"
+                onClick={() => fillCredentials("admin", "admin123")}
+                disabled={isLoading}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Administrator</div>
+                  <div className="text-gray-500">admin / admin123</div>
                 </div>
-              ))}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start h-auto p-2 bg-transparent"
+                onClick={() => fillCredentials("editor", "editor123")}
+                disabled={isLoading}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Editor</div>
+                  <div className="text-gray-500">editor / editor123</div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start h-auto p-2 bg-transparent"
+                onClick={() => fillCredentials("viewer", "viewer123")}
+                disabled={isLoading}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Viewer</div>
+                  <div className="text-gray-500">viewer / viewer123</div>
+                </div>
+              </Button>
             </div>
           </CardContent>
         </Card>

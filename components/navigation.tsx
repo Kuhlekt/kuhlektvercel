@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogIn, LogOut, Plus, Settings, Shield, BookOpen } from "lucide-react"
+import { User, LogIn, LogOut, Plus, Settings, Home, ChevronDown } from "lucide-react"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
@@ -39,14 +39,16 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo and Brand */}
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo and Title */}
           <div className="flex items-center space-x-4">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
-            <div className="flex items-center space-x-1">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <span className="text-xl font-semibold text-gray-900">Knowledge Base</span>
+            <img src="/images/kuhlekt-logo.png" alt="Kuhlekt" className="h-8 w-auto" />
+            <div className="flex items-center space-x-2">
+              <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
+              <Badge variant="outline" className="text-xs">
+                v1.0
+              </Badge>
             </div>
           </div>
 
@@ -58,10 +60,10 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                 variant={currentView === "browse" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => onViewChange("browse")}
-                className="flex items-center space-x-1"
+                className="flex items-center"
               >
-                <BookOpen className="h-4 w-4" />
-                <span>Browse</span>
+                <Home className="h-4 w-4 mr-2" />
+                Browse
               </Button>
 
               {canAddArticles && (
@@ -69,10 +71,10 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                   variant={currentView === "add" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onViewChange("add")}
-                  className="flex items-center space-x-1"
+                  className="flex items-center"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Article</span>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Article
                 </Button>
               )}
 
@@ -81,10 +83,10 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                   variant={currentView === "admin" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onViewChange("admin")}
-                  className="flex items-center space-x-1"
+                  className="flex items-center"
                 >
-                  <Shield className="h-4 w-4" />
-                  <span>Admin</span>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
                 </Button>
               )}
             </div>
@@ -93,12 +95,11 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" className="flex items-center space-x-2 bg-transparent">
                     <User className="h-4 w-4" />
                     <span className="hidden sm:inline">{currentUser.username}</span>
-                    <Badge variant="secondary" className={getRoleBadgeColor(currentUser.role)}>
-                      {currentUser.role}
-                    </Badge>
+                    <Badge className={`text-xs ${getRoleBadgeColor(currentUser.role)}`}>{currentUser.role}</Badge>
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -107,23 +108,6 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                     <p className="text-xs text-gray-500">{currentUser.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onViewChange("browse")}>
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Browse Articles
-                  </DropdownMenuItem>
-                  {canAddArticles && (
-                    <DropdownMenuItem onClick={() => onViewChange("add")}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Article
-                    </DropdownMenuItem>
-                  )}
-                  {canAccessAdmin && (
-                    <DropdownMenuItem onClick={() => onViewChange("admin")}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Admin Dashboard
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
@@ -131,9 +115,9 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={onLogin} className="flex items-center space-x-2">
-                <LogIn className="h-4 w-4" />
-                <span>Sign In</span>
+              <Button onClick={onLogin} size="sm" className="flex items-center">
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
               </Button>
             )}
           </div>

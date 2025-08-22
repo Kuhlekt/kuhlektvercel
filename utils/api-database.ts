@@ -25,7 +25,7 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
       }
 
       const data = await response.json()
@@ -46,7 +46,7 @@ class ApiDatabase {
       }
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error loading data:", error)
-      throw new Error("Failed to load data from server")
+      throw new Error(`Failed to load data from server: ${error.message}`)
     }
   }
 
@@ -64,13 +64,14 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error saving data:", error)
-      throw new Error("Failed to save data to server")
+      throw new Error(`Failed to save data to server: ${error.message}`)
     }
   }
 
@@ -355,7 +356,7 @@ class ApiDatabase {
       console.log("✅ ApiDatabase.importData() - Data imported successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.importData() - Error importing data:", error)
-      throw new Error("Failed to import data to server")
+      throw new Error(`Failed to import data to server: ${error.message}`)
     }
   }
 
@@ -381,7 +382,7 @@ class ApiDatabase {
       return exportData
     } catch (error) {
       console.error("❌ ApiDatabase.exportData() - Error exporting data:", error)
-      throw new Error("Failed to export data from server")
+      throw new Error(`Failed to export data from server: ${error.message}`)
     }
   }
 
@@ -400,7 +401,7 @@ class ApiDatabase {
       console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
-      throw new Error("Failed to clear data from server")
+      throw new Error(`Failed to clear data from server: ${error.message}`)
     }
   }
 }
