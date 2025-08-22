@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,11 +36,14 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
   const [exportProgress, setExportProgress] = useState(0)
   const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null)
   const [importPreview, setImportPreview] = useState<{
+    data: any
     categories: number
     articles: number
     users: number
     auditEntries: number
   } | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleExport = async () => {
     setIsExporting(true)
@@ -99,6 +102,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       const auditEntriesCount = data.auditLog?.length || 0
 
       setImportPreview({
+        data,
         categories: categoriesCount,
         articles: articlesCount,
         users: usersCount,
@@ -115,27 +119,25 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       setImportPreview(null)
     }
 
-    // Reset file input
-    event.target.value = ""
+    // Reset file input safely
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImport = async () => {
+    if (!importPreview) return
 
     setIsImporting(true)
     setImportProgress(0)
     setMessage(null)
 
     try {
-      setImportProgress(10)
-      const text = await file.text()
-
       setImportProgress(25)
-      const data = JSON.parse(text)
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       setImportProgress(50)
-      await database.importData(data)
+      await database.importData(importPreview.data)
 
       setImportProgress(75)
       await new Promise((resolve) => setTimeout(resolve, 500))
@@ -155,9 +157,6 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       setIsImporting(false)
       setTimeout(() => setImportProgress(0), 2000)
     }
-
-    // Reset file input
-    event.target.value = ""
   }
 
   const handleClearData = async () => {
@@ -185,14 +184,9 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
     }
   }
 
-  const confirmImport = async () => {
-    if (!importPreview) return
-
-    const fileInput = document.createElement("input")
-    fileInput.type = "file"
-    fileInput.accept = ".json"
-    fileInput.onchange = handleImport
-    fileInput.click()
+  const cancelImport = () => {
+    setImportPreview(null)
+    setMessage(null)
   }
 
   return (
@@ -320,10 +314,10 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
                   </div>
                 </div>
                 <div className="mt-4 flex space-x-2">
-                  <Button onClick={confirmImport} size="sm">
-                    Confirm Import
+                  <Button onClick={handleImport} size="sm" disabled={isImporting}>
+                    {isImporting ? "Importing..." : "Confirm Import"}
                   </Button>
-                  <Button onClick={() => setImportPreview(null)} variant="outline" size="sm">
+                  <Button onClick={cancelImport} variant="outline" size="sm" disabled={isImporting}>
                     Cancel
                   </Button>
                 </div>
@@ -333,6 +327,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
             <div className="space-y-2">
               <Label htmlFor="import-file">Select backup file</Label>
               <Input
+                ref={fileInputRef}
                 id="import-file"
                 type="file"
                 accept=".json"
