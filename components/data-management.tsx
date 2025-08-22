@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Download, Upload, Trash2, FileText, AlertTriangle, CheckCircle } from "lucide-react"
 import { database } from "@/utils/database"
 
@@ -249,9 +250,12 @@ export function DataManagement() {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={clearFile}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">JSON</Badge>
+                  <Button variant="ghost" size="sm" onClick={clearFile}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
 

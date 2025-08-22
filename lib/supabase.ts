@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mock.supabase.co"
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-key"
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
 
-// Create a mock mode flag
-export const isMockMode = supabaseUrl === "https://mock.supabase.co" || supabaseAnonKey === "mock-key"
+// Check if we're in a real Supabase environment
+export const isMockMode = supabaseUrl === "https://placeholder.supabase.co" || supabaseAnonKey === "placeholder-key"
 
-// Create Supabase client with fallback for mock mode
-export const supabase = isMockMode ? null : createClient(supabaseUrl, supabaseAnonKey)
+// Create Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Mock database for preview mode
 export const mockDatabase = {

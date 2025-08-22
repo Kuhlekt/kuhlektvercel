@@ -1,4 +1,5 @@
-import type { Category, User, AuditLogEntry } from "@/types/knowledge-base"
+import { storage } from "./storage"
+import type { Category, User, AuditLogEntry, Article } from "@/types/knowledge-base"
 
 // Helper function to ensure dates are properly handled
 const ensureDate = (date: any): Date => {
@@ -96,167 +97,298 @@ class Database {
     }
   }
 
-  // Export all data
-  async exportData() {
-    const data = this.loadData()
+  // Categories
+  async getCategories(): Promise<Category[]> {
+    return storage.getCategories()
+  }
+
+  async saveCategory(name: string, description: string): Promise<string> {
+    const categories = await this.getCategories()
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name,
+      description,
+      articles: [],
+      subcategories: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    categories.push(newCategory)
+    storage.saveCategories(categories)
+
+    await this.addAuditEntry({
+      action: "Category Created",
+      categoryId: newCategory.id,
+      categoryName: name,
+      performedBy: "System",
+      details: `Created category: ${name}`,
+    })
+
+    return newCategory.id
+  }
+
+  async saveSubcategory(categoryId: string, name: string, description: string): Promise<string> {
+    const categories = await this.getCategories()
+    const category = categories.find((c) => c.id === categoryId)
+
+    if (!category) {
+      throw new Error("Category not found")
+    }
+
+    const newSubcategory = {
+      id: Date.now().toString(),
+      name,
+      description,
+      articles: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    category.subcategories.push(newSubcategory)
+    category.updatedAt = new Date()
+    storage.saveCategories(categories)
+
+    await this.addAuditEntry({
+      action: "Subcategory Created",
+      categoryId,
+      categoryName: category.name,
+      subcategoryName: name,
+      performedBy: "System",
+      details: `Created subcategory: ${name} in ${category.name}`,
+    })
+
+    return newSubcategory.id
+  }
+
+  // Articles
+  async saveArticle(articleData: {
+    title: string
+    content: string
+    categoryId: string
+    subcategoryId?: string
+    tags: string[]
+    createdBy: string
+    lastEditedBy: string
+    editCount: number
+  }): Promise<string> {
+    const categories = await this.getCategories()
+    const category = categories.find((c) => c.id === articleData.categoryId)
+
+    if (!category) {
+      throw new Error("Category not found")
+    }
+
+    const newArticle: Article = {
+      id: Date.now().toString(),
+      title: articleData.title,
+      content: articleData.content,
+      tags: articleData.tags,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: articleData.createdBy,
+      lastEditedBy: articleData.lastEditedBy,
+      editCount: articleData.editCount,
+    }
+
+    if (articleData.subcategoryId) {
+      const subcategory = category.subcategories.find((s) => s.id === articleData.subcategoryId)
+      if (!subcategory) {
+        throw new Error("Subcategory not found")
+      }
+      subcategory.articles.push(newArticle)
+    } else {
+      category.articles.push(newArticle)
+    }
+
+    category.updatedAt = new Date()
+    storage.saveCategories(categories)
+
+    await this.addAuditEntry({
+      action: "Article Created",
+      articleId: newArticle.id,
+      articleTitle: newArticle.title,
+      categoryId: articleData.categoryId,
+      categoryName: category.name,
+      subcategoryName: articleData.subcategoryId
+        ? category.subcategories.find((s) => s.id === articleData.subcategoryId)?.name
+        : undefined,
+      performedBy: articleData.createdBy,
+      details: `Created article: ${newArticle.title}`,
+    })
+
+    return newArticle.id
+  }
+
+  // Users
+  async getUsers(): Promise<User[]> {
+    return storage.getUsers()
+  }
+
+  async saveUser(userData: {
+    username: string
+    password: string
+    email: string
+    role: "admin" | "user"
+    lastLogin: Date | null
+  }): Promise<string> {
+    const users = await this.getUsers()
+
+    // Check if username already exists
+    if (users.some((u) => u.username === userData.username)) {
+      throw new Error("Username already exists")
+    }
+
+    const newUser: User = {
+      id: Date.now().toString(),
+      username: userData.username,
+      password: userData.password,
+      email: userData.email,
+      role: userData.role,
+      createdAt: new Date(),
+      lastLogin: userData.lastLogin,
+    }
+
+    users.push(newUser)
+    storage.saveUsers(users)
+
+    await this.addAuditEntry({
+      action: "User Created",
+      userId: newUser.id,
+      username: newUser.username,
+      performedBy: "System",
+      details: `Created user: ${newUser.username} with role: ${newUser.role}`,
+    })
+
+    return newUser.id
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<void> {
+    const users = await this.getUsers()
+    const userIndex = users.findIndex((u) => u.id === userId)
+
+    if (userIndex === -1) {
+      throw new Error("User not found")
+    }
+
+    users[userIndex] = { ...users[userIndex], ...updates }
+    storage.saveUsers(users)
+
+    await this.addAuditEntry({
+      action: "User Updated",
+      userId,
+      username: users[userIndex].username,
+      performedBy: "System",
+      details: `Updated user: ${users[userIndex].username}`,
+    })
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const users = await this.getUsers()
+    const user = users.find((u) => u.id === userId)
+
+    if (!user) {
+      throw new Error("User not found")
+    }
+
+    const filteredUsers = users.filter((u) => u.id !== userId)
+    storage.saveUsers(filteredUsers)
+
+    await this.addAuditEntry({
+      action: "User Deleted",
+      userId,
+      username: user.username,
+      performedBy: "System",
+      details: `Deleted user: ${user.username}`,
+    })
+  }
+
+  // Audit Log
+  async getAuditLog(): Promise<AuditLogEntry[]> {
+    return storage.getAuditLog()
+  }
+
+  async addAuditEntry(entry: {
+    action: string
+    articleId?: string
+    articleTitle?: string
+    categoryId?: string
+    categoryName?: string
+    subcategoryName?: string
+    userId?: string
+    username?: string
+    performedBy: string
+    details: string
+  }): Promise<void> {
+    const auditLog = await this.getAuditLog()
+
+    const newEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      ...entry,
+    }
+
+    auditLog.unshift(newEntry) // Add to beginning
+
+    // Keep only last 1000 entries
+    if (auditLog.length > 1000) {
+      auditLog.splice(1000)
+    }
+
+    storage.saveAuditLog(auditLog)
+  }
+
+  // Data Management
+  async exportData(): Promise<any> {
+    const [categories, users, auditLog] = await Promise.all([this.getCategories(), this.getUsers(), this.getAuditLog()])
+
+    const pageVisits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
+
     return {
-      version: "1.0",
-      exportDate: new Date().toISOString(),
-      categories: data.categories,
-      users: data.users,
-      auditLog: data.auditLog,
+      categories,
+      users,
+      auditLog,
       settings: {
-        pageVisits: data.pageVisits,
+        pageVisits,
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
       },
     }
   }
 
-  // Import data from backup
-  async importData(backupData: any) {
-    try {
-      // Validate backup structure
-      if (!backupData.categories || !backupData.users || !backupData.auditLog) {
-        throw new Error("Invalid backup file structure")
-      }
-
-      // Clear existing data
-      await this.clearAllData()
-
-      // Process imported data to ensure proper date handling
-      const processedCategories = backupData.categories.map((cat: any) => ({
-        ...cat,
-        articles:
-          cat.articles?.map((article: any) => ({
-            ...article,
-            createdAt: ensureDate(article.createdAt),
-            updatedAt: ensureDate(article.updatedAt),
-          })) || [],
-        subcategories:
-          cat.subcategories?.map((sub: any) => ({
-            ...sub,
-            articles:
-              sub.articles?.map((article: any) => ({
-                ...article,
-                createdAt: ensureDate(article.createdAt),
-                updatedAt: ensureDate(article.updatedAt),
-              })) || [],
-          })) || [],
-      }))
-
-      const processedUsers = backupData.users.map((user: any) => ({
-        ...user,
-        createdAt: ensureDate(user.createdAt),
-        lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : undefined,
-      }))
-
-      const processedAuditLog = backupData.auditLog.map((entry: any) => ({
-        ...entry,
-        timestamp: ensureDate(entry.timestamp),
-      }))
-
-      // Import new data
-      this.saveData({
-        categories: processedCategories,
-        users: processedUsers,
-        auditLog: processedAuditLog,
-        pageVisits: backupData.settings?.pageVisits || 0,
-      })
-
-      return true
-    } catch (error) {
-      console.error("Error importing data:", error)
-      throw new Error("Failed to import data")
-    }
-  }
-
-  // Clear all data
-  async clearAllData() {
-    try {
-      localStorage.removeItem(this.getStorageKey("categories"))
-      localStorage.removeItem(this.getStorageKey("users"))
-      localStorage.removeItem(this.getStorageKey("auditLog"))
-      localStorage.removeItem(this.getStorageKey("pageVisits"))
-      return true
-    } catch (error) {
-      console.error("Error clearing data:", error)
-      throw new Error("Failed to clear data")
-    }
-  }
-
-  // Add category
-  addCategory(categories: Category[], categoryData: Omit<Category, "id">) {
-    const newCategory: Category = {
-      ...categoryData,
-      id: Date.now().toString(),
-      articles: [],
-      subcategories: [],
+  async importData(data: any): Promise<void> {
+    if (data.categories) {
+      storage.saveCategories(data.categories)
     }
 
-    const updatedCategories = [...categories, newCategory]
-    this.saveData({ categories: updatedCategories })
-    return updatedCategories
-  }
-
-  // Update category
-  updateCategory(categories: Category[], categoryId: string, updates: Partial<Category>) {
-    const updatedCategories = categories.map((cat) => (cat.id === categoryId ? { ...cat, ...updates } : cat))
-    this.saveData({ categories: updatedCategories })
-    return updatedCategories
-  }
-
-  // Delete category
-  deleteCategory(categories: Category[], categoryId: string) {
-    const updatedCategories = categories.filter((cat) => cat.id !== categoryId)
-    this.saveData({ categories: updatedCategories })
-    return updatedCategories
-  }
-
-  // Add user
-  addUser(users: User[], userData: Omit<User, "id" | "createdAt">) {
-    const newUser: User = {
-      ...userData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
+    if (data.users) {
+      storage.saveUsers(data.users)
     }
 
-    const updatedUsers = [...users, newUser]
-    this.saveData({ users: updatedUsers })
-    return updatedUsers
-  }
-
-  // Update user
-  updateUser(users: User[], userId: string, updates: Partial<User>) {
-    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, ...updates } : user))
-    this.saveData({ users: updatedUsers })
-    return updatedUsers
-  }
-
-  // Delete user
-  deleteUser(users: User[], userId: string) {
-    const updatedUsers = users.filter((user) => user.id !== userId)
-    this.saveData({ users: updatedUsers })
-    return updatedUsers
-  }
-
-  // Add audit log entry
-  addAuditEntry(auditLog: AuditLogEntry[], entryData: Omit<AuditLogEntry, "id" | "timestamp">) {
-    const newEntry: AuditLogEntry = {
-      ...entryData,
-      id: Date.now().toString(),
-      timestamp: new Date(),
+    if (data.auditLog) {
+      storage.saveAuditLog(data.auditLog)
     }
 
-    const updatedAuditLog = [newEntry, ...auditLog]
-    this.saveData({ auditLog: updatedAuditLog })
-    return updatedAuditLog
+    if (data.settings?.pageVisits) {
+      localStorage.setItem("kb_page_visits", data.settings.pageVisits.toString())
+    }
+
+    await this.addAuditEntry({
+      action: "Data Imported",
+      performedBy: "System",
+      details: "Imported data from backup file",
+    })
   }
 
-  // Increment page visits
-  incrementPageVisits() {
-    const data = this.loadData()
-    const newPageVisits = data.pageVisits + 1
-    this.saveData({ pageVisits: newPageVisits })
-    return newPageVisits
+  async clearAllData(): Promise<void> {
+    storage.clearAll()
+
+    // Keep a record of the clear action
+    await this.addAuditEntry({
+      action: "All Data Cleared",
+      performedBy: "System",
+      details: "All data was cleared from the system",
+    })
   }
 }
 
