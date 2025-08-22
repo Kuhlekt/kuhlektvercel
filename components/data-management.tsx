@@ -17,6 +17,7 @@ import {
 import { Download, Upload, Trash2, Database, FileText, Users, Activity, HardDrive, AlertTriangle } from "lucide-react"
 import { storage, dataManager } from "../utils/storage"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
+import { useToast } from "@/hooks/use-toast"
 
 interface DataManagementProps {
   categories: Category[]
@@ -35,6 +36,7 @@ export function DataManagement({
   onUsersUpdate,
   onAuditLogUpdate,
 }: DataManagementProps) {
+  const { toast } = useToast()
   const [importFile, setImportFile] = useState<File | null>(null)
   const [isImporting, setIsImporting] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -92,7 +94,7 @@ export function DataManagement({
       storage.saveUsers(importedData.users)
       storage.saveAuditLog(importedData.auditLog)
 
-      if (importedData.pageVisits) {
+      if (importedData.pageVisits !== undefined) {
         localStorage.setItem("kb_page_visits", importedData.pageVisits.toString())
       }
 
@@ -105,6 +107,11 @@ export function DataManagement({
 
       // Refresh page after a short delay to load new data
       setTimeout(() => {
+        toast({
+          title: "Import Successful",
+          description: "Data imported successfully. Refreshing page...",
+          duration: 2000,
+        })
         window.location.reload()
       }, 2000)
     } catch (error) {
@@ -128,6 +135,11 @@ export function DataManagement({
 
     // Refresh page after clearing data
     setTimeout(() => {
+      toast({
+        title: "Clear Successful",
+        description: "All data cleared successfully. Refreshing page...",
+        duration: 1500,
+      })
       window.location.reload()
     }, 1500)
   }
