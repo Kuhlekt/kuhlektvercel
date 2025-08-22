@@ -263,7 +263,7 @@ export function AdminDashboard({
                         <p className="text-xs text-gray-600">{entry.details}</p>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {entry.timestamp.toLocaleDateString()}
+                        {new Date(entry.timestamp).toLocaleDateString()}
                       </Badge>
                     </div>
                   ))}

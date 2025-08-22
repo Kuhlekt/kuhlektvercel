@@ -3,17 +3,9 @@ import { promises as fs } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
-const SETTINGS_FILE = path.join(DATA_DIR, "settings.json")
+const PAGE_VISITS_FILE = path.join(DATA_DIR, "page-visits.json")
 
-interface Settings {
-  pageVisits: number
-}
-
-const defaultSettings: Settings = {
-  pageVisits: 0,
-}
-
-async function ensureDataDirectory() {
+async function ensureDataDir() {
   try {
     await fs.access(DATA_DIR)
   } catch {
@@ -21,42 +13,38 @@ async function ensureDataDirectory() {
   }
 }
 
-async function readSettings(): Promise<Settings> {
+async function ensurePageVisitsFile() {
+  await ensureDataDir()
   try {
-    const data = await fs.readFile(SETTINGS_FILE, "utf-8")
-    return JSON.parse(data)
+    await fs.access(PAGE_VISITS_FILE)
   } catch {
-    await fs.writeFile(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2))
-    return defaultSettings
-  }
-}
-
-async function writeSettings(settings: Settings): Promise<void> {
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2))
-}
-
-export async function POST() {
-  try {
-    await ensureDataDirectory()
-
-    const settings = await readSettings()
-    settings.pageVisits += 1
-    await writeSettings(settings)
-
-    return NextResponse.json({ pageVisits: settings.pageVisits })
-  } catch (error) {
-    console.error("Error incrementing page visits:", error)
-    return NextResponse.json({ error: "Failed to increment page visits" }, { status: 500 })
+    await fs.writeFile(PAGE_VISITS_FILE, JSON.stringify({ visits: 0 }, null, 2))
   }
 }
 
 export async function GET() {
   try {
-    await ensureDataDirectory()
-    const settings = await readSettings()
-    return NextResponse.json(settings)
+    await ensurePageVisitsFile()
+    const data = await fs.readFile(PAGE_VISITS_FILE, "utf-8")
+    const pageVisits = JSON.parse(data)
+    return NextResponse.json({ visits: pageVisits.visits || 0 })
   } catch (error) {
-    console.error("Error getting settings:", error)
-    return NextResponse.json({ error: "Failed to get settings" }, { status: 500 })
+    console.error("Error reading page visits:", error)
+    return NextResponse.json({ visits: 0 })
+  }
+}
+
+export async function POST() {
+  try {
+    await ensurePageVisitsFile()
+    const data = await fs.readFile(PAGE_VISITS_FILE, "utf-8")
+    const pageVisits = JSON.parse(data)
+    const newVisits = (pageVisits.visits || 0) + 1
+
+    await fs.writeFile(PAGE_VISITS_FILE, JSON.stringify({ visits: newVisits }, null, 2))
+    return NextResponse.json({ visits: newVisits })
+  } catch (error) {
+    console.error("Error incrementing page visits:", error)
+    return NextResponse.json({ error: "Failed to increment page visits" }, { status: 500 })
   }
 }
