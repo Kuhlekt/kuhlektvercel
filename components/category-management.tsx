@@ -33,13 +33,17 @@ export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryM
       setIsLoading(true)
       setError(null)
 
+      console.log("🔄 CategoryManagement.handleAddCategory() - Adding category:", newCategoryName)
+
       await apiDatabase.addCategory(categories, newCategoryName.trim(), newCategoryDescription.trim() || undefined)
 
       setNewCategoryName("")
       setNewCategoryDescription("")
+
+      console.log("✅ Category added, triggering UI update...")
       onCategoriesUpdate()
     } catch (error) {
-      console.error("Error adding category:", error)
+      console.error("❌ Error adding category:", error)
       setError("Failed to add category. Please try again.")
     } finally {
       setIsLoading(false)
@@ -53,6 +57,8 @@ export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryM
       setIsLoading(true)
       setError(null)
 
+      console.log("🔄 CategoryManagement.handleAddSubcategory() - Adding subcategory:", newSubcategoryName)
+
       await apiDatabase.addSubcategory(
         categories,
         selectedParentCategory,
@@ -63,9 +69,11 @@ export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryM
       setNewSubcategoryName("")
       setNewSubcategoryDescription("")
       setSelectedParentCategory("")
+
+      console.log("✅ Subcategory added, triggering UI update...")
       onCategoriesUpdate()
     } catch (error) {
-      console.error("Error adding subcategory:", error)
+      console.error("❌ Error adding subcategory:", error)
       setError("Failed to add subcategory. Please try again.")
     } finally {
       setIsLoading(false)
@@ -98,10 +106,14 @@ export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryM
       setIsLoading(true)
       setError(null)
 
+      console.log("🔄 CategoryManagement.handleDeleteCategory() - Deleting category:", categoryId)
+
       await apiDatabase.deleteCategory(categories, categoryId)
+
+      console.log("✅ Category deleted, triggering UI update...")
       onCategoriesUpdate()
     } catch (error) {
-      console.error("Error deleting category:", error)
+      console.error("❌ Error deleting category:", error)
       setError("Failed to delete category. Please try again.")
     } finally {
       setIsLoading(false)
@@ -134,10 +146,14 @@ export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryM
       setIsLoading(true)
       setError(null)
 
+      console.log("🔄 CategoryManagement.handleDeleteSubcategory() - Deleting subcategory:", subcategoryId)
+
       await apiDatabase.deleteSubcategory(categories, categoryId, subcategoryId)
+
+      console.log("✅ Subcategory deleted, triggering UI update...")
       onCategoriesUpdate()
     } catch (error) {
-      console.error("Error deleting subcategory:", error)
+      console.error("❌ Error deleting subcategory:", error)
       setError("Failed to delete subcategory. Please try again.")
     } finally {
       setIsLoading(false)

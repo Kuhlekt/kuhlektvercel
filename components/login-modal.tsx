@@ -1,14 +1,16 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, User, Lock, AlertCircle } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { LogIn, Shield, Edit, Eye, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -19,51 +21,36 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password")
-      return
-    }
-
     setIsLoading(true)
-    setError("")
+    setError(null)
 
     try {
-      console.log("🔐 LoginModal - Attempting login for:", username)
-      const success = await onLogin(username.trim(), password)
+      const success = await onLogin(username, password)
       if (!success) {
         setError("Invalid username or password")
-      } else {
-        // Clear form on successful login
-        setUsername("")
-        setPassword("")
-        setError("")
       }
-    } catch (error) {
-      console.error("❌ LoginModal - Login error:", error)
+    } catch (err) {
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleQuickLogin = (user: string, pass: string) => {
+    setUsername(user)
+    setPassword(pass)
+  }
+
   const handleClose = () => {
     setUsername("")
     setPassword("")
-    setError("")
-    setShowPassword(false)
+    setError(null)
     onClose()
-  }
-
-  const fillCredentials = (user: string, pass: string) => {
-    setUsername(user)
-    setPassword(pass)
-    setError("")
   }
 
   return (
@@ -71,127 +58,113 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <User className="h-5 w-5 mr-2" />
+            <LogIn className="h-5 w-5 mr-2" />
             Login to Knowledge Base
           </DialogTitle>
-          <DialogDescription>
-            Enter your credentials to access the knowledge base management features.
-          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              disabled={isLoading}
-              autoComplete="username"
-            />
-          </div>
+        <div className="space-y-6">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+                disabled={isLoading}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
+            <div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                type={showPassword ? "text" : "password"}
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
+                required
                 disabled={isLoading}
-                autoComplete="current-password"
-                className="pr-10"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
+            </div>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          {/* Quick Login Options */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-700">Quick Login Options:</div>
+
+            <div className="grid gap-2">
+              <Card
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => handleQuickLogin("admin", "admin123")}
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400" />
-                )}
-              </Button>
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-4 w-4 text-red-600" />
+                      <div>
+                        <div className="font-medium">Administrator</div>
+                        <div className="text-xs text-gray-500">Full system access</div>
+                      </div>
+                    </div>
+                    <Badge variant="default">Admin</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => handleQuickLogin("editor", "editor123")}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Edit className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <div className="font-medium">Editor</div>
+                        <div className="text-xs text-gray-500">Content management</div>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">Editor</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => handleQuickLogin("viewer", "viewer123")}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Eye className="h-4 w-4 text-green-600" />
+                      <div>
+                        <div className="font-medium">Viewer</div>
+                        <div className="text-xs text-gray-500">Read-only access</div>
+                      </div>
+                    </div>
+                    <Badge variant="outline">Viewer</Badge>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Signing in...
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Sign In
-              </>
-            )}
-          </Button>
-        </form>
-
-        {/* Available Accounts - No passwords shown */}
-        <Card className="mt-4">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Available Accounts</CardTitle>
-            <CardDescription className="text-xs">Click on any account to auto-fill the form</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="grid grid-cols-1 gap-2 text-xs">
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start h-auto p-2 bg-transparent"
-                onClick={() => fillCredentials("admin", "admin123")}
-                disabled={isLoading}
-              >
-                <div className="text-left">
-                  <div className="font-medium">Administrator</div>
-                  <div className="text-gray-500">Full system access</div>
-                </div>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start h-auto p-2 bg-transparent"
-                onClick={() => fillCredentials("editor", "editor123")}
-                disabled={isLoading}
-              >
-                <div className="text-left">
-                  <div className="font-medium">Editor</div>
-                  <div className="text-gray-500">Content management access</div>
-                </div>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start h-auto p-2 bg-transparent"
-                onClick={() => fillCredentials("viewer", "viewer123")}
-                disabled={isLoading}
-              >
-                <div className="text-left">
-                  <div className="font-medium">Viewer</div>
-                  <div className="text-gray-500">Read-only access</div>
-                </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </DialogContent>
     </Dialog>
   )

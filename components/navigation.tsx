@@ -2,18 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { User, LogIn, LogOut, Plus, Settings, Home, ChevronDown } from "lucide-react"
-import type { User as UserType } from "../types/knowledge-base"
+import { LogIn, LogOut, Plus, Settings, Home, Shield, Edit, Eye } from "lucide-react"
+import type { User } from "../types/knowledge-base"
 
 interface NavigationProps {
-  currentUser: UserType | null
+  currentUser: User | null
   onLogin: () => void
   onLogout: () => void
   onViewChange: (view: "browse" | "add" | "admin") => void
@@ -21,16 +14,25 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-100 text-red-800 hover:bg-red-200"
+        return <Shield className="h-4 w-4" />
       case "editor":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-200"
-      case "viewer":
-        return "bg-green-100 text-green-800 hover:bg-green-200"
+        return <Edit className="h-4 w-4" />
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200"
+        return <Eye className="h-4 w-4" />
+    }
+  }
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "default"
+      case "editor":
+        return "secondary"
+      default:
+        return "outline"
     }
   }
 
@@ -38,88 +40,80 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
   const canAccessAdmin = currentUser && currentUser.role === "admin"
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo and Title */}
+          {/* Logo/Brand */}
           <div className="flex items-center space-x-4">
             <img src="/images/kuhlekt-logo.png" alt="Kuhlekt" className="h-8 w-auto" />
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
-              <Badge variant="outline" className="text-xs">
-                v1.0
-              </Badge>
-            </div>
+            <span className="text-xl font-semibold text-gray-900">Knowledge Base</span>
           </div>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-4">
-            {/* View Navigation */}
-            <div className="flex items-center space-x-2">
-              <Button
-                variant={currentView === "browse" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => onViewChange("browse")}
-                className="flex items-center"
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Browse
-              </Button>
-
-              {canAddArticles && (
+            {currentUser && (
+              <>
                 <Button
-                  variant={currentView === "add" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => onViewChange("add")}
-                  className="flex items-center"
+                  variant={currentView === "browse" ? "default" : "ghost"}
+                  onClick={() => onViewChange("browse")}
+                  className="flex items-center space-x-2"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Article
+                  <Home className="h-4 w-4" />
+                  <span>Browse</span>
                 </Button>
-              )}
 
-              {canAccessAdmin && (
-                <Button
-                  variant={currentView === "admin" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => onViewChange("admin")}
-                  className="flex items-center"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
+                {canAddArticles && (
+                  <Button
+                    variant={currentView === "add" ? "default" : "ghost"}
+                    onClick={() => onViewChange("add")}
+                    className="flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Article</span>
+                  </Button>
+                )}
+
+                {canAccessAdmin && (
+                  <Button
+                    variant={currentView === "admin" ? "default" : "ghost"}
+                    onClick={() => onViewChange("admin")}
+                    className="flex items-center space-x-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Admin</span>
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* User Info & Auth */}
+            <div className="flex items-center space-x-3">
+              {currentUser ? (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={getRoleBadgeVariant(currentUser.role)} className="flex items-center space-x-1">
+                      {getRoleIcon(currentUser.role)}
+                      <span className="capitalize">{currentUser.role}</span>
+                    </Badge>
+                    <span className="text-sm text-gray-700">{currentUser.username}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onLogout}
+                    className="flex items-center space-x-2 bg-transparent"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={onLogin} className="flex items-center space-x-2">
+                  <LogIn className="h-4 w-4" />
+                  <span>Login</span>
                 </Button>
               )}
             </div>
-
-            {/* User Menu */}
-            {currentUser ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center space-x-2 bg-transparent">
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">{currentUser.username}</span>
-                    <Badge className={`text-xs ${getRoleBadgeColor(currentUser.role)}`}>{currentUser.role}</Badge>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{currentUser.username}</p>
-                    <p className="text-xs text-gray-500">{currentUser.email}</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onLogout} className="text-red-600">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button onClick={onLogin} size="sm" className="flex items-center">
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
-            )}
           </div>
         </div>
       </div>

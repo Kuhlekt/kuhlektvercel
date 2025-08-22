@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Trash2, Edit, Plus, Users, Shield, User } from "lucide-react"
 import type { User as UserType } from "@/types/knowledge-base"
+import { apiDatabase } from "@/utils/api-database"
 
 interface UserManagementTableProps {
   users: UserType[]
@@ -29,6 +30,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const formatDate = (dateValue: any): string => {
     if (!dateValue) return "Never"
@@ -56,6 +58,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
   const handleAddUser = async () => {
     try {
       setError(null)
+      setIsLoading(true)
 
       if (!newUser.username || !newUser.email || !newUser.password) {
         setError("All fields are required")
@@ -67,6 +70,8 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
         setError("Username already exists")
         return
       }
+
+      console.log("🔄 UserManagementTable.handleAddUser() - Adding user:", newUser.username)
 
       // Create new user object
       const userToAdd: UserType = {
@@ -80,28 +85,23 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
         isActive: true,
       }
 
-      // Add to users array and trigger update
+      // Add to users array
       const updatedUsers = [...users, userToAdd]
 
-      // Save to server via API
-      const response = await fetch("/api/data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ users: updatedUsers }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to save user")
-      }
+      // Save to server
+      await apiDatabase.saveData({ users: updatedUsers })
 
       setSuccess("User added successfully")
       setNewUser({ username: "", email: "", password: "", role: "viewer" })
       setIsAddDialogOpen(false)
+
+      console.log("✅ User added, triggering UI update...")
       onUsersUpdate()
     } catch (err) {
+      console.error("❌ Error adding user:", err)
       setError(err instanceof Error ? err.message : "Failed to add user")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -110,31 +110,29 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
 
     try {
       setError(null)
+      setIsLoading(true)
+
+      console.log("🔄 UserManagementTable.handleEditUser() - Updating user:", editingUser.username)
 
       // Update user in array
       const updatedUsers = users.map((user) =>
         user.id === editingUser.id ? { ...editingUser, updatedAt: new Date() } : user,
       )
 
-      // Save to server via API
-      const response = await fetch("/api/data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ users: updatedUsers }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to update user")
-      }
+      // Save to server
+      await apiDatabase.saveData({ users: updatedUsers })
 
       setSuccess("User updated successfully")
       setIsEditDialogOpen(false)
       setEditingUser(null)
+
+      console.log("✅ User updated, triggering UI update...")
       onUsersUpdate()
     } catch (err) {
+      console.error("❌ Error updating user:", err)
       setError(err instanceof Error ? err.message : "Failed to update user")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -143,27 +141,25 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
 
     try {
       setError(null)
+      setIsLoading(true)
+
+      console.log("🔄 UserManagementTable.handleDeleteUser() - Deleting user:", userId)
 
       // Remove user from array
       const updatedUsers = users.filter((user) => user.id !== userId)
 
-      // Save to server via API
-      const response = await fetch("/api/data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ users: updatedUsers }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to delete user")
-      }
+      // Save to server
+      await apiDatabase.saveData({ users: updatedUsers })
 
       setSuccess("User deleted successfully")
+
+      console.log("✅ User deleted, triggering UI update...")
       onUsersUpdate()
     } catch (err) {
+      console.error("❌ Error deleting user:", err)
       setError(err instanceof Error ? err.message : "Failed to delete user")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -222,6 +218,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   value={newUser.username}
                   onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                   placeholder="Enter username"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -232,6 +229,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   placeholder="Enter email"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -242,6 +240,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   placeholder="Enter password"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -249,6 +248,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                 <Select
                   value={newUser.role}
                   onValueChange={(value: "admin" | "editor" | "viewer") => setNewUser({ ...newUser, role: value })}
+                  disabled={isLoading}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -260,8 +260,8 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddUser} className="w-full">
-                Add User
+              <Button onClick={handleAddUser} className="w-full" disabled={isLoading}>
+                {isLoading ? "Adding..." : "Add User"}
               </Button>
             </div>
           </DialogContent>
@@ -331,6 +331,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                               setEditingUser(user)
                               setIsEditDialogOpen(true)
                             }}
+                            disabled={isLoading}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -339,6 +340,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                             size="sm"
                             onClick={() => handleDeleteUser(user.id)}
                             className="text-red-600 hover:text-red-700"
+                            disabled={isLoading}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -372,6 +374,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   id="edit-username"
                   value={editingUser.username}
                   onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -381,6 +384,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   type="email"
                   value={editingUser.email}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -390,6 +394,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   onValueChange={(value: "admin" | "editor" | "viewer") =>
                     setEditingUser({ ...editingUser, role: value })
                   }
+                  disabled={isLoading}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -407,11 +412,12 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                   id="edit-active"
                   checked={editingUser.isActive}
                   onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.checked })}
+                  disabled={isLoading}
                 />
                 <Label htmlFor="edit-active">Active</Label>
               </div>
-              <Button onClick={handleEditUser} className="w-full">
-                Update User
+              <Button onClick={handleEditUser} className="w-full" disabled={isLoading}>
+                {isLoading ? "Updating..." : "Update User"}
               </Button>
             </div>
           )}
