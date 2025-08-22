@@ -1,3 +1,5 @@
+import KnowledgeBase from "../knowledge-base"
+
 const HomePage = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -6,7 +8,7 @@ const HomePage = () => {
         alt="Kuhlekt Logo"
         className="h-20 w-auto mb-4" // Increased size with margin
       />
-      {/* rest of code here */}
+      <KnowledgeBase />
     </div>
   )
 }

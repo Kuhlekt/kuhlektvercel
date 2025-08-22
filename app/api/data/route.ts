@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
-import type { Category, User, AuditLogEntry } from "../../../types/knowledge-base"
+import { initialUsers } from "../../../data/initial-users"
+import { initialAuditLog } from "../../../data/initial-audit-log"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json")
@@ -18,174 +19,64 @@ async function ensureDataDir() {
   }
 }
 
-// Helper to safely read JSON file
-async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
+// Initialize files with default data if they don't exist
+async function initializeFile(filePath: string, defaultData: any) {
   try {
-    const data = await fs.readFile(filePath, "utf-8")
-    const parsed = JSON.parse(data)
-
-    // Convert date strings back to Date objects for categories
-    if (filePath === CATEGORIES_FILE && Array.isArray(parsed)) {
-      return parsed.map((category: any) => ({
-        ...category,
-        articles: (category.articles || []).map((article: any) => ({
-          ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt),
-        })),
-        subcategories: (category.subcategories || []).map((sub: any) => ({
-          ...sub,
-          articles: (sub.articles || []).map((article: any) => ({
-            ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt),
-          })),
-        })),
-      })) as T
-    }
-
-    // Convert date strings for users
-    if (filePath === USERS_FILE && Array.isArray(parsed)) {
-      return parsed.map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
-      })) as T
-    }
-
-    // Convert date strings for audit log
-    if (filePath === AUDIT_LOG_FILE && Array.isArray(parsed)) {
-      return parsed.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp),
-      })) as T
-    }
-
-    return parsed
+    await fs.access(filePath)
   } catch {
-    return defaultValue
+    await fs.writeFile(filePath, JSON.stringify(defaultData, null, 2))
   }
 }
 
-// Helper to write JSON file
-async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
+// Load data from files
+async function loadData() {
   await ensureDataDir()
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8")
+
+  // Initialize files with default data
+  await initializeFile(CATEGORIES_FILE, [])
+  await initializeFile(USERS_FILE, initialUsers)
+  await initializeFile(AUDIT_LOG_FILE, initialAuditLog)
+  await initializeFile(SETTINGS_FILE, { pageVisits: 0 })
+
+  const [categories, users, auditLog, settings] = await Promise.all([
+    fs.readFile(CATEGORIES_FILE, "utf-8").then(JSON.parse),
+    fs.readFile(USERS_FILE, "utf-8").then(JSON.parse),
+    fs.readFile(AUDIT_LOG_FILE, "utf-8").then(JSON.parse),
+    fs.readFile(SETTINGS_FILE, "utf-8").then(JSON.parse),
+  ])
+
+  return { categories, users, auditLog, settings }
 }
 
-// Initialize default data
-async function initializeData() {
+// Save data to files
+async function saveData(data: any) {
   await ensureDataDir()
 
-  // Initialize categories if not exists
-  try {
-    await fs.access(CATEGORIES_FILE)
-  } catch {
-    await writeJsonFile(CATEGORIES_FILE, [])
-  }
-
-  // Initialize users if not exists
-  try {
-    await fs.access(USERS_FILE)
-  } catch {
-    const defaultUsers: User[] = [
-      {
-        id: "1",
-        username: "admin",
-        password: "admin123",
-        email: "admin@kuhlekt.com",
-        role: "admin",
-        createdAt: new Date("2024-01-01"),
-        lastLogin: undefined,
-      },
-      {
-        id: "2",
-        username: "editor",
-        password: "editor123",
-        email: "editor@kuhlekt.com",
-        role: "editor",
-        createdAt: new Date("2024-01-01"),
-        lastLogin: undefined,
-      },
-      {
-        id: "3",
-        username: "viewer",
-        password: "viewer123",
-        email: "viewer@kuhlekt.com",
-        role: "viewer",
-        createdAt: new Date("2024-01-01"),
-        lastLogin: undefined,
-      },
-    ]
-    await writeJsonFile(USERS_FILE, defaultUsers)
-  }
-
-  // Initialize audit log if not exists
-  try {
-    await fs.access(AUDIT_LOG_FILE)
-  } catch {
-    await writeJsonFile(AUDIT_LOG_FILE, [])
-  }
-
-  // Initialize settings if not exists
-  try {
-    await fs.access(SETTINGS_FILE)
-  } catch {
-    await writeJsonFile(SETTINGS_FILE, { pageVisits: 0 })
-  }
+  await Promise.all([
+    fs.writeFile(CATEGORIES_FILE, JSON.stringify(data.categories, null, 2)),
+    fs.writeFile(USERS_FILE, JSON.stringify(data.users, null, 2)),
+    fs.writeFile(AUDIT_LOG_FILE, JSON.stringify(data.auditLog, null, 2)),
+    fs.writeFile(SETTINGS_FILE, JSON.stringify(data.settings, null, 2)),
+  ])
 }
 
 export async function GET() {
   try {
-    await initializeData()
-
-    const [categories, users, auditLog, settings] = await Promise.all([
-      readJsonFile<Category[]>(CATEGORIES_FILE, []),
-      readJsonFile<User[]>(USERS_FILE, []),
-      readJsonFile<AuditLogEntry[]>(AUDIT_LOG_FILE, []),
-      readJsonFile<{ pageVisits: number }>(SETTINGS_FILE, { pageVisits: 0 }),
-    ])
-
-    return NextResponse.json({
-      categories,
-      users,
-      auditLog,
-      pageVisits: settings.pageVisits,
-    })
+    const data = await loadData()
+    return NextResponse.json(data)
   } catch (error) {
-    console.error("Error reading data:", error)
-    return NextResponse.json({ error: "Failed to read data" }, { status: 500 })
+    console.error("Error loading data:", error)
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { type, data } = await request.json()
-
-    await initializeData()
-
-    switch (type) {
-      case "categories":
-        await writeJsonFile(CATEGORIES_FILE, data)
-        break
-      case "users":
-        await writeJsonFile(USERS_FILE, data)
-        break
-      case "auditLog":
-        await writeJsonFile(AUDIT_LOG_FILE, data)
-        break
-      case "incrementPageVisits":
-        const settings = await readJsonFile<{ pageVisits: number }>(SETTINGS_FILE, { pageVisits: 0 })
-        settings.pageVisits += 1
-        await writeJsonFile(SETTINGS_FILE, settings)
-        return NextResponse.json({ pageVisits: settings.pageVisits })
-      default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 })
-    }
-
+    const data = await request.json()
+    await saveData(data)
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error writing data:", error)
-    return NextResponse.json({ error: "Failed to write data" }, { status: 500 })
+    console.error("Error saving data:", error)
+    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
   }
 }

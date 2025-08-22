@@ -368,6 +368,7 @@ export default function KnowledgeBase() {
         onLogout={handleLogout}
         onViewChange={setCurrentView}
         currentView={currentView}
+        className="h-28" // Updated navigation height
       />
 
       {/* Error Alert */}
@@ -399,7 +400,7 @@ export default function KnowledgeBase() {
               <img
                 src="/images/kuhlekt-logo.jpg"
                 alt="Kuhlekt Logo"
-                className="h-32 w-32 mx-auto mb-4 object-contain"
+                className="h-40 w-40 mx-auto mb-4 object-contain" // Updated logo size
               />
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
               <p className="text-gray-600">Find answers, guides, and documentation</p>
