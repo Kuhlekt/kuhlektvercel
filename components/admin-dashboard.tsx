@@ -21,27 +21,26 @@ import {
   HardDrive,
 } from "lucide-react"
 import { CategoryManagement } from "./category-management"
-import { ArticleManagement } from "./article-management"
 import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  currentUser: User
-  onCategoriesUpdate: (categories: Category[]) => void
-  onUsersUpdate: (users: User[]) => void
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
+  categories?: Category[]
+  users?: User[]
+  auditLog?: AuditLogEntry[]
+  currentUser?: User | null
+  onCategoriesUpdate?: (categories: Category[]) => void
+  onUsersUpdate?: (users: User[]) => void
+  onAuditLogUpdate?: (auditLog: AuditLogEntry[]) => void
 }
 
 export function AdminDashboard({
-  categories,
-  users,
-  auditLog,
-  currentUser,
+  categories = [],
+  users = [],
+  auditLog = [],
+  currentUser = null,
   onCategoriesUpdate,
   onUsersUpdate,
   onAuditLogUpdate,
@@ -59,18 +58,20 @@ export function AdminDashboard({
   // Calculate statistics
   useEffect(() => {
     const totalArticles = categories.reduce((total, category) => {
-      const categoryArticles = category.articles.length
-      const subcategoryArticles = category.subcategories.reduce((subTotal, sub) => subTotal + sub.articles.length, 0)
+      const categoryArticles = category.articles?.length || 0
+      const subcategoryArticles =
+        category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
       return total + categoryArticles + subcategoryArticles
     }, 0)
 
-    const totalSubcategories = categories.reduce((total, category) => total + category.subcategories.length, 0)
+    const totalSubcategories = categories.reduce((total, category) => total + (category.subcategories?.length || 0), 0)
 
     const recentActivity = auditLog.filter(
       (entry) => new Date(entry.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000),
     ).length
 
-    const pageViews = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
+    const pageViews =
+      typeof window !== "undefined" ? Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10) : 0
 
     setStats({
       totalArticles,
@@ -140,16 +141,20 @@ export function AdminDashboard({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {currentUser.username}. Manage your knowledge base.</p>
+          <p className="text-muted-foreground">
+            Welcome back, {currentUser?.username || "Admin"}. Manage your knowledge base.
+          </p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          {currentUser.role}
-        </Badge>
+        {currentUser && (
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            {currentUser.role}
+          </Badge>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Overview
@@ -157,10 +162,6 @@ export function AdminDashboard({
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Categories
-          </TabsTrigger>
-          <TabsTrigger value="articles" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Articles
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -231,7 +232,7 @@ export function AdminDashboard({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {entry.articleTitle || entry.categoryName || "System Action"}
+                            {entry.articleTitle || entry.details || "System Action"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {entry.action.replace(/_/g, " ").toLowerCase()} by {entry.performedBy}
@@ -264,15 +265,7 @@ export function AdminDashboard({
                   onClick={() => setActiveTab("categories")}
                 >
                   <FolderPlus className="h-4 w-4 mr-2" />
-                  Add New Category
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start bg-transparent"
-                  onClick={() => setActiveTab("articles")}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Create Article
+                  Manage Categories
                 </Button>
                 <Button
                   variant="outline"
@@ -289,6 +282,14 @@ export function AdminDashboard({
                 >
                   <HardDrive className="h-4 w-4 mr-2" />
                   Backup Data
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start bg-transparent"
+                  onClick={() => setActiveTab("audit")}
+                >
+                  <Activity className="h-4 w-4 mr-2" />
+                  View Audit Log
                 </Button>
               </CardContent>
             </Card>
@@ -317,10 +318,10 @@ export function AdminDashboard({
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Storage</span>
                     <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      Healthy
+                      Local Storage
                     </Badge>
                   </div>
-                  <div className="text-xs text-muted-foreground">Local storage active</div>
+                  <div className="text-xs text-muted-foreground">Browser storage active</div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -336,15 +337,6 @@ export function AdminDashboard({
 
         <TabsContent value="categories">
           <CategoryManagement
-            categories={categories}
-            currentUser={currentUser}
-            onCategoriesUpdate={onCategoriesUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
-          />
-        </TabsContent>
-
-        <TabsContent value="articles">
-          <ArticleManagement
             categories={categories}
             currentUser={currentUser}
             onCategoriesUpdate={onCategoriesUpdate}

@@ -7,66 +7,55 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Download, Upload, Trash2, AlertTriangle, CheckCircle, Info, FileText } from "lucide-react"
-import { isMockMode } from "@/lib/supabase"
-import { exportAllData, importAllData, clearAllData } from "@/utils/database"
+  Download,
+  Upload,
+  Trash2,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  X,
+  Database,
+  Users,
+  Activity,
+} from "lucide-react"
+import { database } from "../utils/database"
 
 interface ImportStats {
   categories: number
-  subcategories: number
   articles: number
   users: number
-  auditLogs: number
+  auditLog: number
 }
 
 export function DataManagement() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
-  const [importProgress, setImportProgress] = useState(0)
   const [exportProgress, setExportProgress] = useState(0)
-  const [clearProgress, setClearProgress] = useState(0)
+  const [importProgress, setImportProgress] = useState(0)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [importStats, setImportStats] = useState<ImportStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [showClearDialog, setShowClearDialog] = useState(false)
-  const [clearConfirmText, setClearConfirmText] = useState("")
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const clearMessages = () => {
-    setError(null)
-    setSuccess(null)
-  }
-
-  const handleExportData = async () => {
-    if (isMockMode) {
-      setError("Export not available in preview mode. Supabase configuration required.")
-      return
-    }
-
-    setIsExporting(true)
-    clearMessages()
-    setExportProgress(0)
-
+  const handleExport = async () => {
     try {
+      setIsExporting(true)
+      setExportProgress(0)
+      setError(null)
+      setSuccess(null)
+
       // Simulate progress
       const progressInterval = setInterval(() => {
         setExportProgress((prev) => Math.min(prev + 10, 90))
-      }, 200)
+      }, 100)
 
-      const data = await exportAllData()
+      // Get all data
+      const data = await database.exportData()
 
       clearInterval(progressInterval)
       setExportProgress(100)
@@ -76,152 +65,180 @@ export function DataManagement() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
+      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
       setSuccess("Data exported successfully!")
+
+      setTimeout(() => {
+        setExportProgress(0)
+        setIsExporting(false)
+      }, 1000)
     } catch (err) {
-      setError(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`)
-    } finally {
+      console.error("Export error:", err)
+      setError("Failed to export data. Please try again.")
       setIsExporting(false)
-      setTimeout(() => setExportProgress(0), 2000)
+      setExportProgress(0)
     }
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.type !== "application/json" && !file.name.endsWith(".json")) {
-        setError("Please select a valid JSON file")
-        return
+      if (file.type === "application/json" || file.name.endsWith(".json")) {
+        setSelectedFile(file)
+        setError(null)
+      } else {
+        setError("Please select a valid JSON file.")
+        setSelectedFile(null)
       }
-      setSelectedFile(file)
-      clearMessages()
     }
   }
 
-  const handleImportData = async () => {
+  const clearFileSelection = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const handleImport = async () => {
     if (!selectedFile) {
-      setError("Please select a backup file first")
+      setError("Please select a file to import.")
       return
     }
-
-    if (isMockMode) {
-      setError("Import not available in preview mode. Supabase configuration required.")
-      return
-    }
-
-    setIsImporting(true)
-    clearMessages()
-    setImportStats(null)
-    setImportProgress(0)
 
     try {
-      setImportProgress(10)
+      setIsImporting(true)
+      setImportProgress(0)
+      setError(null)
+      setSuccess(null)
+      setImportStats(null)
+
+      // Read file
       const text = await selectedFile.text()
+      let data
 
-      setImportProgress(20)
-      const data = JSON.parse(text)
-
-      // Validate backup format
-      if (!data.categories && !data.articles && !data.users) {
-        throw new Error("Invalid backup file format. Missing required data sections.")
+      try {
+        data = JSON.parse(text)
+      } catch (parseError) {
+        throw new Error("Invalid JSON file format.")
       }
 
-      setImportProgress(30)
+      // Validate data structure
+      if (!data.categories || !data.users || !data.auditLog) {
+        throw new Error("Invalid backup file structure. Missing required data.")
+      }
 
       // Simulate progress
       const progressInterval = setInterval(() => {
         setImportProgress((prev) => Math.min(prev + 5, 90))
-      }, 300)
+      }, 100)
 
-      const stats = await importAllData(data)
+      // Import data
+      await database.importData(data)
 
       clearInterval(progressInterval)
       setImportProgress(100)
+
+      // Calculate import stats
+      const stats: ImportStats = {
+        categories: data.categories?.length || 0,
+        articles:
+          data.categories?.reduce((total: number, cat: any) => {
+            const catArticles = cat.articles?.length || 0
+            const subArticles =
+              cat.subcategories?.reduce((subTotal: number, sub: any) => subTotal + (sub.articles?.length || 0), 0) || 0
+            return total + catArticles + subArticles
+          }, 0) || 0,
+        users: data.users?.length || 0,
+        auditLog: data.auditLog?.length || 0,
+      }
+
       setImportStats(stats)
       setSuccess("Data imported successfully!")
-      setSelectedFile(null)
+      clearFileSelection()
 
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      setTimeout(() => {
+        setImportProgress(0)
+        setIsImporting(false)
+      }, 1000)
     } catch (err) {
-      setError(`Import failed: ${err instanceof Error ? err.message : "Unknown error"}`)
-    } finally {
+      console.error("Import error:", err)
+      setError(err instanceof Error ? err.message : "Failed to import data. Please try again.")
       setIsImporting(false)
-      setTimeout(() => setImportProgress(0), 3000)
+      setImportProgress(0)
     }
   }
 
   const handleClearData = async () => {
-    if (clearConfirmText !== "DELETE ALL DATA") {
-      setError('Please type "DELETE ALL DATA" to confirm')
-      return
-    }
+    const confirmed = window.confirm("Are you sure you want to clear ALL data? This action cannot be undone.")
 
-    if (isMockMode) {
-      setError("Clear data not available in preview mode. Supabase configuration required.")
-      return
-    }
+    if (!confirmed) return
 
-    setIsClearing(true)
-    clearMessages()
-    setClearProgress(0)
+    const doubleConfirmed = window.confirm(
+      'This will permanently delete all categories, articles, users, and audit logs. Type "DELETE" to confirm.',
+    )
+
+    if (!doubleConfirmed) return
 
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setClearProgress((prev) => Math.min(prev + 8, 90))
-      }, 200)
+      setIsClearing(true)
+      setError(null)
+      setSuccess(null)
 
-      await clearAllData()
+      await database.clearAllData()
 
-      clearInterval(progressInterval)
-      setClearProgress(100)
       setSuccess("All data cleared successfully!")
-      setShowClearDialog(false)
-      setClearConfirmText("")
+      setImportStats(null)
+
+      setTimeout(() => {
+        setIsClearing(false)
+        // Reload page to reflect changes
+        window.location.reload()
+      }, 2000)
     } catch (err) {
-      setError(`Clear failed: ${err instanceof Error ? err.message : "Unknown error"}`)
-    } finally {
+      console.error("Clear data error:", err)
+      setError("Failed to clear data. Please try again.")
       setIsClearing(false)
-      setTimeout(() => setClearProgress(0), 2000)
     }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Data Management</h2>
-        <p className="text-muted-foreground">Export, import, and manage your knowledge base data.</p>
-      </div>
-
-      {isMockMode && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Data management features require Supabase configuration. Currently running in preview mode with local
-            storage.
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* Status Messages */}
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            {error}
+            <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
       {success && (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between text-green-800">
+            {success}
+            <Button variant="ghost" size="sm" onClick={() => setSuccess(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -232,27 +249,23 @@ export function DataManagement() {
             <Download className="h-5 w-5" />
             Export Data
           </CardTitle>
-          <CardDescription>
-            Download a complete backup of your knowledge base including all categories, articles, users, and audit logs.
-          </CardDescription>
+          <CardDescription>Download a complete backup of your knowledge base as a JSON file</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isExporting && (
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex items-center justify-between text-sm">
                 <span>Exporting data...</span>
                 <span>{exportProgress}%</span>
               </div>
-              <Progress value={exportProgress} />
+              <Progress value={exportProgress} className="w-full" />
             </div>
           )}
-          <Button onClick={handleExportData} disabled={isExporting || isMockMode} className="w-full">
+
+          <Button onClick={handleExport} disabled={isExporting} className="w-full">
             <Download className="h-4 w-4 mr-2" />
-            {isExporting ? "Exporting..." : "Export All Data"}
+            {isExporting ? "Exporting..." : "Export Data"}
           </Button>
-          <p className="text-xs text-muted-foreground">
-            Creates a JSON file with timestamp in filename for easy organization.
-          </p>
         </CardContent>
       </Card>
 
@@ -268,90 +281,116 @@ export function DataManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Warning:</strong> Importing will completely replace all existing data. Export current data first
-              if needed.
-            </AlertDescription>
-          </Alert>
-
-          {isImporting && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Importing data...</span>
-                <span>{importProgress}%</span>
-              </div>
-              <Progress value={importProgress} />
-            </div>
-          )}
-
-          {importStats && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                Import Summary
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-sm text-green-700">
-                <div>Categories: {importStats.categories}</div>
-                <div>Subcategories: {importStats.subcategories}</div>
-                <div>Articles: {importStats.articles}</div>
-                <div>Users: {importStats.users}</div>
-                <div>Audit Logs: {importStats.auditLogs}</div>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="backup-file">Select Backup File</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  ref={fileInputRef}
-                  id="backup-file"
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleFileSelect}
-                  disabled={isImporting || isMockMode}
-                  className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                />
-                {selectedFile && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFile(null)
-                      if (fileInputRef.current) fileInputRef.current.value = ""
-                    }}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
+          {/* File Selection */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="backup-file"
+              />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                <FileText className="h-4 w-4 mr-2" />
+                Choose Backup File
+              </Button>
+              {selectedFile && (
+                <Button variant="ghost" size="sm" onClick={clearFileSelection}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {selectedFile && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-blue-800">
-                  <FileText className="h-4 w-4" />
-                  <div className="text-sm">
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-blue-600">
-                      Size: {(selectedFile.size / 1024).toFixed(1)} KB | Modified:{" "}
-                      {new Date(selectedFile.lastModified).toLocaleDateString()}
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(selectedFile.size)} • Modified{" "}
+                      {selectedFile.lastModified ? new Date(selectedFile.lastModified).toLocaleDateString() : "Unknown"}
                     </p>
                   </div>
+                  <Badge variant="secondary">JSON</Badge>
                 </div>
               </div>
             )}
-
-            <Button onClick={handleImportData} disabled={!selectedFile || isImporting || isMockMode} className="w-full">
-              <Upload className="h-4 w-4 mr-2" />
-              {isImporting ? "Importing..." : "Import Data"}
-            </Button>
           </div>
+
+          {isImporting && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Importing data...</span>
+                <span>{importProgress}%</span>
+              </div>
+              <Progress value={importProgress} className="w-full" />
+            </div>
+          )}
+
+          <Button onClick={handleImport} disabled={!selectedFile || isImporting} className="w-full">
+            <Upload className="h-4 w-4 mr-2" />
+            {isImporting ? "Importing..." : "Import Data"}
+          </Button>
         </CardContent>
       </Card>
+
+      {/* Import Statistics */}
+      {importStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Import Summary
+            </CardTitle>
+            <CardDescription>Data successfully imported from backup file</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Database className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{importStats.categories}</p>
+                  <p className="text-xs text-muted-foreground">Categories</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <FileText className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{importStats.articles}</p>
+                  <p className="text-xs text-muted-foreground">Articles</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Users className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{importStats.users}</p>
+                  <p className="text-xs text-muted-foreground">Users</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Activity className="h-4 w-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{importStats.auditLog}</p>
+                  <p className="text-xs text-muted-foreground">Audit Entries</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 
@@ -360,96 +399,19 @@ export function DataManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-600">
             <Trash2 className="h-5 w-5" />
-            Danger Zone
+            Clear All Data
           </CardTitle>
           <CardDescription>
             Permanently delete all data from the knowledge base. This action cannot be undone.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Warning:</strong> This will permanently delete all categories, articles, users, and audit logs.
-            </AlertDescription>
-          </Alert>
-
-          <Button variant="destructive" onClick={() => setShowClearDialog(true)} disabled={isMockMode}>
+        <CardContent>
+          <Button variant="destructive" onClick={handleClearData} disabled={isClearing} className="w-full">
             <Trash2 className="h-4 w-4 mr-2" />
-            Clear All Data
+            {isClearing ? "Clearing Data..." : "Clear All Data"}
           </Button>
         </CardContent>
       </Card>
-
-      {/* Clear Confirmation Dialog */}
-      <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              Confirm Data Deletion
-            </DialogTitle>
-            <DialogDescription>This will permanently delete all data from your knowledge base:</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
-                <li>All categories and subcategories</li>
-                <li>All articles and their content</li>
-                <li>All users (except system admin)</li>
-                <li>All audit log entries</li>
-                <li>All application settings</li>
-              </ul>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-text">
-                Type <code className="bg-red-100 px-1 rounded text-red-800">DELETE ALL DATA</code> to confirm:
-              </Label>
-              <Input
-                id="confirm-text"
-                value={clearConfirmText}
-                onChange={(e) => setClearConfirmText(e.target.value)}
-                placeholder="DELETE ALL DATA"
-                disabled={isClearing}
-              />
-            </div>
-
-            {isClearing && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Clearing data...</span>
-                  <span>{clearProgress}%</span>
-                </div>
-                <Progress value={clearProgress} />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowClearDialog(false)
-                setClearConfirmText("")
-                clearMessages()
-              }}
-              disabled={isClearing}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleClearData}
-              disabled={isClearing || clearConfirmText !== "DELETE ALL DATA" || isMockMode}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isClearing ? "Clearing..." : "Confirm Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
