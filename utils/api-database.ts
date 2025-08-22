@@ -1,63 +1,43 @@
-interface DatabaseData {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  settings: { pageVisits: number }
-}
+import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"
 
-class ApiDatabase {
+export class ApiDatabase {
   private baseUrl = "/api/data"
 
-  async loadData(): Promise<DatabaseData> {
-    try {
-      const response = await fetch(this.baseUrl)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
-      return {
-        categories: data.categories || [],
-        users: data.users || [],
-        auditLog: data.auditLog || [],
-        settings: data.settings || { pageVisits: 0 },
-      }
-    } catch (error) {
-      console.error("Error loading data:", error)
-      throw error
+  async loadData(): Promise<{
+    categories: Category[]
+    users: User[]
+    auditLog: AuditLogEntry[]
+  }> {
+    const response = await fetch(this.baseUrl)
+    if (!response.ok) {
+      throw new Error("Failed to load data")
+    }
+    return response.json()
+  }
+
+  async saveData(data: {
+    categories: Category[]
+    users: User[]
+    auditLog: AuditLogEntry[]
+  }): Promise<void> {
+    const response = await fetch(this.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      throw new Error("Failed to save data")
     }
   }
 
-  async saveData(data: DatabaseData): Promise<void> {
-    try {
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-    } catch (error) {
-      console.error("Error saving data:", error)
-      throw error
-    }
-  }
-
-  async incrementPageVisits(): Promise<number> {
-    try {
-      const response = await fetch("/api/data/page-visits", {
-        method: "POST",
-      })
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
-      return data.pageVisits
-    } catch (error) {
-      console.error("Error incrementing page visits:", error)
-      throw error
+  async incrementPageVisits(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/page-visits`, {
+      method: "POST",
+    })
+    if (!response.ok) {
+      throw new Error("Failed to increment page visits")
     }
   }
 
@@ -68,8 +48,8 @@ class ApiDatabase {
     const newArticle: Article = {
       ...articleData,
       id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
 
     const updatedCategories = categories.map((category) => {
@@ -79,6 +59,26 @@ class ApiDatabase {
           articles: [...(category.articles || []), newArticle],
         }
       }
+
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.id === articleData.categoryId) {
+            return {
+              ...subcategory,
+              articles: [...(subcategory.articles || []), newArticle],
+            }
+          }
+          return subcategory
+        })
+
+        if (updatedSubcategories !== category.subcategories) {
+          return {
+            ...category,
+            subcategories: updatedSubcategories,
+          }
+        }
+      }
+
       return category
     })
 
@@ -96,14 +96,51 @@ class ApiDatabase {
     articleId: string,
     updatedArticle: Omit<Article, "createdAt">,
   ): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => ({
-      ...category,
-      articles: (category.articles || []).map((article) =>
-        article.id === articleId
-          ? { ...updatedArticle, createdAt: article.createdAt, updatedAt: new Date().toISOString() }
-          : article,
-      ),
-    }))
+    const updatedCategories = categories.map((category) => {
+      if (category.articles) {
+        const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+        if (articleIndex !== -1) {
+          const updatedArticles = [...category.articles]
+          updatedArticles[articleIndex] = {
+            ...updatedArticle,
+            createdAt: updatedArticles[articleIndex].createdAt,
+            updatedAt: new Date(),
+          }
+          return {
+            ...category,
+            articles: updatedArticles,
+          }
+        }
+      }
+
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const articleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+            if (articleIndex !== -1) {
+              const updatedArticles = [...subcategory.articles]
+              updatedArticles[articleIndex] = {
+                ...updatedArticle,
+                createdAt: updatedArticles[articleIndex].createdAt,
+                updatedAt: new Date(),
+              }
+              return {
+                ...subcategory,
+                articles: updatedArticles,
+              }
+            }
+          }
+          return subcategory
+        })
+
+        return {
+          ...category,
+          subcategories: updatedSubcategories,
+        }
+      }
+
+      return category
+    })
 
     const data = await this.loadData()
     await this.saveData({
@@ -115,10 +152,39 @@ class ApiDatabase {
   }
 
   async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => ({
-      ...category,
-      articles: (category.articles || []).filter((article) => article.id !== articleId),
-    }))
+    const updatedCategories = categories.map((category) => {
+      if (category.articles) {
+        const filteredArticles = category.articles.filter((a) => a.id !== articleId)
+        if (filteredArticles.length !== category.articles.length) {
+          return {
+            ...category,
+            articles: filteredArticles,
+          }
+        }
+      }
+
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const filteredArticles = subcategory.articles.filter((a) => a.id !== articleId)
+            if (filteredArticles.length !== subcategory.articles.length) {
+              return {
+                ...subcategory,
+                articles: filteredArticles,
+              }
+            }
+          }
+          return subcategory
+        })
+
+        return {
+          ...category,
+          subcategories: updatedSubcategories,
+        }
+      }
+
+      return category
+    })
 
     const data = await this.loadData()
     await this.saveData({
@@ -130,7 +196,15 @@ class ApiDatabase {
   }
 
   async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
+    const updatedUsers = users.map((user) => {
+      if (user.id === userId) {
+        return {
+          ...user,
+          lastLogin: new Date(),
+        }
+      }
+      return user
+    })
 
     const data = await this.loadData()
     await this.saveData({
@@ -148,7 +222,7 @@ class ApiDatabase {
     const newEntry: AuditLogEntry = {
       ...entry,
       id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     }
 
     const updatedAuditLog = [newEntry, ...auditLog]
@@ -164,6 +238,3 @@ class ApiDatabase {
 }
 
 export const apiDatabase = new ApiDatabase()
-
-// Import types
-import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"

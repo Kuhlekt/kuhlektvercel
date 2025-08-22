@@ -14,15 +14,15 @@ interface NavigationProps {
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
   return (
-    <nav className="bg-white shadow-sm border-b h-32">
+    <nav className="bg-white shadow-sm border-b h-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-full">
-          {/* Logo */}
+          {/* Logo - Reduced size */}
           <div className="flex items-center">
             <img
               src="/images/kuhlekt-logo.png"
               alt="Kuhlekt Logo"
-              className="h-24 w-auto object-contain cursor-pointer"
+              className="h-12 w-auto object-contain cursor-pointer"
               onClick={() => onViewChange("browse")}
             />
           </div>

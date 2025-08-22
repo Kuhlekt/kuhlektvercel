@@ -63,7 +63,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                 <img
                   src="/images/kuhlekt-logo.png"
                   alt="Kuhlekt Logo"
-                  className="h-20 w-auto mx-auto mb-4 object-contain"
+                  className="h-12 w-auto mx-auto mb-4 object-contain"
                 />
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>Access the knowledge base management system</CardDescription>
