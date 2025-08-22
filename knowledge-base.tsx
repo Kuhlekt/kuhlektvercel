@@ -9,351 +9,345 @@ import { AddArticleForm } from "./components/add-article-form"
 import { EditArticleForm } from "./components/edit-article-form"
 import { AdminDashboard } from "./components/admin-dashboard"
 import { LoginModal } from "./components/login-modal"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, X, Database, AlertCircle } from "lucide-react"
+import { SearchResults } from "./components/search-results"
+import { SelectedArticles } from "./components/selected-articles"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
-import { apiDatabase } from "./utils/api-database"
+import { loadFromAPI, saveToAPI } from "./utils/api-database"
 
 export default function KnowledgeBase() {
   // State management
   const [categories, setCategories] = useState<Category[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [users, setUsers] = useState<User[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Article[]>([])
-  const [currentView, setCurrentView] = useState<"browse" | "add" | "admin">("browse")
-  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [selectedArticles, setSelectedArticles] = useState<Article[]>([])
+  const [pageVisits, setPageVisits] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load initial data
+  // Load data on component mount
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        console.log("Loading data from API...")
-
-        const data = await apiDatabase.loadData()
-
-        console.log("Loaded data:", data)
-
-        setCategories(data.categories)
-        setUsers(data.users)
-        setAuditLog(data.auditLog)
-
-        // Increment page visits
-        await apiDatabase.incrementPageVisits()
-
-        console.log("Data loaded successfully")
-      } catch (error) {
-        console.error("Error loading data:", error)
-        setError("Failed to load data from server. Please refresh the page.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     loadData()
+    incrementPageVisits()
   }, [])
 
-  // Refresh data function for manual refresh
-  const refreshData = async () => {
+  const loadData = async () => {
     try {
+      setIsLoading(true)
       setError(null)
-      const data = await apiDatabase.loadData()
-      setCategories(data.categories)
-      setUsers(data.users)
-      setAuditLog(data.auditLog)
-    } catch (error) {
-      console.error("Error refreshing data:", error)
-      setError("Failed to refresh data from server.")
+
+      const data = await loadFromAPI()
+      setCategories(data.categories || [])
+      setUsers(data.users || [])
+      setAuditLog(data.auditLog || [])
+      setPageVisits(data.settings?.pageVisits || 0)
+    } catch (err) {
+      console.error("Failed to load data:", err)
+      setError("Failed to load data. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // Handle login
-  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+  const saveData = async () => {
     try {
-      console.log("Attempting login with:", username)
-
-      const user = users.find((u) => u.username === username && u.password === password)
-
-      if (user) {
-        // Update last login time
-        const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
-        setUsers(updatedUsers)
-
-        const updatedUser = updatedUsers.find((u) => u.id === user.id)
-        setCurrentUser(updatedUser || user)
-
-        console.log("Login successful")
-        setShowLoginModal(false)
-        return true
-      }
-
-      console.log("Login failed - invalid credentials")
-      return false
-    } catch (error) {
-      console.error("Login error:", error)
-      setError("Login failed. Please try again.")
-      return false
+      await saveToAPI({
+        categories,
+        users,
+        auditLog,
+        settings: { pageVisits },
+      })
+    } catch (err) {
+      console.error("Failed to save data:", err)
+      setError("Failed to save data. Please try again.")
     }
   }
 
-  // Handle logout
+  const incrementPageVisits = async () => {
+    try {
+      const response = await fetch("/api/data/page-visits", {
+        method: "POST",
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setPageVisits(data.pageVisits)
+      }
+    } catch (err) {
+      console.error("Failed to increment page visits:", err)
+    }
+  }
+
+  // Authentication
+  const handleLogin = (username: string, password: string): boolean => {
+    const user = users.find((u) => u.username === username && u.password === password)
+    if (user) {
+      setIsLoggedIn(true)
+      setCurrentUser(user)
+      addAuditLogEntry(`User ${username} logged in`, "auth")
+      return true
+    }
+    return false
+  }
+
   const handleLogout = () => {
+    if (currentUser) {
+      addAuditLogEntry(`User ${currentUser.username} logged out`, "auth")
+    }
+    setIsLoggedIn(false)
     setCurrentUser(null)
-    setCurrentView("browse")
-    setSelectedArticle(null)
+    setShowAdminDashboard(false)
+    setShowAddForm(false)
     setEditingArticle(null)
   }
 
-  // Get all articles from categories
-  const getAllArticles = (): Article[] => {
-    const allArticles: Article[] = []
-
-    categories.forEach((category) => {
-      allArticles.push(...category.articles)
-      category.subcategories.forEach((subcategory) => {
-        allArticles.push(...subcategory.articles)
-      })
-    })
-
-    return allArticles
+  // Audit logging
+  const addAuditLogEntry = (action: string, type: "create" | "update" | "delete" | "auth" | "admin" = "admin") => {
+    const entry: AuditLogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      user: currentUser?.username || "Anonymous",
+      action,
+      type,
+    }
+    setAuditLog((prev) => [entry, ...prev])
   }
 
-  // Get filtered articles based on selected category
-  const getFilteredArticles = (): Article[] => {
-    if (!selectedCategory) {
-      return getAllArticles()
+  // Category management
+  const addCategory = (name: string, parentId?: string) => {
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name,
+      parentId,
+      articles: [],
+    }
+    setCategories((prev) => [...prev, newCategory])
+    addAuditLogEntry(`Created category: ${name}`, "create")
+    saveData()
+  }
+
+  const updateCategory = (id: string, name: string) => {
+    setCategories((prev) => prev.map((cat) => (cat.id === id ? { ...cat, name } : cat)))
+    addAuditLogEntry(`Updated category: ${name}`, "update")
+    saveData()
+  }
+
+  const deleteCategory = (id: string) => {
+    const category = categories.find((cat) => cat.id === id)
+    if (category) {
+      setCategories((prev) => prev.filter((cat) => cat.id !== id && cat.parentId !== id))
+      addAuditLogEntry(`Deleted category: ${category.name}`, "delete")
+      saveData()
+    }
+  }
+
+  // Article management
+  const addArticle = (title: string, content: string, categoryId: string, tags: string[] = []) => {
+    const newArticle: Article = {
+      id: Date.now().toString(),
+      title,
+      content,
+      categoryId,
+      tags,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      author: currentUser?.username || "Anonymous",
     }
 
-    const allArticles: Article[] = []
+    setCategories((prev) =>
+      prev.map((cat) => (cat.id === categoryId ? { ...cat, articles: [...cat.articles, newArticle] } : cat)),
+    )
 
-    categories.forEach((category) => {
-      if (category.id === selectedCategory) {
-        allArticles.push(...category.articles)
-        category.subcategories.forEach((subcategory) => {
-          allArticles.push(...subcategory.articles)
-        })
-      } else {
-        category.subcategories.forEach((subcategory) => {
-          if (subcategory.id === selectedCategory) {
-            allArticles.push(...subcategory.articles)
-          }
-        })
-      }
-    })
-
-    return allArticles
+    addAuditLogEntry(`Created article: ${title}`, "create")
+    setShowAddForm(false)
+    saveData()
   }
 
-  // Handle search
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
+  const updateArticle = (id: string, title: string, content: string, tags: string[] = []) => {
+    setCategories((prev) =>
+      prev.map((cat) => ({
+        ...cat,
+        articles: cat.articles.map((article) =>
+          article.id === id
+            ? {
+                ...article,
+                title,
+                content,
+                tags,
+                updatedAt: new Date().toISOString(),
+              }
+            : article,
+        ),
+      })),
+    )
+
+    addAuditLogEntry(`Updated article: ${title}`, "update")
+    setEditingArticle(null)
+    saveData()
+  }
+
+  const deleteArticle = (id: string) => {
+    let articleTitle = ""
+    setCategories((prev) =>
+      prev.map((cat) => ({
+        ...cat,
+        articles: cat.articles.filter((article) => {
+          if (article.id === id) {
+            articleTitle = article.title
+            return false
+          }
+          return true
+        }),
+      })),
+    )
+
+    if (articleTitle) {
+      addAuditLogEntry(`Deleted article: ${articleTitle}`, "delete")
+    }
+
+    if (selectedArticle?.id === id) {
+      setSelectedArticle(null)
+    }
+    saveData()
+  }
+
+  // Search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+    if (!query.trim()) {
       setSearchResults([])
       return
     }
 
-    const allArticles = getAllArticles()
-    const results = allArticles.filter(
-      (article) =>
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())),
-    )
-
+    const results: Article[] = []
+    categories.forEach((category) => {
+      category.articles.forEach((article) => {
+        if (
+          article.title.toLowerCase().includes(query.toLowerCase()) ||
+          article.content.toLowerCase().includes(query.toLowerCase()) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+        ) {
+          results.push(article)
+        }
+      })
+    })
     setSearchResults(results)
   }
 
-  // Clear search
-  const clearSearch = () => {
-    setSearchQuery("")
+  // Article selection
+  const toggleArticleSelection = (article: Article) => {
+    setSelectedArticles((prev) => {
+      const isSelected = prev.some((a) => a.id === article.id)
+      if (isSelected) {
+        return prev.filter((a) => a.id !== article.id)
+      } else {
+        return [...prev, article]
+      }
+    })
+  }
+
+  const clearSelectedArticles = () => {
+    setSelectedArticles([])
+  }
+
+  // User management
+  const addUser = (username: string, password: string, role: "admin" | "editor" | "viewer") => {
+    const newUser: User = {
+      id: Date.now().toString(),
+      username,
+      password,
+      role,
+      createdAt: new Date().toISOString(),
+    }
+    setUsers((prev) => [...prev, newUser])
+    addAuditLogEntry(`Created user: ${username} (${role})`, "create")
+    saveData()
+  }
+
+  const updateUser = (id: string, username: string, password: string, role: "admin" | "editor" | "viewer") => {
+    setUsers((prev) => prev.map((user) => (user.id === id ? { ...user, username, password, role } : user)))
+    addAuditLogEntry(`Updated user: ${username}`, "update")
+    saveData()
+  }
+
+  const deleteUser = (id: string) => {
+    const user = users.find((u) => u.id === id)
+    if (user) {
+      setUsers((prev) => prev.filter((u) => u.id !== id))
+      addAuditLogEntry(`Deleted user: ${user.username}`, "delete")
+      saveData()
+    }
+  }
+
+  // Data management
+  const exportData = () => {
+    const data = {
+      categories,
+      users,
+      auditLog,
+      settings: { pageVisits },
+      exportedAt: new Date().toISOString(),
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `knowledge-base-export-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    addAuditLogEntry("Exported knowledge base data", "admin")
+  }
+
+  const importData = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string)
+        if (data.categories) setCategories(data.categories)
+        if (data.users) setUsers(data.users)
+        if (data.auditLog) setAuditLog(data.auditLog)
+        if (data.settings?.pageVisits) setPageVisits(data.settings.pageVisits)
+
+        addAuditLogEntry("Imported knowledge base data", "admin")
+        saveData()
+      } catch (err) {
+        console.error("Failed to import data:", err)
+        setError("Failed to import data. Please check the file format.")
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const clearAllData = () => {
+    setCategories([])
+    setUsers([])
+    setAuditLog([])
+    setSelectedCategory(null)
+    setSelectedArticle(null)
     setSearchResults([])
-  }
-
-  // Handle category selection
-  const handleCategorySelect = (categoryId: string | null) => {
-    setSelectedCategory(categoryId)
-    setSelectedArticle(null)
-    clearSearch()
-  }
-
-  // Handle article selection
-  const handleArticleSelect = (article: Article) => {
-    setSelectedArticle(article)
-  }
-
-  // Handle back to articles
-  const handleBackToArticles = () => {
-    setSelectedArticle(null)
-    setEditingArticle(null)
-  }
-
-  // Handle add article
-  const handleAddArticle = async (articleData: Omit<Article, "id" | "createdAt" | "updatedAt">) => {
-    try {
-      setError(null)
-
-      const newArticle = await apiDatabase.addArticle(categories, articleData)
-      const updatedCategories = await apiDatabase.loadData().then((data) => data.categories)
-      setCategories(updatedCategories)
-
-      // Add audit log entry
-      const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
-        action: "article_created",
-        articleId: newArticle.id,
-        articleTitle: newArticle.title,
-        categoryId: newArticle.categoryId,
-        performedBy: currentUser?.username || "anonymous",
-        details: `Created article: ${newArticle.title}`,
-      })
-      setAuditLog(updatedAuditLog)
-
-      setCurrentView("browse")
-    } catch (error) {
-      console.error("Error adding article:", error)
-      setError("Failed to add article. Please try again.")
-    }
-  }
-
-  // Handle edit article
-  const handleEditArticle = (article: Article) => {
-    setEditingArticle(article)
-  }
-
-  // Handle update article
-  const handleUpdateArticle = async (updatedArticle: Omit<Article, "createdAt">) => {
-    try {
-      setError(null)
-
-      const updatedCategories = await apiDatabase.updateArticle(categories, updatedArticle.id, updatedArticle)
-      setCategories(updatedCategories)
-
-      // Add audit log entry
-      const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
-        action: "article_updated",
-        articleId: updatedArticle.id,
-        articleTitle: updatedArticle.title,
-        categoryId: updatedArticle.categoryId,
-        performedBy: currentUser?.username || "anonymous",
-        details: `Updated article: ${updatedArticle.title}`,
-      })
-      setAuditLog(updatedAuditLog)
-
-      setEditingArticle(null)
-      setSelectedArticle(null)
-    } catch (error) {
-      console.error("Error updating article:", error)
-      setError("Failed to update article. Please try again.")
-    }
-  }
-
-  // Handle delete article
-  const handleDeleteArticle = async (articleId: string) => {
-    if (!window.confirm("Are you sure you want to delete this article?")) {
-      return
-    }
-
-    try {
-      setError(null)
-
-      const article = getAllArticles().find((a) => a.id === articleId)
-      const updatedCategories = await apiDatabase.deleteArticle(categories, articleId)
-      setCategories(updatedCategories)
-
-      // Add audit log entry
-      if (article) {
-        const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
-          action: "article_deleted",
-          articleId: articleId,
-          articleTitle: article.title,
-          categoryId: article.categoryId,
-          performedBy: currentUser?.username || "anonymous",
-          details: `Deleted article: ${article.title}`,
-        })
-        setAuditLog(updatedAuditLog)
-      }
-
-      setSelectedArticle(null)
-    } catch (error) {
-      console.error("Error deleting article:", error)
-      setError("Failed to delete article. Please try again.")
-    }
-  }
-
-  // Handle category management
-  const handleCategoriesUpdate = async () => {
-    try {
-      await refreshData()
-    } catch (error) {
-      console.error("Error updating categories:", error)
-      setError("Failed to update categories.")
-    }
-  }
-
-  const handleUsersUpdate = async () => {
-    try {
-      await refreshData()
-    } catch (error) {
-      console.error("Error updating users:", error)
-      setError("Failed to update users.")
-    }
-  }
-
-  const handleAuditLogUpdate = async () => {
-    try {
-      await refreshData()
-    } catch (error) {
-      console.error("Error updating audit log:", error)
-      setError("Failed to update audit log.")
-    }
-  }
-
-  // Get current articles to display
-  const getCurrentArticles = () => {
-    if (searchQuery && searchResults.length >= 0) {
-      return searchResults
-    }
-    return getFilteredArticles()
-  }
-
-  // Get current title
-  const getCurrentTitle = () => {
-    if (searchQuery) {
-      return `Search Results for "${searchQuery}"`
-    }
-
-    if (selectedCategory) {
-      for (const category of categories) {
-        if (category.id === selectedCategory) {
-          return category.name
-        }
-        for (const subcategory of category.subcategories) {
-          if (subcategory.id === selectedCategory) {
-            return `${category.name} > ${subcategory.name}`
-          }
-        }
-      }
-    }
-
-    return "All Articles"
+    setSelectedArticles([])
+    addAuditLogEntry("Cleared all knowledge base data", "admin")
+    saveData()
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading knowledge base...</p>
-          <p className="text-sm text-gray-500 mt-2">Connecting to server...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading knowledge base...</p>
         </div>
       </div>
     )
@@ -361,156 +355,135 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <Navigation
-        currentUser={currentUser}
-        onLogin={() => setShowLoginModal(true)}
-        onLogout={handleLogout}
-        onViewChange={setCurrentView}
-        currentView={currentView}
-        className="h-28" // Updated navigation height
-      />
+      {/* Header with larger logo */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-6">
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-24 w-auto" />
+          </div>
+        </div>
+      </div>
 
-      {/* Error Alert */}
       {error && (
-        <div className="container mx-auto px-4 pt-4">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              {error}
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" onClick={refreshData}>
-                  Retry
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setError(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mx-4 mt-4">
+          <div className="flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+              ×
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        {currentView === "browse" && (
-          <>
-            {/* Header */}
-            <div className="text-center mb-8">
-              <img
-                src="/images/kuhlekt-logo.jpg"
-                alt="Kuhlekt Logo"
-                className="h-40 w-40 mx-auto mb-4 object-contain" // Updated logo size
+      <Navigation
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        onLogin={() => setShowLoginModal(true)}
+        onLogout={handleLogout}
+        onShowAdmin={() => setShowAdminDashboard(true)}
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+        pageVisits={pageVisits}
+        onRefresh={loadData}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <CategoryTree
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              onAddCategory={isLoggedIn ? addCategory : undefined}
+              onUpdateCategory={isLoggedIn ? updateCategory : undefined}
+              onDeleteCategory={isLoggedIn ? deleteCategory : undefined}
+            />
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {searchResults.length > 0 ? (
+              <SearchResults
+                results={searchResults}
+                searchQuery={searchQuery}
+                onSelectArticle={setSelectedArticle}
+                onToggleSelection={toggleArticleSelection}
+                selectedArticles={selectedArticles}
+                onClearSearch={() => {
+                  setSearchQuery("")
+                  setSearchResults([])
+                }}
               />
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
-              <p className="text-gray-600">Find answers, guides, and documentation</p>
-              <div className="flex items-center justify-center space-x-2 mt-2 text-sm text-gray-500">
-                <Database className="h-4 w-4 text-green-500" />
-                <span>Shared database - changes visible to all users</span>
-                <Button variant="ghost" size="sm" onClick={refreshData} className="h-6 px-2 text-xs">
-                  Refresh
-                </Button>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  type="text"
-                  placeholder="Search articles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10 pr-10"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearSearch}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            ) : selectedArticles.length > 0 ? (
+              <SelectedArticles
+                articles={selectedArticles}
+                onSelectArticle={setSelectedArticle}
+                onRemoveFromSelection={toggleArticleSelection}
+                onClearSelection={clearSelectedArticles}
+              />
+            ) : showAdminDashboard ? (
+              <AdminDashboard
+                categories={categories}
+                users={users}
+                auditLog={auditLog}
+                pageVisits={pageVisits}
+                onAddUser={addUser}
+                onUpdateUser={updateUser}
+                onDeleteUser={deleteUser}
+                onExportData={exportData}
+                onImportData={importData}
+                onClearData={clearAllData}
+                onClose={() => setShowAdminDashboard(false)}
+              />
+            ) : showAddForm ? (
+              <AddArticleForm
+                categories={categories}
+                onAddArticle={addArticle}
+                onCancel={() => setShowAddForm(false)}
+              />
+            ) : editingArticle ? (
+              <EditArticleForm
+                article={editingArticle}
+                onUpdateArticle={updateArticle}
+                onCancel={() => setEditingArticle(null)}
+              />
+            ) : selectedArticle ? (
+              <ArticleViewer
+                article={selectedArticle}
+                onEdit={isLoggedIn ? setEditingArticle : undefined}
+                onDelete={isLoggedIn ? deleteArticle : undefined}
+                onBack={() => setSelectedArticle(null)}
+              />
+            ) : selectedCategory ? (
+              <ArticleList
+                category={categories.find((cat) => cat.id === selectedCategory)}
+                onSelectArticle={setSelectedArticle}
+                onAddArticle={isLoggedIn ? () => setShowAddForm(true) : undefined}
+                onToggleSelection={toggleArticleSelection}
+                selectedArticles={selectedArticles}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Kuhlekt Knowledge Base</h2>
+                <p className="text-gray-600 mb-8">
+                  Select a category from the sidebar to browse articles, or use the search function to find specific
+                  content.
+                </p>
+                {isLoggedIn && (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    Add New Article
+                  </button>
                 )}
               </div>
-              {searchQuery && (
-                <div className="mt-2 text-center">
-                  <Button onClick={handleSearch} className="mx-auto">
-                    Search
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Main Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              {/* Sidebar - Categories */}
-              {!selectedArticle && !editingArticle && (
-                <div className="lg:col-span-1">
-                  <CategoryTree
-                    categories={categories}
-                    selectedCategory={selectedCategory}
-                    onCategorySelect={handleCategorySelect}
-                  />
-                </div>
-              )}
-
-              {/* Content Area */}
-              <div className={selectedArticle || editingArticle ? "lg:col-span-4" : "lg:col-span-3"}>
-                {editingArticle ? (
-                  <EditArticleForm
-                    article={editingArticle}
-                    categories={categories}
-                    currentUser={currentUser}
-                    onSubmit={handleUpdateArticle}
-                    onCancel={() => setEditingArticle(null)}
-                  />
-                ) : selectedArticle ? (
-                  <ArticleViewer
-                    article={selectedArticle}
-                    categories={categories}
-                    currentUser={currentUser}
-                    onBack={handleBackToArticles}
-                    onEdit={currentUser ? handleEditArticle : undefined}
-                    onDelete={currentUser ? handleDeleteArticle : undefined}
-                  />
-                ) : (
-                  <ArticleList
-                    articles={getCurrentArticles()}
-                    categories={categories}
-                    onArticleSelect={handleArticleSelect}
-                    title={getCurrentTitle()}
-                  />
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        {currentView === "add" && currentUser && (
-          <AddArticleForm
-            categories={categories}
-            onSubmit={handleAddArticle}
-            onCancel={() => setCurrentView("browse")}
-          />
-        )}
-
-        {currentView === "admin" && currentUser && (
-          <AdminDashboard
-            categories={categories}
-            users={users}
-            auditLog={auditLog}
-            onCategoriesUpdate={handleCategoriesUpdate}
-            onUsersUpdate={handleUsersUpdate}
-            onAuditLogUpdate={handleAuditLogUpdate}
-          />
-        )}
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Login Modal */}
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
     </div>
   )

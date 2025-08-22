@@ -14,17 +14,17 @@ export async function POST() {
       await fs.mkdir(DATA_DIR, { recursive: true })
     }
 
-    // Load current settings
+    // Read current settings
     let settings = { pageVisits: 0 }
     try {
-      const settingsData = await fs.readFile(SETTINGS_FILE, "utf-8")
-      settings = JSON.parse(settingsData)
+      const data = await fs.readFile(SETTINGS_FILE, "utf8")
+      settings = JSON.parse(data)
     } catch {
       // File doesn't exist, use default
     }
 
     // Increment page visits
-    settings.pageVisits += 1
+    settings.pageVisits = (settings.pageVisits || 0) + 1
 
     // Save updated settings
     await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2))
