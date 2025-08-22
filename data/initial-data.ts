@@ -4,34 +4,16 @@ export const initialData: Category[] = [
   {
     id: "1",
     name: "Getting Started",
-    description: "Essential guides to get you up and running",
+    description: "Basic information to get you started",
     icon: "BookOpen",
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
     articles: [
       {
         id: "1",
-        title: "Welcome to Kuhlekt Knowledge Base",
-        content: `# Welcome to Kuhlekt Knowledge Base
-
-This knowledge base contains comprehensive documentation, guides, and resources to help you get the most out of our platform.
-
-## What you'll find here:
-
-- **Getting Started Guides** - Step-by-step instructions for new users
-- **Feature Documentation** - Detailed explanations of all features
-- **Troubleshooting** - Solutions to common issues
-- **Best Practices** - Tips and recommendations from our experts
-
-## How to navigate:
-
-1. Use the category tree on the left to browse topics
-2. Use the search bar to find specific information
-3. Click on any article title to read the full content
-
-## Need help?
-
-If you can't find what you're looking for, please contact our support team.`,
+        title: "Welcome to the Knowledge Base",
+        content:
+          "This is your first article in the knowledge base. You can edit, delete, or create new articles using the admin interface.\n\nTo get started:\n1. Login with admin/admin123\n2. Navigate to the Admin section\n3. Explore the different management options",
         categoryId: "1",
         subcategoryId: undefined,
         tags: ["welcome", "introduction", "getting-started"],
@@ -120,6 +102,26 @@ Congratulations! Your account is now set up and ready to use. Check out our othe
           },
         ],
       },
+      {
+        id: "2",
+        name: "Installation",
+        description: "How to install and set up",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01"),
+        articles: [
+          {
+            id: "2",
+            title: "System Requirements",
+            content:
+              "Before you begin, make sure your system meets the following requirements:\n\n- Node.js 18 or higher\n- Modern web browser\n- Internet connection for initial setup\n\nThis knowledge base runs entirely in your browser with data stored locally.",
+            categoryId: "2",
+            subcategoryId: "2",
+            tags: ["requirements", "setup", "installation"],
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-01"),
+          },
+        ],
+      },
     ],
   },
   {
@@ -201,7 +203,7 @@ Learn how to add new users to your organization and set their permissions.
   {
     id: "3",
     name: "Troubleshooting",
-    description: "Solutions to common problems and issues",
+    description: "Common issues and solutions",
     icon: "AlertCircle",
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
@@ -273,6 +275,17 @@ If none of these solutions work, please contact our support team with:
         categoryId: "3",
         subcategoryId: undefined,
         tags: ["login", "troubleshooting", "authentication"],
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01"),
+      },
+      {
+        id: "3",
+        title: "Common Issues",
+        content:
+          "Here are some common issues you might encounter:\n\n1. **Login problems** - Check your username and password\n   - Default admin: admin/admin123\n   - Default editor: editor/editor123\n   - Default viewer: viewer/viewer123\n\n2. **Slow loading** - Clear your browser cache\n\n3. **Missing content** - Refresh the page or check the data management section\n\n4. **Import/Export issues** - Ensure you're using valid JSON files",
+        categoryId: "3",
+        subcategoryId: undefined,
+        tags: ["troubleshooting", "issues", "help"],
         createdAt: new Date("2024-01-01"),
         updatedAt: new Date("2024-01-01"),
       },

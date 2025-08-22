@@ -33,7 +33,6 @@ export interface Category {
   id: string
   name: string
   description: string
-  icon: string
   articles?: Article[]
   subcategories?: Subcategory[]
   createdAt: Date
@@ -42,16 +41,16 @@ export interface Category {
 
 export interface AuditLogEntry {
   id: string
-  timestamp: Date
   action: string
+  performedBy: string
+  username: string
+  timestamp: Date
   articleId?: string
   articleTitle?: string
   categoryId?: string
   categoryName?: string
   subcategoryName?: string
   userId?: string
-  username: string
-  performedBy: string
   details: string
 }
 
@@ -59,7 +58,5 @@ export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  settings: {
-    pageVisits: number
-  }
+  pageVisits: number
 }

@@ -8,24 +8,20 @@ export async function POST() {
   try {
     console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
 
-    // Load current data
-    let data
-    try {
-      const fileContent = await fs.readFile(DATA_FILE, "utf8")
-      data = JSON.parse(fileContent)
-    } catch {
-      data = { pageVisits: 0 }
-    }
+    // Read current data
+    const data = await fs.readFile(DATA_FILE, "utf8")
+    const parsed = JSON.parse(data)
 
     // Increment page visits
-    data.pageVisits = (data.pageVisits || 0) + 1
+    const newPageVisits = (parsed.pageVisits || 0) + 1
+    parsed.pageVisits = newPageVisits
 
-    // Save back to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    // Save updated data
+    await fs.writeFile(DATA_FILE, JSON.stringify(parsed, null, 2))
 
-    console.log(`✅ Page visits incremented to: ${data.pageVisits}`)
+    console.log(`✅ Page visits incremented to: ${newPageVisits}`)
 
-    return NextResponse.json({ pageVisits: data.pageVisits })
+    return NextResponse.json({ pageVisits: newPageVisits })
   } catch (error) {
     console.error("❌ Error incrementing page visits:", error)
     return NextResponse.json({ pageVisits: 0 })

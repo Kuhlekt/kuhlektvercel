@@ -91,45 +91,79 @@ export default function KnowledgeBase() {
     loadData()
   }, [])
 
-  // Handle login
+  // Handle login with detailed debugging
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log("🔐 KnowledgeBase.handleLogin() - Attempting login for:", username)
+      console.log("🔐 KnowledgeBase.handleLogin() - Attempting login")
+      console.log("📝 Login attempt details:", {
+        username: username,
+        passwordLength: password.length,
+        usersAvailable: users.length,
+      })
+
       console.log(
-        "👥 Available users:",
+        "👥 Available users in state:",
         users.map((u) => ({
+          id: u.id,
           username: u.username,
           role: u.role,
           hasPassword: !!u.password,
+          passwordLength: u.password?.length || 0,
         })),
       )
 
-      // Find user with exact match (case sensitive)
-      const user = users.find((u) => u.username === username && u.password === password)
+      // Find user with exact match
+      const user = users.find((u) => {
+        const usernameMatch = u.username === username
+        const passwordMatch = u.password === password
+
+        console.log(`🔍 Checking user ${u.username}:`, {
+          usernameMatch,
+          passwordMatch,
+          storedUsername: u.username,
+          storedPasswordLength: u.password?.length || 0,
+        })
+
+        return usernameMatch && passwordMatch
+      })
 
       if (user) {
-        console.log("✅ Login successful for user:", user.username, "with role:", user.role)
+        console.log("✅ Login successful for user:", {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+        })
 
         // Update last login time
-        const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
-        setUsers(updatedUsers)
+        try {
+          const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
+          setUsers(updatedUsers)
 
-        const updatedUser = updatedUsers.find((u) => u.id === user.id)
-        setCurrentUser(updatedUser || user)
+          const updatedUser = updatedUsers.find((u) => u.id === user.id)
+          setCurrentUser(updatedUser || user)
+        } catch (updateError) {
+          console.warn("⚠️ Failed to update last login, but continuing with login:", updateError)
+          setCurrentUser(user)
+        }
 
         setShowLoginModal(false)
         return true
       }
 
-      console.log("❌ Login failed - invalid credentials for username:", username)
-      console.log("🔍 Debug - Checking credentials:", {
+      console.log("❌ Login failed - no matching user found")
+      console.log("🔍 Debug comparison:", {
         inputUsername: username,
         inputPassword: password,
-        availableUsers: users.map((u) => ({
-          username: u.username,
-          passwordMatch: u.password === password,
-        })),
+        availableUsernames: users.map((u) => u.username),
+        exactMatches: users
+          .filter((u) => u.username === username)
+          .map((u) => ({
+            username: u.username,
+            passwordMatches: u.password === password,
+            storedPassword: u.password,
+          })),
       })
+
       return false
     } catch (error) {
       console.error("❌ KnowledgeBase.handleLogin() - Login error:", error)

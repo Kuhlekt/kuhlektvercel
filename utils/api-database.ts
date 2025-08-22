@@ -21,11 +21,11 @@ class ApiDatabase {
         headers: {
           "Content-Type": "application/json",
         },
-        cache: "no-store", // Ensure fresh data
+        cache: "no-store",
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
@@ -64,8 +64,7 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")

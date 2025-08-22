@@ -145,11 +145,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </Button>
         </form>
 
-        {/* Default Credentials - No passwords shown */}
+        {/* Available Accounts - No passwords shown */}
         <Card className="mt-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Available Accounts</CardTitle>
-            <CardDescription className="text-xs">Click on any account to auto-fill the username</CardDescription>
+            <CardDescription className="text-xs">Click on any account to auto-fill the form</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="grid grid-cols-1 gap-2 text-xs">
