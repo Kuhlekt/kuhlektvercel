@@ -9,24 +9,23 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Trash2, Edit, Plus, Users, Shield } from "lucide-react"
-import { database } from "@/utils/database"
-import type { User } from "@/types/knowledge-base"
+import { Trash2, Edit, Plus, Users, Shield, User } from "lucide-react"
+import type { User as UserType } from "@/types/knowledge-base"
 
 interface UserManagementTableProps {
-  users: User[]
+  users: UserType[]
   onUsersUpdate: () => void
 }
 
 export function UserManagementTable({ users, onUsersUpdate }: UserManagementTableProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState<UserType | null>(null)
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
     password: "",
-    role: "user" as "admin" | "user",
+    role: "viewer" as "admin" | "editor" | "viewer",
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -63,16 +62,42 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
         return
       }
 
-      await database.saveUser({
+      // Check if username already exists
+      if (users.some((user) => user.username === newUser.username)) {
+        setError("Username already exists")
+        return
+      }
+
+      // Create new user object
+      const userToAdd: UserType = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         username: newUser.username,
         email: newUser.email,
         password: newUser.password,
         role: newUser.role,
+        createdAt: new Date(),
         lastLogin: null,
+        isActive: true,
+      }
+
+      // Add to users array and trigger update
+      const updatedUsers = [...users, userToAdd]
+
+      // Save to server via API
+      const response = await fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ users: updatedUsers }),
       })
 
+      if (!response.ok) {
+        throw new Error("Failed to save user")
+      }
+
       setSuccess("User added successfully")
-      setNewUser({ username: "", email: "", password: "", role: "user" })
+      setNewUser({ username: "", email: "", password: "", role: "viewer" })
       setIsAddDialogOpen(false)
       onUsersUpdate()
     } catch (err) {
@@ -86,11 +111,23 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
     try {
       setError(null)
 
-      await database.updateUser(editingUser.id, {
-        username: editingUser.username,
-        email: editingUser.email,
-        role: editingUser.role,
+      // Update user in array
+      const updatedUsers = users.map((user) =>
+        user.id === editingUser.id ? { ...editingUser, updatedAt: new Date() } : user,
+      )
+
+      // Save to server via API
+      const response = await fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ users: updatedUsers }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to update user")
+      }
 
       setSuccess("User updated successfully")
       setIsEditDialogOpen(false)
@@ -106,7 +143,23 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
 
     try {
       setError(null)
-      await database.deleteUser(userId)
+
+      // Remove user from array
+      const updatedUsers = users.filter((user) => user.id !== userId)
+
+      // Save to server via API
+      const response = await fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ users: updatedUsers }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user")
+      }
+
       setSuccess("User deleted successfully")
       onUsersUpdate()
     } catch (err) {
@@ -115,12 +168,32 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
   }
 
   const getRoleIcon = (role: string) => {
-    return role === "admin" ? <Shield className="h-4 w-4" /> : <div className="h-4 w-4"></div>
+    switch (role) {
+      case "admin":
+        return <Shield className="h-4 w-4" />
+      case "editor":
+        return <Edit className="h-4 w-4" />
+      default:
+        return <User className="h-4 w-4" />
+    }
   }
 
   const getRoleBadgeVariant = (role: string) => {
-    return role === "admin" ? "default" : "secondary"
+    switch (role) {
+      case "admin":
+        return "default"
+      case "editor":
+        return "secondary"
+      default:
+        return "outline"
+    }
   }
+
+  console.log(
+    "👥 UserManagementTable - Rendering with users:",
+    users.length,
+    users.map((u) => u.username),
+  )
 
   return (
     <div className="space-y-6">
@@ -175,13 +248,14 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                 <Label htmlFor="role">Role</Label>
                 <Select
                   value={newUser.role}
-                  onValueChange={(value: "admin" | "user") => setNewUser({ ...newUser, role: value })}
+                  onValueChange={(value: "admin" | "editor" | "viewer") => setNewUser({ ...newUser, role: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -224,6 +298,7 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                     <th className="text-left py-2">Username</th>
                     <th className="text-left py-2">Email</th>
                     <th className="text-left py-2">Role</th>
+                    <th className="text-left py-2">Status</th>
                     <th className="text-left py-2">Last Login</th>
                     <th className="text-left py-2">Created</th>
                     <th className="text-right py-2">Actions</th>
@@ -238,6 +313,11 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                         <Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center space-x-1 w-fit">
                           {getRoleIcon(user.role)}
                           <span className="capitalize">{user.role}</span>
+                        </Badge>
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={user.isActive ? "default" : "secondary"}>
+                          {user.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </td>
                       <td className="py-3 text-gray-600">{formatDate(user.lastLogin)}</td>
@@ -307,16 +387,28 @@ export function UserManagementTable({ users, onUsersUpdate }: UserManagementTabl
                 <Label htmlFor="edit-role">Role</Label>
                 <Select
                   value={editingUser.role}
-                  onValueChange={(value: "admin" | "user") => setEditingUser({ ...editingUser, role: value })}
+                  onValueChange={(value: "admin" | "editor" | "viewer") =>
+                    setEditingUser({ ...editingUser, role: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-active"
+                  checked={editingUser.isActive}
+                  onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.checked })}
+                />
+                <Label htmlFor="edit-active">Active</Label>
               </div>
               <Button onClick={handleEditUser} className="w-full">
                 Update User

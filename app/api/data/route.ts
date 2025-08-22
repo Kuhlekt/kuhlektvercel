@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
+import { initialUsers } from "@/data/initial-users"
+import { initialData } from "@/data/initial-data"
+import { initialAuditLog } from "@/data/initial-audit-log"
 
 const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
 
@@ -14,176 +17,33 @@ async function ensureDataDirectory() {
   }
 }
 
-// Initialize with default data if file doesn't exist
-async function initializeData() {
-  const defaultData = {
-    categories: [
-      {
-        id: "1",
-        name: "Getting Started",
-        description: "Basic information to get you started",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        articles: [
-          {
-            id: "1",
-            title: "Welcome to the Knowledge Base",
-            content:
-              "This is your first article in the knowledge base. You can edit, delete, or create new articles using the admin interface.\n\nTo get started:\n1. Login with admin/admin123\n2. Navigate to the Admin section\n3. Explore the different management options",
-            categoryId: "1",
-            tags: ["welcome", "introduction", "getting-started"],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        subcategories: [
-          {
-            id: "2",
-            name: "Installation",
-            description: "How to install and set up",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            articles: [
-              {
-                id: "2",
-                title: "System Requirements",
-                content:
-                  "Before you begin, make sure your system meets the following requirements:\n\n- Node.js 18 or higher\n- Modern web browser\n- Internet connection for initial setup\n\nThis knowledge base runs entirely in your browser with data stored locally.",
-                categoryId: "2",
-                subcategoryId: "2",
-                tags: ["requirements", "setup", "installation"],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "3",
-        name: "Troubleshooting",
-        description: "Common issues and solutions",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        articles: [
-          {
-            id: "3",
-            title: "Common Issues",
-            content:
-              "Here are some common issues you might encounter:\n\n1. **Login problems** - Check your username and password\n   - Default admin: admin/admin123\n   - Default editor: editor/editor123\n   - Default viewer: viewer/viewer123\n\n2. **Slow loading** - Clear your browser cache\n\n3. **Missing content** - Refresh the page or check the data management section\n\n4. **Import/Export issues** - Ensure you're using valid JSON files",
-            categoryId: "3",
-            tags: ["troubleshooting", "issues", "help"],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        subcategories: [],
-      },
-    ],
-    users: [
-      {
-        id: "1",
-        username: "admin",
-        password: "admin123",
-        email: "admin@kuhlekt.com",
-        role: "admin",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        username: "editor",
-        password: "editor123",
-        email: "editor@kuhlekt.com",
-        role: "editor",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      },
-      {
-        id: "3",
-        username: "viewer",
-        password: "viewer123",
-        email: "viewer@kuhlekt.com",
-        role: "viewer",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      },
-    ],
-    auditLog: [
-      {
-        id: "1",
-        action: "system_initialized",
-        performedBy: "system",
-        username: "system",
-        timestamp: new Date().toISOString(),
-        details: "Knowledge base initialized with default data",
-      },
-      {
-        id: "2",
-        action: "article_created",
-        performedBy: "system",
-        username: "system",
-        timestamp: new Date().toISOString(),
-        articleId: "1",
-        articleTitle: "Welcome to the Knowledge Base",
-        categoryId: "1",
-        details: "Initial welcome article created during setup",
-      },
-    ],
-    pageVisits: 0,
-  }
-
-  try {
-    await ensureDataDirectory()
-    await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
-    console.log("✅ Initialized default data successfully")
-    return defaultData
-  } catch (error) {
-    console.error("❌ Error initializing default data:", error)
-    throw error
-  }
-}
-
-// Load data from file
+// Load data from file or create default
 async function loadData() {
   try {
     await ensureDataDirectory()
-
-    // Check if file exists
-    try {
-      await fs.access(DATA_FILE)
-    } catch {
-      console.log("🔄 No existing data file found, initializing with default data")
-      return await initializeData()
-    }
-
     const data = await fs.readFile(DATA_FILE, "utf8")
     const parsed = JSON.parse(data)
 
-    console.log("📊 Loaded data from file:", {
+    console.log("📁 Data loaded from file:", {
       categories: parsed.categories?.length || 0,
       users: parsed.users?.length || 0,
-      usernames: parsed.users?.map((u: any) => u.username) || [],
       auditLog: parsed.auditLog?.length || 0,
       pageVisits: parsed.pageVisits || 0,
     })
 
-    // Ensure all required fields exist
-    const validatedData = {
-      categories: parsed.categories || [],
-      users: parsed.users || [],
-      auditLog: parsed.auditLog || [],
-      pageVisits: parsed.pageVisits || 0,
+    return parsed
+  } catch (error) {
+    console.log("🔧 Creating default data file...")
+
+    const defaultData = {
+      categories: initialData,
+      users: initialUsers,
+      auditLog: initialAuditLog,
+      pageVisits: 0,
     }
 
-    return validatedData
-  } catch (error) {
-    console.error("❌ Error loading data from file:", error)
-    console.log("🔄 Falling back to default data initialization")
-    return await initializeData()
+    await saveData(defaultData)
+    return defaultData
   }
 }
 
@@ -191,107 +51,85 @@ async function loadData() {
 async function saveData(data: any) {
   try {
     await ensureDataDirectory()
-
-    // Validate data structure
-    const validatedData = {
-      categories: data.categories || [],
-      users: data.users || [],
-      auditLog: data.auditLog || [],
-      pageVisits: data.pageVisits || 0,
-    }
-
-    await fs.writeFile(DATA_FILE, JSON.stringify(validatedData, null, 2), "utf8")
-
-    console.log("💾 Saved data to file:", {
-      categories: validatedData.categories?.length || 0,
-      users: validatedData.users?.length || 0,
-      usernames: validatedData.users?.map((u: any) => u.username) || [],
-      auditLog: validatedData.auditLog?.length || 0,
-      pageVisits: validatedData.pageVisits || 0,
-    })
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    console.log("💾 Data saved to file successfully")
   } catch (error) {
-    console.error("❌ Error saving data to file:", error)
+    console.error("❌ Error saving data:", error)
     throw error
   }
 }
 
-// GET - Load data
 export async function GET() {
   try {
-    console.log("🔍 GET /api/data - Loading data...")
+    console.log("🔍 API GET /api/data - Loading data...")
+
     const data = await loadData()
-    console.log("✅ GET /api/data - Data loaded successfully")
 
-    return NextResponse.json(data, {
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
+    // Ensure users have all required fields
+    const users = (data.users || []).map((user: any) => ({
+      id: user.id || Date.now().toString(),
+      username: user.username,
+      password: user.password,
+      email: user.email || `${user.username}@example.com`,
+      role: user.role || "viewer",
+      createdAt: user.createdAt || new Date().toISOString(),
+      lastLogin: user.lastLogin || null,
+      isActive: user.isActive !== false,
+    }))
+
+    const response = {
+      categories: data.categories || [],
+      users: users,
+      auditLog: data.auditLog || [],
+      pageVisits: data.pageVisits || 0,
+    }
+
+    console.log("✅ API GET /api/data - Data sent:", {
+      categories: response.categories.length,
+      users: response.users.length,
+      usernames: response.users.map((u: any) => u.username),
+      auditLog: response.auditLog.length,
+      pageVisits: response.pageVisits,
     })
-  } catch (error) {
-    console.error("❌ Error in GET /api/data:", error)
 
-    // Return minimal fallback data instead of error
+    return NextResponse.json(response)
+  } catch (error) {
+    console.error("❌ API GET /api/data - Error:", error)
+
+    // Return fallback data instead of error
     const fallbackData = {
-      categories: [],
-      users: [
-        {
-          id: "1",
-          username: "admin",
-          password: "admin123",
-          email: "admin@kuhlekt.com",
-          role: "admin",
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        },
-      ],
-      auditLog: [],
+      categories: initialData,
+      users: initialUsers,
+      auditLog: initialAuditLog,
       pageVisits: 0,
     }
 
-    return NextResponse.json(fallbackData, {
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-    })
+    return NextResponse.json(fallbackData)
   }
 }
 
-// POST - Save data
 export async function POST(request: NextRequest) {
   try {
-    console.log("📝 POST /api/data - Saving data...")
-    const body = await request.json()
+    console.log("💾 API POST /api/data - Saving data...")
 
-    console.log("📊 Received data to save:", {
-      categories: body.categories?.length || 0,
-      users: body.users?.length || 0,
-      usernames: body.users?.map((u: any) => u.username) || [],
-      auditLog: body.auditLog?.length || 0,
-      pageVisits: body.pageVisits || 0,
-    })
+    const newData = await request.json()
+    const currentData = await loadData()
 
-    // Load existing data
-    const existingData = await loadData()
-
-    // Merge with new data (only update provided fields)
+    // Merge with existing data
     const updatedData = {
-      categories: body.categories !== undefined ? body.categories : existingData.categories,
-      users: body.users !== undefined ? body.users : existingData.users,
-      auditLog: body.auditLog !== undefined ? body.auditLog : existingData.auditLog,
-      pageVisits: body.pageVisits !== undefined ? body.pageVisits : existingData.pageVisits,
+      categories: newData.categories !== undefined ? newData.categories : currentData.categories,
+      users: newData.users !== undefined ? newData.users : currentData.users,
+      auditLog: newData.auditLog !== undefined ? newData.auditLog : currentData.auditLog,
+      pageVisits: newData.pageVisits !== undefined ? newData.pageVisits : currentData.pageVisits,
     }
 
     await saveData(updatedData)
-    console.log("✅ POST /api/data - Data saved successfully")
+
+    console.log("✅ API POST /api/data - Data saved successfully")
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("❌ Error in POST /api/data:", error)
-    return NextResponse.json({ error: "Failed to save data", details: error.message }, { status: 500 })
+    console.error("❌ API POST /api/data - Error:", error)
+    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
   }
 }

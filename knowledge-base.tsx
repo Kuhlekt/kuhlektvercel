@@ -40,7 +40,12 @@ export default function KnowledgeBase() {
 
       const data = await apiDatabase.loadData()
 
-      console.log("✅ KnowledgeBase.refreshData() - Data refreshed successfully")
+      console.log("✅ KnowledgeBase.refreshData() - Data refreshed successfully:", {
+        categories: data.categories?.length || 0,
+        users: data.users?.length || 0,
+        usernames: data.users?.map((u) => u.username) || [],
+        auditLog: data.auditLog?.length || 0,
+      })
 
       setCategories(data.categories || [])
       setUsers(data.users || [])
@@ -62,7 +67,12 @@ export default function KnowledgeBase() {
 
         const data = await apiDatabase.loadData()
 
-        console.log("✅ KnowledgeBase - Initial data loaded successfully")
+        console.log("✅ KnowledgeBase - Initial data loaded successfully:", {
+          categories: data.categories?.length || 0,
+          users: data.users?.length || 0,
+          usernames: data.users?.map((u) => u.username) || [],
+          auditLog: data.auditLog?.length || 0,
+        })
 
         setCategories(data.categories || [])
         setUsers(data.users || [])
@@ -87,9 +97,14 @@ export default function KnowledgeBase() {
       console.log("🔐 KnowledgeBase.handleLogin() - Attempting login for:", username)
       console.log(
         "👥 Available users:",
-        users.map((u) => ({ username: u.username, role: u.role })),
+        users.map((u) => ({
+          username: u.username,
+          role: u.role,
+          hasPassword: !!u.password,
+        })),
       )
 
+      // Find user with exact match (case sensitive)
       const user = users.find((u) => u.username === username && u.password === password)
 
       if (user) {
@@ -107,6 +122,14 @@ export default function KnowledgeBase() {
       }
 
       console.log("❌ Login failed - invalid credentials for username:", username)
+      console.log("🔍 Debug - Checking credentials:", {
+        inputUsername: username,
+        inputPassword: password,
+        availableUsers: users.map((u) => ({
+          username: u.username,
+          passwordMatch: u.password === password,
+        })),
+      })
       return false
     } catch (error) {
       console.error("❌ KnowledgeBase.handleLogin() - Login error:", error)
@@ -430,6 +453,8 @@ export default function KnowledgeBase() {
                   <span>{categories.length} categories</span>
                   <span>•</span>
                   <span>{getAllArticles().length} articles</span>
+                  <span>•</span>
+                  <span>{users.length} users</span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={refreshData} className="h-6 px-2 text-xs">
                   <RefreshCw className="h-4 w-4 mr-1" />

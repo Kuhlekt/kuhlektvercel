@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,11 +34,18 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
 
     try {
+      console.log("🔐 LoginModal - Attempting login for:", username)
       const success = await onLogin(username.trim(), password)
       if (!success) {
         setError("Invalid username or password")
+      } else {
+        // Clear form on successful login
+        setUsername("")
+        setPassword("")
+        setError("")
       }
     } catch (error) {
+      console.error("❌ LoginModal - Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -139,11 +145,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </Button>
         </form>
 
-        {/* Default Credentials */}
+        {/* Default Credentials - No passwords shown */}
         <Card className="mt-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Default Credentials</CardTitle>
-            <CardDescription className="text-xs">Click on any credential set to auto-fill the form</CardDescription>
+            <CardTitle className="text-sm">Available Accounts</CardTitle>
+            <CardDescription className="text-xs">Click on any account to auto-fill the username</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="grid grid-cols-1 gap-2 text-xs">
@@ -156,7 +162,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               >
                 <div className="text-left">
                   <div className="font-medium">Administrator</div>
-                  <div className="text-gray-500">admin / admin123</div>
+                  <div className="text-gray-500">Full system access</div>
                 </div>
               </Button>
               <Button
@@ -168,7 +174,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               >
                 <div className="text-left">
                   <div className="font-medium">Editor</div>
-                  <div className="text-gray-500">editor / editor123</div>
+                  <div className="text-gray-500">Content management access</div>
                 </div>
               </Button>
               <Button
@@ -180,7 +186,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               >
                 <div className="text-left">
                   <div className="font-medium">Viewer</div>
-                  <div className="text-gray-500">viewer / viewer123</div>
+                  <div className="text-gray-500">Read-only access</div>
                 </div>
               </Button>
             </div>
