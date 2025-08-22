@@ -14,11 +14,14 @@ class ApiDatabase {
   // Load all data from server
   async loadData(): Promise<DatabaseData> {
     try {
+      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
+
       const response = await fetch(`${this.baseUrl}/data`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store", // Ensure fresh data
       })
 
       if (!response.ok) {
@@ -26,7 +29,14 @@ class ApiDatabase {
       }
 
       const data = await response.json()
-      console.log("API loadData response:", data)
+
+      console.log("✅ ApiDatabase.loadData() - Data received:", {
+        categories: data.categories?.length || 0,
+        users: data.users?.length || 0,
+        usernames: data.users?.map((u: any) => u.username) || [],
+        auditLog: data.auditLog?.length || 0,
+        pageVisits: data.pageVisits || 0,
+      })
 
       return {
         categories: data.categories || [],
@@ -35,7 +45,7 @@ class ApiDatabase {
         pageVisits: data.pageVisits || 0,
       }
     } catch (error) {
-      console.error("Error loading data from API:", error)
+      console.error("❌ ApiDatabase.loadData() - Error loading data:", error)
       throw new Error("Failed to load data from server")
     }
   }
@@ -43,6 +53,8 @@ class ApiDatabase {
   // Save all data to server
   async saveData(data: Partial<DatabaseData>): Promise<void> {
     try {
+      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+
       const response = await fetch(`${this.baseUrl}/data`, {
         method: "POST",
         headers: {
@@ -55,9 +67,9 @@ class ApiDatabase {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      console.log("Data saved successfully to API")
+      console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
-      console.error("Error saving data to API:", error)
+      console.error("❌ ApiDatabase.saveData() - Error saving data:", error)
       throw new Error("Failed to save data to server")
     }
   }
@@ -65,6 +77,8 @@ class ApiDatabase {
   // Increment page visits
   async incrementPageVisits(): Promise<number> {
     try {
+      console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
+
       const response = await fetch(`${this.baseUrl}/data/page-visits`, {
         method: "POST",
         headers: {
@@ -73,13 +87,15 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        console.warn("⚠️ Failed to increment page visits, continuing...")
+        return 0
       }
 
       const data = await response.json()
+      console.log(`✅ Page visits incremented to: ${data.pageVisits}`)
       return data.pageVisits || 0
     } catch (error) {
-      console.error("Error incrementing page visits:", error)
+      console.warn("⚠️ Error incrementing page visits:", error)
       return 0
     }
   }
@@ -89,6 +105,8 @@ class ApiDatabase {
     categories: Category[],
     articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
   ): Promise<Article> {
+    console.log("📝 ApiDatabase.addArticle() - Adding new article:", articleData.title)
+
     const newArticle: Article = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       ...articleData,
@@ -97,8 +115,8 @@ class ApiDatabase {
     }
 
     // Find the target category
-    const updatedCategories = [...categories]
-    const targetCategory = updatedCategories.find((cat) => cat.id === articleData.categoryId)
+    const updatedCategories = JSON.parse(JSON.stringify(categories)) // Deep clone
+    const targetCategory = updatedCategories.find((cat: Category) => cat.id === articleData.categoryId)
 
     if (!targetCategory) {
       throw new Error("Category not found")
@@ -106,7 +124,7 @@ class ApiDatabase {
 
     // Add to category or subcategory
     if (articleData.subcategoryId) {
-      const subcategory = targetCategory.subcategories?.find((sub) => sub.id === articleData.subcategoryId)
+      const subcategory = targetCategory.subcategories?.find((sub: any) => sub.id === articleData.subcategoryId)
       if (!subcategory) {
         throw new Error("Subcategory not found")
       }
@@ -124,6 +142,7 @@ class ApiDatabase {
     // Save to server
     await this.saveData({ categories: updatedCategories })
 
+    console.log("✅ Article added successfully:", newArticle.title)
     return newArticle
   }
 
@@ -133,14 +152,16 @@ class ApiDatabase {
     articleId: string,
     updatedArticle: Omit<Article, "createdAt">,
   ): Promise<Category[]> {
-    const updatedCategories = [...categories]
+    console.log("📝 ApiDatabase.updateArticle() - Updating article:", articleId)
+
+    const updatedCategories = JSON.parse(JSON.stringify(categories)) // Deep clone
     let found = false
 
     // Find and update the article
     for (const category of updatedCategories) {
       // Check category articles
       if (category.articles) {
-        const articleIndex = category.articles.findIndex((article) => article.id === articleId)
+        const articleIndex = category.articles.findIndex((article: Article) => article.id === articleId)
         if (articleIndex !== -1) {
           category.articles[articleIndex] = {
             ...updatedArticle,
@@ -156,7 +177,7 @@ class ApiDatabase {
       if (category.subcategories) {
         for (const subcategory of category.subcategories) {
           if (subcategory.articles) {
-            const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
+            const articleIndex = subcategory.articles.findIndex((article: Article) => article.id === articleId)
             if (articleIndex !== -1) {
               subcategory.articles[articleIndex] = {
                 ...updatedArticle,
@@ -179,19 +200,22 @@ class ApiDatabase {
     // Save to server
     await this.saveData({ categories: updatedCategories })
 
+    console.log("✅ Article updated successfully")
     return updatedCategories
   }
 
   // Delete article
   async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
-    const updatedCategories = [...categories]
+    console.log("🗑️ ApiDatabase.deleteArticle() - Deleting article:", articleId)
+
+    const updatedCategories = JSON.parse(JSON.stringify(categories)) // Deep clone
     let found = false
 
     // Find and delete the article
     for (const category of updatedCategories) {
       // Check category articles
       if (category.articles) {
-        const articleIndex = category.articles.findIndex((article) => article.id === articleId)
+        const articleIndex = category.articles.findIndex((article: Article) => article.id === articleId)
         if (articleIndex !== -1) {
           category.articles.splice(articleIndex, 1)
           found = true
@@ -203,7 +227,7 @@ class ApiDatabase {
       if (category.subcategories) {
         for (const subcategory of category.subcategories) {
           if (subcategory.articles) {
-            const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
+            const articleIndex = subcategory.articles.findIndex((article: Article) => article.id === articleId)
             if (articleIndex !== -1) {
               subcategory.articles.splice(articleIndex, 1)
               found = true
@@ -222,16 +246,20 @@ class ApiDatabase {
     // Save to server
     await this.saveData({ categories: updatedCategories })
 
+    console.log("✅ Article deleted successfully")
     return updatedCategories
   }
 
   // Update user last login
   async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
+    console.log("👤 ApiDatabase.updateUserLastLogin() - Updating last login for user:", userId)
+
     const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
 
     // Save to server
     await this.saveData({ users: updatedUsers })
 
+    console.log("✅ User last login updated successfully")
     return updatedUsers
   }
 
@@ -251,9 +279,12 @@ class ApiDatabase {
       details: string
     },
   ): Promise<AuditLogEntry[]> {
+    console.log("📋 ApiDatabase.addAuditEntry() - Adding audit entry:", entry.action)
+
     const newEntry: AuditLogEntry = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date(),
+      username: entry.performedBy,
       ...entry,
     }
 
@@ -267,13 +298,14 @@ class ApiDatabase {
     // Save to server
     await this.saveData({ auditLog: updatedAuditLog })
 
+    console.log("✅ Audit entry added successfully")
     return updatedAuditLog
   }
 
   // Import data
   async importData(importData: any): Promise<void> {
     try {
-      console.log("Importing data to API:", importData)
+      console.log("📥 ApiDatabase.importData() - Starting data import...")
 
       // Process and validate the data
       const processedData = {
@@ -309,6 +341,7 @@ class ApiDatabase {
         ...user,
         createdAt: new Date(user.createdAt || Date.now()),
         lastLogin: user.lastLogin ? new Date(user.lastLogin) : null,
+        isActive: user.isActive !== false, // Default to true
       }))
 
       processedData.auditLog = processedData.auditLog.map((entry: any) => ({
@@ -319,9 +352,9 @@ class ApiDatabase {
       // Save all data to server
       await this.saveData(processedData)
 
-      console.log("Data imported successfully to API")
+      console.log("✅ ApiDatabase.importData() - Data imported successfully")
     } catch (error) {
-      console.error("Error importing data to API:", error)
+      console.error("❌ ApiDatabase.importData() - Error importing data:", error)
       throw new Error("Failed to import data to server")
     }
   }
@@ -329,9 +362,11 @@ class ApiDatabase {
   // Export data
   async exportData(): Promise<any> {
     try {
+      console.log("📤 ApiDatabase.exportData() - Starting data export...")
+
       const data = await this.loadData()
 
-      return {
+      const exportData = {
         categories: data.categories,
         users: data.users,
         auditLog: data.auditLog,
@@ -341,8 +376,11 @@ class ApiDatabase {
           version: "1.0",
         },
       }
+
+      console.log("✅ ApiDatabase.exportData() - Data exported successfully")
+      return exportData
     } catch (error) {
-      console.error("Error exporting data from API:", error)
+      console.error("❌ ApiDatabase.exportData() - Error exporting data:", error)
       throw new Error("Failed to export data from server")
     }
   }
@@ -350,6 +388,8 @@ class ApiDatabase {
   // Clear all data
   async clearAllData(): Promise<void> {
     try {
+      console.log("🗑️ ApiDatabase.clearAllData() - Clearing all data...")
+
       await this.saveData({
         categories: [],
         users: [],
@@ -357,9 +397,9 @@ class ApiDatabase {
         pageVisits: 0,
       })
 
-      console.log("All data cleared successfully from API")
+      console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
     } catch (error) {
-      console.error("Error clearing data from API:", error)
+      console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
       throw new Error("Failed to clear data from server")
     }
   }

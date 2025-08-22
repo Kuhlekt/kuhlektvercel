@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Home, Plus, Settings, User, LogIn, LogOut, Menu, Shield, Edit, Eye } from "lucide-react"
+import { User, LogIn, LogOut, Plus, Settings, Shield, BookOpen } from "lucide-react"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
@@ -21,95 +21,83 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
-  const getRoleIcon = (role: string) => {
+  const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return <Shield className="h-3 w-3" />
+        return "bg-red-100 text-red-800 hover:bg-red-200"
       case "editor":
-        return <Edit className="h-3 w-3" />
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200"
       case "viewer":
-        return <Eye className="h-3 w-3" />
+        return "bg-green-100 text-green-800 hover:bg-green-200"
       default:
-        return <User className="h-3 w-3" />
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200"
     }
   }
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800"
-      case "editor":
-        return "bg-blue-100 text-blue-800"
-      case "viewer":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const canCreateArticles = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
+  const canAddArticles = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
   const canAccessAdmin = currentUser && currentUser.role === "admin"
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
-            <img src="/images/kuhlekt-logo.png" alt="Kuhlekt Logo" className="h-8 w-auto object-contain" />
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt" className="h-8 w-auto" />
+            <div className="flex items-center space-x-1">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+              <span className="text-xl font-semibold text-gray-900">Knowledge Base</span>
             </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Button
-              variant={currentView === "browse" ? "default" : "ghost"}
-              onClick={() => onViewChange("browse")}
-              className="flex items-center space-x-2"
-            >
-              <Home className="h-4 w-4" />
-              <span>Browse</span>
-            </Button>
-
-            {canCreateArticles && (
-              <Button
-                variant={currentView === "add" ? "default" : "ghost"}
-                onClick={() => onViewChange("add")}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Article</span>
-              </Button>
-            )}
-
-            {canAccessAdmin && (
-              <Button
-                variant={currentView === "admin" ? "default" : "ghost"}
-                onClick={() => onViewChange("admin")}
-                className="flex items-center space-x-2"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Admin</span>
-              </Button>
-            )}
-          </div>
-
-          {/* User Menu */}
+          {/* Navigation Links */}
           <div className="flex items-center space-x-4">
+            {/* View Navigation */}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={currentView === "browse" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => onViewChange("browse")}
+                className="flex items-center space-x-1"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Browse</span>
+              </Button>
+
+              {canAddArticles && (
+                <Button
+                  variant={currentView === "add" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("add")}
+                  className="flex items-center space-x-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Article</span>
+                </Button>
+              )}
+
+              {canAccessAdmin && (
+                <Button
+                  variant={currentView === "admin" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onViewChange("admin")}
+                  className="flex items-center space-x-1"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>Admin</span>
+                </Button>
+              )}
+            </div>
+
+            {/* User Menu */}
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2">
                     <User className="h-4 w-4" />
-                    <span className="hidden md:inline">{currentUser.username}</span>
-                    <Badge
-                      variant="secondary"
-                      className={`${getRoleColor(currentUser.role)} flex items-center space-x-1`}
-                    >
-                      {getRoleIcon(currentUser.role)}
-                      <span className="capitalize">{currentUser.role}</span>
+                    <span className="hidden sm:inline">{currentUser.username}</span>
+                    <Badge variant="secondary" className={getRoleBadgeColor(currentUser.role)}>
+                      {currentUser.role}
                     </Badge>
                   </Button>
                 </DropdownMenuTrigger>
@@ -119,32 +107,24 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                     <p className="text-xs text-gray-500">{currentUser.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-
-                  {/* Mobile Navigation Items */}
-                  <div className="md:hidden">
-                    <DropdownMenuItem onClick={() => onViewChange("browse")}>
-                      <Home className="h-4 w-4 mr-2" />
-                      Browse Articles
+                  <DropdownMenuItem onClick={() => onViewChange("browse")}>
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Browse Articles
+                  </DropdownMenuItem>
+                  {canAddArticles && (
+                    <DropdownMenuItem onClick={() => onViewChange("add")}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Article
                     </DropdownMenuItem>
-
-                    {canCreateArticles && (
-                      <DropdownMenuItem onClick={() => onViewChange("add")}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Article
-                      </DropdownMenuItem>
-                    )}
-
-                    {canAccessAdmin && (
-                      <DropdownMenuItem onClick={() => onViewChange("admin")}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Admin Dashboard
-                      </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuSeparator />
-                  </div>
-
-                  <DropdownMenuItem onClick={onLogout}>
+                  )}
+                  {canAccessAdmin && (
+                    <DropdownMenuItem onClick={() => onViewChange("admin")}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
@@ -155,23 +135,6 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                 <LogIn className="h-4 w-4" />
                 <span>Sign In</span>
               </Button>
-            )}
-
-            {/* Mobile Menu */}
-            {!currentUser && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="md:hidden">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onViewChange("browse")}>
-                    <Home className="h-4 w-4 mr-2" />
-                    Browse Articles
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             )}
           </div>
         </div>

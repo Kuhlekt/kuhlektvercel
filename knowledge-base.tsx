@@ -12,7 +12,7 @@ import { LoginModal } from "./components/login-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, X, Database, AlertCircle } from "lucide-react"
+import { Search, X, Database, AlertCircle, RefreshCw } from "lucide-react"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
 import { apiDatabase } from "./utils/api-database"
 
@@ -35,25 +35,18 @@ export default function KnowledgeBase() {
   // Refresh data function
   const refreshData = useCallback(async () => {
     try {
-      console.log("Refreshing all data...")
+      console.log("🔄 KnowledgeBase.refreshData() - Refreshing all data...")
       setError(null)
 
       const data = await apiDatabase.loadData()
 
-      console.log("Data refreshed:", {
-        categories: data.categories?.length || 0,
-        users: data.users?.length || 0,
-        usernames: data.users?.map((u) => u.username) || [],
-        auditLog: data.auditLog?.length || 0,
-      })
+      console.log("✅ KnowledgeBase.refreshData() - Data refreshed successfully")
 
       setCategories(data.categories || [])
       setUsers(data.users || [])
       setAuditLog(data.auditLog || [])
-
-      console.log("State updated successfully")
     } catch (error) {
-      console.error("Error refreshing data:", error)
+      console.error("❌ KnowledgeBase.refreshData() - Error refreshing data:", error)
       setError("Failed to refresh data from server.")
     }
   }, [])
@@ -65,16 +58,11 @@ export default function KnowledgeBase() {
         setIsLoading(true)
         setError(null)
 
-        console.log("Loading initial data from API...")
+        console.log("🚀 KnowledgeBase - Loading initial data...")
 
         const data = await apiDatabase.loadData()
 
-        console.log("Initial data loaded:", {
-          categories: data.categories?.length || 0,
-          users: data.users?.length || 0,
-          usernames: data.users?.map((u) => u.username) || [],
-          auditLog: data.auditLog?.length || 0,
-        })
+        console.log("✅ KnowledgeBase - Initial data loaded successfully")
 
         setCategories(data.categories || [])
         setUsers(data.users || [])
@@ -82,10 +70,8 @@ export default function KnowledgeBase() {
 
         // Increment page visits
         await apiDatabase.incrementPageVisits()
-
-        console.log("Initial data loaded successfully")
       } catch (error) {
-        console.error("Error loading initial data:", error)
+        console.error("❌ KnowledgeBase - Error loading initial data:", error)
         setError("Failed to load data from server. Please refresh the page.")
       } finally {
         setIsLoading(false)
@@ -98,16 +84,16 @@ export default function KnowledgeBase() {
   // Handle login
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log("Attempting login with:", username)
+      console.log("🔐 KnowledgeBase.handleLogin() - Attempting login for:", username)
       console.log(
-        "Available users:",
+        "👥 Available users:",
         users.map((u) => ({ username: u.username, role: u.role })),
       )
 
       const user = users.find((u) => u.username === username && u.password === password)
 
       if (user) {
-        console.log("Login successful for user:", user.username, "with role:", user.role)
+        console.log("✅ Login successful for user:", user.username, "with role:", user.role)
 
         // Update last login time
         const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
@@ -120,10 +106,10 @@ export default function KnowledgeBase() {
         return true
       }
 
-      console.log("Login failed - invalid credentials for username:", username)
+      console.log("❌ Login failed - invalid credentials for username:", username)
       return false
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("❌ KnowledgeBase.handleLogin() - Login error:", error)
       setError("Login failed. Please try again.")
       return false
     }
@@ -131,6 +117,7 @@ export default function KnowledgeBase() {
 
   // Handle logout
   const handleLogout = () => {
+    console.log("👋 KnowledgeBase.handleLogout() - User logging out")
     setCurrentUser(null)
     setCurrentView("browse")
     setSelectedArticle(null)
@@ -205,6 +192,7 @@ export default function KnowledgeBase() {
     )
 
     setSearchResults(results)
+    console.log(`🔍 Search for "${searchQuery}" returned ${results.length} results`)
   }
 
   // Clear search
@@ -254,7 +242,7 @@ export default function KnowledgeBase() {
 
       setCurrentView("browse")
     } catch (error) {
-      console.error("Error adding article:", error)
+      console.error("❌ Error adding article:", error)
       setError("Failed to add article. Please try again.")
     }
   }
@@ -286,7 +274,7 @@ export default function KnowledgeBase() {
       setEditingArticle(null)
       setSelectedArticle(null)
     } catch (error) {
-      console.error("Error updating article:", error)
+      console.error("❌ Error updating article:", error)
       setError("Failed to update article. Please try again.")
     }
   }
@@ -319,24 +307,24 @@ export default function KnowledgeBase() {
 
       setSelectedArticle(null)
     } catch (error) {
-      console.error("Error deleting article:", error)
+      console.error("❌ Error deleting article:", error)
       setError("Failed to delete article. Please try again.")
     }
   }
 
   // Handle category management updates
   const handleCategoriesUpdate = useCallback(async () => {
-    console.log("Categories update triggered")
+    console.log("📂 Categories update triggered")
     await refreshData()
   }, [refreshData])
 
   const handleUsersUpdate = useCallback(async () => {
-    console.log("Users update triggered")
+    console.log("👥 Users update triggered")
     await refreshData()
   }, [refreshData])
 
   const handleAuditLogUpdate = useCallback(async () => {
-    console.log("Audit log update triggered")
+    console.log("📋 Audit log update triggered")
     await refreshData()
   }, [refreshData])
 
@@ -376,9 +364,13 @@ export default function KnowledgeBase() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading knowledge base...</p>
-          <p className="text-sm text-gray-500 mt-2">Connecting to server...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Knowledge Base</h2>
+          <p className="text-gray-600 mb-4">Connecting to server and loading data...</p>
+          <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+            <Database className="h-4 w-4" />
+            <span>Initializing database connection</span>
+          </div>
         </div>
       </div>
     )
@@ -404,6 +396,7 @@ export default function KnowledgeBase() {
               {error}
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" size="sm" onClick={refreshData} className="h-6 px-2 text-xs">
+                  <RefreshCw className="h-4 w-4 mr-1" />
                   Retry
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setError(null)}>
@@ -419,7 +412,7 @@ export default function KnowledgeBase() {
       <div className="container mx-auto px-4 py-8">
         {currentView === "browse" && (
           <>
-            {/* Header with reduced logo size */}
+            {/* Header */}
             <div className="text-center mb-8">
               <img
                 src="/images/kuhlekt-logo.png"
@@ -428,10 +421,18 @@ export default function KnowledgeBase() {
               />
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
               <p className="text-gray-600 mb-4">Find answers, guides, and documentation</p>
-              <div className="flex items-center justify-center space-x-2 mt-2 text-sm text-gray-500">
-                <Database className="h-4 w-4 text-green-500" />
-                <span>Shared database - changes visible to all users</span>
+              <div className="flex items-center justify-center space-x-4 mt-2 text-sm text-gray-500">
+                <div className="flex items-center space-x-2">
+                  <Database className="h-4 w-4 text-green-500" />
+                  <span>Database connected</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>{categories.length} categories</span>
+                  <span>•</span>
+                  <span>{getAllArticles().length} articles</span>
+                </div>
                 <Button variant="ghost" size="sm" onClick={refreshData} className="h-6 px-2 text-xs">
+                  <RefreshCw className="h-4 w-4 mr-1" />
                   Refresh
                 </Button>
               </div>
@@ -463,6 +464,7 @@ export default function KnowledgeBase() {
               {searchQuery && (
                 <div className="mt-2 text-center">
                   <Button onClick={handleSearch} className="mx-auto">
+                    <Search className="h-4 w-4 mr-2" />
                     Search
                   </Button>
                 </div>
