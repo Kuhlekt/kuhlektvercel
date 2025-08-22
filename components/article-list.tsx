@@ -12,13 +12,13 @@ interface ArticleListProps {
   title: string
 }
 
-export function ArticleList({ articles, categories, onArticleSelect, title }: ArticleListProps) {
+export function ArticleList({ articles = [], categories = [], onArticleSelect, title }: ArticleListProps) {
   const getCategoryName = (categoryId: string): string => {
     for (const category of categories) {
       if (category.id === categoryId) {
         return category.name
       }
-      for (const subcategory of category.subcategories) {
+      for (const subcategory of category.subcategories || []) {
         if (subcategory.id === categoryId) {
           return `${category.name} > ${subcategory.name}`
         }
@@ -34,6 +34,11 @@ export function ArticleList({ articles, categories, onArticleSelect, title }: Ar
   const getPreview = (content: string): string => {
     const plainText = stripHtml(content)
     return plainText.length > 150 ? plainText.substring(0, 150) + "..." : plainText
+  }
+
+  const formatDate = (date: Date | string): string => {
+    const dateObj = typeof date === "string" ? new Date(date) : date
+    return dateObj.toLocaleDateString()
   }
 
   return (
@@ -73,7 +78,7 @@ export function ArticleList({ articles, categories, onArticleSelect, title }: Ar
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
-                      <span>{article.createdAt.toLocaleDateString()}</span>
+                      <span>{formatDate(article.createdAt)}</span>
                     </div>
                     {article.createdBy && (
                       <div className="flex items-center space-x-1">
@@ -83,7 +88,7 @@ export function ArticleList({ articles, categories, onArticleSelect, title }: Ar
                     )}
                   </div>
 
-                  {article.tags.length > 0 && (
+                  {article.tags && article.tags.length > 0 && (
                     <div className="flex items-center space-x-1">
                       <Tag className="h-3 w-3" />
                       <div className="flex space-x-1">

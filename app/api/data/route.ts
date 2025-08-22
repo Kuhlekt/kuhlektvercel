@@ -3,6 +3,10 @@ import { promises as fs } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
+const CATEGORIES_FILE = path.join(DATA_DIR, "categories.json")
+const USERS_FILE = path.join(DATA_DIR, "users.json")
+const AUDIT_LOG_FILE = path.join(DATA_DIR, "audit-log.json")
+const SETTINGS_FILE = path.join(DATA_DIR, "settings.json")
 
 // Ensure data directory exists
 async function ensureDataDir() {
@@ -13,91 +17,120 @@ async function ensureDataDir() {
   }
 }
 
-// Helper function to read JSON file
-async function readJsonFile(filename: string, defaultValue: any = {}) {
+// Initialize default data files
+async function initializeDataFiles() {
   await ensureDataDir()
-  const filePath = path.join(DATA_DIR, filename)
+
+  // Initialize categories.json
   try {
-    const data = await fs.readFile(filePath, "utf8")
-    return JSON.parse(data)
+    await fs.access(CATEGORIES_FILE)
   } catch {
-    return defaultValue
+    const defaultCategories = []
+    await fs.writeFile(CATEGORIES_FILE, JSON.stringify(defaultCategories, null, 2))
+  }
+
+  // Initialize users.json
+  try {
+    await fs.access(USERS_FILE)
+  } catch {
+    const defaultUsers = [
+      {
+        id: "1",
+        username: "admin",
+        password: "admin123",
+        role: "admin",
+        createdAt: new Date().toISOString(),
+        lastLogin: null,
+      },
+      {
+        id: "2",
+        username: "editor",
+        password: "editor123",
+        role: "editor",
+        createdAt: new Date().toISOString(),
+        lastLogin: null,
+      },
+      {
+        id: "3",
+        username: "viewer",
+        password: "viewer123",
+        role: "viewer",
+        createdAt: new Date().toISOString(),
+        lastLogin: null,
+      },
+    ]
+    await fs.writeFile(USERS_FILE, JSON.stringify(defaultUsers, null, 2))
+  }
+
+  // Initialize audit-log.json
+  try {
+    await fs.access(AUDIT_LOG_FILE)
+  } catch {
+    const defaultAuditLog = []
+    await fs.writeFile(AUDIT_LOG_FILE, JSON.stringify(defaultAuditLog, null, 2))
+  }
+
+  // Initialize settings.json
+  try {
+    await fs.access(SETTINGS_FILE)
+  } catch {
+    const defaultSettings = { pageVisits: 0 }
+    await fs.writeFile(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2))
   }
 }
 
-// Helper function to write JSON file
-async function writeJsonFile(filename: string, data: any) {
-  await ensureDataDir()
-  const filePath = path.join(DATA_DIR, filename)
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2))
-}
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const type = searchParams.get("type")
-
+export async function GET() {
   try {
-    switch (type) {
-      case "categories":
-        const categories = await readJsonFile("categories.json", { categories: [] })
-        return NextResponse.json(categories)
+    await initializeDataFiles()
 
-      case "users":
-        const users = await readJsonFile("users.json", {
-          users: [
-            { id: "1", username: "admin", password: "admin123", role: "admin" },
-            { id: "2", username: "editor", password: "editor123", role: "editor" },
-            { id: "3", username: "viewer", password: "viewer123", role: "viewer" },
-          ],
-        })
-        return NextResponse.json(users)
+    const [categoriesData, usersData, auditLogData, settingsData] = await Promise.all([
+      fs.readFile(CATEGORIES_FILE, "utf-8").then((data) => JSON.parse(data)),
+      fs.readFile(USERS_FILE, "utf-8").then((data) => JSON.parse(data)),
+      fs.readFile(AUDIT_LOG_FILE, "utf-8").then((data) => JSON.parse(data)),
+      fs.readFile(SETTINGS_FILE, "utf-8").then((data) => JSON.parse(data)),
+    ])
 
-      case "audit-log":
-        const auditLog = await readJsonFile("audit-log.json", { auditLog: [] })
-        return NextResponse.json(auditLog)
-
-      case "settings":
-        const settings = await readJsonFile("settings.json", { settings: { pageVisits: 0 } })
-        return NextResponse.json(settings)
-
-      default:
-        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 })
-    }
+    return NextResponse.json({
+      categories: categoriesData,
+      users: usersData,
+      auditLog: auditLogData,
+      settings: settingsData,
+    })
   } catch (error) {
-    console.error("Error in GET /api/data:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error reading data:", error)
+    return NextResponse.json({ error: "Failed to read data" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const type = searchParams.get("type")
-
   try {
-    const body = await request.json()
+    await initializeDataFiles()
 
-    switch (type) {
-      case "categories":
-        await writeJsonFile("categories.json", { categories: body.categories })
-        return NextResponse.json({ success: true })
+    const data = await request.json()
 
-      case "users":
-        await writeJsonFile("users.json", { users: body.users })
-        return NextResponse.json({ success: true })
+    const writePromises = []
 
-      case "audit-log":
-        await writeJsonFile("audit-log.json", { auditLog: body.auditLog })
-        return NextResponse.json({ success: true })
-
-      case "settings":
-        await writeJsonFile("settings.json", { settings: body.settings })
-        return NextResponse.json({ success: true })
-
-      default:
-        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 })
+    if (data.categories !== undefined) {
+      writePromises.push(fs.writeFile(CATEGORIES_FILE, JSON.stringify(data.categories, null, 2)))
     }
+
+    if (data.users !== undefined) {
+      writePromises.push(fs.writeFile(USERS_FILE, JSON.stringify(data.users, null, 2)))
+    }
+
+    if (data.auditLog !== undefined) {
+      writePromises.push(fs.writeFile(AUDIT_LOG_FILE, JSON.stringify(data.auditLog, null, 2)))
+    }
+
+    if (data.settings !== undefined) {
+      writePromises.push(fs.writeFile(SETTINGS_FILE, JSON.stringify(data.settings, null, 2)))
+    }
+
+    await Promise.all(writePromises)
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error in POST /api/data:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error writing data:", error)
+    return NextResponse.json({ error: "Failed to write data" }, { status: 500 })
   }
 }
