@@ -2,11 +2,15 @@ import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
-const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
+const VISITS_FILE_PATH = path.join(process.cwd(), "data", "page-visits.json")
 
-// Ensure data directory exists
+interface PageVisitsData {
+  count: number
+  lastVisit: string
+}
+
 async function ensureDataDirectory() {
-  const dataDir = path.dirname(DATA_FILE)
+  const dataDir = path.dirname(VISITS_FILE_PATH)
   try {
     await fs.access(dataDir)
   } catch {
@@ -14,46 +18,42 @@ async function ensureDataDirectory() {
   }
 }
 
-// Load data from file
-async function loadData() {
+async function loadVisits(): Promise<PageVisitsData> {
   try {
     await ensureDataDirectory()
-    const data = await fs.readFile(DATA_FILE, "utf8")
+    const data = await fs.readFile(VISITS_FILE_PATH, "utf-8")
     return JSON.parse(data)
-  } catch (error) {
-    console.error("Error loading data for page visits:", error)
-    return { pageVisits: 0 }
+  } catch {
+    return { count: 0, lastVisit: new Date().toISOString() }
   }
 }
 
-// Save data to file
-async function saveData(data: any) {
+async function saveVisits(data: PageVisitsData): Promise<void> {
+  await ensureDataDirectory()
+  await fs.writeFile(VISITS_FILE_PATH, JSON.stringify(data, null, 2), "utf-8")
+}
+
+export async function GET() {
   try {
-    await ensureDataDirectory()
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    const visits = await loadVisits()
+    return NextResponse.json(visits)
   } catch (error) {
-    console.error("Error saving data for page visits:", error)
-    throw error
+    console.error("Error loading page visits:", error)
+    return NextResponse.json({ error: "Failed to load page visits" }, { status: 500 })
   }
 }
 
 export async function POST() {
   try {
-    console.log("📈 Incrementing page visits...")
-
-    const data = await loadData()
-    const updatedData = {
-      ...data,
-      pageVisits: (data.pageVisits || 0) + 1,
+    const visits = await loadVisits()
+    const updatedVisits = {
+      count: visits.count + 1,
+      lastVisit: new Date().toISOString(),
     }
-
-    await saveData(updatedData)
-
-    console.log(`✅ Page visits incremented to: ${updatedData.pageVisits}`)
-
-    return NextResponse.json({ pageVisits: updatedData.pageVisits })
+    await saveVisits(updatedVisits)
+    return NextResponse.json(updatedVisits)
   } catch (error) {
-    console.error("❌ Error incrementing page visits:", error)
+    console.error("Error incrementing page visits:", error)
     return NextResponse.json({ error: "Failed to increment page visits" }, { status: 500 })
   }
 }

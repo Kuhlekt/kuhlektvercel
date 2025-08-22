@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Plus, Edit, Trash2, Shield, Eye, AlertCircle, CheckCircle } from "lucide-react"
 import { apiDatabase } from "../utils/api-database"
-import type { KnowledgeBaseUser } from "../types/knowledge-base"
+import type { User as KnowledgeBaseUser } from "../types/knowledge-base"
 
 interface UserManagementTableProps {
   users: KnowledgeBaseUser[]
