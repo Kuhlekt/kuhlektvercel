@@ -69,7 +69,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
     try {
       setIsExporting(true)
 
-      console.log("🔄 DataManagement.handleExport() - Starting data export...")
+      console.log("Starting data export...")
       const data = await apiDatabase.exportData()
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
@@ -82,10 +82,10 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      console.log("✅ Data exported successfully")
+      console.log("Data exported successfully")
       showMessage("success", "Data exported successfully!")
     } catch (error) {
-      console.error("❌ Export error:", error)
+      console.error("Export error:", error)
       showMessage("error", "Failed to export data. Please try again.")
     } finally {
       setIsExporting(false)
@@ -102,7 +102,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
         const content = e.target?.result as string
         const data = JSON.parse(content)
 
-        console.log("📁 File parsed successfully:", {
+        console.log("File parsed successfully:", {
           categories: data.categories?.length || 0,
           users: data.users?.length || 0,
           auditLog: data.auditLog?.length || 0,
@@ -110,7 +110,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
 
         setImportPreview(data)
       } catch (error) {
-        console.error("❌ File parsing error:", error)
+        console.error("File parsing error:", error)
         showMessage("error", "Invalid JSON file. Please select a valid backup file.")
       }
     }
@@ -124,7 +124,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       setIsImporting(true)
       setImportProgress(0)
 
-      console.log("🔄 DataManagement.handleImport() - Starting data import...")
+      console.log("Starting data import...")
 
       // Simulate progress
       const progressInterval = setInterval(() => {
@@ -136,7 +136,7 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       clearInterval(progressInterval)
       setImportProgress(100)
 
-      console.log("✅ Data imported successfully, triggering UI update...")
+      console.log("Data imported successfully, triggering UI update...")
       showMessage("success", "Data imported successfully! Refreshing data...")
 
       // Clear preview and reset file input
@@ -148,9 +148,9 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       // Trigger immediate data update
       await onDataUpdate()
 
-      console.log("✅ UI update completed")
+      console.log("UI update completed")
     } catch (error) {
-      console.error("❌ Import error:", error)
+      console.error("Import error:", error)
       showMessage("error", "Failed to import data. Please check the file format and try again.")
     } finally {
       setIsImporting(false)
@@ -170,18 +170,18 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
     try {
       setIsClearing(true)
 
-      console.log("🔄 DataManagement.handleClearData() - Starting data clear...")
+      console.log("Starting data clear...")
       await apiDatabase.clearAllData()
 
-      console.log("✅ Data cleared successfully, triggering UI update...")
+      console.log("Data cleared successfully, triggering UI update...")
       showMessage("success", "All data cleared successfully!")
 
       // Trigger immediate data update
       await onDataUpdate()
 
-      console.log("✅ UI update completed")
+      console.log("UI update completed")
     } catch (error) {
-      console.error("❌ Clear data error:", error)
+      console.error("Clear data error:", error)
       showMessage("error", "Failed to clear data. Please try again.")
     } finally {
       setIsClearing(false)

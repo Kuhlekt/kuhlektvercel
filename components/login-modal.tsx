@@ -6,11 +6,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { LogIn, Shield, Edit, Eye, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { User, Lock, Shield, Edit, Eye, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -26,12 +26,23 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password")
+      return
+    }
 
     try {
+      setIsLoading(true)
+      setError(null)
+
       const success = await onLogin(username, password)
-      if (!success) {
+
+      if (success) {
+        setUsername("")
+        setPassword("")
+        onClose()
+      } else {
         setError("Invalid username or password")
       }
     } catch (err) {
@@ -41,9 +52,10 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
-  const handleQuickLogin = (user: string, pass: string) => {
+  const handleQuickLogin = (user: string, pass: string, role: string) => {
     setUsername(user)
     setPassword(pass)
+    setError(null)
   }
 
   const handleClose = () => {
@@ -58,111 +70,123 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <LogIn className="h-5 w-5 mr-2" />
+            <User className="h-5 w-5 mr-2" />
             Login to Knowledge Base
           </DialogTitle>
+          <DialogDescription>Enter your credentials to access the knowledge base admin features</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-
           {/* Quick Login Options */}
           <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-700">Quick Login Options:</div>
-
-            <div className="grid gap-2">
+            <h4 className="text-sm font-medium text-gray-900">Quick Login Options:</h4>
+            <div className="space-y-2">
               <Card
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => handleQuickLogin("admin", "admin123")}
+                onClick={() => handleQuickLogin("admin", "admin123", "admin")}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Shield className="h-4 w-4 text-red-600" />
-                      <div>
-                        <div className="font-medium">Administrator</div>
-                        <div className="text-xs text-gray-500">Full system access</div>
-                      </div>
+                      <Shield className="h-4 w-4 text-red-500" />
+                      <span className="font-medium">Admin</span>
                     </div>
-                    <Badge variant="default">Admin</Badge>
+                    <Badge variant="destructive">Full Access</Badge>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Complete system administration access</p>
                 </CardContent>
               </Card>
 
               <Card
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => handleQuickLogin("editor", "editor123")}
+                onClick={() => handleQuickLogin("editor", "editor123", "editor")}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Edit className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <div className="font-medium">Editor</div>
-                        <div className="text-xs text-gray-500">Content management</div>
-                      </div>
+                      <Edit className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium">Editor</span>
                     </div>
-                    <Badge variant="secondary">Editor</Badge>
+                    <Badge variant="secondary">Content Management</Badge>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Create, edit, and manage articles</p>
                 </CardContent>
               </Card>
 
               <Card
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => handleQuickLogin("viewer", "viewer123")}
+                onClick={() => handleQuickLogin("viewer", "viewer123", "viewer")}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4 text-green-600" />
-                      <div>
-                        <div className="font-medium">Viewer</div>
-                        <div className="text-xs text-gray-500">Read-only access</div>
-                      </div>
+                      <Eye className="h-4 w-4 text-green-500" />
+                      <span className="font-medium">Viewer</span>
                     </div>
-                    <Badge variant="outline">Viewer</Badge>
+                    <Badge variant="outline">Read Only</Badge>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Browse and read articles only</p>
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Manual Login Form */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Or login manually:</h4>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-2 pt-2">
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Login
+                    </>
+                  )}
+                </Button>
+                <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </DialogContent>

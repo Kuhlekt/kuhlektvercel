@@ -32,7 +32,7 @@ export default function KnowledgeBase() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Refresh data function with enhanced UI update
+  // Refresh data function with force reload
   const refreshData = useCallback(async () => {
     try {
       console.log("🔄 KnowledgeBase.refreshData() - Refreshing all data...")
@@ -51,8 +51,6 @@ export default function KnowledgeBase() {
       setCategories([...data.categories] || [])
       setUsers([...data.users] || [])
       setAuditLog([...data.auditLog] || [])
-
-      console.log("🔄 State updated, forcing re-render...")
     } catch (error) {
       console.error("❌ KnowledgeBase.refreshData() - Error refreshing data:", error)
       setError("Failed to refresh data from server.")
@@ -374,17 +372,17 @@ export default function KnowledgeBase() {
 
   // Handle category management updates with forced refresh
   const handleCategoriesUpdate = useCallback(async () => {
-    console.log("📂 Categories update triggered")
+    console.log("📂 Categories update triggered - forcing full refresh")
     await refreshData()
   }, [refreshData])
 
   const handleUsersUpdate = useCallback(async () => {
-    console.log("👥 Users update triggered")
+    console.log("👥 Users update triggered - forcing full refresh")
     await refreshData()
   }, [refreshData])
 
   const handleAuditLogUpdate = useCallback(async () => {
-    console.log("📋 Audit log update triggered")
+    console.log("📋 Audit log update triggered - forcing full refresh")
     await refreshData()
   }, [refreshData])
 

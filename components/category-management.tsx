@@ -1,16 +1,27 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Folder, FolderPlus, Trash2, Plus, AlertTriangle } from "lucide-react"
-import type { Category } from "../types/knowledge-base"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Plus, Edit, Trash2, Folder, FolderPlus, AlertCircle, CheckCircle } from "lucide-react"
 import { apiDatabase } from "../utils/api-database"
+import type { Category } from "../types/knowledge-base"
 
 interface CategoryManagementProps {
   categories: Category[]
@@ -18,332 +29,385 @@ interface CategoryManagementProps {
 }
 
 export function CategoryManagement({ categories, onCategoriesUpdate }: CategoryManagementProps) {
-  const [newCategoryName, setNewCategoryName] = useState("")
-  const [newCategoryDescription, setNewCategoryDescription] = useState("")
-  const [newSubcategoryName, setNewSubcategoryName] = useState("")
-  const [newSubcategoryDescription, setNewSubcategoryDescription] = useState("")
-  const [selectedParentCategory, setSelectedParentCategory] = useState("")
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return
+  // Form state
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 5000)
+  }
+
+  const resetForm = () => {
+    setName("")
+    setDescription("")
+    setError(null)
+  }
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!name.trim()) {
+      setError("Category name is required")
+      return
+    }
 
     try {
       setIsLoading(true)
       setError(null)
 
-      console.log("🔄 CategoryManagement.handleAddCategory() - Adding category:", newCategoryName)
+      const newCategory: Category = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: name.trim(),
+        description: description.trim(),
+        articles: [],
+        subcategories: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
 
-      await apiDatabase.addCategory(categories, newCategoryName.trim(), newCategoryDescription.trim() || undefined)
+      const updatedCategories = [...categories, newCategory]
 
-      setNewCategoryName("")
-      setNewCategoryDescription("")
+      await apiDatabase.saveData({ categories: updatedCategories })
 
-      console.log("✅ Category added, triggering UI update...")
-      onCategoriesUpdate()
+      showMessage("success", "Category created successfully!")
+      setShowAddDialog(false)
+      resetForm()
+      await onCategoriesUpdate()
     } catch (error) {
-      console.error("❌ Error adding category:", error)
-      setError("Failed to add category. Please try again.")
+      console.error("Error creating category:", error)
+      setError("Failed to create category. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleAddSubcategory = async () => {
-    if (!newSubcategoryName.trim() || !selectedParentCategory) return
+  const handleEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!editingCategory) return
+
+    if (!name.trim()) {
+      setError("Category name is required")
+      return
+    }
 
     try {
       setIsLoading(true)
       setError(null)
 
-      console.log("🔄 CategoryManagement.handleAddSubcategory() - Adding subcategory:", newSubcategoryName)
-
-      await apiDatabase.addSubcategory(
-        categories,
-        selectedParentCategory,
-        newSubcategoryName.trim(),
-        newSubcategoryDescription.trim() || undefined,
+      const updatedCategories = categories.map((cat) =>
+        cat.id === editingCategory.id
+          ? {
+              ...cat,
+              name: name.trim(),
+              description: description.trim(),
+              updatedAt: new Date(),
+            }
+          : cat,
       )
 
-      setNewSubcategoryName("")
-      setNewSubcategoryDescription("")
-      setSelectedParentCategory("")
+      await apiDatabase.saveData({ categories: updatedCategories })
 
-      console.log("✅ Subcategory added, triggering UI update...")
-      onCategoriesUpdate()
+      showMessage("success", "Category updated successfully!")
+      setShowEditDialog(false)
+      setEditingCategory(null)
+      resetForm()
+      await onCategoriesUpdate()
     } catch (error) {
-      console.error("❌ Error adding subcategory:", error)
-      setError("Failed to add subcategory. Please try again.")
+      console.error("Error updating category:", error)
+      setError("Failed to update category. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    if (!category) return
-
-    const totalArticles =
-      (category.articles?.length || 0) +
-      (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0)
-
-    if (totalArticles > 0) {
-      if (
-        !window.confirm(
-          `This category contains ${totalArticles} articles. Are you sure you want to delete it? All articles will be lost.`,
-        )
-      ) {
-        return
-      }
-    } else {
-      if (!window.confirm("Are you sure you want to delete this category?")) {
-        return
-      }
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete the category "${categoryName}"? This will also delete all articles in this category.`,
+      )
+    ) {
+      return
     }
 
     try {
       setIsLoading(true)
-      setError(null)
 
-      console.log("🔄 CategoryManagement.handleDeleteCategory() - Deleting category:", categoryId)
+      const updatedCategories = categories.filter((cat) => cat.id !== categoryId)
 
-      await apiDatabase.deleteCategory(categories, categoryId)
+      await apiDatabase.saveData({ categories: updatedCategories })
 
-      console.log("✅ Category deleted, triggering UI update...")
-      onCategoriesUpdate()
+      showMessage("success", "Category deleted successfully!")
+      await onCategoriesUpdate()
     } catch (error) {
-      console.error("❌ Error deleting category:", error)
-      setError("Failed to delete category. Please try again.")
+      console.error("Error deleting category:", error)
+      showMessage("error", "Failed to delete category. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string) => {
-    const category = categories.find((c) => c.id === categoryId)
-    const subcategory = category?.subcategories?.find((s) => s.id === subcategoryId)
+  const openEditDialog = (category: Category) => {
+    setEditingCategory(category)
+    setName(category.name)
+    setDescription(category.description)
+    setShowEditDialog(true)
+  }
 
-    if (!subcategory) return
+  const closeDialogs = () => {
+    setShowAddDialog(false)
+    setShowEditDialog(false)
+    setEditingCategory(null)
+    resetForm()
+  }
 
-    const articleCount = subcategory.articles?.length || 0
-
-    if (articleCount > 0) {
-      if (
-        !window.confirm(
-          `This subcategory contains ${articleCount} articles. Are you sure you want to delete it? All articles will be lost.`,
-        )
-      ) {
-        return
-      }
-    } else {
-      if (!window.confirm("Are you sure you want to delete this subcategory?")) {
-        return
-      }
+  const getTotalArticles = (category: Category): number => {
+    let total = category.articles?.length || 0
+    if (category.subcategories) {
+      category.subcategories.forEach((sub) => {
+        total += sub.articles?.length || 0
+      })
     }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      console.log("🔄 CategoryManagement.handleDeleteSubcategory() - Deleting subcategory:", subcategoryId)
-
-      await apiDatabase.deleteSubcategory(categories, categoryId, subcategoryId)
-
-      console.log("✅ Subcategory deleted, triggering UI update...")
-      onCategoriesUpdate()
-    } catch (error) {
-      console.error("❌ Error deleting subcategory:", error)
-      setError("Failed to delete subcategory. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
+    return total
   }
 
   return (
     <div className="space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium mb-2">Category Management</h3>
+          <p className="text-sm text-gray-600">
+            Create and manage knowledge base categories to organize your articles.
+          </p>
+        </div>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button
+              onClick={() => {
+                resetForm()
+                setShowAddDialog(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Category
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Category</DialogTitle>
+              <DialogDescription>Create a new category to organize your articles.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddCategory} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="add-name">Name *</Label>
+                <Input
+                  id="add-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter category name"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-description">Description</Label>
+                <Textarea
+                  id="add-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter category description (optional)"
+                  disabled={isLoading}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex space-x-2 pt-4">
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Create Category
+                    </>
+                  )}
+                </Button>
+                <Button type="button" variant="outline" onClick={closeDialogs} disabled={isLoading}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {message && (
+        <Alert variant={message.type === "error" ? "destructive" : "default"}>
+          {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+          <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
 
-      {/* Add New Category */}
+      {/* Categories Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <FolderPlus className="h-5 w-5 mr-2" />
-            Add New Category
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="categoryName">Category Name *</Label>
-              <Input
-                id="categoryName"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Enter category name"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <Label htmlFor="categoryDescription">Description</Label>
-              <Input
-                id="categoryDescription"
-                value={newCategoryDescription}
-                onChange={(e) => setNewCategoryDescription(e.target.value)}
-                placeholder="Optional description"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleAddCategory}
-            disabled={!newCategoryName.trim() || isLoading}
-            className="w-full md:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {isLoading ? "Adding..." : "Add Category"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Add New Subcategory */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Folder className="h-5 w-5 mr-2" />
-            Add New Subcategory
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="parentCategory">Parent Category *</Label>
-            <Select value={selectedParentCategory} onValueChange={setSelectedParentCategory} disabled={isLoading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select parent category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="subcategoryName">Subcategory Name *</Label>
-              <Input
-                id="subcategoryName"
-                value={newSubcategoryName}
-                onChange={(e) => setNewSubcategoryName(e.target.value)}
-                placeholder="Enter subcategory name"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <Label htmlFor="subcategoryDescription">Description</Label>
-              <Input
-                id="subcategoryDescription"
-                value={newSubcategoryDescription}
-                onChange={(e) => setNewSubcategoryDescription(e.target.value)}
-                placeholder="Optional description"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleAddSubcategory}
-            disabled={!newSubcategoryName.trim() || !selectedParentCategory || isLoading}
-            className="w-full md:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {isLoading ? "Adding..." : "Add Subcategory"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Category Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Category Overview</CardTitle>
+          <CardTitle>Categories</CardTitle>
+          <CardDescription>Manage your knowledge base categories and their organization.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {categories.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No categories yet. Create your first category above.</p>
-            ) : (
-              categories.map((category) => {
-                const totalArticles =
-                  (category.articles?.length || 0) +
-                  (category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0)
-
-                return (
-                  <div key={category.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Folder className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <span className="font-medium">{category.name}</span>
-                          {category.description && <p className="text-sm text-gray-600">{category.description}</p>}
-                        </div>
+          {categories.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Articles</TableHead>
+                  <TableHead>Subcategories</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center">
+                        <Folder className="h-4 w-4 mr-2 text-blue-500" />
+                        {category.name}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">{totalArticles} articles</Badge>
-                        <Badge variant="outline">{category.articles?.length || 0} direct</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="text-sm text-gray-600 line-clamp-2">{category.description || "No description"}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{getTotalArticles(category)} total</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{category.subcategories?.length || 0}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {new Date(category.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(category)} disabled={isLoading}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteCategory(category.id)}
-                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteCategory(category.id, category.name)}
                           disabled={isLoading}
+                          className="text-red-600 hover:text-red-700"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-
-                    {category.subcategories && category.subcategories.length > 0 && (
-                      <div className="ml-6 space-y-1 mt-3">
-                        {category.subcategories.map((sub) => (
-                          <div
-                            key={sub.id}
-                            className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded"
-                          >
-                            <div>
-                              <span className="text-gray-700">• {sub.name}</span>
-                              {sub.description && <span className="text-gray-500 ml-2">- {sub.description}</span>}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="outline" className="text-xs">
-                                {sub.articles?.length || 0} articles
-                              </Badge>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteSubcategory(category.id, sub.id)}
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                                disabled={isLoading}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <Folder className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Categories</h3>
+              <p className="text-gray-500 mb-4">Get started by creating your first category.</p>
+              <Button
+                onClick={() => {
+                  resetForm()
+                  setShowAddDialog(true)
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>Update the category information.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditCategory} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name *</Label>
+              <Input
+                id="edit-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter category name"
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter category description (optional)"
+                disabled={isLoading}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex space-x-2 pt-4">
+              <Button type="submit" disabled={isLoading} className="flex-1">
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Category
+                  </>
+                )}
+              </Button>
+              <Button type="button" variant="outline" onClick={closeDialogs} disabled={isLoading}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
