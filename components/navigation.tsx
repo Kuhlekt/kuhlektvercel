@@ -1,80 +1,26 @@
-"use client"
-
-import { Button } from "@/components/ui/button"
-import { LogIn, LogOut, Plus, Settings, Home } from "lucide-react"
-import type { User } from "../types/knowledge-base"
-
-interface NavigationProps {
-  currentUser: User | null
-  onLogin: () => void
-  onLogout: () => void
-  onViewChange: (view: "browse" | "add" | "admin") => void
-  currentView: "browse" | "add" | "admin"
-}
-
-export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
+const Navigation = () => {
   return (
-    <nav className="bg-white shadow-sm border-b h-24">
-      <div className="container mx-auto px-4 h-full">
-        <div className="flex items-center justify-between h-full">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <img src="/images/kuhlekt-logo.jpg" alt="Kuhlekt Logo" className="h-16 w-16 object-contain" />
-          </div>
-
-          {/* Navigation Items */}
-          <div className="flex items-center space-x-4">
-            <Button
-              variant={currentView === "browse" ? "default" : "ghost"}
-              onClick={() => onViewChange("browse")}
-              className="flex items-center space-x-2"
-            >
-              <Home className="h-4 w-4" />
-              <span>Browse</span>
-            </Button>
-
-            {currentUser && (
-              <>
-                <Button
-                  variant={currentView === "add" ? "default" : "ghost"}
-                  onClick={() => onViewChange("add")}
-                  className="flex items-center space-x-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Article</span>
-                </Button>
-
-                <Button
-                  variant={currentView === "admin" ? "default" : "ghost"}
-                  onClick={() => onViewChange("admin")}
-                  className="flex items-center space-x-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Admin</span>
-                </Button>
-              </>
-            )}
-
-            {/* User Actions */}
-            <div className="flex items-center space-x-2 border-l pl-4">
-              {currentUser ? (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">Welcome, {currentUser.username}</span>
-                  <Button variant="outline" onClick={onLogout} className="flex items-center space-x-2 bg-transparent">
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={onLogin} className="flex items-center space-x-2">
-                  <LogIn className="h-4 w-4" />
-                  <span>Login</span>
-                </Button>
-              )}
+    <nav className="bg-white shadow-lg">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex justify-between">
+          <div className="flex space-x-7">
+            <div>
+              <img
+                src="/images/kuhlekt-logo.jpg"
+                alt="Kuhlekt Logo"
+                className="h-16 w-auto" // Increased from smaller size
+              />
             </div>
+            {/* Additional navigation links can be added here */}
           </div>
+          <div className="hidden md:flex items-center space-x-1">
+            {/* Additional navigation items can be added here */}
+          </div>
+          <div className="md:hidden flex items-center">{/* Mobile menu button can be added here */}</div>
         </div>
       </div>
     </nav>
   )
 }
+
+export default Navigation
