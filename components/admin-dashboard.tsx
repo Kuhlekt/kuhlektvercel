@@ -1,242 +1,278 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Users, FileText, Database, Activity, TrendingUp, Clock, Shield } from "lucide-react"
 import { CategoryManagement } from "./category-management"
 import { ArticleManagement } from "./article-management"
 import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
-import { Settings, Users, FileText, FolderTree, Activity, Database } from "lucide-react"
-import type { Category, User, AuditLogEntry, Article } from "../types/knowledge-base"
-import { calculateTotalArticles } from "../utils/article-utils"
+import { database } from "@/utils/database"
+import type { User, Category, AuditLogEntry } from "@/types/knowledge-base"
 
 interface AdminDashboardProps {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-  onCategoriesUpdate: () => void
-  onUsersUpdate: () => void
-  onAuditLogUpdate: () => void
+  currentUser?: User
+  onLogout: () => void
 }
 
-export function AdminDashboard({
-  categories,
-  users,
-  auditLog,
-  onCategoriesUpdate,
-  onUsersUpdate,
-  onAuditLogUpdate,
-}: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState("overview")
+export function AdminDashboard({ currentUser, onLogout }: AdminDashboardProps) {
+  const [categories, setCategories] = useState<Category[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
+  const [stats, setStats] = useState({
+    totalArticles: 0,
+    totalCategories: 0,
+    totalUsers: 0,
+    totalAuditEntries: 0,
+    pageVisits: 0,
+  })
 
-  // Calculate statistics
-  const totalArticles = calculateTotalArticles(categories)
-  const totalCategories = categories.length
-  const totalSubcategories = categories.reduce((sum, cat) => sum + (cat.subcategories?.length || 0), 0)
-  const totalUsers = users.length
-  const recentAuditEntries = auditLog.slice(0, 5)
+  useEffect(() => {
+    loadData()
+  }, [])
 
-  // Handle data updates - this will refresh all data
+  const loadData = async () => {
+    try {
+      const [categoriesData, usersData, auditLogData] = await Promise.all([
+        database.getCategories(),
+        database.getUsers(),
+        database.getAuditLog(),
+      ])
+
+      setCategories(categoriesData)
+      setUsers(usersData)
+      setAuditLog(auditLogData)
+
+      // Calculate stats
+      const totalArticles = categoriesData.reduce((total, category) => {
+        const categoryArticles = category.articles?.length || 0
+        const subcategoryArticles =
+          category.subcategories?.reduce((subTotal, sub) => subTotal + (sub.articles?.length || 0), 0) || 0
+        return total + categoryArticles + subcategoryArticles
+      }, 0)
+
+      const pageVisits = Number.parseInt(localStorage.getItem("kb_page_visits") || "0", 10)
+
+      setStats({
+        totalArticles,
+        totalCategories: categoriesData.length,
+        totalUsers: usersData.length,
+        totalAuditEntries: auditLogData.length,
+        pageVisits,
+      })
+    } catch (error) {
+      console.error("Failed to load admin data:", error)
+    }
+  }
+
   const handleDataUpdate = () => {
-    onCategoriesUpdate()
-    onUsersUpdate()
-    onAuditLogUpdate()
+    loadData()
   }
 
-  // Handle edit article
-  const handleEditArticle = (article: Article) => {
-    // This would typically open an edit modal or navigate to edit page
-    console.log("Edit article:", article)
+  const recentActivity = auditLog.slice(0, 5).map((entry) => ({
+    id: entry.id,
+    action: entry.action,
+    user: entry.username || entry.performedBy || "Unknown",
+    target: entry.articleTitle || entry.categoryName || "Unknown",
+    timestamp: entry.timestamp,
+  }))
+
+  const formatDate = (dateValue: any): string => {
+    if (!dateValue) return "Unknown"
+
+    try {
+      const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return date.toLocaleDateString()
+      }
+      return "Invalid Date"
+    } catch {
+      return "Invalid Date"
+    }
   }
 
-  // Handle delete article
-  const handleDeleteArticle = (articleId: string) => {
-    // This would typically call an API to delete the article
-    console.log("Delete article:", articleId)
-    onCategoriesUpdate() // Refresh categories after deletion
+  const formatTime = (dateValue: any): string => {
+    if (!dateValue) return "Unknown"
+
+    try {
+      const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return date.toLocaleTimeString()
+      }
+      return "Invalid Time"
+    } catch {
+      return "Invalid Time"
+    }
+  }
+
+  const formatDateTime = (dateValue: any): string => {
+    if (!dateValue) return "Unknown"
+
+    try {
+      const date = typeof dateValue === "string" ? new Date(dateValue) : dateValue
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+      }
+      return "Invalid Date"
+    } catch {
+      return "Invalid Date"
+    }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Manage your knowledge base content, users, and settings</p>
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-4">
+              <Shield className="h-8 w-8 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-sm text-gray-500">Welcome back, {currentUser?.username || "Admin"}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Badge variant="secondary" className="flex items-center space-x-1">
+                <Clock className="h-3 w-3" />
+                <span>Last login: {currentUser?.lastLogin ? formatDate(currentUser.lastLogin) : "Never"}</span>
+              </Badge>
+              <Button variant="outline" onClick={onLogout}>
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center space-x-2">
-            <FolderTree className="h-4 w-4" />
-            <span className="hidden sm:inline">Categories</span>
-          </TabsTrigger>
-          <TabsTrigger value="articles" className="flex items-center space-x-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Articles</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Users</span>
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="flex items-center space-x-2">
-            <Activity className="h-4 w-4" />
-            <span className="hidden sm:inline">Audit Log</span>
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center space-x-2">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Data</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="articles">Articles</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="audit">Audit Log</TabsTrigger>
+            <TabsTrigger value="data">Data</TabsTrigger>
+          </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalArticles}</div>
+                  <p className="text-xs text-muted-foreground">Across all categories</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalCategories}</div>
+                  <p className="text-xs text-muted-foreground">Knowledge base sections</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                  <p className="text-xs text-muted-foreground">Registered accounts</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Page Visits</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.pageVisits}</div>
+                  <p className="text-xs text-muted-foreground">Total page views</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activity */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Activity className="h-5 w-5" />
+                  <span>Recent Activity</span>
+                </CardTitle>
+                <CardDescription>Latest actions performed in the system</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalArticles}</div>
-                <p className="text-xs text-muted-foreground">Across all categories</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                <FolderTree className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalCategories}</div>
-                <p className="text-xs text-muted-foreground">{totalSubcategories} subcategories</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalUsers}</div>
-                <p className="text-xs text-muted-foreground">Registered users</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Audit Entries</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{auditLog.length}</div>
-                <p className="text-xs text-muted-foreground">Total logged actions</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentAuditEntries.length === 0 ? (
-                <p className="text-gray-600 text-center py-4">No recent activity</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentAuditEntries.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">{entry.action}</Badge>
-                          <span className="text-sm font-medium">{entry.performedBy}</span>
+                {recentActivity.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between py-2 border-b last:border-b-0"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {activity.action} - {activity.target}
+                            </p>
+                            <p className="text-xs text-gray-500">by {activity.user}</p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{entry.details}</p>
+                        <div className="text-xs text-gray-500">{formatDateTime(activity.timestamp)}</div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {entry.timestamp.toLocaleDateString()} {entry.timestamp.toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No recent activity</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Category Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Category Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {categories.length === 0 ? (
-                <p className="text-gray-600 text-center py-4">No categories created yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {categories.map((category) => {
-                    const categoryArticles = category.articles?.length || 0
-                    const subcategoryArticles =
-                      category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0
-                    const totalCategoryArticles = categoryArticles + subcategoryArticles
+          {/* Categories Tab */}
+          <TabsContent value="categories">
+            <CategoryManagement categories={categories} onCategoriesUpdate={handleDataUpdate} />
+          </TabsContent>
 
-                    return (
-                      <div key={category.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <span className="font-medium">{category.name}</span>
-                          {category.description && <p className="text-sm text-gray-600">{category.description}</p>}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{totalCategoryArticles} articles</Badge>
-                          <Badge variant="outline">{category.subcategories?.length || 0} subcategories</Badge>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* Articles Tab */}
+          <TabsContent value="articles">
+            <ArticleManagement categories={categories} onUpdate={handleDataUpdate} />
+          </TabsContent>
 
-        {/* Categories Tab */}
-        <TabsContent value="categories">
-          <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
-        </TabsContent>
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <UserManagementTable users={users} onUsersUpdate={handleDataUpdate} />
+          </TabsContent>
 
-        {/* Articles Tab */}
-        <TabsContent value="articles">
-          <ArticleManagement
-            categories={categories}
-            onEditArticle={handleEditArticle}
-            onDeleteArticle={handleDeleteArticle}
-          />
-        </TabsContent>
+          {/* Audit Log Tab */}
+          <TabsContent value="audit">
+            <AuditLog auditLog={auditLog} />
+          </TabsContent>
 
-        {/* Users Tab */}
-        <TabsContent value="users">
-          <UserManagementTable users={users} onUsersUpdate={onUsersUpdate} />
-        </TabsContent>
-
-        {/* Audit Log Tab */}
-        <TabsContent value="audit">
-          <AuditLog auditLog={auditLog} onAuditLogUpdate={onAuditLogUpdate} />
-        </TabsContent>
-
-        {/* Data Management Tab */}
-        <TabsContent value="data">
-          <DataManagement categories={categories} users={users} auditLog={auditLog} onDataUpdate={handleDataUpdate} />
-        </TabsContent>
-      </Tabs>
+          {/* Data Management Tab */}
+          <TabsContent value="data">
+            <DataManagement onDataUpdate={handleDataUpdate} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
