@@ -8,18 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Users, FileText, FolderTree, Plus, Folder, Trash2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Users, FileText, FolderTree, Plus, Folder, Trash2, AlertTriangle } from "lucide-react"
 import { ArticleManagement } from "./article-management"
-import { DataManagement } from "./data-management"
+import { AuditLog } from "./audit-log"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
+import { apiDatabase } from "../utils/api-database"
 
 interface AdminDashboardProps {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  onCategoriesUpdate: (categories: Category[]) => void
-  onUsersUpdate: (users: User[]) => void
-  onAuditLogUpdate: (auditLog: AuditLogEntry[]) => void
+  onCategoriesUpdate: () => void
+  onUsersUpdate: () => void
+  onAuditLogUpdate: () => void
 }
 
 export function AdminDashboard({
@@ -33,6 +35,8 @@ export function AdminDashboard({
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newSubcategoryName, setNewSubcategoryName] = useState("")
   const [selectedParentCategory, setSelectedParentCategory] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const getTotalArticles = () => {
     return categories.reduce((total, category) => {
@@ -46,64 +50,134 @@ export function AdminDashboard({
     return categories.reduce((total, category) => total + category.subcategories.length, 0)
   }
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return
 
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: newCategoryName.trim(),
-      articles: [],
-      subcategories: [],
-    }
+    try {
+      setIsLoading(true)
+      setError(null)
 
-    const updatedCategories = [...categories, newCategory]
-    onCategoriesUpdate(updatedCategories)
-    setNewCategoryName("")
+      await apiDatabase.addCategory(categories, newCategoryName.trim())
+      setNewCategoryName("")
+      onCategoriesUpdate()
+    } catch (error) {
+      console.error("Error adding category:", error)
+      setError("Failed to add category. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleAddSubcategory = () => {
+  const handleAddSubcategory = async () => {
     if (!newSubcategoryName.trim() || !selectedParentCategory) return
 
-    const updatedCategories = categories.map((category) => {
-      if (category.id === selectedParentCategory) {
-        const newSubcategory = {
-          id: Date.now().toString(),
-          name: newSubcategoryName.trim(),
-          articles: [],
-        }
+    try {
+      setIsLoading(true)
+      setError(null)
 
-        return {
-          ...category,
-          subcategories: [...category.subcategories, newSubcategory],
-        }
-      }
-      return category
-    })
-
-    onCategoriesUpdate(updatedCategories)
-    setNewSubcategoryName("")
-    setSelectedParentCategory("")
-  }
-
-  const handleDeleteCategory = (categoryId: string) => {
-    if (window.confirm("Are you sure you want to delete this category? All articles in it will be lost.")) {
-      const updatedCategories = categories.filter((cat) => cat.id !== categoryId)
-      onCategoriesUpdate(updatedCategories)
+      await apiDatabase.addSubcategory(categories, selectedParentCategory, newSubcategoryName.trim())
+      setNewSubcategoryName("")
+      setSelectedParentCategory("")
+      onCategoriesUpdate()
+    } catch (error) {
+      console.error("Error adding subcategory:", error)
+      setError("Failed to add subcategory. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleDeleteSubcategory = (categoryId: string, subcategoryId: string) => {
-    if (window.confirm("Are you sure you want to delete this subcategory? All articles in it will be lost.")) {
-      const updatedCategories = categories.map((category) => {
-        if (category.id === categoryId) {
-          return {
-            ...category,
-            subcategories: category.subcategories.filter((sub) => sub.id !== subcategoryId),
-          }
-        }
-        return category
-      })
-      onCategoriesUpdate(updatedCategories)
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!window.confirm("Are you sure you want to delete this category? All articles in it will be lost.")) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await apiDatabase.deleteCategory(categories, categoryId)
+      onCategoriesUpdate()
+    } catch (error) {
+      console.error("Error deleting category:", error)
+      setError("Failed to delete category. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string) => {
+    if (!window.confirm("Are you sure you want to delete this subcategory? All articles in it will be lost.")) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await apiDatabase.deleteSubcategory(categories, categoryId, subcategoryId)
+      onCategoriesUpdate()
+    } catch (error) {
+      console.error("Error deleting subcategory:", error)
+      setError("Failed to delete subcategory. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleExportData = async () => {
+    try {
+      setError(null)
+      await apiDatabase.exportData()
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      setError("Failed to export data. Please try again.")
+    }
+  }
+
+  const handleImportData = async (file: File) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await apiDatabase.importData(file)
+
+      // Refresh all data
+      onCategoriesUpdate()
+      onUsersUpdate()
+      onAuditLogUpdate()
+
+      alert("Data imported successfully!")
+    } catch (error) {
+      console.error("Error importing data:", error)
+      setError(error instanceof Error ? error.message : "Failed to import data.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleClearAllData = async () => {
+    if (!window.confirm("Are you sure you want to clear ALL data? This cannot be undone!")) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await apiDatabase.clearAllData()
+
+      // Refresh all data
+      onCategoriesUpdate()
+      onUsersUpdate()
+      onAuditLogUpdate()
+
+      alert("All data cleared successfully!")
+    } catch (error) {
+      console.error("Error clearing data:", error)
+      setError("Failed to clear data. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -140,6 +214,13 @@ export function AdminDashboard({
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
@@ -163,7 +244,7 @@ export function AdminDashboard({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
         </TabsList>
 
@@ -235,11 +316,12 @@ export function AdminDashboard({
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="Enter category name"
+                    disabled={isLoading}
                   />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full" disabled={!newCategoryName.trim()}>
+                <Button onClick={handleAddCategory} className="w-full" disabled={!newCategoryName.trim() || isLoading}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Category
+                  {isLoading ? "Adding..." : "Add Category"}
                 </Button>
               </CardContent>
             </Card>
@@ -255,7 +337,7 @@ export function AdminDashboard({
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="parentCategory">Parent Category</Label>
-                  <Select value={selectedParentCategory} onValueChange={setSelectedParentCategory}>
+                  <Select value={selectedParentCategory} onValueChange={setSelectedParentCategory} disabled={isLoading}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select parent category" />
                     </SelectTrigger>
@@ -275,15 +357,16 @@ export function AdminDashboard({
                     value={newSubcategoryName}
                     onChange={(e) => setNewSubcategoryName(e.target.value)}
                     placeholder="Enter subcategory name"
+                    disabled={isLoading}
                   />
                 </div>
                 <Button
                   onClick={handleAddSubcategory}
                   className="w-full"
-                  disabled={!newSubcategoryName.trim() || !selectedParentCategory}
+                  disabled={!newSubcategoryName.trim() || !selectedParentCategory || isLoading}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Subcategory
+                  {isLoading ? "Adding..." : "Add Subcategory"}
                 </Button>
               </CardContent>
             </Card>
@@ -315,6 +398,7 @@ export function AdminDashboard({
                             size="sm"
                             onClick={() => handleDeleteCategory(category.id)}
                             className="text-red-600 hover:text-red-700"
+                            disabled={isLoading}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -335,6 +419,7 @@ export function AdminDashboard({
                                   size="sm"
                                   onClick={() => handleDeleteSubcategory(category.id, sub.id)}
                                   className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                  disabled={isLoading}
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
@@ -359,42 +444,76 @@ export function AdminDashboard({
           />
         </TabsContent>
 
-        <TabsContent value="users">
-          <Card>
+        <TabsContent value="audit">
+          <AuditLog auditLog={auditLog} />
+        </TabsContent>
+
+        <TabsContent value="data" className="space-y-6">
+          {/* Export/Import */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Export */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Data</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">Download a complete backup of all your knowledge base data.</p>
+                <Button onClick={handleExportData} className="w-full" disabled={isLoading}>
+                  Export Data
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Import */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Import Data</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Restore your knowledge base from a backup file. This will replace all current data.
+                </p>
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Warning:</strong> Importing will completely replace all existing data.
+                  </AlertDescription>
+                </Alert>
+                <Input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handleImportData(file)
+                    }
+                  }}
+                  disabled={isLoading}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Danger Zone */}
+          <Card className="border-red-200">
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
+              <CardTitle className="text-red-600">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{user.username}</p>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                      <p className="text-xs text-gray-500">Role: {user.role}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
-                      {user.lastLogin && (
-                        <span className="text-xs text-gray-500">Last login: {user.lastLogin.toLocaleDateString()}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                <div>
+                  <h4 className="font-medium text-red-800">Clear All Data</h4>
+                  <p className="text-sm text-red-600">
+                    Permanently delete all articles, categories, and audit logs. This action cannot be undone.
+                  </p>
+                </div>
+                <Button variant="destructive" onClick={handleClearAllData} disabled={isLoading}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isLoading ? "Clearing..." : "Clear All"}
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="data">
-          <DataManagement
-            categories={categories}
-            users={users}
-            auditLog={auditLog}
-            onCategoriesUpdate={onCategoriesUpdate}
-            onUsersUpdate={onUsersUpdate}
-            onAuditLogUpdate={onAuditLogUpdate}
-          />
         </TabsContent>
       </Tabs>
     </div>

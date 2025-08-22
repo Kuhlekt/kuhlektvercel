@@ -12,9 +12,9 @@ import { LoginModal } from "./components/login-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, X, Wifi, WifiOff } from "lucide-react"
+import { Search, X, Database, AlertCircle } from "lucide-react"
 import type { Category, Article, User, AuditLogEntry } from "./types/knowledge-base"
-import { database } from "./utils/database"
+import { apiDatabase } from "./utils/api-database"
 
 export default function KnowledgeBase() {
   // State management
@@ -31,96 +31,52 @@ export default function KnowledgeBase() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isOnline, setIsOnline] = useState(true)
 
-  // Load initial data and set up real-time subscriptions
+  // Load initial data
   useEffect(() => {
-    let categoriesSubscription: any
-    let auditSubscription: any
-
     const loadData = async () => {
       try {
         setIsLoading(true)
         setError(null)
 
-        console.log("Loading data from database...")
+        console.log("Loading data from API...")
 
-        // Load all data in parallel
-        const [loadedCategories, loadedUsers, loadedAuditLog] = await Promise.all([
-          database.getCategories(),
-          database.getUsers(),
-          database.getAuditLog(),
-        ])
+        const data = await apiDatabase.loadData()
 
-        console.log("Loaded categories:", loadedCategories)
-        console.log("Loaded users:", loadedUsers)
-        console.log("Loaded audit log:", loadedAuditLog)
+        console.log("Loaded data:", data)
 
-        setCategories(loadedCategories)
-        setUsers(loadedUsers)
-        setAuditLog(loadedAuditLog)
+        setCategories(data.categories)
+        setUsers(data.users)
+        setAuditLog(data.auditLog)
 
         // Increment page visits
-        await database.incrementPageVisits()
+        await apiDatabase.incrementPageVisits()
 
-        // Set up real-time subscriptions
-        categoriesSubscription = database.subscribeToCategories(async () => {
-          console.log("Categories changed, reloading...")
-          try {
-            const updatedCategories = await database.getCategories()
-            setCategories(updatedCategories)
-          } catch (error) {
-            console.error("Error reloading categories:", error)
-          }
-        })
-
-        auditSubscription = database.subscribeToAuditLog(async () => {
-          console.log("Audit log changed, reloading...")
-          try {
-            const updatedAuditLog = await database.getAuditLog()
-            setAuditLog(updatedAuditLog)
-          } catch (error) {
-            console.error("Error reloading audit log:", error)
-          }
-        })
-
-        setIsOnline(true)
         console.log("Data loaded successfully")
       } catch (error) {
         console.error("Error loading data:", error)
-        setError("Failed to load data from database. Please check your connection.")
-        setIsOnline(false)
+        setError("Failed to load data from server. Please refresh the page.")
       } finally {
         setIsLoading(false)
       }
     }
 
     loadData()
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      if (categoriesSubscription) {
-        categoriesSubscription.unsubscribe()
-      }
-      if (auditSubscription) {
-        auditSubscription.unsubscribe()
-      }
-    }
   }, [])
 
-  // Handle online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
+  // Refresh data function for manual refresh
+  const refreshData = async () => {
+    try {
+      setError(null)
+      const data = await apiDatabase.loadData()
+      setCategories(data.categories)
+      setUsers(data.users)
+      setAuditLog(data.auditLog)
+    } catch (error) {
+      console.error("Error refreshing data:", error)
+      setError("Failed to refresh data from server.")
     }
-  }, [])
+  }
 
   // Handle login
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
@@ -130,13 +86,12 @@ export default function KnowledgeBase() {
       const user = users.find((u) => u.username === username && u.password === password)
 
       if (user) {
-        // Update last login time in database
-        const updatedUser = await database.updateUser(user.id, { lastLogin: new Date() })
-        setCurrentUser(updatedUser)
-
-        // Refresh users list
-        const updatedUsers = await database.getUsers()
+        // Update last login time
+        const updatedUsers = await apiDatabase.updateUserLastLogin(users, user.id)
         setUsers(updatedUsers)
+
+        const updatedUser = updatedUsers.find((u) => u.id === user.id)
+        setCurrentUser(updatedUser || user)
 
         console.log("Login successful")
         setShowLoginModal(false)
@@ -247,10 +202,12 @@ export default function KnowledgeBase() {
     try {
       setError(null)
 
-      const newArticle = await database.saveArticle(articleData)
+      const newArticle = await apiDatabase.addArticle(categories, articleData)
+      const updatedCategories = await apiDatabase.loadData().then((data) => data.categories)
+      setCategories(updatedCategories)
 
       // Add audit log entry
-      await database.addAuditEntry({
+      const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
         action: "article_created",
         articleId: newArticle.id,
         articleTitle: newArticle.title,
@@ -258,8 +215,8 @@ export default function KnowledgeBase() {
         performedBy: currentUser?.username || "anonymous",
         details: `Created article: ${newArticle.title}`,
       })
+      setAuditLog(updatedAuditLog)
 
-      // Data will be updated via real-time subscription
       setCurrentView("browse")
     } catch (error) {
       console.error("Error adding article:", error)
@@ -277,10 +234,11 @@ export default function KnowledgeBase() {
     try {
       setError(null)
 
-      await database.updateArticle(updatedArticle.id, updatedArticle)
+      const updatedCategories = await apiDatabase.updateArticle(categories, updatedArticle.id, updatedArticle)
+      setCategories(updatedCategories)
 
       // Add audit log entry
-      await database.addAuditEntry({
+      const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
         action: "article_updated",
         articleId: updatedArticle.id,
         articleTitle: updatedArticle.title,
@@ -288,8 +246,8 @@ export default function KnowledgeBase() {
         performedBy: currentUser?.username || "anonymous",
         details: `Updated article: ${updatedArticle.title}`,
       })
+      setAuditLog(updatedAuditLog)
 
-      // Data will be updated via real-time subscription
       setEditingArticle(null)
       setSelectedArticle(null)
     } catch (error) {
@@ -308,12 +266,12 @@ export default function KnowledgeBase() {
       setError(null)
 
       const article = getAllArticles().find((a) => a.id === articleId)
-
-      await database.deleteArticle(articleId)
+      const updatedCategories = await apiDatabase.deleteArticle(categories, articleId)
+      setCategories(updatedCategories)
 
       // Add audit log entry
       if (article) {
-        await database.addAuditEntry({
+        const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
           action: "article_deleted",
           articleId: articleId,
           articleTitle: article.title,
@@ -321,9 +279,9 @@ export default function KnowledgeBase() {
           performedBy: currentUser?.username || "anonymous",
           details: `Deleted article: ${article.title}`,
         })
+        setAuditLog(updatedAuditLog)
       }
 
-      // Data will be updated via real-time subscription
       setSelectedArticle(null)
     } catch (error) {
       console.error("Error deleting article:", error)
@@ -334,8 +292,7 @@ export default function KnowledgeBase() {
   // Handle category management
   const handleCategoriesUpdate = async () => {
     try {
-      const updatedCategories = await database.getCategories()
-      setCategories(updatedCategories)
+      await refreshData()
     } catch (error) {
       console.error("Error updating categories:", error)
       setError("Failed to update categories.")
@@ -344,8 +301,7 @@ export default function KnowledgeBase() {
 
   const handleUsersUpdate = async () => {
     try {
-      const updatedUsers = await database.getUsers()
-      setUsers(updatedUsers)
+      await refreshData()
     } catch (error) {
       console.error("Error updating users:", error)
       setError("Failed to update users.")
@@ -354,8 +310,7 @@ export default function KnowledgeBase() {
 
   const handleAuditLogUpdate = async () => {
     try {
-      const updatedAuditLog = await database.getAuditLog()
-      setAuditLog(updatedAuditLog)
+      await refreshData()
     } catch (error) {
       console.error("Error updating audit log:", error)
       setError("Failed to update audit log.")
@@ -398,7 +353,7 @@ export default function KnowledgeBase() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading knowledge base...</p>
-          <p className="text-sm text-gray-500 mt-2">Connecting to database...</p>
+          <p className="text-sm text-gray-500 mt-2">Connecting to server...</p>
         </div>
       </div>
     )
@@ -415,25 +370,21 @@ export default function KnowledgeBase() {
         currentView={currentView}
       />
 
-      {/* Connection Status */}
-      {!isOnline && (
-        <div className="bg-red-100 border-b border-red-200 px-4 py-2">
-          <div className="container mx-auto flex items-center space-x-2 text-red-800">
-            <WifiOff className="h-4 w-4" />
-            <span className="text-sm">You are offline. Some features may not work.</span>
-          </div>
-        </div>
-      )}
-
       {/* Error Alert */}
       {error && (
         <div className="container mx-auto px-4 pt-4">
           <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               {error}
-              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="sm" onClick={refreshData}>
+                  Retry
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         </div>
@@ -453,8 +404,11 @@ export default function KnowledgeBase() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Knowledge Base</h1>
               <p className="text-gray-600">Find answers, guides, and documentation</p>
               <div className="flex items-center justify-center space-x-2 mt-2 text-sm text-gray-500">
-                <Wifi className="h-4 w-4 text-green-500" />
-                <span>Live database - changes sync in real-time</span>
+                <Database className="h-4 w-4 text-green-500" />
+                <span>Shared database - changes visible to all users</span>
+                <Button variant="ghost" size="sm" onClick={refreshData} className="h-6 px-2 text-xs">
+                  Refresh
+                </Button>
               </div>
             </div>
 
