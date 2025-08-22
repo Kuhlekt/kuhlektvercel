@@ -1,58 +1,73 @@
-import type { Category, Article, User, AuditLogEntry } from "../types/knowledge-base"
+interface DatabaseData {
+  categories: any[]
+  users: any[]
+  auditLog: any[]
+  pageVisits: number
+}
 
-export class ApiDatabase {
+class ApiDatabase {
   private baseUrl = "/api/data"
 
-  async loadData(): Promise<{
-    categories: Category[]
-    users: User[]
-    auditLog: AuditLogEntry[]
-  }> {
-    const response = await fetch(this.baseUrl)
-    if (!response.ok) {
-      throw new Error("Failed to load data")
-    }
-    return response.json()
-  }
-
-  async saveData(data: {
-    categories: Category[]
-    users: User[]
-    auditLog: AuditLogEntry[]
-  }): Promise<void> {
-    const response = await fetch(this.baseUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-    if (!response.ok) {
-      throw new Error("Failed to save data")
+  async loadData(): Promise<DatabaseData> {
+    try {
+      const response = await fetch(this.baseUrl)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("Error loading data:", error)
+      throw error
     }
   }
 
-  async incrementPageVisits(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/page-visits`, {
-      method: "POST",
-    })
-    if (!response.ok) {
-      throw new Error("Failed to increment page visits")
+  async saveData(data: DatabaseData): Promise<void> {
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+    } catch (error) {
+      console.error("Error saving data:", error)
+      throw error
     }
   }
 
-  async addArticle(
-    categories: Category[],
-    articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
-  ): Promise<Article> {
-    const newArticle: Article = {
-      ...articleData,
+  async incrementPageVisits(): Promise<number> {
+    try {
+      const response = await fetch(`${this.baseUrl}/page-visits`, {
+        method: "POST",
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      return data.pageVisits
+    } catch (error) {
+      console.error("Error incrementing page visits:", error)
+      throw error
+    }
+  }
+
+  async addArticle(categories: any[], articleData: any): Promise<any> {
+    const data = await this.loadData()
+
+    const newArticle = {
       id: Date.now().toString(),
+      ...articleData,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
 
-    const updatedCategories = categories.map((category) => {
+    // Find the category and add the article
+    const updatedCategories = data.categories.map((category) => {
       if (category.id === articleData.categoryId) {
         return {
           ...category,
@@ -60,15 +75,16 @@ export class ApiDatabase {
         }
       }
 
+      // Check subcategories
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.id === articleData.categoryId) {
+        const updatedSubcategories = category.subcategories.map((sub: any) => {
+          if (sub.id === articleData.categoryId) {
             return {
-              ...subcategory,
-              articles: [...(subcategory.articles || []), newArticle],
+              ...sub,
+              articles: [...(sub.articles || []), newArticle],
             }
           }
-          return subcategory
+          return sub
         })
 
         if (updatedSubcategories !== category.subcategories) {
@@ -82,7 +98,6 @@ export class ApiDatabase {
       return category
     })
 
-    const data = await this.loadData()
     await this.saveData({
       ...data,
       categories: updatedCategories,
@@ -91,58 +106,40 @@ export class ApiDatabase {
     return newArticle
   }
 
-  async updateArticle(
-    categories: Category[],
-    articleId: string,
-    updatedArticle: Omit<Article, "createdAt">,
-  ): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => {
+  async updateArticle(categories: any[], articleId: string, updatedArticle: any): Promise<any[]> {
+    const data = await this.loadData()
+
+    const updatedCategories = data.categories.map((category: any) => {
+      // Check main category articles
       if (category.articles) {
-        const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+        const articleIndex = category.articles.findIndex((a: any) => a.id === articleId)
         if (articleIndex !== -1) {
-          const updatedArticles = [...category.articles]
-          updatedArticles[articleIndex] = {
-            ...updatedArticle,
-            createdAt: updatedArticles[articleIndex].createdAt,
-            updatedAt: new Date(),
-          }
-          return {
-            ...category,
-            articles: updatedArticles,
-          }
+          const newArticles = [...category.articles]
+          newArticles[articleIndex] = { ...updatedArticle, updatedAt: new Date() }
+          return { ...category, articles: newArticles }
         }
       }
 
+      // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.articles) {
-            const articleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+        const updatedSubcategories = category.subcategories.map((sub: any) => {
+          if (sub.articles) {
+            const articleIndex = sub.articles.findIndex((a: any) => a.id === articleId)
             if (articleIndex !== -1) {
-              const updatedArticles = [...subcategory.articles]
-              updatedArticles[articleIndex] = {
-                ...updatedArticle,
-                createdAt: updatedArticles[articleIndex].createdAt,
-                updatedAt: new Date(),
-              }
-              return {
-                ...subcategory,
-                articles: updatedArticles,
-              }
+              const newArticles = [...sub.articles]
+              newArticles[articleIndex] = { ...updatedArticle, updatedAt: new Date() }
+              return { ...sub, articles: newArticles }
             }
           }
-          return subcategory
+          return sub
         })
 
-        return {
-          ...category,
-          subcategories: updatedSubcategories,
-        }
+        return { ...category, subcategories: updatedSubcategories }
       }
 
       return category
     })
 
-    const data = await this.loadData()
     await this.saveData({
       ...data,
       categories: updatedCategories,
@@ -151,42 +148,34 @@ export class ApiDatabase {
     return updatedCategories
   }
 
-  async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => {
+  async deleteArticle(categories: any[], articleId: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const updatedCategories = data.categories.map((category: any) => {
+      // Check main category articles
       if (category.articles) {
-        const filteredArticles = category.articles.filter((a) => a.id !== articleId)
+        const filteredArticles = category.articles.filter((a: any) => a.id !== articleId)
         if (filteredArticles.length !== category.articles.length) {
-          return {
-            ...category,
-            articles: filteredArticles,
-          }
+          return { ...category, articles: filteredArticles }
         }
       }
 
+      // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.articles) {
-            const filteredArticles = subcategory.articles.filter((a) => a.id !== articleId)
-            if (filteredArticles.length !== subcategory.articles.length) {
-              return {
-                ...subcategory,
-                articles: filteredArticles,
-              }
-            }
+        const updatedSubcategories = category.subcategories.map((sub: any) => {
+          if (sub.articles) {
+            const filteredArticles = sub.articles.filter((a: any) => a.id !== articleId)
+            return { ...sub, articles: filteredArticles }
           }
-          return subcategory
+          return sub
         })
 
-        return {
-          ...category,
-          subcategories: updatedSubcategories,
-        }
+        return { ...category, subcategories: updatedSubcategories }
       }
 
       return category
     })
 
-    const data = await this.loadData()
     await this.saveData({
       ...data,
       categories: updatedCategories,
@@ -195,8 +184,112 @@ export class ApiDatabase {
     return updatedCategories
   }
 
-  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    const updatedUsers = users.map((user) => {
+  async addCategory(categories: any[], name: string, description?: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const newCategory = {
+      id: Date.now().toString(),
+      name,
+      description,
+      articles: [],
+      subcategories: [],
+    }
+
+    const updatedCategories = [...data.categories, newCategory]
+
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async addSubcategory(categories: any[], parentId: string, name: string, description?: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const newSubcategory = {
+      id: Date.now().toString(),
+      name,
+      description,
+      articles: [],
+    }
+
+    const updatedCategories = data.categories.map((category: any) => {
+      if (category.id === parentId) {
+        return {
+          ...category,
+          subcategories: [...(category.subcategories || []), newSubcategory],
+        }
+      }
+      return category
+    })
+
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async deleteCategory(categories: any[], categoryId: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const updatedCategories = data.categories.filter((category: any) => category.id !== categoryId)
+
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async deleteSubcategory(categories: any[], categoryId: string, subcategoryId: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const updatedCategories = data.categories.map((category: any) => {
+      if (category.id === categoryId && category.subcategories) {
+        return {
+          ...category,
+          subcategories: category.subcategories.filter((sub: any) => sub.id !== subcategoryId),
+        }
+      }
+      return category
+    })
+
+    await this.saveData({
+      ...data,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async addAuditEntry(auditLog: any[], entry: any): Promise<any[]> {
+    const data = await this.loadData()
+
+    const newEntry = {
+      id: Date.now().toString(),
+      ...entry,
+      timestamp: new Date(),
+    }
+
+    const updatedAuditLog = [newEntry, ...data.auditLog]
+
+    await this.saveData({
+      ...data,
+      auditLog: updatedAuditLog,
+    })
+
+    return updatedAuditLog
+  }
+
+  async updateUserLastLogin(users: any[], userId: string): Promise<any[]> {
+    const data = await this.loadData()
+
+    const updatedUsers = data.users.map((user: any) => {
       if (user.id === userId) {
         return {
           ...user,
@@ -206,153 +299,6 @@ export class ApiDatabase {
       return user
     })
 
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      users: updatedUsers,
-    })
-
-    return updatedUsers
-  }
-
-  async addAuditEntry(
-    auditLog: AuditLogEntry[],
-    entry: Omit<AuditLogEntry, "id" | "timestamp">,
-  ): Promise<AuditLogEntry[]> {
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-    }
-
-    const updatedAuditLog = [newEntry, ...auditLog]
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      auditLog: updatedAuditLog,
-    })
-
-    return updatedAuditLog
-  }
-
-  async addCategory(categories: Category[], name: string, description?: string): Promise<Category[]> {
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name,
-      description,
-      articles: [],
-      subcategories: [],
-    }
-
-    const updatedCategories = [...categories, newCategory]
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async addSubcategory(
-    categories: Category[],
-    categoryId: string,
-    name: string,
-    description?: string,
-  ): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => {
-      if (category.id === categoryId) {
-        const newSubcategory = {
-          id: Date.now().toString(),
-          name,
-          description,
-          articles: [],
-        }
-        return {
-          ...category,
-          subcategories: [...(category.subcategories || []), newSubcategory],
-        }
-      }
-      return category
-    })
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async deleteCategory(categories: Category[], categoryId: string): Promise<Category[]> {
-    const updatedCategories = categories.filter((category) => category.id !== categoryId)
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async deleteSubcategory(categories: Category[], categoryId: string, subcategoryId: string): Promise<Category[]> {
-    const updatedCategories = categories.map((category) => {
-      if (category.id === categoryId) {
-        return {
-          ...category,
-          subcategories: (category.subcategories || []).filter((sub) => sub.id !== subcategoryId),
-        }
-      }
-      return category
-    })
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      categories: updatedCategories,
-    })
-
-    return updatedCategories
-  }
-
-  async addUser(users: User[], userData: Omit<User, "id" | "createdAt">): Promise<User[]> {
-    const newUser: User = {
-      ...userData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    }
-
-    const updatedUsers = [...users, newUser]
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      users: updatedUsers,
-    })
-
-    return updatedUsers
-  }
-
-  async updateUser(users: User[], userId: string, updates: Partial<User>): Promise<User[]> {
-    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, ...updates } : user))
-
-    const data = await this.loadData()
-    await this.saveData({
-      ...data,
-      users: updatedUsers,
-    })
-
-    return updatedUsers
-  }
-
-  async deleteUser(users: User[], userId: string): Promise<User[]> {
-    const updatedUsers = users.filter((user) => user.id !== userId)
-
-    const data = await this.loadData()
     await this.saveData({
       ...data,
       users: updatedUsers,
