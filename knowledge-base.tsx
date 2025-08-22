@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Navigation } from "./components/navigation"
 import { CategoryTree } from "./components/category-tree"
 import { ArticleList } from "./components/article-list"
@@ -32,6 +32,32 @@ export default function KnowledgeBase() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Refresh data function
+  const refreshData = useCallback(async () => {
+    try {
+      console.log("Refreshing all data...")
+      setError(null)
+
+      const data = await apiDatabase.loadData()
+
+      console.log("Data refreshed:", {
+        categories: data.categories?.length || 0,
+        users: data.users?.length || 0,
+        usernames: data.users?.map((u) => u.username) || [],
+        auditLog: data.auditLog?.length || 0,
+      })
+
+      setCategories(data.categories || [])
+      setUsers(data.users || [])
+      setAuditLog(data.auditLog || [])
+
+      console.log("State updated successfully")
+    } catch (error) {
+      console.error("Error refreshing data:", error)
+      setError("Failed to refresh data from server.")
+    }
+  }, [])
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
@@ -39,11 +65,11 @@ export default function KnowledgeBase() {
         setIsLoading(true)
         setError(null)
 
-        console.log("Loading data from API...")
+        console.log("Loading initial data from API...")
 
         const data = await apiDatabase.loadData()
 
-        console.log("Loaded data:", {
+        console.log("Initial data loaded:", {
           categories: data.categories?.length || 0,
           users: data.users?.length || 0,
           usernames: data.users?.map((u) => u.username) || [],
@@ -57,9 +83,9 @@ export default function KnowledgeBase() {
         // Increment page visits
         await apiDatabase.incrementPageVisits()
 
-        console.log("Data loaded successfully")
+        console.log("Initial data loaded successfully")
       } catch (error) {
-        console.error("Error loading data:", error)
+        console.error("Error loading initial data:", error)
         setError("Failed to load data from server. Please refresh the page.")
       } finally {
         setIsLoading(false)
@@ -68,20 +94,6 @@ export default function KnowledgeBase() {
 
     loadData()
   }, [])
-
-  // Refresh data function for manual refresh
-  const refreshData = async () => {
-    try {
-      setError(null)
-      const data = await apiDatabase.loadData()
-      setCategories(data.categories || [])
-      setUsers(data.users || [])
-      setAuditLog(data.auditLog || [])
-    } catch (error) {
-      console.error("Error refreshing data:", error)
-      setError("Failed to refresh data from server.")
-    }
-  }
 
   // Handle login
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
@@ -225,8 +237,9 @@ export default function KnowledgeBase() {
       setError(null)
 
       const newArticle = await apiDatabase.addArticle(categories, articleData)
-      const updatedCategories = await apiDatabase.loadData().then((data) => data.categories)
-      setCategories(updatedCategories || [])
+
+      // Refresh all data to ensure UI is updated
+      await refreshData()
 
       // Add audit log entry
       const updatedAuditLog = await apiDatabase.addAuditEntry(auditLog, {
@@ -311,48 +324,21 @@ export default function KnowledgeBase() {
     }
   }
 
-  // Handle category management
-  const handleCategoriesUpdate = async () => {
-    try {
-      console.log("Updating categories...")
-      const data = await apiDatabase.loadData()
-      setCategories(data.categories || [])
-      setUsers(data.users || [])
-      setAuditLog(data.auditLog || [])
-      console.log("Categories updated successfully")
-    } catch (error) {
-      console.error("Error updating categories:", error)
-      setError("Failed to update categories.")
-    }
-  }
+  // Handle category management updates
+  const handleCategoriesUpdate = useCallback(async () => {
+    console.log("Categories update triggered")
+    await refreshData()
+  }, [refreshData])
 
-  const handleUsersUpdate = async () => {
-    try {
-      console.log("Updating users...")
-      const data = await apiDatabase.loadData()
-      setCategories(data.categories || [])
-      setUsers(data.users || [])
-      setAuditLog(data.auditLog || [])
-      console.log("Users updated successfully")
-    } catch (error) {
-      console.error("Error updating users:", error)
-      setError("Failed to update users.")
-    }
-  }
+  const handleUsersUpdate = useCallback(async () => {
+    console.log("Users update triggered")
+    await refreshData()
+  }, [refreshData])
 
-  const handleAuditLogUpdate = async () => {
-    try {
-      console.log("Updating audit log...")
-      const data = await apiDatabase.loadData()
-      setCategories(data.categories || [])
-      setUsers(data.users || [])
-      setAuditLog(data.auditLog || [])
-      console.log("Audit log updated successfully")
-    } catch (error) {
-      console.error("Error updating audit log:", error)
-      setError("Failed to update audit log.")
-    }
-  }
+  const handleAuditLogUpdate = useCallback(async () => {
+    console.log("Audit log update triggered")
+    await refreshData()
+  }, [refreshData])
 
   // Get current articles to display
   const getCurrentArticles = () => {

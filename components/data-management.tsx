@@ -136,8 +136,8 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       clearInterval(progressInterval)
       setImportProgress(100)
 
-      console.log("Data imported successfully")
-      showMessage("success", "Data imported successfully! The page will refresh to show the new data.")
+      console.log("Data imported successfully, triggering UI update...")
+      showMessage("success", "Data imported successfully! Refreshing data...")
 
       // Clear preview and reset file input
       setImportPreview(null)
@@ -145,13 +145,10 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
         fileInputRef.current.value = ""
       }
 
-      // Trigger data update and refresh
-      onDataUpdate()
+      // Trigger immediate data update
+      await onDataUpdate()
 
-      // Force page refresh after a short delay to ensure UI updates
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
+      console.log("UI update completed")
     } catch (error) {
       console.error("Import error:", error)
       showMessage("error", "Failed to import data. Please check the file format and try again.")
@@ -176,16 +173,13 @@ export function DataManagement({ onDataUpdate }: DataManagementProps) {
       console.log("Starting data clear...")
       await apiDatabase.clearAllData()
 
-      console.log("Data cleared successfully")
-      showMessage("success", "All data cleared successfully! The page will refresh.")
+      console.log("Data cleared successfully, triggering UI update...")
+      showMessage("success", "All data cleared successfully!")
 
-      // Trigger data update and refresh
-      onDataUpdate()
+      // Trigger immediate data update
+      await onDataUpdate()
 
-      // Force page refresh after a short delay
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
+      console.log("UI update completed")
     } catch (error) {
       console.error("Clear data error:", error)
       showMessage("error", "Failed to clear data. Please try again.")
