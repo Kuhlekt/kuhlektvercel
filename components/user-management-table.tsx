@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Trash2, Shield, Edit, Eye } from "lucide-react"
-import type { User } from "../types/knowledge-base"
+import type { User } from "@/types/knowledge-base"
 
 interface UserManagementTableProps {
   users: User[]
@@ -36,6 +36,17 @@ export function UserManagementTable({ users, currentUserId, onDeleteUser }: User
         return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return "Never"
+
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date)
+      return dateObj.toLocaleDateString()
+    } catch (error) {
+      return "Invalid date"
     }
   }
 
@@ -75,10 +86,8 @@ export function UserManagementTable({ users, currentUserId, onDeleteUser }: User
                       <span className="capitalize">{user.role}</span>
                     </Badge>
                   </td>
-                  <td className="p-2 text-sm text-gray-600">{user.createdAt.toLocaleDateString()}</td>
-                  <td className="p-2 text-sm text-gray-600">
-                    {user.lastLogin ? user.lastLogin.toLocaleDateString() : "Never"}
-                  </td>
+                  <td className="p-2 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
+                  <td className="p-2 text-sm text-gray-600">{formatDate(user.lastLogin)}</td>
                   <td className="p-2">
                     {user.id !== currentUserId && (
                       <Button

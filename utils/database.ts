@@ -1,127 +1,10 @@
-import type { Category, User, Article, AuditLogEntry } from "@/types/knowledge-base"
+import type { Category, User, AuditLogEntry } from "@/types/knowledge-base"
 
-// Helper function to convert database dates to Date objects
-const parseDate = (dateString: string): Date => new Date(dateString)
-
-// Helper function to convert database user to app user
-const convertDatabaseUser = (dbUser: any): User => ({
-  id: dbUser.id,
-  username: dbUser.username,
-  password: dbUser.password,
-  email: dbUser.email || "",
-  role: dbUser.role,
-  createdAt: parseDate(dbUser.created_at),
-  lastLogin: dbUser.last_login ? parseDate(dbUser.last_login) : undefined,
-})
-
-// Helper function to convert database article to app article
-const convertDatabaseArticle = (dbArticle: any): Article => ({
-  id: dbArticle.id,
-  title: dbArticle.title,
-  content: dbArticle.content,
-  categoryId: dbArticle.category_id,
-  subcategoryId: dbArticle.subcategory_id,
-  tags: dbArticle.tags || [],
-  createdBy: dbArticle.created_by,
-  lastEditedBy: dbArticle.last_edited_by,
-  editCount: dbArticle.edit_count || 0,
-  createdAt: parseDate(dbArticle.created_at),
-  updatedAt: parseDate(dbArticle.updated_at),
-})
-
-// Helper function to convert database audit log to app audit log
-const convertDatabaseAuditLog = (dbAudit: any): AuditLogEntry => ({
-  id: dbAudit.id,
-  action: dbAudit.action as any,
-  articleId: dbAudit.article_id,
-  articleTitle: dbAudit.article_title,
-  categoryId: dbAudit.category_id,
-  categoryName: dbAudit.category_name,
-  subcategoryName: dbAudit.subcategory_name,
-  userId: dbAudit.user_id,
-  username: dbAudit.username,
-  performedBy: dbAudit.performed_by,
-  timestamp: parseDate(dbAudit.timestamp),
-  details: dbAudit.details,
-})
-
-// Mock data for preview mode
-const mockData = {
-  categories: [
-    {
-      id: "1",
-      name: "Getting Started",
-      description: "Basic setup and introduction",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      articles: [],
-      subcategories: [],
-    },
-    {
-      id: "2",
-      name: "Advanced Topics",
-      description: "Complex configurations and features",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      articles: [],
-      subcategories: [],
-    },
-  ],
-  subcategories: [
-    {
-      id: "1",
-      name: "Installation",
-      description: "How to install",
-      category_id: "1",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      name: "Configuration",
-      description: "How to configure",
-      category_id: "1",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ],
-  articles: [
-    {
-      id: "1",
-      title: "Welcome to Kuhlekt KB",
-      content: "This is your knowledge base...",
-      category_id: "1",
-      subcategory_id: "1",
-      tags: ["welcome", "intro"],
-      created_by: "admin",
-      last_edited_by: "admin",
-      edit_count: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ],
-  users: [
-    {
-      id: "1",
-      username: "admin",
-      password: "hashed_password",
-      email: "admin@kuhlekt.com",
-      role: "admin" as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ],
-  auditLogs: [
-    {
-      id: "1",
-      action: "CREATE_ARTICLE",
-      article_id: "1",
-      article_title: "Welcome to Kuhlekt KB",
-      performed_by: "admin",
-      details: "Initial article creation",
-      timestamp: new Date().toISOString(),
-    },
-  ],
+// Helper function to ensure dates are properly handled
+const ensureDate = (date: any): Date => {
+  if (date instanceof Date) return date
+  if (typeof date === "string") return new Date(date)
+  return new Date()
 }
 
 // Mock database for local storage
@@ -138,14 +21,14 @@ class Database {
       const auditLog = JSON.parse(localStorage.getItem(this.getStorageKey("auditLog")) || "[]")
       const pageVisits = Number.parseInt(localStorage.getItem(this.getStorageKey("pageVisits")) || "0", 10)
 
-      // Convert date strings back to Date objects
+      // Convert date strings back to Date objects with proper error handling
       const processedCategories = categories.map((cat: any) => ({
         ...cat,
         articles:
           cat.articles?.map((article: any) => ({
             ...article,
-            createdAt: new Date(article.createdAt),
-            updatedAt: new Date(article.updatedAt),
+            createdAt: ensureDate(article.createdAt),
+            updatedAt: ensureDate(article.updatedAt),
           })) || [],
         subcategories:
           cat.subcategories?.map((sub: any) => ({
@@ -153,21 +36,21 @@ class Database {
             articles:
               sub.articles?.map((article: any) => ({
                 ...article,
-                createdAt: new Date(article.createdAt),
-                updatedAt: new Date(article.updatedAt),
+                createdAt: ensureDate(article.createdAt),
+                updatedAt: ensureDate(article.updatedAt),
               })) || [],
           })) || [],
       }))
 
       const processedUsers = users.map((user: any) => ({
         ...user,
-        createdAt: new Date(user.createdAt),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+        createdAt: ensureDate(user.createdAt),
+        lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : undefined,
       }))
 
       const processedAuditLog = auditLog.map((entry: any) => ({
         ...entry,
-        timestamp: new Date(entry.timestamp),
+        timestamp: ensureDate(entry.timestamp),
       }))
 
       return {
@@ -239,11 +122,43 @@ class Database {
       // Clear existing data
       await this.clearAllData()
 
+      // Process imported data to ensure proper date handling
+      const processedCategories = backupData.categories.map((cat: any) => ({
+        ...cat,
+        articles:
+          cat.articles?.map((article: any) => ({
+            ...article,
+            createdAt: ensureDate(article.createdAt),
+            updatedAt: ensureDate(article.updatedAt),
+          })) || [],
+        subcategories:
+          cat.subcategories?.map((sub: any) => ({
+            ...sub,
+            articles:
+              sub.articles?.map((article: any) => ({
+                ...article,
+                createdAt: ensureDate(article.createdAt),
+                updatedAt: ensureDate(article.updatedAt),
+              })) || [],
+          })) || [],
+      }))
+
+      const processedUsers = backupData.users.map((user: any) => ({
+        ...user,
+        createdAt: ensureDate(user.createdAt),
+        lastLogin: user.lastLogin ? ensureDate(user.lastLogin) : undefined,
+      }))
+
+      const processedAuditLog = backupData.auditLog.map((entry: any) => ({
+        ...entry,
+        timestamp: ensureDate(entry.timestamp),
+      }))
+
       // Import new data
       this.saveData({
-        categories: backupData.categories,
-        users: backupData.users,
-        auditLog: backupData.auditLog,
+        categories: processedCategories,
+        users: processedUsers,
+        auditLog: processedAuditLog,
         pageVisits: backupData.settings?.pageVisits || 0,
       })
 

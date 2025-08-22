@@ -4,30 +4,17 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import {
-  Download,
-  Upload,
-  Trash2,
-  FileText,
-  AlertTriangle,
-  CheckCircle,
-  X,
-  Database,
-  Users,
-  Activity,
-} from "lucide-react"
-import { database } from "../utils/database"
+import { Download, Upload, Trash2, FileText, AlertTriangle, CheckCircle } from "lucide-react"
+import { database } from "@/utils/database"
 
 interface ImportStats {
   categories: number
-  articles: number
   users: number
   auditLog: number
+  pageVisits: number
 }
 
 export function DataManagement() {
@@ -54,7 +41,7 @@ export function DataManagement() {
         setExportProgress((prev) => Math.min(prev + 10, 90))
       }, 100)
 
-      // Get all data
+      // Export data
       const data = await database.exportData()
 
       clearInterval(progressInterval)
@@ -65,49 +52,36 @@ export function DataManagement() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `knowledge-base-backup-${new Date().toISOString().split("T")[0]}.json`
+      a.download = `kuhlekt-kb-backup-${new Date().toISOString().split("T")[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
       setSuccess("Data exported successfully!")
-
-      setTimeout(() => {
-        setExportProgress(0)
-        setIsExporting(false)
-      }, 1000)
     } catch (err) {
-      console.error("Export error:", err)
-      setError("Failed to export data. Please try again.")
+      setError(err instanceof Error ? err.message : "Failed to export data")
+    } finally {
       setIsExporting(false)
-      setExportProgress(0)
+      setTimeout(() => setExportProgress(0), 2000)
     }
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.type === "application/json" || file.name.endsWith(".json")) {
-        setSelectedFile(file)
-        setError(null)
-      } else {
-        setError("Please select a valid JSON file.")
-        setSelectedFile(null)
+      if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+        setError("Please select a valid JSON file")
+        return
       }
-    }
-  }
-
-  const clearFileSelection = () => {
-    setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      setSelectedFile(file)
+      setError(null)
     }
   }
 
   const handleImport = async () => {
     if (!selectedFile) {
-      setError("Please select a file to import.")
+      setError("Please select a backup file first")
       return
     }
 
@@ -120,70 +94,55 @@ export function DataManagement() {
 
       // Read file
       const text = await selectedFile.text()
-      let data
+      setImportProgress(20)
 
-      try {
-        data = JSON.parse(text)
-      } catch (parseError) {
-        throw new Error("Invalid JSON file format.")
+      // Parse JSON
+      const backupData = JSON.parse(text)
+      setImportProgress(40)
+
+      // Validate structure
+      if (!backupData.categories || !backupData.users || !backupData.auditLog) {
+        throw new Error("Invalid backup file structure")
       }
-
-      // Validate data structure
-      if (!data.categories || !data.users || !data.auditLog) {
-        throw new Error("Invalid backup file structure. Missing required data.")
-      }
-
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setImportProgress((prev) => Math.min(prev + 5, 90))
-      }, 100)
+      setImportProgress(60)
 
       // Import data
-      await database.importData(data)
+      await database.importData(backupData)
+      setImportProgress(80)
 
-      clearInterval(progressInterval)
+      // Calculate stats
+      const stats: ImportStats = {
+        categories: backupData.categories?.length || 0,
+        users: backupData.users?.length || 0,
+        auditLog: backupData.auditLog?.length || 0,
+        pageVisits: backupData.settings?.pageVisits || 0,
+      }
+      setImportStats(stats)
       setImportProgress(100)
 
-      // Calculate import stats
-      const stats: ImportStats = {
-        categories: data.categories?.length || 0,
-        articles:
-          data.categories?.reduce((total: number, cat: any) => {
-            const catArticles = cat.articles?.length || 0
-            const subArticles =
-              cat.subcategories?.reduce((subTotal: number, sub: any) => subTotal + (sub.articles?.length || 0), 0) || 0
-            return total + catArticles + subArticles
-          }, 0) || 0,
-        users: data.users?.length || 0,
-        auditLog: data.auditLog?.length || 0,
-      }
-
-      setImportStats(stats)
       setSuccess("Data imported successfully!")
-      clearFileSelection()
-
-      setTimeout(() => {
-        setImportProgress(0)
-        setIsImporting(false)
-      }, 1000)
+      setSelectedFile(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
     } catch (err) {
-      console.error("Import error:", err)
-      setError(err instanceof Error ? err.message : "Failed to import data. Please try again.")
+      setError(err instanceof Error ? err.message : "Failed to import data")
+    } finally {
       setIsImporting(false)
-      setImportProgress(0)
+      setTimeout(() => setImportProgress(0), 2000)
     }
   }
 
   const handleClearData = async () => {
-    const confirmed = window.confirm("Are you sure you want to clear ALL data? This action cannot be undone.")
+    if (!confirm("Are you sure you want to clear ALL data? This action cannot be undone.")) {
+      return
+    }
 
-    if (!confirmed) return
-
-    const doubleConfirmed = window.confirm(
-      'This will permanently delete all categories, articles, users, and audit logs. Type "DELETE" to confirm.',
-    )
-
-    if (!doubleConfirmed) return
+    if (
+      !confirm("This will permanently delete all categories, articles, users, and audit logs. Are you absolutely sure?")
+    ) {
+      return
+    }
 
     try {
       setIsClearing(true)
@@ -191,20 +150,21 @@ export function DataManagement() {
       setSuccess(null)
 
       await database.clearAllData()
-
       setSuccess("All data cleared successfully!")
       setImportStats(null)
-
-      setTimeout(() => {
-        setIsClearing(false)
-        // Reload page to reflect changes
-        window.location.reload()
-      }, 2000)
     } catch (err) {
-      console.error("Clear data error:", err)
-      setError("Failed to clear data. Please try again.")
+      setError(err instanceof Error ? err.message : "Failed to clear data")
+    } finally {
       setIsClearing(false)
     }
+  }
+
+  const clearFile = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+    setError(null)
   }
 
   const formatFileSize = (bytes: number) => {
@@ -217,41 +177,19 @@ export function DataManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Status Messages */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            {error}
-            <Button variant="ghost" size="sm" onClick={() => setError(null)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {success && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="flex items-center justify-between text-green-800">
-            {success}
-            <Button variant="ghost" size="sm" onClick={() => setSuccess(null)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Export Data */}
+      {/* Export Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center space-x-2">
             <Download className="h-5 w-5" />
-            Export Data
+            <span>Export Data</span>
           </CardTitle>
-          <CardDescription>Download a complete backup of your knowledge base as a JSON file</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Export all knowledge base data including categories, articles, users, and audit logs as a JSON backup file.
+          </p>
+
           {isExporting && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -269,70 +207,69 @@ export function DataManagement() {
         </CardContent>
       </Card>
 
-      {/* Import Data */}
+      {/* Import Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center space-x-2">
             <Upload className="h-5 w-5" />
-            Import Data
+            <span>Import Data</span>
           </CardTitle>
-          <CardDescription>
-            Restore your knowledge base from a backup file. This will replace all existing data.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* File Selection */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <p className="text-sm text-gray-600">Import data from a backup file. This will replace all existing data.</p>
+
+          <div className="space-y-4">
+            <div>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".json,application/json"
                 onChange={handleFileSelect}
                 className="hidden"
-                id="backup-file"
+                id="backup-file-input"
               />
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
+              <label
+                htmlFor="backup-file-input"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 cursor-pointer"
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Choose Backup File
-              </Button>
-              {selectedFile && (
-                <Button variant="ghost" size="sm" onClick={clearFileSelection}>
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+              </label>
             </div>
 
             {selectedFile && (
-              <div className="p-3 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4 text-blue-500" />
                   <div>
                     <p className="text-sm font-medium">{selectedFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-gray-500">
                       {formatFileSize(selectedFile.size)} • Modified{" "}
                       {selectedFile.lastModified ? new Date(selectedFile.lastModified).toLocaleDateString() : "Unknown"}
                     </p>
                   </div>
-                  <Badge variant="secondary">JSON</Badge>
                 </div>
+                <Button variant="ghost" size="sm" onClick={clearFile}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             )}
-          </div>
 
-          {isImporting && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Importing data...</span>
-                <span>{importProgress}%</span>
+            {isImporting && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Importing data...</span>
+                  <span>{importProgress}%</span>
+                </div>
+                <Progress value={importProgress} className="w-full" />
               </div>
-              <Progress value={importProgress} className="w-full" />
-            </div>
-          )}
+            )}
 
-          <Button onClick={handleImport} disabled={!selectedFile || isImporting} className="w-full">
-            <Upload className="h-4 w-4 mr-2" />
-            {isImporting ? "Importing..." : "Import Data"}
-          </Button>
+            <Button onClick={handleImport} disabled={!selectedFile || isImporting} className="w-full">
+              <Upload className="h-4 w-4 mr-2" />
+              {isImporting ? "Importing..." : "Import Data"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -340,78 +277,68 @@ export function DataManagement() {
       {importStats && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Import Summary
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <span>Import Summary</span>
             </CardTitle>
-            <CardDescription>Data successfully imported from backup file</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Database className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{importStats.categories}</p>
-                  <p className="text-xs text-muted-foreground">Categories</p>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{importStats.categories}</div>
+                <div className="text-sm text-gray-600">Categories</div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <FileText className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{importStats.articles}</p>
-                  <p className="text-xs text-muted-foreground">Articles</p>
-                </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{importStats.users}</div>
+                <div className="text-sm text-gray-600">Users</div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Users className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{importStats.users}</p>
-                  <p className="text-xs text-muted-foreground">Users</p>
-                </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{importStats.auditLog}</div>
+                <div className="text-sm text-gray-600">Audit Entries</div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Activity className="h-4 w-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{importStats.auditLog}</p>
-                  <p className="text-xs text-muted-foreground">Audit Entries</p>
-                </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{importStats.pageVisits}</div>
+                <div className="text-sm text-gray-600">Page Visits</div>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Separator />
-
-      {/* Clear All Data */}
+      {/* Clear Data Section */}
       <Card className="border-red-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600">
-            <Trash2 className="h-5 w-5" />
-            Clear All Data
+          <CardTitle className="flex items-center space-x-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
+            <span>Danger Zone</span>
           </CardTitle>
-          <CardDescription>
-            Permanently delete all data from the knowledge base. This action cannot be undone.
-          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Permanently delete all data from the knowledge base. This action cannot be undone.
+          </p>
+
           <Button variant="destructive" onClick={handleClearData} disabled={isClearing} className="w-full">
             <Trash2 className="h-4 w-4 mr-2" />
-            {isClearing ? "Clearing Data..." : "Clear All Data"}
+            {isClearing ? "Clearing..." : "Clear All Data"}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Status Messages */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">{success}</AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }
