@@ -1,65 +1,53 @@
-export interface Article {
+export interface User {
   id: string
-  title: string
-  content: string
-  categoryId: string
-  subcategoryId?: string
-  tags?: string[]
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface Subcategory {
-  id: string
-  name: string
-  description: string
-  articles?: Article[]
-  createdAt: Date
-  updatedAt: Date
+  username: string
+  password: string
+  role: "admin" | "editor" | "viewer"
+  email?: string
+  createdAt: string
+  lastLogin?: string
+  isActive: boolean
 }
 
 export interface Category {
   id: string
   name: string
-  description: string
-  articles?: Article[]
-  subcategories?: Subcategory[]
-  createdAt: Date
-  updatedAt: Date
+  description?: string
+  parentId?: string
+  order: number
+  createdAt: string
+  updatedAt: string
 }
 
-export interface User {
+export interface Article {
   id: string
-  username: string
-  password: string
-  email: string
-  role: "admin" | "editor" | "viewer"
-  isActive: boolean
-  createdAt: Date
-  lastLogin: Date | null
+  title: string
+  content: string
+  categoryId: string
+  authorId: string
+  tags: string[]
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+  viewCount: number
 }
-
-// Backward compatibility alias
-export type KnowledgeBaseUser = User
 
 export interface AuditLogEntry {
   id: string
+  userId: string
   action: string
-  articleId?: string
-  articleTitle?: string
-  categoryId?: string
-  categoryName?: string
-  subcategoryName?: string
-  userId?: string
-  username: string
-  performedBy: string
-  timestamp: Date
   details: string
+  timestamp: string
+  ipAddress?: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
+  articles: Article[]
   users: User[]
   auditLog: AuditLogEntry[]
   pageVisits: number
 }
+
+// Backward compatibility
+export type KnowledgeBaseUser = User
