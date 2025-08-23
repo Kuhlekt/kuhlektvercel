@@ -1,57 +1,61 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const VISITS_FILE = path.join(DATA_DIR, "page-visits.json")
 
-async function ensureVisitsFile() {
+// Ensure data directory exists
+async function ensureDataDir() {
   try {
     await fs.access(DATA_DIR)
   } catch {
     await fs.mkdir(DATA_DIR, { recursive: true })
   }
+}
 
+// Load page visits
+async function loadPageVisits() {
   try {
-    await fs.access(VISITS_FILE)
+    await ensureDataDir()
+    const data = await fs.readFile(VISITS_FILE, "utf-8")
+    return JSON.parse(data)
   } catch {
-    await fs.writeFile(VISITS_FILE, JSON.stringify({ totalVisits: 0, dailyVisits: {} }, null, 2))
+    return { visits: 0, lastVisit: null }
+  }
+}
+
+// Save page visits
+async function savePageVisits(data: any) {
+  try {
+    await ensureDataDir()
+    await fs.writeFile(VISITS_FILE, JSON.stringify(data, null, 2))
+  } catch (error) {
+    console.error("Error saving page visits:", error)
   }
 }
 
 export async function GET() {
   try {
-    await ensureVisitsFile()
-    const data = await fs.readFile(VISITS_FILE, "utf8")
-    return NextResponse.json(JSON.parse(data))
+    const data = await loadPageVisits()
+    return NextResponse.json(data)
   } catch (error) {
-    console.error("Error reading visits file:", error)
-    return NextResponse.json({ totalVisits: 0, dailyVisits: {} })
+    console.error("❌ Page Visits API Error (GET):", error)
+    return NextResponse.json({ error: "Failed to load page visits" }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    await ensureVisitsFile()
-    const { increment = 1 } = await request.json()
-
-    let visitsData
-    try {
-      const data = await fs.readFile(VISITS_FILE, "utf8")
-      visitsData = JSON.parse(data)
-    } catch {
-      visitsData = { totalVisits: 0, dailyVisits: {} }
+    const data = await loadPageVisits()
+    const updatedData = {
+      visits: (data.visits || 0) + 1,
+      lastVisit: new Date().toISOString(),
     }
-
-    const today = new Date().toISOString().split("T")[0]
-    visitsData.totalVisits = (visitsData.totalVisits || 0) + increment
-    visitsData.dailyVisits = visitsData.dailyVisits || {}
-    visitsData.dailyVisits[today] = (visitsData.dailyVisits[today] || 0) + increment
-
-    await fs.writeFile(VISITS_FILE, JSON.stringify(visitsData, null, 2))
-    return NextResponse.json({ success: true, totalVisits: visitsData.totalVisits })
+    await savePageVisits(updatedData)
+    return NextResponse.json(updatedData)
   } catch (error) {
-    console.error("Error updating visits:", error)
-    return NextResponse.json({ error: "Failed to update visits" }, { status: 500 })
+    console.error("❌ Page Visits API Error (POST):", error)
+    return NextResponse.json({ error: "Failed to increment page visits" }, { status: 500 })
   }
 }
