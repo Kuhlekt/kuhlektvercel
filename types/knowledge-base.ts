@@ -13,6 +13,7 @@ export interface Subcategory {
   id: string
   name: string
   description?: string
+  categoryId: string
   articles?: Article[]
   createdAt: Date | string
   updatedAt: Date | string
@@ -33,29 +34,29 @@ export interface User {
   id: string
   username: string
   password: string
-  role: "admin" | "editor" | "viewer"
   email?: string
+  role: "admin" | "editor" | "viewer"
   isActive: boolean
   createdAt: Date | string
   lastLogin?: Date | string | null
 }
 
-// Alias for backward compatibility
+// Backward compatibility alias
 export type KnowledgeBaseUser = User
 
 export interface AuditLogEntry {
   id: string
-  timestamp: Date | string
   action: string
+  timestamp: Date | string
+  username: string
+  performedBy: string
+  details: string
   articleId?: string
   articleTitle?: string
   categoryId?: string
   categoryName?: string
   subcategoryName?: string
   userId?: string
-  username: string
-  performedBy?: string
-  details: string
 }
 
 export interface KnowledgeBaseData {
@@ -64,10 +65,4 @@ export interface KnowledgeBaseData {
   users: User[]
   auditLog: AuditLogEntry[]
   pageVisits: number
-}
-
-export interface SearchResult {
-  article: Article
-  category: Category
-  subcategory?: Subcategory
 }

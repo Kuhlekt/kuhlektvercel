@@ -7,11 +7,29 @@ const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 export async function POST() {
   try {
-    console.log("📈 API: Incrementing page visits...")
+    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
+
+    // Ensure data directory exists
+    try {
+      await fs.access(DATA_DIR)
+    } catch {
+      await fs.mkdir(DATA_DIR, { recursive: true })
+    }
 
     // Read current data
-    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
-    const data = JSON.parse(fileContent)
+    let data
+    try {
+      const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+      data = JSON.parse(fileContent)
+    } catch {
+      // If file doesn't exist, create minimal structure
+      data = {
+        categories: [],
+        users: [],
+        auditLog: [],
+        pageVisits: 0,
+      }
+    }
 
     // Increment page visits
     const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
@@ -26,21 +44,20 @@ export async function POST() {
     // Write back to file
     await fs.writeFile(DATA_FILE, JSON.stringify(updatedData, null, 2))
 
-    console.log(`✅ API: Page visits incremented to ${newVisits}`)
+    console.log(`✅ API POST /api/data/page-visits - Page visits incremented to ${newVisits}`)
 
     return NextResponse.json({
       success: true,
       pageVisits: newVisits,
     })
   } catch (error) {
-    console.error("❌ API: Error incrementing page visits:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to increment page visits",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("❌ API POST /api/data/page-visits - Error:", error)
+
+    // Return success with 0 to prevent blocking the app
+    return NextResponse.json({
+      success: true,
+      pageVisits: 0,
+      error: "Failed to increment but continuing",
+    })
   }
 }

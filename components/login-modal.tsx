@@ -2,13 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Trash2 } from "lucide-react"
+import { Eye, EyeOff, X, Trash2 } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -24,68 +24,70 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [error, setError] = useState("")
 
   // Clear form when modal opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      // Clear form when opening
+  useEffect(() => {
+    if (isOpen) {
       setUsername("")
       setPassword("")
       setError("")
       setShowPassword(false)
-    } else {
-      onClose()
     }
-  }
-
-  // Manual clear function
-  const handleClearForm = () => {
-    setUsername("")
-    setPassword("")
-    setError("")
-    setShowPassword(false)
-  }
+  }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password")
+      return
+    }
+
     setIsLoading(true)
     setError("")
 
     try {
-      const success = await onLogin(username, password)
-      if (success) {
-        // Clear form on successful login
-        setUsername("")
-        setPassword("")
-        setError("")
-        setShowPassword(false)
-      } else {
+      const success = await onLogin(username.trim(), password)
+
+      if (!success) {
         setError("Invalid username or password")
-        // Clear password on failed login for security
+        // Clear password on failed login
         setPassword("")
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
-      // Clear password on error for security
+      // Clear password on error
       setPassword("")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleClear = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    setShowPassword(false)
+  }
+
+  const handleClose = () => {
+    handleClear()
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Admin Login</DialogTitle>
-          <DialogDescription>Enter your credentials to access the admin features</DialogDescription>
+          <DialogTitle className="flex items-center justify-between">
+            Login Required
+            <Button variant="ghost" size="sm" onClick={handleClose} className="h-6 w-6 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
+          <DialogDescription>Please enter your credentials to access admin features</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -94,8 +96,8 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
-              required
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
@@ -108,8 +110,8 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
-                required
                 disabled={isLoading}
+                autoComplete="current-password"
                 className="pr-10"
               />
               <Button
@@ -125,11 +127,17 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </div>
           </div>
 
-          <div className="flex justify-between space-x-2 pt-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-between space-x-2">
             <Button
               type="button"
               variant="outline"
-              onClick={handleClearForm}
+              onClick={handleClear}
               disabled={isLoading}
               className="flex items-center space-x-2 bg-transparent"
             >
@@ -138,11 +146,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </Button>
 
             <div className="flex space-x-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </div>
           </div>
