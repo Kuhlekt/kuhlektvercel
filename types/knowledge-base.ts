@@ -2,11 +2,11 @@ export interface User {
   id: string
   username: string
   password: string
-  email: string
   role: "admin" | "editor" | "viewer"
-  isActive: boolean
+  email?: string
+  lastLogin?: string
   createdAt: string
-  lastLogin: string | null
+  isActive: boolean
 }
 
 export interface Article {
@@ -14,12 +14,13 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  tags?: string[]
-  author: string
+  tags: string[]
+  authorId: string
+  status: "draft" | "published" | "archived"
   createdAt: string
   updatedAt: string
-  isPublished: boolean
-  views: number
+  viewCount: number
+  lastViewedAt?: string
 }
 
 export interface Subcategory {
@@ -34,13 +35,14 @@ export interface Subcategory {
 export interface Category {
   id: string
   name: string
-  description: string
+  description?: string
   icon?: string
   articles?: Article[]
   subcategories?: Category[]
+  children?: Category[]
   createdAt: string
   updatedAt: string
-  parentId: string | null
+  parentId?: string
   order: number
   isExpanded?: boolean
   isActive?: boolean
@@ -50,12 +52,14 @@ export interface AuditLogEntry {
   id: string
   action: string
   userId: string
+  username: string
   articleId?: string
   articleTitle?: string
   categoryId?: string
-  performedBy: string
+  performedBy?: string
   timestamp: string
   details: string
+  ipAddress?: string
 }
 
 export interface PageVisit {
@@ -77,6 +81,8 @@ export interface KnowledgeBaseData {
     requireApproval: boolean
     defaultRole: string
   }
+  pageVisits: number
+  lastUpdated: string
 }
 
 export interface SearchResult {
@@ -89,9 +95,10 @@ export interface SearchResult {
 }
 
 export interface UserSession {
-  user: User | null
+  user: User
   isLoggedIn: boolean
-  loginTime: Date | null
+  loginTime: string
+  expiresAt: string
 }
 
 export interface SystemStats {
