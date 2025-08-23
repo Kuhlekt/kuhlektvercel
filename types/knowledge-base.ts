@@ -47,12 +47,13 @@ export interface Category {
 export interface AuditLogEntry {
   id: string
   action: string
-  userId: string
+  userId?: string
   articleId?: string
   articleTitle?: string
   categoryId?: string
-  details: string
+  performedBy: string
   timestamp: string
+  details: string
 }
 
 export interface PageVisit {
@@ -140,4 +141,16 @@ export const USER_ROLES: Record<string, UserRole> = {
     canManageCategories: false,
     canViewAudit: false,
   },
+}
+
+export interface LoginCredentials {
+  username: string
+  password: string
+}
+
+export interface AuthUser {
+  id: string
+  username: string
+  role: "admin" | "editor" | "viewer"
+  email: string
 }

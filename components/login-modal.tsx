@@ -8,65 +8,59 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Eye, EyeOff } from "lucide-react"
+import { AlertCircle } from "lucide-react"
+import type { LoginCredentials, AuthUser } from "@/types/knowledge-base"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onLogin: (username: string, password: string) => Promise<boolean>
+  onLogin: (credentials: LoginCredentials) => Promise<AuthUser | null>
 }
 
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
+  const [credentials, setCredentials] = useState<LoginCredentials>({
+    username: "",
+    password: "",
+  })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password")
-      return
-    }
-
     setIsLoading(true)
-    setError("")
+    setError(null)
 
     try {
-      const success = await onLogin(username.trim(), password.trim())
-      if (success) {
-        setUsername("")
-        setPassword("")
+      const user = await onLogin(credentials)
+      if (user) {
+        setCredentials({ username: "", password: "" })
         onClose()
       } else {
         setError("Invalid username or password")
-        setPassword("")
       }
     } catch (err) {
-      console.error("Login error:", err)
       setError("Login failed. Please try again.")
-      setPassword("")
+      console.error("Login error:", err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleClose = () => {
-    setUsername("")
-    setPassword("")
-    setError("")
-    setIsLoading(false)
-    onClose()
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setCredentials({ username: "", password: "" })
+      setError(null)
+      onClose()
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[425px]" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
           <DialogDescription id="login-description">
-            Enter your credentials to access the knowledge base
+            Enter your credentials to access the knowledge base system.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,39 +70,25 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             <Input
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={credentials.username}
+              onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
               placeholder="Enter your username"
+              required
               disabled={isLoading}
-              autoComplete="username"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                disabled={isLoading}
-                autoComplete="current-password"
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-              </Button>
-            </div>
+            <Input
+              id="password"
+              type="password"
+              value={credentials.password}
+              onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
+              placeholder="Enter your password"
+              required
+              disabled={isLoading}
+            />
           </div>
 
           {error && (
@@ -119,27 +99,21 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           )}
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </div>
         </form>
 
-        <div className="mt-4 p-4 bg-gray-50 rounded-md">
-          <p className="text-sm text-gray-600 mb-2">Demo Accounts:</p>
+        <div className="mt-4 p-4 bg-muted rounded-lg">
+          <p className="text-sm font-medium mb-2">Demo Accounts:</p>
           <div className="text-xs space-y-1">
-            <div>
-              <strong>Admin:</strong> admin / admin123
-            </div>
-            <div>
-              <strong>Editor:</strong> editor / editor123
-            </div>
-            <div>
-              <strong>Viewer:</strong> viewer / viewer123
-            </div>
+            <div>Admin: admin / admin123</div>
+            <div>Editor: editor / editor123</div>
+            <div>Viewer: viewer / viewer123</div>
           </div>
         </div>
       </DialogContent>
