@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
-import type { Category, User, AuditLogEntry } from "@/types/knowledge-base"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
-// Complete default data structure
-const getDefaultData = () => ({
+console.log("📁 Data directory:", DATA_DIR)
+console.log("📄 Data file:", DATA_FILE)
+
+// Default data structure
+const DEFAULT_DATA = {
   categories: [
     {
       id: "getting-started",
@@ -33,7 +35,18 @@ const getDefaultData = () => ({
       id: "documentation",
       name: "Documentation",
       description: "Technical documentation and API references",
-      articles: [],
+      articles: [
+        {
+          id: "how-to-add-articles",
+          title: "How to Add Articles",
+          content:
+            "Adding articles to the knowledge base is simple:\n\n1. Click 'Add Article' in the navigation\n2. Fill in the title and content\n3. Select a category\n4. Add relevant tags\n5. Click 'Save Article'\n\nYour article will be immediately available.",
+          categoryId: "documentation",
+          tags: ["tutorial", "articles"],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
       subcategories: [
         {
           id: "api-docs",
@@ -47,13 +60,22 @@ const getDefaultData = () => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-  ] as Category[],
+    {
+      id: "faq",
+      name: "FAQ",
+      description: "Frequently asked questions",
+      articles: [],
+      subcategories: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
   users: [
     {
       id: "admin-1",
       username: "admin",
       password: "admin123",
-      role: "admin" as const,
+      role: "admin",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -61,7 +83,7 @@ const getDefaultData = () => ({
       id: "editor-1",
       username: "editor",
       password: "editor123",
-      role: "editor" as const,
+      role: "editor",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -69,11 +91,11 @@ const getDefaultData = () => ({
       id: "viewer-1",
       username: "viewer",
       password: "viewer123",
-      role: "viewer" as const,
+      role: "viewer",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
-  ] as User[],
+  ],
   auditLog: [
     {
       id: "audit-1",
@@ -82,54 +104,81 @@ const getDefaultData = () => ({
       timestamp: new Date().toISOString(),
       details: "Knowledge base system initialized with default data",
     },
-  ] as AuditLogEntry[],
-})
-
-// Ensure data directory exists
-async function ensureDataDir() {
-  try {
-    await fs.access(DATA_DIR)
-  } catch {
-    console.log("📁 Creating data directory...")
-    await fs.mkdir(DATA_DIR, { recursive: true })
-  }
+  ],
 }
 
-// Load data from file
-async function loadData() {
+async function ensureDataFile() {
   try {
-    await ensureDataDir()
+    console.log("🔍 Checking data directory...")
 
+    // Ensure data directory exists
     try {
-      const data = await fs.readFile(DATA_FILE, "utf-8")
-      const parsed = JSON.parse(data)
+      await fs.access(DATA_DIR)
+      console.log("✅ Data directory exists")
+    } catch {
+      console.log("📁 Creating data directory...")
+      await fs.mkdir(DATA_DIR, { recursive: true })
+      console.log("✅ Data directory created")
+    }
 
-      // Validate data structure
-      if (!parsed.categories || !parsed.users || !parsed.auditLog) {
-        throw new Error("Invalid data structure")
-      }
-
-      console.log("✅ Data loaded from file")
-      return parsed
-    } catch (error) {
-      console.log("📁 Creating default data file...")
-      const defaultData = getDefaultData()
-      await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
+    // Check if data file exists
+    try {
+      await fs.access(DATA_FILE)
+      console.log("✅ Data file exists")
+    } catch {
+      console.log("📄 Creating default data file...")
+      await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2))
       console.log("✅ Default data file created")
-      return defaultData
     }
   } catch (error) {
-    console.error("❌ Error in loadData:", error)
+    console.error("❌ Error ensuring data file:", error)
     throw error
   }
 }
 
-// Save data to file
+async function loadData() {
+  try {
+    console.log("📖 Loading data from file...")
+    await ensureDataFile()
+
+    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+    const data = JSON.parse(fileContent)
+
+    // Validate data structure
+    if (!data.categories || !Array.isArray(data.categories)) {
+      console.warn("⚠️ Invalid categories data, using defaults")
+      data.categories = DEFAULT_DATA.categories
+    }
+
+    if (!data.users || !Array.isArray(data.users)) {
+      console.warn("⚠️ Invalid users data, using defaults")
+      data.users = DEFAULT_DATA.users
+    }
+
+    if (!data.auditLog || !Array.isArray(data.auditLog)) {
+      console.warn("⚠️ Invalid audit log data, using defaults")
+      data.auditLog = DEFAULT_DATA.auditLog
+    }
+
+    console.log("✅ Data loaded successfully:", {
+      categories: data.categories.length,
+      users: data.users.length,
+      auditLog: data.auditLog.length,
+    })
+
+    return data
+  } catch (error) {
+    console.error("❌ Error loading data, using defaults:", error)
+    return DEFAULT_DATA
+  }
+}
+
 async function saveData(data: any) {
   try {
-    await ensureDataDir()
+    console.log("💾 Saving data to file...")
+    await ensureDataFile()
     await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
-    console.log("✅ Data saved to file")
+    console.log("✅ Data saved successfully")
   } catch (error) {
     console.error("❌ Error saving data:", error)
     throw error
@@ -138,51 +187,67 @@ async function saveData(data: any) {
 
 export async function GET() {
   try {
-    console.log("📖 GET /api/data - Loading data...")
+    console.log("🔄 GET /api/data - Loading data...")
     const data = await loadData()
+    console.log("✅ GET /api/data - Success")
     return NextResponse.json(data)
   } catch (error) {
     console.error("❌ GET /api/data - Error:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to load data", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     console.log("💾 POST /api/data - Processing request...")
-    const body = await request.json()
-    const { action, data: requestData } = body
 
-    console.log("📝 Action:", action)
+    const contentType = request.headers.get("content-type")
+    console.log("📋 Content-Type:", contentType)
 
-    switch (action) {
-      case "load":
-        const data = await loadData()
-        return NextResponse.json(data)
-
-      case "save":
-        if (!requestData) {
-          return NextResponse.json({ error: "No data provided" }, { status: 400 })
-        }
-        await saveData(requestData)
-        return NextResponse.json({ success: true })
-
-      case "import":
-        if (!requestData) {
-          return NextResponse.json({ error: "No data provided for import" }, { status: 400 })
-        }
-        // Validate imported data
-        if (!requestData.categories || !requestData.users || !requestData.auditLog) {
-          return NextResponse.json({ error: "Invalid data structure for import" }, { status: 400 })
-        }
-        await saveData(requestData)
-        return NextResponse.json({ success: true })
-
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    if (!contentType?.includes("application/json")) {
+      console.error("❌ Invalid content type:", contentType)
+      return NextResponse.json({ error: "Content-Type must be application/json" }, { status: 400 })
     }
+
+    let data
+    try {
+      data = await request.json()
+      console.log("📝 Request data received, keys:", Object.keys(data || {}))
+    } catch (parseError) {
+      console.error("❌ JSON parse error:", parseError)
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 })
+    }
+
+    if (!data) {
+      console.error("❌ No data provided")
+      return NextResponse.json({ error: "No data provided" }, { status: 400 })
+    }
+
+    // Validate required fields
+    if (!data.categories || !Array.isArray(data.categories)) {
+      console.error("❌ Invalid categories data")
+      return NextResponse.json({ error: "Invalid categories data" }, { status: 400 })
+    }
+
+    if (!data.users || !Array.isArray(data.users)) {
+      console.error("❌ Invalid users data")
+      return NextResponse.json({ error: "Invalid users data" }, { status: 400 })
+    }
+
+    await saveData(data)
+    console.log("✅ POST /api/data - Success")
+    return NextResponse.json({ success: true, message: "Data saved successfully" })
   } catch (error) {
     console.error("❌ POST /api/data - Error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to save data",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

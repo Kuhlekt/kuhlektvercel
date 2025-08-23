@@ -1,63 +1,66 @@
-import type { Category, Article, User, AuditLogEntry } from "@/types/knowledge-base"
-
-interface DatabaseData {
-  categories: Category[]
-  users: User[]
-  auditLog: AuditLogEntry[]
-}
+import type { Category, Article, User, AuditLogEntry, KnowledgeBaseData } from "@/types/knowledge-base"
 
 class ApiDatabase {
-  private baseUrl = "/api/data"
+  private data: KnowledgeBaseData | null = null
+  private isLoading = false
 
-  async loadData(): Promise<DatabaseData> {
+  async loadData(): Promise<KnowledgeBaseData> {
+    console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
+
     try {
-      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
-
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
+      const response = await fetch("/api/data", {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action: "load" }),
+        cache: "no-store",
       })
 
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ HTTP Error Response:", errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
-
       console.log("✅ ApiDatabase.loadData() - Data loaded successfully")
 
-      return {
-        categories: data.categories || [],
-        users: data.users || [],
-        auditLog: data.auditLog || [],
+      this.data = {
+        categories: Array.isArray(data.categories) ? data.categories : [],
+        users: Array.isArray(data.users) ? data.users : [],
+        auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
       }
+
+      return this.data
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error:", error)
       throw new Error("Failed to load data from server")
     }
   }
 
-  async saveData(data: DatabaseData): Promise<void> {
-    try {
-      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+  async saveData(): Promise<void> {
+    if (!this.data) {
+      throw new Error("No data to save")
+    }
 
-      const response = await fetch(this.baseUrl, {
+    console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+
+    try {
+      const response = await fetch("/api/data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action: "save", data }),
+        body: JSON.stringify(this.data),
       })
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error("❌ Save error response:", errorText)
+        console.error("❌ Save Error Response:", errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
+      const result = await response.json()
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error:", error)
@@ -65,10 +68,8 @@ class ApiDatabase {
     }
   }
 
-  async incrementPageVisits(): Promise<void> {
+  async incrementPageVisits(): Promise<number> {
     try {
-      console.log("📊 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
-
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
         headers: {
@@ -77,15 +78,15 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        console.warn("⚠️ Failed to increment page visits, but continuing...")
-        return
+        console.warn("Failed to increment page visits")
+        return 0
       }
 
-      const data = await response.json()
-      console.log("✅ ApiDatabase.incrementPageVisits() - Page visits updated:", data)
+      const result = await response.json()
+      return result.totalVisits || 0
     } catch (error) {
-      console.warn("⚠️ ApiDatabase.incrementPageVisits() - Error (non-critical):", error)
-      // Don't throw error for page visits - it's not critical
+      console.warn("Error incrementing page visits:", error)
+      return 0
     }
   }
 
@@ -128,12 +129,12 @@ class ApiDatabase {
       return category
     })
 
-    const currentData = await this.loadData()
-    await this.saveData({
-      ...currentData,
+    this.data = {
+      ...this.data!,
       categories: updatedCategories,
-    })
+    }
 
+    await this.saveData()
     return newArticle
   }
 
@@ -183,12 +184,12 @@ class ApiDatabase {
       return category
     })
 
-    const currentData = await this.loadData()
-    await this.saveData({
-      ...currentData,
+    this.data = {
+      ...this.data!,
       categories: updatedCategories,
-    })
+    }
 
+    await this.saveData()
     return updatedCategories
   }
 
@@ -218,89 +219,73 @@ class ApiDatabase {
       return category
     })
 
-    const currentData = await this.loadData()
-    await this.saveData({
-      ...currentData,
+    this.data = {
+      ...this.data!,
       categories: updatedCategories,
-    })
+    }
 
+    await this.saveData()
     return updatedCategories
   }
 
   async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    try {
-      const updatedUsers = users.map((user) => {
-        if (user.id === userId) {
-          return {
-            ...user,
-            lastLogin: new Date().toISOString(),
-          }
-        }
-        return user
-      })
-
-      const currentData = await this.loadData()
-      await this.saveData({
-        ...currentData,
-        users: updatedUsers,
-      })
-
-      return updatedUsers
-    } catch (error) {
-      console.warn("Failed to update user last login:", error)
-      return users // Return original users if update fails
+    if (!Array.isArray(users)) {
+      throw new Error("Users parameter must be an array")
     }
+
+    const updatedUsers = users.map((user) => {
+      if (user.id === userId) {
+        return {
+          ...user,
+          lastLogin: new Date().toISOString(),
+        }
+      }
+      return user
+    })
+
+    this.data = {
+      ...this.data!,
+      users: updatedUsers,
+    }
+
+    await this.saveData()
+    return updatedUsers
   }
 
   async addAuditEntry(
     auditLog: AuditLogEntry[],
     entry: Omit<AuditLogEntry, "id" | "timestamp">,
   ): Promise<AuditLogEntry[]> {
-    try {
-      const newEntry: AuditLogEntry = {
-        ...entry,
-        id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: new Date().toISOString(),
-      }
-
-      const updatedAuditLog = [...auditLog, newEntry]
-
-      const currentData = await this.loadData()
-      await this.saveData({
-        ...currentData,
-        auditLog: updatedAuditLog,
-      })
-
-      return updatedAuditLog
-    } catch (error) {
-      console.warn("Failed to add audit entry:", error)
-      return auditLog // Return original audit log if update fails
+    if (!Array.isArray(auditLog)) {
+      throw new Error("AuditLog parameter must be an array")
     }
+
+    const newEntry: AuditLogEntry = {
+      ...entry,
+      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+    }
+
+    const updatedAuditLog = [newEntry, ...auditLog]
+
+    // Keep only last 1000 entries
+    if (updatedAuditLog.length > 1000) {
+      updatedAuditLog.splice(1000)
+    }
+
+    this.data = {
+      ...this.data!,
+      auditLog: updatedAuditLog,
+    }
+
+    await this.saveData()
+    return updatedAuditLog
   }
 
-  async importData(data: DatabaseData): Promise<void> {
-    try {
-      console.log("📥 ApiDatabase.importData() - Importing data...")
-
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "import", data }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      console.log("✅ ApiDatabase.importData() - Data imported successfully")
-    } catch (error) {
-      console.error("❌ ApiDatabase.importData() - Error:", error)
-      throw new Error("Failed to import data")
-    }
+  async importData(data: KnowledgeBaseData): Promise<void> {
+    this.data = data
+    await this.saveData()
   }
 }
 
-// Export singleton instance
 export const apiDatabase = new ApiDatabase()

@@ -2,8 +2,9 @@ export interface User {
   id: string
   username: string
   password: string
-  email?: string
+  email: string
   role: "admin" | "editor" | "viewer"
+  isActive: boolean
   createdAt: string
   lastLogin: string | null
 }
@@ -14,8 +15,11 @@ export interface Article {
   content: string
   categoryId: string
   tags?: string[]
+  author: string
   createdAt: string
   updatedAt: string
+  isPublished: boolean
+  views: number
 }
 
 export interface Subcategory {
@@ -36,11 +40,16 @@ export interface Category {
   subcategories?: Category[]
   createdAt: string
   updatedAt: string
+  parentId: string | null
+  order: number
+  isExpanded?: boolean
+  isActive?: boolean
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
+  userId: string
   articleId?: string
   articleTitle?: string
   categoryId?: string
@@ -59,6 +68,7 @@ export interface PageVisit {
 
 export interface KnowledgeBaseData {
   categories: Category[]
+  articles: Article[]
   users: User[]
   auditLog: AuditLogEntry[]
   settings: {
