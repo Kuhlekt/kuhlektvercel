@@ -1,3 +1,4 @@
+// API Database utility for handling server communication
 import type { Category, User, AuditLogEntry, Article } from "@/types/knowledge-base"
 
 interface DatabaseData {
@@ -9,12 +10,6 @@ interface DatabaseData {
 
 class ApiDatabase {
   private baseUrl = "/api"
-  private data: DatabaseData = {
-    categories: [],
-    users: [],
-    auditLog: [],
-    pageVisits: 0,
-  }
 
   // Load all data from server
   async loadData(): Promise<DatabaseData> {
@@ -429,45 +424,6 @@ class ApiDatabase {
       console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
       throw new Error(`Failed to clear data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
-  }
-
-  // Getter methods
-  getCategories(): Category[] {
-    return this.data.categories || []
-  }
-
-  getArticles(): Article[] {
-    return this.data.articles || []
-  }
-
-  getUsers(): User[] {
-    return this.data.users || []
-  }
-
-  getAuditLog(): AuditLogEntry[] {
-    return this.data.auditLog || []
-  }
-
-  getPageVisits(): number {
-    return this.data.pageVisits || 0
-  }
-
-  getData(): DatabaseData {
-    return { ...this.data }
-  }
-
-  // Setter methods for direct updates
-  setData(newData: DatabaseData): void {
-    this.data = { ...newData }
-  }
-
-  addAuditLogEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): void {
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-    }
-    this.data.auditLog = [...(this.data.auditLog || []), newEntry]
   }
 }
 
