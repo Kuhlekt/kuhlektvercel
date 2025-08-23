@@ -7,12 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { User } from "@/types/knowledge-base"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onLogin: (user: User) => void
+  onLogin: (username: string, password: string) => Promise<boolean>
 }
 
 export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
@@ -27,40 +27,38 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        onLogin(data.user)
-        onClose()
+      const success = await onLogin(username, password)
+      if (success) {
         setUsername("")
         setPassword("")
+        onClose()
       } else {
-        setError(data.error || "Login failed")
+        setError("Invalid username or password")
       }
     } catch (error) {
-      setError("Network error. Please try again.")
+      setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]" aria-describedby="login-description">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
         </DialogHeader>
         <div id="login-description" className="sr-only">
           Enter your username and password to access the knowledge base
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
@@ -69,10 +67,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
               required
               disabled={isLoading}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -80,13 +80,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
               required
               disabled={isLoading}
             />
           </div>
-          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
@@ -94,11 +101,14 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </Button>
           </div>
         </form>
-        <div className="mt-4 p-3 bg-blue-50 rounded text-sm">
-          <p className="font-medium mb-2">Demo Accounts:</p>
-          <p>Admin: admin / admin123</p>
-          <p>Editor: editor / editor123</p>
-          <p>Viewer: viewer / viewer123</p>
+
+        <div className="mt-4 p-3 bg-gray-50 rounded-md">
+          <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
+          <div className="text-xs text-gray-600 space-y-1">
+            <div>👑 Admin: admin / admin123</div>
+            <div>✏️ Editor: editor / editor123</div>
+            <div>👁️ Viewer: viewer / viewer123</div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

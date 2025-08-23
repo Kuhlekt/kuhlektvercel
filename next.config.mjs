@@ -11,12 +11,8 @@ const nextConfig = {
   },
   images: {
     domains: ['localhost'],
-    unoptimized: true,
+    unoptimized: true
   },
-  // Ensure static file serving works properly
-  trailingSlash: false,
-  // Enable static exports for better compatibility
-  output: 'standalone',
 }
 
 export default nextConfig

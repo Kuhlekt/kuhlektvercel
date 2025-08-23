@@ -1,41 +1,41 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
+import type { KnowledgeBaseData } from "@/types/knowledge-base"
 
-const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
+const DATA_DIR = path.join(process.cwd(), "data")
+const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
-export async function POST(request: NextRequest) {
+async function loadData(): Promise<KnowledgeBaseData | null> {
   try {
-    const { articleId } = await request.json()
-
-    if (!articleId) {
-      return NextResponse.json({ error: "Article ID is required" }, { status: 400 })
-    }
-
-    // Read current data
     const fileContent = await fs.readFile(DATA_FILE, "utf-8")
-    const data = JSON.parse(fileContent)
+    return JSON.parse(fileContent)
+  } catch {
+    return null
+  }
+}
 
-    // Find and update article
-    const article = data.articles.find((a: any) => a.id === articleId)
-    if (article) {
-      article.views = (article.views || 0) + 1
-      article.lastViewedAt = new Date().toISOString()
+async function saveData(data: KnowledgeBaseData): Promise<void> {
+  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+}
+
+export async function POST() {
+  try {
+    const data = await loadData()
+
+    if (!data) {
+      return NextResponse.json({ success: false, error: "Data not found" }, { status: 404 })
     }
 
-    // Update stats
-    data.stats.totalViews = data.articles.reduce((sum: number, article: any) => sum + (article.views || 0), 0)
-    data.stats.lastUpdated = new Date().toISOString()
-
-    // Save updated data
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    data.pageVisits = (data.pageVisits || 0) + 1
+    await saveData(data)
 
     return NextResponse.json({
       success: true,
-      views: article?.views || 0,
+      pageVisits: data.pageVisits,
     })
   } catch (error) {
-    console.error("POST /api/data/page-visits error:", error)
-    return NextResponse.json({ error: "Failed to update page visits" }, { status: 500 })
+    console.error("Error incrementing page visits:", error)
+    return NextResponse.json({ success: false, error: "Failed to increment page visits" }, { status: 500 })
   }
 }
