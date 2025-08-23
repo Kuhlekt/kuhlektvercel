@@ -57,8 +57,35 @@ export interface SearchResult {
   id: string
   title: string
   content?: string
-  categoryName: string
-  relevance: number
+  categoryName?: string
+  subcategoryName?: string
+  tags?: string[]
+  relevanceScore: number
+}
+
+export interface UserSession {
+  user: User | null
+  isLoggedIn: boolean
+  loginTime: Date | null
+}
+
+export interface SystemStats {
+  totalArticles: number
+  totalCategories: number
+  totalUsers: number
+  pageVisits: number
+  lastUpdated: Date
+}
+
+export interface ImportExportData {
+  categories: Category[]
+  users: User[]
+  auditLog: AuditLogEntry[]
+  settings: {
+    pageVisits: number
+    exportedAt: string
+    version: string
+  }
 }
 
 export interface UserRole {

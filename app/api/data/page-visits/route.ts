@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
@@ -35,33 +35,37 @@ async function saveData(data: any) {
     await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
     return true
   } catch (error) {
-    console.error("Error saving data:", error)
-    throw new Error("Failed to save data")
+    console.error("❌ Error saving page visits data:", error)
+    throw new Error("Failed to save page visits data")
   }
 }
 
 export async function GET() {
   try {
+    console.log("📊 API GET /api/data/page-visits - Getting page visits...")
     const data = await loadData()
+
     return NextResponse.json({
       success: true,
       pageVisits: data.pageVisits || 0,
     })
   } catch (error) {
-    console.error("Error getting page visits:", error)
+    console.error("❌ API GET /api/data/page-visits - Error:", error)
     return NextResponse.json(
       {
         success: false,
         error: "Failed to get page visits",
-        pageVisits: 0,
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     )
   }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
+
     const data = await loadData()
     const newPageVisits = (data.pageVisits || 0) + 1
 
@@ -72,17 +76,20 @@ export async function POST() {
 
     await saveData(updatedData)
 
+    console.log(`✅ API POST /api/data/page-visits - Page visits incremented to: ${newPageVisits}`)
+
     return NextResponse.json({
       success: true,
       pageVisits: newPageVisits,
+      message: "Page visits incremented successfully",
     })
   } catch (error) {
-    console.error("Error incrementing page visits:", error)
+    console.error("❌ API POST /api/data/page-visits - Error:", error)
     return NextResponse.json(
       {
         success: false,
         error: "Failed to increment page visits",
-        pageVisits: 0,
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     )
