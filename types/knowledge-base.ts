@@ -1,21 +1,10 @@
-export interface User {
+export interface Category {
   id: string
-  username: string
-  password: string
-  email: string
-  role: "admin" | "editor" | "viewer"
-  createdAt: Date
-  lastLogin: Date | null
-  isActive: boolean
-}
-
-export interface Article {
-  id: string
-  title: string
-  content: string
-  categoryId: string
-  subcategoryId?: string
-  tags?: string[]
+  name: string
+  description: string
+  icon?: string
+  articles?: Article[]
+  subcategories?: Subcategory[]
   createdAt: Date
   updatedAt: Date
 }
@@ -24,39 +13,65 @@ export interface Subcategory {
   id: string
   name: string
   description: string
+  parentId: string
   articles?: Article[]
   createdAt: Date
   updatedAt: Date
 }
 
-export interface Category {
+export interface Article {
   id: string
-  name: string
-  description: string
-  articles?: Article[]
-  subcategories?: Subcategory[]
+  title: string
+  content: string
+  summary?: string
+  categoryId: string
+  subcategoryId?: string
+  tags?: string[]
+  author: string
+  status: "draft" | "published" | "archived"
+  priority: "low" | "medium" | "high"
   createdAt: Date
   updatedAt: Date
+  viewCount?: number
+  lastViewedAt?: Date
 }
+
+export interface User {
+  id: string
+  username: string
+  password: string
+  email: string
+  role: "admin" | "editor" | "viewer"
+  isActive: boolean
+  createdAt: Date
+  lastLogin: Date | null
+}
+
+// Alias for backward compatibility
+export type KnowledgeBaseUser = User
 
 export interface AuditLogEntry {
   id: string
   action: string
-  performedBy: string
-  username: string
-  timestamp: Date
   articleId?: string
   articleTitle?: string
   categoryId?: string
-  categoryName?: string
-  subcategoryName?: string
-  userId?: string
+  performedBy: string
+  timestamp: Date
   details: string
 }
 
-export interface KnowledgeBaseData {
+export interface SystemStats {
+  totalArticles: number
+  totalCategories: number
+  totalUsers: number
+  pageViews: number
+  lastUpdated: Date
+}
+
+export interface DatabaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
+  stats?: SystemStats
 }

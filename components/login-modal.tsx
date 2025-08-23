@@ -3,12 +3,12 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { User, Lock, AlertCircle, X } from "lucide-react"
+import { X, LogIn, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -25,9 +25,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   // Clear form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setUsername("")
-      setPassword("")
-      setError(null)
+      clearForm()
     }
   }, [isOpen])
 
@@ -35,6 +33,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     setUsername("")
     setPassword("")
     setError(null)
+  }
+
+  const handleClose = () => {
+    clearForm()
+    onClose()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,95 +48,88 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       return
     }
 
-    try {
-      setIsLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
-      const success = await onLogin(username, password)
+    try {
+      const success = await onLogin(username.trim(), password)
 
       if (success) {
         clearForm()
         onClose()
       } else {
         setError("Invalid username or password")
-        // Clear password on failed login for security
-        setPassword("")
+        setPassword("") // Clear password on failed login for security
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
-      setPassword("")
+      setPassword("") // Clear password on error for security
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleClose = () => {
-    clearForm()
-    onClose()
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <User className="h-5 w-5 mr-2" />
-              Login to Knowledge Base
-            </div>
-            <Button variant="ghost" size="sm" onClick={clearForm} className="h-8 w-8 p-0" title="Clear form">
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <DialogTitle className="text-xl font-semibold">Login</DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="sm" onClick={clearForm} className="h-8 px-2 text-xs" disabled={isLoading}>
+              Clear
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0" disabled={isLoading}>
               <X className="h-4 w-4" />
             </Button>
-          </DialogTitle>
-          <DialogDescription>Enter your credentials to access the knowledge base admin features</DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Login Form */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-900">Login:</h4>
-              <Button type="button" variant="ghost" size="sm" onClick={clearForm} className="text-xs">
-                Clear
-              </Button>
+          {/* Manual Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                disabled={isLoading}
+                autoComplete="username"
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-
-              <div className="flex space-x-2 pt-2">
-                <Button type="submit" disabled={isLoading} className="flex-1">
+            <div className="flex justify-between items-center pt-4">
+              <Button type="button" variant="ghost" onClick={clearForm} disabled={isLoading} className="text-sm">
+                Clear
+              </Button>
+              <div className="flex space-x-2">
+                <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()}>
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -141,17 +137,14 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                     </>
                   ) : (
                     <>
-                      <Lock className="h-4 w-4 mr-2" />
+                      <LogIn className="h-4 w-4 mr-2" />
                       Login
                     </>
                   )}
                 </Button>
-                <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-                  Cancel
-                </Button>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       </DialogContent>
     </Dialog>
