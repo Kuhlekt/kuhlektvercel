@@ -1,85 +1,42 @@
-import type { KnowledgeBaseData, User, Category, Article, AuditLogEntry } from "@/types/knowledge-base"
-
-interface ApiResponse {
-  success: boolean
-  data?: KnowledgeBaseData
-  error?: string
-  message?: string
-  timestamp?: string
-}
-
-interface DatabaseData {
-  categories?: Category[]
-  articles?: Article[]
-  users?: User[]
-  auditLog?: AuditLogEntry[]
-  pageVisits?: number
-}
+import type { KnowledgeBaseData, User, Article, Category, AuditLog } from "@/types/knowledge-base"
 
 class ApiDatabase {
-  private baseUrl = ""
   private cache: KnowledgeBaseData | null = null
-  private isLoading = false
+  private cacheExpiry = 0
+  private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-  async loadData(): Promise<KnowledgeBaseData> {
-    if (this.isLoading) {
-      // Wait for current load to complete
-      while (this.isLoading) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-      return this.cache!
+  private async fetchData(): Promise<KnowledgeBaseData> {
+    const now = Date.now()
+
+    if (this.cache && now < this.cacheExpiry) {
+      return this.cache
     }
 
-    this.isLoading = true
     try {
-      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
-
       const response = await fetch("/api/data", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        cache: "no-store", // Always fetch fresh data
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const result: ApiResponse = await response.json()
+      const data = await response.json()
+      this.cache = data
+      this.cacheExpiry = now + this.CACHE_DURATION
 
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Invalid response from server")
-      }
-
-      this.cache = result.data
-      console.log("✅ ApiDatabase.loadData() - Data loaded successfully:", {
-        categories: result.data.categories?.length || 0,
-        articles: result.data.articles?.length || 0,
-        users: result.data.users?.length || 0,
-        auditLog: result.data.auditLog?.length || 0,
-      })
-
-      return result.data
+      return data
     } catch (error) {
-      console.error("❌ ApiDatabase.loadData() - Error:", error)
-      throw new Error(`Failed to load data: ${error instanceof Error ? error.message : "Unknown error"}`)
-    } finally {
-      this.isLoading = false
+      console.error("Error fetching data:", error)
+      throw new Error("Failed to fetch data from server")
     }
   }
 
-  async saveData(data: KnowledgeBaseData): Promise<void> {
+  private async saveData(data: KnowledgeBaseData): Promise<void> {
     try {
-      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
-      console.log("📊 Data structure:", {
-        categories: data.categories?.length || 0,
-        articles: data.articles?.length || 0,
-        users: data.users?.length || 0,
-        auditLog: data.auditLog?.length || 0,
-        pageVisits: data.pageVisits,
-      })
-
       const response = await fetch("/api/data", {
         method: "POST",
         headers: {
@@ -89,109 +46,224 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error("❌ Save Error Response:", errorData)
-        throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`)
-      }
-
-      const result: ApiResponse = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Save operation failed")
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
       // Update cache
       this.cache = data
-      console.log("✅ ApiDatabase.saveData() - Data saved successfully")
+      this.cacheExpiry = Date.now() + this.CACHE_DURATION
     } catch (error) {
-      console.error("❌ ApiDatabase.saveData() - Error:", error)
-      throw new Error(`Failed to save data: ${error instanceof Error ? error.message : "Unknown error"}`)
+      console.error("Error saving data:", error)
+      throw new Error("Failed to save data to server")
     }
   }
 
-  async incrementPageVisits(): Promise<number> {
-    try {
-      console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing...")
+  private invalidateCache(): void {
+    this.cache = null
+    this.cacheExpiry = 0
+  }
 
+  async getAllData(): Promise<KnowledgeBaseData> {
+    return await this.fetchData()
+  }
+
+  async getUsers(): Promise<User[]> {
+    const data = await this.fetchData()
+    return data.users || []
+  }
+
+  async getArticles(): Promise<Article[]> {
+    const data = await this.fetchData()
+    return data.articles || []
+  }
+
+  async getCategories(): Promise<Category[]> {
+    const data = await this.fetchData()
+    return data.categories || []
+  }
+
+  async getAuditLog(): Promise<AuditLog[]> {
+    const data = await this.fetchData()
+    return data.auditLog || []
+  }
+
+  async addUser(user: Omit<User, "id" | "createdAt">): Promise<User> {
+    const data = await this.fetchData()
+    const newUser: User = {
+      ...user,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+    }
+
+    data.users.push(newUser)
+    await this.saveData(data)
+    return newUser
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    const data = await this.fetchData()
+    const userIndex = data.users.findIndex((u) => u.id === id)
+
+    if (userIndex === -1) return null
+
+    data.users[userIndex] = { ...data.users[userIndex], ...updates }
+    await this.saveData(data)
+    return data.users[userIndex]
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const data = await this.fetchData()
+    const initialLength = data.users.length
+    data.users = data.users.filter((u) => u.id !== id)
+
+    if (data.users.length < initialLength) {
+      await this.saveData(data)
+      return true
+    }
+    return false
+  }
+
+  async addArticle(article: Omit<Article, "id" | "createdAt" | "updatedAt" | "views">): Promise<Article> {
+    const data = await this.fetchData()
+    const newArticle: Article = {
+      ...article,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      views: 0,
+    }
+
+    data.articles.push(newArticle)
+    await this.saveData(data)
+    return newArticle
+  }
+
+  async updateArticle(id: string, updates: Partial<Article>): Promise<Article | null> {
+    const data = await this.fetchData()
+    const articleIndex = data.articles.findIndex((a) => a.id === id)
+
+    if (articleIndex === -1) return null
+
+    data.articles[articleIndex] = {
+      ...data.articles[articleIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }
+    await this.saveData(data)
+    return data.articles[articleIndex]
+  }
+
+  async deleteArticle(id: string): Promise<boolean> {
+    const data = await this.fetchData()
+    const initialLength = data.articles.length
+    data.articles = data.articles.filter((a) => a.id !== id)
+
+    if (data.articles.length < initialLength) {
+      await this.saveData(data)
+      return true
+    }
+    return false
+  }
+
+  async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category> {
+    const data = await this.fetchData()
+    const newCategory: Category = {
+      ...category,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    data.categories.push(newCategory)
+    await this.saveData(data)
+    return newCategory
+  }
+
+  async updateCategory(id: string, updates: Partial<Category>): Promise<Category | null> {
+    const data = await this.fetchData()
+    const categoryIndex = data.categories.findIndex((c) => c.id === id)
+
+    if (categoryIndex === -1) return null
+
+    data.categories[categoryIndex] = {
+      ...data.categories[categoryIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }
+    await this.saveData(data)
+    return data.categories[categoryIndex]
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    const data = await this.fetchData()
+    const initialLength = data.categories.length
+    data.categories = data.categories.filter((c) => c.id !== id)
+
+    if (data.categories.length < initialLength) {
+      await this.saveData(data)
+      return true
+    }
+    return false
+  }
+
+  async addAuditLog(log: Omit<AuditLog, "id" | "timestamp">): Promise<AuditLog> {
+    const data = await this.fetchData()
+    const newLog: AuditLog = {
+      ...log,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    }
+
+    data.auditLog.push(newLog)
+    await this.saveData(data)
+    return newLog
+  }
+
+  async incrementPageVisits(articleId: string): Promise<number> {
+    try {
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ articleId }),
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to increment page visits")
-      }
-
-      console.log("✅ Page visits incremented to:", result.pageVisits)
-      return result.pageVisits || 0
+      this.invalidateCache() // Invalidate cache since data changed
+      return result.views || 0
     } catch (error) {
-      console.warn("⚠️ Failed to increment page visits:", error)
-      // Don't throw error for page visits - it's not critical
+      console.error("Error incrementing page visits:", error)
       return 0
     }
   }
 
-  clearCache(): void {
-    this.cache = null
-    console.log("🗑️ ApiDatabase cache cleared")
-  }
+  async searchArticles(query: string): Promise<Article[]> {
+    const data = await this.fetchData()
+    const searchTerm = query.toLowerCase()
 
-  getCachedData(): KnowledgeBaseData | null {
-    return this.cache
-  }
-
-  async addAuditEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): Promise<void> {
-    const data = await this.loadData()
-
-    const newEntry: AuditLogEntry = {
-      ...entry,
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
-    }
-
-    data.auditLog = data.auditLog || []
-    data.auditLog.unshift(newEntry) // Add to beginning
-
-    // Keep only last 1000 entries
-    if (data.auditLog.length > 1000) {
-      data.auditLog = data.auditLog.slice(0, 1000)
-    }
-
-    await this.saveData(data)
-  }
-
-  async updateUserLastLogin(userId: string): Promise<void> {
-    const data = await this.loadData()
-
-    data.users = data.users.map((user) =>
-      user.id === userId ? { ...user, lastLogin: new Date().toISOString() } : user,
+    return data.articles.filter(
+      (article) =>
+        article.title.toLowerCase().includes(searchTerm) ||
+        article.content.toLowerCase().includes(searchTerm) ||
+        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm)),
     )
-
-    await this.saveData(data)
   }
 
-  // Data validation
-  validateData(data: any): data is KnowledgeBaseData {
-    return (
-      data &&
-      typeof data === "object" &&
-      Array.isArray(data.categories) &&
-      Array.isArray(data.users) &&
-      Array.isArray(data.auditLog)
-    )
+  async getArticlesByCategory(categoryId: string): Promise<Article[]> {
+    const data = await this.fetchData()
+    return data.articles.filter((article) => article.categoryId === categoryId)
+  }
+
+  async getStats() {
+    const data = await this.fetchData()
+    return data.stats
   }
 }
 
-// Export singleton instance
 export const apiDatabase = new ApiDatabase()
-
-// Export class for testing
-export { ApiDatabase }

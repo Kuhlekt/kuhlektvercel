@@ -2,41 +2,22 @@ export interface User {
   id: string
   username: string
   password: string
-  email: string
   role: "admin" | "editor" | "viewer"
+  email?: string
+  lastLogin?: string
+  createdAt: string
   isActive: boolean
-  createdAt: Date | string
-  lastLogin?: Date | string | null
-}
-
-export interface KnowledgeBaseUser {
-  id: string
-  username: string
-  password: string
-  email: string
-  role: "admin" | "editor" | "viewer"
-  isActive: boolean
-  createdAt: Date | string
-  lastLogin?: Date | string | null
 }
 
 export interface Category {
   id: string
   name: string
-  description: string
-  createdAt: Date | string
-  updatedAt: Date | string
-  subcategories?: Subcategory[]
-  articles?: Article[]
-}
-
-export interface Subcategory {
-  id: string
-  name: string
-  description: string
-  createdAt: Date | string
-  updatedAt: Date | string
-  articles?: Article[]
+  description?: string
+  parentId?: string
+  children?: Category[]
+  articleCount?: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Article {
@@ -44,37 +25,58 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  subcategoryId?: string
-  author: string
-  createdAt: Date | string
-  updatedAt: Date | string
   tags: string[]
+  author: string
+  createdAt: string
+  updatedAt: string
+  isPublished: boolean
   views: number
-  createdBy?: string
-  lastEditedBy?: string
-  editCount?: number
+  lastViewedAt?: string
 }
 
-export interface AuditLogEntry {
+export interface AuditLog {
   id: string
+  userId: string
+  username: string
   action: string
-  articleId?: string
-  articleTitle?: string
-  categoryId?: string
-  categoryName?: string
-  subcategoryName?: string
-  userId?: string
-  username?: string
-  performedBy: string
-  timestamp: Date | string
   details: string
+  timestamp: string
+  ipAddress?: string
 }
 
 export interface KnowledgeBaseData {
+  users: User[]
   categories: Category[]
-  articles?: Article[]
-  users: KnowledgeBaseUser[]
-  auditLog: AuditLogEntry[]
-  pageVisits?: number
-  lastUpdated?: Date | string
+  articles: Article[]
+  auditLog: AuditLog[]
+  settings: {
+    siteName: string
+    description: string
+    version: string
+    lastBackup?: string
+  }
+  stats: {
+    totalUsers: number
+    totalArticles: number
+    totalCategories: number
+    totalViews: number
+    lastUpdated: string
+  }
+}
+
+export interface SearchResult {
+  type: "article" | "category"
+  id: string
+  title: string
+  content?: string
+  categoryName?: string
+  relevance: number
+}
+
+export interface NavigationItem {
+  id: string
+  label: string
+  path: string
+  icon?: string
+  children?: NavigationItem[]
 }

@@ -57,13 +57,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Username and password are required" }, { status: 400 })
     }
 
-    const users = await loadUsers()
-    console.log(
-      "👥 Available users:",
-      users.map((u) => ({ username: u.username, role: u.role, isActive: u.isActive })),
-    )
+    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+    const data: KnowledgeBaseData = JSON.parse(fileContent)
 
-    const user = users.find((u) => u.username === username && u.password === password && u.isActive)
+    const user = data.users.find((u) => u.username === username && u.password === password && u.isActive)
 
     if (!user) {
       console.log("❌ Login failed for username:", username)
@@ -72,7 +69,21 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Login successful for user:", { id: user.id, username: user.username, role: user.role })
 
-    // Return user without password
+    user.lastLogin = new Date().toISOString()
+
+    const auditEntry = {
+      id: Date.now().toString(),
+      userId: user.id,
+      username: user.username,
+      action: "login",
+      details: "User logged in successfully",
+      timestamp: new Date().toISOString(),
+    }
+
+    data.auditLog.push(auditEntry)
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+
     const { password: _, ...userWithoutPassword } = user
     return NextResponse.json({
       success: true,
