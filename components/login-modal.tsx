@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -80,10 +80,13 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5" />
+          <DialogTitle className="flex items-center">
+            <LogIn className="h-5 w-5 mr-2" />
             Login to Knowledge Base
           </DialogTitle>
+          <DialogDescription>
+            Enter your credentials to access the knowledge base management features.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,7 +106,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               placeholder="Enter your username"
               disabled={isLoading}
               autoComplete="username"
-              autoFocus
             />
           </div>
 
@@ -129,25 +131,24 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
                 disabled={isLoading}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
               </Button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 pt-4">
+          <div className="flex items-center justify-between space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={handleClear}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-transparent"
+              className="flex items-center bg-transparent"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 mr-2" />
               Clear
             </Button>
 
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
+            <div className="flex space-x-2">
+              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isLoading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
@@ -157,17 +158,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
           </div>
         </form>
 
-        <div className="mt-4 p-3 bg-muted rounded-lg">
-          <p className="text-sm text-muted-foreground mb-2">Default accounts:</p>
-          <div className="text-xs space-y-1">
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-2">Default accounts:</p>
+          <div className="text-xs text-gray-500 space-y-1">
             <div>
-              <strong>Admin:</strong> admin / admin123
+              Admin: <code className="bg-white px-1 rounded">admin</code> /{" "}
+              <code className="bg-white px-1 rounded">admin123</code>
             </div>
             <div>
-              <strong>Editor:</strong> editor / editor123
+              Editor: <code className="bg-white px-1 rounded">editor</code> /{" "}
+              <code className="bg-white px-1 rounded">editor123</code>
             </div>
             <div>
-              <strong>Viewer:</strong> viewer / viewer123
+              Viewer: <code className="bg-white px-1 rounded">viewer</code> /{" "}
+              <code className="bg-white px-1 rounded">viewer123</code>
             </div>
           </div>
         </div>

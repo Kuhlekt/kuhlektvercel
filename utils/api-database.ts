@@ -1,29 +1,24 @@
-import type { User, Category, Article, AuditLogEntry } from "@/types/knowledge-base"
+import type { Category, Article, User, AuditLogEntry } from "@/types/knowledge-base"
 
 interface DatabaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
 }
 
-export class ApiDatabase {
-  private baseUrl: string
-
-  constructor() {
-    this.baseUrl = typeof window !== "undefined" ? window.location.origin + "/api/data" : "/api/data"
-  }
+class ApiDatabase {
+  private baseUrl = "/api/data"
 
   async loadData(): Promise<DatabaseData> {
-    console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
     try {
+      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
+
       const response = await fetch(this.baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ action: "load" }),
-        cache: "no-store",
       })
 
       if (!response.ok) {
@@ -32,145 +27,51 @@ export class ApiDatabase {
 
       const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.error || "Failed to load data")
-      }
-
-      console.log("✅ ApiDatabase.loadData() - Data received:", {
+      console.log("✅ ApiDatabase.loadData() - Data loaded successfully:", {
         categories: data.categories?.length || 0,
         users: data.users?.length || 0,
-        usernames: data.users?.map((u: User) => u.username) || [],
         auditLog: data.auditLog?.length || 0,
-        pageVisits: data.pageVisits || 0,
       })
 
-      // Ensure all arrays exist
       return {
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        users: Array.isArray(data.users) ? data.users : [],
-        auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
-        pageVisits: typeof data.pageVisits === "number" ? data.pageVisits : 0,
+        categories: data.categories || [],
+        users: data.users || [],
+        auditLog: data.auditLog || [],
       }
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error:", error)
-      throw new Error(`Failed to load data from server`)
+      throw new Error("Failed to load data from server")
     }
   }
 
-  async saveData(data: Partial<DatabaseData>): Promise<void> {
-    console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+  async saveData(data: DatabaseData): Promise<void> {
     try {
-      // Validate data structure before sending
-      const validatedData = {
-        categories: Array.isArray(data.categories) ? data.categories : [],
-        users: Array.isArray(data.users) ? data.users : [],
-        auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
-        pageVisits: typeof data.pageVisits === "number" ? data.pageVisits : 0,
-      }
+      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
 
       const response = await fetch(this.baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action: "save", data: validatedData }),
+        body: JSON.stringify({ action: "save", data }),
       })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || "Save operation failed")
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
-      console.error("❌ ApiDatabase.saveData() - Error saving data:", error)
-      throw new Error(`Failed to save data to server`)
+      console.error("❌ ApiDatabase.saveData() - Error:", error)
+      throw new Error("Failed to save data to server")
     }
   }
 
-  async importData(importData: any): Promise<void> {
+  async incrementPageVisits(): Promise<void> {
     try {
-      console.log("📥 ApiDatabase.importData() - Starting data import...")
+      console.log("📊 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
 
-      if (!importData || typeof importData !== "object") {
-        throw new Error("Invalid import data structure")
-      }
-
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "import", data: importData }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || "Import operation failed")
-      }
-
-      console.log("✅ ApiDatabase.importData() - Data imported successfully")
-    } catch (error) {
-      console.error("❌ ApiDatabase.importData() - Error importing data:", error)
-      throw new Error(`Failed to import data to server`)
-    }
-  }
-
-  async exportData(): Promise<any> {
-    try {
-      console.log("📤 ApiDatabase.exportData() - Starting data export...")
-
-      const data = await this.loadData()
-
-      const exportData = {
-        categories: data.categories,
-        users: data.users,
-        auditLog: data.auditLog,
-        settings: {
-          pageVisits: data.pageVisits,
-          exportedAt: new Date().toISOString(),
-          version: "1.0",
-        },
-      }
-
-      console.log("✅ ApiDatabase.exportData() - Data exported successfully")
-      return exportData
-    } catch (error) {
-      console.error("❌ ApiDatabase.exportData() - Error exporting data:", error)
-      throw new Error(`Failed to export data from server`)
-    }
-  }
-
-  async clearAllData(): Promise<void> {
-    try {
-      console.log("🗑️ ApiDatabase.clearAllData() - Clearing all data...")
-
-      await this.saveData({
-        categories: [],
-        users: [],
-        auditLog: [],
-        pageVisits: 0,
-      })
-
-      console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
-    } catch (error) {
-      console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
-      throw new Error(`Failed to clear data from server`)
-    }
-  }
-
-  async incrementPageVisits(): Promise<number> {
-    console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
-    try {
-      const response = await fetch(`${this.baseUrl}/page-visits`, {
+      const response = await fetch("/api/data/page-visits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,96 +79,15 @@ export class ApiDatabase {
       })
 
       if (!response.ok) {
-        console.warn("⚠️ Failed to increment page visits, continuing...")
-        return 0
+        console.warn("⚠️ Failed to increment page visits, but continuing...")
+        return
       }
 
       const data = await response.json()
-
-      if (data.success) {
-        console.log(`✅ ApiDatabase.incrementPageVisits() - Success: ${data.pageVisits}`)
-        return data.pageVisits || 0
-      } else {
-        console.warn("⚠️ Page visits increment returned failure, continuing...")
-        return 0
-      }
+      console.log("✅ ApiDatabase.incrementPageVisits() - Page visits updated:", data)
     } catch (error) {
-      console.warn("⚠️ Error incrementing page visits:", error)
-      return 0
-    }
-  }
-
-  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    console.log("👤 ApiDatabase.updateUserLastLogin() - Updating last login for user:", userId)
-
-    try {
-      // Validate inputs
-      if (!Array.isArray(users)) {
-        throw new Error("Users parameter must be an array")
-      }
-
-      if (!userId || typeof userId !== "string") {
-        throw new Error("UserId parameter must be a string")
-      }
-
-      const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
-
-      // Save to server
-      await this.saveData({ users: updatedUsers })
-
-      console.log("✅ User last login updated successfully")
-      return updatedUsers
-    } catch (error) {
-      console.error("❌ ApiDatabase.updateUserLastLogin() - Error:", error)
-      throw new Error(`Failed to update last login`)
-    }
-  }
-
-  async addAuditEntry(
-    auditLog: AuditLogEntry[],
-    entry: {
-      action: string
-      articleId?: string
-      articleTitle?: string
-      categoryId?: string
-      categoryName?: string
-      subcategoryName?: string
-      userId?: string
-      username?: string
-      performedBy: string
-      details: string
-    },
-  ): Promise<AuditLogEntry[]> {
-    console.log("📋 ApiDatabase.addAuditEntry() - Adding audit entry:", entry.action)
-
-    try {
-      // Validate inputs
-      if (!Array.isArray(auditLog)) {
-        throw new Error("AuditLog parameter must be an array")
-      }
-
-      const newEntry: AuditLogEntry = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        timestamp: new Date(),
-        username: entry.performedBy,
-        ...entry,
-      }
-
-      const updatedAuditLog = [newEntry, ...auditLog]
-
-      // Keep only last 1000 entries
-      if (updatedAuditLog.length > 1000) {
-        updatedAuditLog.splice(1000)
-      }
-
-      // Save to server
-      await this.saveData({ auditLog: updatedAuditLog })
-
-      console.log("✅ Audit entry added successfully")
-      return updatedAuditLog
-    } catch (error) {
-      console.error("❌ ApiDatabase.addAuditEntry() - Error:", error)
-      throw new Error(`Failed to add audit entry`)
+      console.warn("⚠️ ApiDatabase.incrementPageVisits() - Error (non-critical):", error)
+      // Don't throw error for page visits - it's not critical
     }
   }
 
@@ -275,52 +95,48 @@ export class ApiDatabase {
     categories: Category[],
     articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
   ): Promise<Article> {
-    console.log("📝 ApiDatabase.addArticle() - Adding new article:", articleData.title)
+    const newArticle: Article = {
+      ...articleData,
+      id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
 
-    try {
-      const newArticle: Article = {
-        ...articleData,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    const updatedCategories = categories.map((category) => {
+      if (category.id === articleData.categoryId) {
+        return {
+          ...category,
+          articles: [...(category.articles || []), newArticle],
+        }
       }
 
-      const updatedCategories = categories.map((category) => {
-        if (category.id === articleData.categoryId) {
-          return {
-            ...category,
-            articles: [...(category.articles || []), newArticle],
-          }
-        }
-
-        if (category.subcategories) {
-          const updatedSubcategories = category.subcategories.map((subcategory) => {
-            if (subcategory.id === articleData.categoryId) {
-              return {
-                ...subcategory,
-                articles: [...(subcategory.articles || []), newArticle],
-              }
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.id === articleData.categoryId) {
+            return {
+              ...subcategory,
+              articles: [...(subcategory.articles || []), newArticle],
             }
-            return subcategory
-          })
-
-          return {
-            ...category,
-            subcategories: updatedSubcategories,
           }
+          return subcategory
+        })
+
+        return {
+          ...category,
+          subcategories: updatedSubcategories,
         }
+      }
 
-        return category
-      })
+      return category
+    })
 
-      await this.saveData({ categories: updatedCategories })
+    const currentData = await this.loadData()
+    await this.saveData({
+      ...currentData,
+      categories: updatedCategories,
+    })
 
-      console.log("✅ Article added successfully")
-      return newArticle
-    } catch (error) {
-      console.error("❌ ApiDatabase.addArticle() - Error:", error)
-      throw new Error(`Failed to add article`)
-    }
+    return newArticle
   }
 
   async updateArticle(
@@ -328,228 +144,155 @@ export class ApiDatabase {
     articleId: string,
     updatedArticle: Omit<Article, "createdAt">,
   ): Promise<Category[]> {
-    console.log("📝 ApiDatabase.updateArticle() - Updating article:", articleId)
-
-    try {
-      const updatedCategories = categories.map((category) => {
-        // Check main category articles
-        if (category.articles) {
-          const articleIndex = category.articles.findIndex((article) => article.id === articleId)
-          if (articleIndex !== -1) {
-            const updatedArticles = [...category.articles]
-            updatedArticles[articleIndex] = {
-              ...updatedArticle,
-              createdAt: updatedArticles[articleIndex].createdAt,
-              updatedAt: new Date(),
-            }
-            return {
-              ...category,
-              articles: updatedArticles,
-            }
+    const updatedCategories = categories.map((category) => {
+      // Check main category articles
+      if (category.articles) {
+        const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+        if (articleIndex !== -1) {
+          const originalArticle = category.articles[articleIndex]
+          const updated = [...category.articles]
+          updated[articleIndex] = {
+            ...updatedArticle,
+            createdAt: originalArticle.createdAt,
+            updatedAt: new Date().toISOString(),
           }
+          return { ...category, articles: updated }
         }
+      }
 
-        // Check subcategory articles
-        if (category.subcategories) {
-          const updatedSubcategories = category.subcategories.map((subcategory) => {
-            if (subcategory.articles) {
-              const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
-              if (articleIndex !== -1) {
-                const updatedArticles = [...subcategory.articles]
-                updatedArticles[articleIndex] = {
-                  ...updatedArticle,
-                  createdAt: updatedArticles[articleIndex].createdAt,
-                  updatedAt: new Date(),
-                }
-                return {
-                  ...subcategory,
-                  articles: updatedArticles,
-                }
+      // Check subcategory articles
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const articleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+            if (articleIndex !== -1) {
+              const originalArticle = subcategory.articles[articleIndex]
+              const updated = [...subcategory.articles]
+              updated[articleIndex] = {
+                ...updatedArticle,
+                createdAt: originalArticle.createdAt,
+                updatedAt: new Date().toISOString(),
               }
+              return { ...subcategory, articles: updated }
             }
-            return subcategory
-          })
-
-          return {
-            ...category,
-            subcategories: updatedSubcategories,
           }
-        }
+          return subcategory
+        })
 
-        return category
-      })
+        return { ...category, subcategories: updatedSubcategories }
+      }
 
-      await this.saveData({ categories: updatedCategories })
+      return category
+    })
 
-      console.log("✅ Article updated successfully")
-      return updatedCategories
-    } catch (error) {
-      console.error("❌ ApiDatabase.updateArticle() - Error:", error)
-      throw new Error(`Failed to update article`)
-    }
+    const currentData = await this.loadData()
+    await this.saveData({
+      ...currentData,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
   }
 
   async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
-    console.log("🗑️ ApiDatabase.deleteArticle() - Deleting article:", articleId)
+    const updatedCategories = categories.map((category) => {
+      // Check main category articles
+      if (category.articles) {
+        const filtered = category.articles.filter((a) => a.id !== articleId)
+        if (filtered.length !== category.articles.length) {
+          return { ...category, articles: filtered }
+        }
+      }
 
+      // Check subcategory articles
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const filtered = subcategory.articles.filter((a) => a.id !== articleId)
+            return { ...subcategory, articles: filtered }
+          }
+          return subcategory
+        })
+
+        return { ...category, subcategories: updatedSubcategories }
+      }
+
+      return category
+    })
+
+    const currentData = await this.loadData()
+    await this.saveData({
+      ...currentData,
+      categories: updatedCategories,
+    })
+
+    return updatedCategories
+  }
+
+  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
+    const updatedUsers = users.map((user) => {
+      if (user.id === userId) {
+        return {
+          ...user,
+          lastLogin: new Date().toISOString(),
+        }
+      }
+      return user
+    })
+
+    const currentData = await this.loadData()
+    await this.saveData({
+      ...currentData,
+      users: updatedUsers,
+    })
+
+    return updatedUsers
+  }
+
+  async addAuditEntry(
+    auditLog: AuditLogEntry[],
+    entry: Omit<AuditLogEntry, "id" | "timestamp">,
+  ): Promise<AuditLogEntry[]> {
+    const newEntry: AuditLogEntry = {
+      ...entry,
+      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+    }
+
+    const updatedAuditLog = [...auditLog, newEntry]
+
+    const currentData = await this.loadData()
+    await this.saveData({
+      ...currentData,
+      auditLog: updatedAuditLog,
+    })
+
+    return updatedAuditLog
+  }
+
+  async importData(data: DatabaseData): Promise<void> {
     try {
-      const updatedCategories = categories.map((category) => {
-        // Check main category articles
-        if (category.articles) {
-          const filteredArticles = category.articles.filter((article) => article.id !== articleId)
-          if (filteredArticles.length !== category.articles.length) {
-            return {
-              ...category,
-              articles: filteredArticles,
-            }
-          }
-        }
+      console.log("📥 ApiDatabase.importData() - Importing data...")
 
-        // Check subcategory articles
-        if (category.subcategories) {
-          const updatedSubcategories = category.subcategories.map((subcategory) => {
-            if (subcategory.articles) {
-              const filteredArticles = subcategory.articles.filter((article) => article.id !== articleId)
-              return {
-                ...subcategory,
-                articles: filteredArticles,
-              }
-            }
-            return subcategory
-          })
-
-          return {
-            ...category,
-            subcategories: updatedSubcategories,
-          }
-        }
-
-        return category
+      const response = await fetch(this.baseUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "import", data }),
       })
 
-      await this.saveData({ categories: updatedCategories })
-
-      console.log("✅ Article deleted successfully")
-      return updatedCategories
-    } catch (error) {
-      console.error("❌ ApiDatabase.deleteArticle() - Error:", error)
-      throw new Error(`Failed to delete article`)
-    }
-  }
-
-  async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category> {
-    try {
-      const data = await this.loadData()
-
-      const newCategory: Category = {
-        ...category,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      data.categories.push(newCategory)
-      await this.saveData(data)
-
-      return newCategory
+      console.log("✅ ApiDatabase.importData() - Data imported successfully")
     } catch (error) {
-      console.error("❌ ApiDatabase.addCategory() - Error:", error)
-      throw new Error("Failed to add category")
-    }
-  }
-
-  async updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
-    try {
-      const data = await this.loadData()
-      const categoryIndex = data.categories.findIndex((c) => c.id === id)
-
-      if (categoryIndex === -1) {
-        throw new Error("Category not found")
-      }
-
-      const updatedCategory = {
-        ...data.categories[categoryIndex],
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      }
-
-      data.categories[categoryIndex] = updatedCategory
-      await this.saveData(data)
-
-      return updatedCategory
-    } catch (error) {
-      console.error("❌ ApiDatabase.updateCategory() - Error:", error)
-      throw new Error("Failed to update category")
-    }
-  }
-
-  async deleteCategory(id: string): Promise<void> {
-    try {
-      const data = await this.loadData()
-      data.categories = data.categories.filter((c) => c.id !== id)
-      await this.saveData(data)
-    } catch (error) {
-      console.error("❌ ApiDatabase.deleteCategory() - Error:", error)
-      throw new Error("Failed to delete category")
-    }
-  }
-
-  async addUser(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User> {
-    try {
-      const data = await this.loadData()
-
-      const newUser: User = {
-        ...user,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      data.users.push(newUser)
-      await this.saveData(data)
-
-      return newUser
-    } catch (error) {
-      console.error("❌ ApiDatabase.addUser() - Error:", error)
-      throw new Error("Failed to add user")
-    }
-  }
-
-  async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    try {
-      const data = await this.loadData()
-      const userIndex = data.users.findIndex((u) => u.id === id)
-
-      if (userIndex === -1) {
-        throw new Error("User not found")
-      }
-
-      const updatedUser = {
-        ...data.users[userIndex],
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      }
-
-      data.users[userIndex] = updatedUser
-      await this.saveData(data)
-
-      return updatedUser
-    } catch (error) {
-      console.error("❌ ApiDatabase.updateUser() - Error:", error)
-      throw new Error("Failed to update user")
-    }
-  }
-
-  async deleteUser(id: string): Promise<void> {
-    try {
-      const data = await this.loadData()
-      data.users = data.users.filter((u) => u.id !== id)
-      await this.saveData(data)
-    } catch (error) {
-      console.error("❌ ApiDatabase.deleteUser() - Error:", error)
-      throw new Error("Failed to delete user")
+      console.error("❌ ApiDatabase.importData() - Error:", error)
+      throw new Error("Failed to import data")
     }
   }
 }
 
+// Export singleton instance
 export const apiDatabase = new ApiDatabase()

@@ -1,105 +1,83 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
-import type { KnowledgeBaseData } from "@/types/knowledge-base"
+import type { Category, User, AuditLogEntry } from "@/types/knowledge-base"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 // Default data structure
-const DEFAULT_DATA: KnowledgeBaseData = {
+const getDefaultData = () => ({
   categories: [
     {
       id: "getting-started",
       name: "Getting Started",
       description: "Essential guides to get you up and running",
-      icon: "BookOpen",
       articles: [
         {
           id: "welcome",
           title: "Welcome to the Knowledge Base",
           content:
-            "This is your comprehensive knowledge base system. Here you can find guides, documentation, and helpful resources.",
+            "This is your comprehensive knowledge base system. Here you can find documentation, guides, and answers to common questions.\n\nFeatures:\n- Browse articles by category\n- Search across all content\n- User management and authentication\n- Admin dashboard for content management\n\nTo get started, explore the categories on the left or use the search bar above.",
           categoryId: "getting-started",
-          tags: ["welcome", "introduction"],
+          tags: ["welcome", "introduction", "overview"],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
       ],
       subcategories: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     },
     {
-      id: "technical",
-      name: "Technical Documentation",
-      description: "Technical guides and API documentation",
-      icon: "Code",
+      id: "documentation",
+      name: "Documentation",
+      description: "Technical documentation and API references",
       articles: [],
       subcategories: [
         {
           id: "api-docs",
           name: "API Documentation",
           description: "REST API endpoints and usage examples",
-          articles: [
-            {
-              id: "api-overview",
-              title: "API Overview",
-              content: "Learn about our REST API endpoints, authentication, and best practices for integration.",
-              categoryId: "api-docs",
-              tags: ["api", "rest", "documentation"],
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          articles: [],
         },
       ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     },
-  ],
+  ] as Category[],
   users: [
     {
       id: "admin-1",
       username: "admin",
       password: "admin123",
-      role: "admin",
-      email: "admin@example.com",
+      role: "admin" as const,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      lastLogin: null,
     },
     {
       id: "editor-1",
       username: "editor",
       password: "editor123",
-      role: "editor",
-      email: "editor@example.com",
+      role: "editor" as const,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      lastLogin: null,
     },
     {
       id: "viewer-1",
       username: "viewer",
       password: "viewer123",
-      role: "viewer",
-      email: "viewer@example.com",
+      role: "viewer" as const,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      lastLogin: null,
     },
-  ],
+  ] as User[],
   auditLog: [
     {
       id: "audit-1",
       action: "system_initialized",
-      username: "system",
-      details: "Knowledge base system initialized with default data",
+      performedBy: "system",
       timestamp: new Date().toISOString(),
+      details: "Knowledge base system initialized with default data",
     },
-  ],
-  pageVisits: 0,
-}
+  ] as AuditLogEntry[],
+})
 
 // Ensure data directory exists
 async function ensureDataDir() {
@@ -111,28 +89,28 @@ async function ensureDataDir() {
 }
 
 // Load data from file
-async function loadData(): Promise<KnowledgeBaseData> {
+async function loadData() {
   try {
     await ensureDataDir()
     const data = await fs.readFile(DATA_FILE, "utf-8")
-    const parsedData = JSON.parse(data)
+    const parsed = JSON.parse(data)
 
-    // Ensure all required fields exist
-    return {
-      categories: parsedData.categories || DEFAULT_DATA.categories,
-      users: parsedData.users || DEFAULT_DATA.users,
-      auditLog: parsedData.auditLog || DEFAULT_DATA.auditLog,
-      pageVisits: parsedData.pageVisits || 0,
+    // Validate data structure
+    if (!parsed.categories || !parsed.users || !parsed.auditLog) {
+      throw new Error("Invalid data structure")
     }
+
+    return parsed
   } catch (error) {
     console.log("📁 Creating default data file...")
-    await saveData(DEFAULT_DATA)
-    return DEFAULT_DATA
+    const defaultData = getDefaultData()
+    await saveData(defaultData)
+    return defaultData
   }
 }
 
 // Save data to file
-async function saveData(data: KnowledgeBaseData): Promise<void> {
+async function saveData(data: any) {
   await ensureDataDir()
   await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
 }
@@ -140,16 +118,10 @@ async function saveData(data: KnowledgeBaseData): Promise<void> {
 export async function GET() {
   try {
     const data = await loadData()
-    return NextResponse.json({
-      success: true,
-      categories: data.categories.length,
-      users: data.users.length,
-      auditLog: data.auditLog.length,
-      pageVisits: data.pageVisits,
-    })
+    return NextResponse.json(data)
   } catch (error) {
-    console.error("❌ GET /api/data - Error:", error)
-    return NextResponse.json({ success: false, error: "Failed to get data summary" }, { status: 500 })
+    console.error("❌ API Error (GET):", error)
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
   }
 }
 
@@ -158,56 +130,36 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, data: requestData } = body
 
-    console.log(`📡 POST /api/data - Action: ${action}`)
+    console.log("📝 API Request:", { action, hasData: !!requestData })
 
     switch (action) {
-      case "load": {
+      case "load":
         const data = await loadData()
-        console.log("✅ Data loaded successfully:", {
-          categories: data.categories.length,
-          users: data.users.length,
-          auditLog: data.auditLog.length,
-          pageVisits: data.pageVisits,
-        })
-        return NextResponse.json({
-          success: true,
-          ...data,
-        })
-      }
+        return NextResponse.json(data)
 
-      case "save": {
+      case "save":
         if (!requestData) {
-          return NextResponse.json({ success: false, error: "No data provided" }, { status: 400 })
+          return NextResponse.json({ error: "No data provided" }, { status: 400 })
         }
-
         await saveData(requestData)
-        console.log("✅ Data saved successfully")
         return NextResponse.json({ success: true })
-      }
 
-      case "import": {
+      case "import":
         if (!requestData) {
-          return NextResponse.json({ success: false, error: "No data provided for import" }, { status: 400 })
+          return NextResponse.json({ error: "No data provided for import" }, { status: 400 })
         }
-
-        // Validate import data structure
-        const importData: KnowledgeBaseData = {
-          categories: requestData.categories || [],
-          users: requestData.users || [],
-          auditLog: requestData.auditLog || [],
-          pageVisits: requestData.pageVisits || 0,
+        // Validate imported data
+        if (!requestData.categories || !requestData.users || !requestData.auditLog) {
+          return NextResponse.json({ error: "Invalid data structure for import" }, { status: 400 })
         }
-
-        await saveData(importData)
-        console.log("✅ Data imported successfully")
+        await saveData(requestData)
         return NextResponse.json({ success: true })
-      }
 
       default:
-        return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 })
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
   } catch (error) {
-    console.error("❌ POST /api/data - Error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error("❌ API Error (POST):", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

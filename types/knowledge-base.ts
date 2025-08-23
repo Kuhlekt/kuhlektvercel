@@ -4,9 +4,9 @@ export interface User {
   password: string
   role: "admin" | "editor" | "viewer"
   email?: string
-  lastLogin?: Date | string
-  createdAt: Date | string
-  updatedAt: Date | string
+  lastLogin: string | null
+  createdAt: string
+  updatedAt: string
   isActive?: boolean
 }
 
@@ -15,12 +15,10 @@ export interface Article {
   title: string
   content: string
   categoryId: string
+  subcategoryId?: string
   tags?: string[]
-  createdAt: Date | string
-  updatedAt: Date | string
-  authorId?: string
-  status?: "draft" | "published" | "archived"
-  publishedAt?: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Subcategory {
@@ -52,13 +50,9 @@ export interface AuditLogEntry {
   articleId?: string
   articleTitle?: string
   categoryId?: string
-  categoryName?: string
-  subcategoryName?: string
-  userId?: string
-  username: string
-  performedBy?: string
-  details: string
-  timestamp: Date | string
+  performedBy: string
+  timestamp: string
+  details?: string
 }
 
 export interface PageVisit {
