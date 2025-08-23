@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { User, Lock, Shield, Edit, Eye, AlertCircle } from "lucide-react"
+import { User, Lock, Shield, Edit, Eye, AlertCircle, X } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -23,6 +23,21 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Clear form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setUsername("")
+      setPassword("")
+      setError(null)
+    }
+  }, [isOpen])
+
+  const clearForm = () => {
+    setUsername("")
+    setPassword("")
+    setError(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,14 +54,16 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       const success = await onLogin(username, password)
 
       if (success) {
-        setUsername("")
-        setPassword("")
+        clearForm()
         onClose()
       } else {
         setError("Invalid username or password")
+        // Clear password on failed login for security
+        setPassword("")
       }
     } catch (err) {
       setError("Login failed. Please try again.")
+      setPassword("")
     } finally {
       setIsLoading(false)
     }
@@ -59,9 +76,7 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   }
 
   const handleClose = () => {
-    setUsername("")
-    setPassword("")
-    setError(null)
+    clearForm()
     onClose()
   }
 
@@ -69,9 +84,14 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <User className="h-5 w-5 mr-2" />
-            Login to Knowledge Base
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <User className="h-5 w-5 mr-2" />
+              Login to Knowledge Base
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearForm} className="h-8 w-8 p-0" title="Clear form">
+              <X className="h-4 w-4" />
+            </Button>
           </DialogTitle>
           <DialogDescription>Enter your credentials to access the knowledge base admin features</DialogDescription>
         </DialogHeader>
@@ -133,7 +153,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
           {/* Manual Login Form */}
           <div className="border-t pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Or login manually:</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-900">Or login manually:</h4>
+              <Button type="button" variant="ghost" size="sm" onClick={clearForm} className="text-xs">
+                Clear
+              </Button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
