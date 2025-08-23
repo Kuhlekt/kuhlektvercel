@@ -1,83 +1,59 @@
-import type { KnowledgeBaseData, User, Category, Article, AuditLogEntry } from "@/types/knowledge-base"
+import type { Category, Article, User, AuditLogEntry, KnowledgeBaseData } from "@/types/knowledge-base"
 
 class ApiDatabase {
-  private data: KnowledgeBaseData | null = null
-  private isLoading = false
+  private baseUrl = "/api"
 
   async loadData(): Promise<KnowledgeBaseData> {
-    if (this.isLoading) {
-      // Wait for current load to complete
-      while (this.isLoading) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-      return this.data!
-    }
+    console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
 
-    if (this.data) {
-      return this.data
-    }
-
-    this.isLoading = true
     try {
-      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
-      const response = await fetch("/api/data", {
+      const response = await fetch(`${this.baseUrl}/data`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        cache: "no-store",
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ HTTP Error Response:", errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
 
-      // Handle error response with default data fallback
-      if (result.error && result.defaultData) {
-        console.warn("⚠️ Using default data due to server error:", result.error)
-        this.data = result.defaultData
-      } else {
-        this.data = result
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load data")
       }
 
       console.log("✅ ApiDatabase.loadData() - Data loaded successfully")
-      return this.data!
+      return result.data
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error:", error)
       throw new Error("Failed to load data from server")
-    } finally {
-      this.isLoading = false
     }
   }
 
-  async saveData(): Promise<void> {
-    if (!this.data) {
-      throw new Error("No data to save")
-    }
+  async saveData(data: KnowledgeBaseData): Promise<void> {
+    console.log("💾 ApiDatabase.saveData() - Saving data to server...")
 
     try {
-      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
-      const response = await fetch("/api/data", {
+      const response = await fetch(`${this.baseUrl}/data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(this.data),
+        body: JSON.stringify({ data }),
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ Save Error Response:", errorText)
+        const errorData = await response.json().catch(() => ({}))
+        console.log("❌ Save Error Response:", errorData)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
+
       if (!result.success) {
-        throw new Error(result.error || "Save operation failed")
+        throw new Error(result.error || "Failed to save data")
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
@@ -89,7 +65,7 @@ class ApiDatabase {
 
   async incrementPageVisits(): Promise<number> {
     try {
-      const response = await fetch("/api/data/page-visits", {
+      const response = await fetch(`${this.baseUrl}/data/page-visits`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -97,32 +73,33 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        console.warn("Failed to increment page visits")
-        return 0
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
-      if (result.success) {
-        return result.totalVisits || 0
-      } else {
-        console.warn("Page visits increment returned failure:", result.error)
-        return 0
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to increment page visits")
       }
+
+      return result.visits
     } catch (error) {
-      console.warn("Error incrementing page visits:", error)
+      console.error("Failed to increment page visits:", error)
       return 0
     }
   }
 
+  // Article operations
   async addArticle(
     categories: Category[],
     articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
   ): Promise<Article> {
     const newArticle: Article = {
       ...articleData,
-      id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      id: `art-${Date.now()}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      views: 0,
     }
 
     const updatedCategories = categories.map((category) => {
@@ -133,32 +110,31 @@ class ApiDatabase {
         }
       }
 
-      if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.id === articleData.categoryId) {
-            return {
-              ...subcategory,
-              articles: [...(subcategory.articles || []), newArticle],
-            }
-          }
-          return subcategory
-        })
-
+      if (category.subcategories && articleData.subcategoryId) {
         return {
           ...category,
-          subcategories: updatedSubcategories,
+          subcategories: category.subcategories.map((sub) => {
+            if (sub.id === articleData.subcategoryId) {
+              return {
+                ...sub,
+                articles: [...(sub.articles || []), newArticle],
+              }
+            }
+            return sub
+          }),
         }
       }
 
       return category
     })
 
-    if (this.data) {
-      this.data.categories = updatedCategories
-      this.data.articles = [...(this.data.articles || []), newArticle]
-      await this.saveData()
+    const data: KnowledgeBaseData = {
+      categories: updatedCategories,
+      users: [],
+      auditLog: [],
     }
 
+    await this.saveData(data)
     return newArticle
   }
 
@@ -170,58 +146,40 @@ class ApiDatabase {
     const updatedCategories = categories.map((category) => {
       // Check main category articles
       if (category.articles) {
-        const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+        const articleIndex = category.articles.findIndex((art) => art.id === articleId)
         if (articleIndex !== -1) {
-          const originalArticle = category.articles[articleIndex]
-          const updated = [...category.articles]
-          updated[articleIndex] = {
+          const articles = [...category.articles]
+          articles[articleIndex] = {
             ...updatedArticle,
-            createdAt: originalArticle.createdAt,
-            updatedAt: new Date().toISOString(),
+            createdAt: articles[articleIndex].createdAt,
+            updatedAt: new Date(),
           }
-          return { ...category, articles: updated }
+          return { ...category, articles }
         }
       }
 
       // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.articles) {
-            const articleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+        const subcategories = category.subcategories.map((sub) => {
+          if (sub.articles) {
+            const articleIndex = sub.articles.findIndex((art) => art.id === articleId)
             if (articleIndex !== -1) {
-              const originalArticle = subcategory.articles[articleIndex]
-              const updated = [...subcategory.articles]
-              updated[articleIndex] = {
+              const articles = [...sub.articles]
+              articles[articleIndex] = {
                 ...updatedArticle,
-                createdAt: originalArticle.createdAt,
-                updatedAt: new Date().toISOString(),
+                createdAt: articles[articleIndex].createdAt,
+                updatedAt: new Date(),
               }
-              return { ...subcategory, articles: updated }
+              return { ...sub, articles }
             }
           }
-          return subcategory
+          return sub
         })
-
-        return { ...category, subcategories: updatedSubcategories }
+        return { ...category, subcategories }
       }
 
       return category
     })
-
-    if (this.data) {
-      this.data.categories = updatedCategories
-      // Also update in articles array
-      const articleIndex = this.data.articles.findIndex((a) => a.id === articleId)
-      if (articleIndex !== -1) {
-        const originalArticle = this.data.articles[articleIndex]
-        this.data.articles[articleIndex] = {
-          ...updatedArticle,
-          createdAt: originalArticle.createdAt,
-          updatedAt: new Date().toISOString(),
-        }
-      }
-      await this.saveData()
-    }
 
     return updatedCategories
   }
@@ -230,92 +188,54 @@ class ApiDatabase {
     const updatedCategories = categories.map((category) => {
       // Check main category articles
       if (category.articles) {
-        const filtered = category.articles.filter((a) => a.id !== articleId)
-        if (filtered.length !== category.articles.length) {
-          return { ...category, articles: filtered }
+        const filteredArticles = category.articles.filter((art) => art.id !== articleId)
+        if (filteredArticles.length !== category.articles.length) {
+          return { ...category, articles: filteredArticles }
         }
       }
 
       // Check subcategory articles
       if (category.subcategories) {
-        const updatedSubcategories = category.subcategories.map((subcategory) => {
-          if (subcategory.articles) {
-            const filtered = subcategory.articles.filter((a) => a.id !== articleId)
-            return { ...subcategory, articles: filtered }
+        const subcategories = category.subcategories.map((sub) => {
+          if (sub.articles) {
+            const filteredArticles = sub.articles.filter((art) => art.id !== articleId)
+            return { ...sub, articles: filteredArticles }
           }
-          return subcategory
+          return sub
         })
-
-        return { ...category, subcategories: updatedSubcategories }
+        return { ...category, subcategories }
       }
 
       return category
     })
 
-    if (this.data) {
-      this.data.categories = updatedCategories
-      this.data.articles = this.data.articles.filter((a) => a.id !== articleId)
-      await this.saveData()
-    }
-
     return updatedCategories
   }
 
+  // User operations
   async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
-    if (!Array.isArray(users)) {
-      throw new Error("Users parameter must be an array")
-    }
-
     const updatedUsers = users.map((user) => {
       if (user.id === userId) {
-        return {
-          ...user,
-          lastLogin: new Date().toISOString(),
-        }
+        return { ...user, lastLogin: new Date() }
       }
       return user
     })
 
-    if (this.data) {
-      this.data.users = updatedUsers
-      await this.saveData()
-    }
-
     return updatedUsers
   }
 
+  // Audit log operations
   async addAuditEntry(
     auditLog: AuditLogEntry[],
     entry: Omit<AuditLogEntry, "id" | "timestamp">,
   ): Promise<AuditLogEntry[]> {
-    if (!Array.isArray(auditLog)) {
-      throw new Error("AuditLog parameter must be an array")
-    }
-
     const newEntry: AuditLogEntry = {
       ...entry,
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
+      id: `audit-${Date.now()}`,
+      timestamp: new Date(),
     }
 
-    const updatedAuditLog = [newEntry, ...auditLog]
-
-    // Keep only last 1000 entries
-    if (updatedAuditLog.length > 1000) {
-      updatedAuditLog.splice(1000)
-    }
-
-    if (this.data) {
-      this.data.auditLog = updatedAuditLog
-      await this.saveData()
-    }
-
-    return updatedAuditLog
-  }
-
-  async importData(data: KnowledgeBaseData): Promise<void> {
-    this.data = data
-    await this.saveData()
+    return [newEntry, ...auditLog]
   }
 }
 

@@ -5,110 +5,56 @@ import path from "path"
 const DATA_DIR = path.join(process.cwd(), "data")
 const VISITS_FILE = path.join(DATA_DIR, "page-visits.json")
 
-interface VisitsData {
-  count: number
-  lastVisit: string
-}
-
-async function ensureVisitsFile(): Promise<void> {
+// Ensure data directory exists
+async function ensureDataDir() {
   try {
-    // Ensure data directory exists
+    await fs.access(DATA_DIR)
+  } catch {
     await fs.mkdir(DATA_DIR, { recursive: true })
-
-    // Check if visits file exists
-    try {
-      await fs.access(VISITS_FILE)
-      console.log("✅ Visits file exists")
-    } catch {
-      console.log("📄 Creating visits file...")
-      const initialData: VisitsData = {
-        count: 0,
-        lastVisit: new Date().toISOString(),
-      }
-      await fs.writeFile(VISITS_FILE, JSON.stringify(initialData, null, 2))
-      console.log("✅ Visits file created")
-    }
-  } catch (error) {
-    console.error("❌ Error ensuring visits file:", error)
-    throw error
   }
 }
 
-async function loadVisits(): Promise<VisitsData> {
+// Load page visits
+async function loadPageVisits(): Promise<number> {
   try {
-    await ensureVisitsFile()
-    const fileContent = await fs.readFile(VISITS_FILE, "utf-8")
-    const data = JSON.parse(fileContent)
-
-    // Validate data structure
-    if (typeof data.count !== "number") {
-      data.count = 0
-    }
-    if (typeof data.lastVisit !== "string") {
-      data.lastVisit = new Date().toISOString()
-    }
-
-    return data
-  } catch (error) {
-    console.error("❌ Error loading visits data, using defaults:", error)
-    return {
-      count: 0,
-      lastVisit: new Date().toISOString(),
-    }
+    await ensureDataDir()
+    const data = await fs.readFile(VISITS_FILE, "utf-8")
+    const parsed = JSON.parse(data)
+    return parsed.visits || 0
+  } catch {
+    return 0
   }
 }
 
-async function saveVisits(data: VisitsData): Promise<void> {
+// Save page visits
+async function savePageVisits(visits: number): Promise<void> {
   try {
-    await ensureVisitsFile()
-    await fs.writeFile(VISITS_FILE, JSON.stringify(data, null, 2))
-    console.log("✅ Visits data saved successfully")
+    await ensureDataDir()
+    await fs.writeFile(VISITS_FILE, JSON.stringify({ visits, lastUpdated: new Date() }, null, 2))
   } catch (error) {
-    console.error("❌ Error saving visits data:", error)
-    throw error
+    console.error("Error saving page visits:", error)
+    throw new Error("Failed to save page visits")
   }
 }
 
 export async function GET() {
   try {
-    console.log("📊 GET /api/data/page-visits - Loading visits...")
-    const data = await loadVisits()
-    console.log("✅ GET /api/data/page-visits - Success:", data)
-    return NextResponse.json({ success: true, ...data })
+    const visits = await loadPageVisits()
+    return NextResponse.json({ success: true, visits })
   } catch (error) {
-    console.error("❌ GET /api/data/page-visits - Error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to load page visits",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("GET /api/data/page-visits error:", error)
+    return NextResponse.json({ success: false, error: "Failed to load page visits" }, { status: 500 })
   }
 }
 
 export async function POST() {
   try {
-    console.log("📊 POST /api/data/page-visits - Incrementing visits...")
-
-    const data = await loadVisits()
-    data.count += 1
-    data.lastVisit = new Date().toISOString()
-
-    await saveVisits(data)
-
-    console.log("✅ POST /api/data/page-visits - Success:", { count: data.count })
-    return NextResponse.json({ success: true, totalVisits: data.count })
+    const currentVisits = await loadPageVisits()
+    const newVisits = currentVisits + 1
+    await savePageVisits(newVisits)
+    return NextResponse.json({ success: true, visits: newVisits })
   } catch (error) {
-    console.error("❌ POST /api/data/page-visits - Error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to increment page visits",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("POST /api/data/page-visits error:", error)
+    return NextResponse.json({ success: false, error: "Failed to increment page visits" }, { status: 500 })
   }
 }

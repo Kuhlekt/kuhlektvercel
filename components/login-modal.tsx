@@ -3,29 +3,30 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { LogIn, User, Lock, X } from "lucide-react"
-import type { User as UserType } from "@/types/knowledge-base"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, EyeOff, User, Lock, AlertCircle } from "lucide-react"
 
 interface LoginModalProps {
-  onLogin: (user: UserType) => void
   isOpen: boolean
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
+  onLogin: (username: string, password: string) => Promise<boolean>
 }
 
-export function LoginModal({ onLogin, isOpen, onOpenChange }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!username || !password) {
+    if (!username.trim() || !password.trim()) {
       setError("Please enter both username and password")
       return
     }
@@ -34,129 +35,122 @@ export function LoginModal({ onLogin, isOpen, onOpenChange }: LoginModalProps) {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        onLogin(result.user)
-        onOpenChange(false)
-        setUsername("")
+      const success = await onLogin(username, password)
+      if (!success) {
+        setError("Invalid username or password")
         setPassword("")
-      } else {
-        setError(result.message || "Login failed")
       }
     } catch (error) {
       console.error("Login error:", error)
       setError("Login failed. Please try again.")
+      setPassword("")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleClear = () => {
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError("")
+    setShowPassword(false)
+    onClose()
+  }
+
+  const clearForm = () => {
     setUsername("")
     setPassword("")
     setError("")
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-dialog-description">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5" />
-            Login to Knowledge Base
+          <DialogTitle className="flex items-center space-x-2">
+            <User className="h-5 w-5" />
+            <span>Login to Knowledge Base</span>
           </DialogTitle>
-          <DialogDescription id="login-dialog-description">
-            Enter your credentials to access the knowledge base system.
+          <DialogDescription id="login-description">
+            Enter your credentials to access the knowledge base administration features.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-right">
-              Username
-            </Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="pl-10"
-                disabled={isLoading}
-              />
-            </div>
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              disabled={isLoading}
+              autoComplete="username"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-right">
-              Password
-            </Label>
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 id="password"
-                type="password"
-                placeholder="Enter password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
+                placeholder="Enter your password"
                 disabled={isLoading}
+                autoComplete="current-password"
+                className="pr-10"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+              </Button>
             </div>
           </div>
 
-          {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-          <div className="flex justify-between gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClear}
-              disabled={isLoading}
-              className="flex items-center gap-2 bg-transparent"
-            >
-              <X className="h-4 w-4" />
+          <div className="flex justify-between space-x-2">
+            <Button type="button" variant="outline" onClick={clearForm} disabled={isLoading}>
+              <Lock className="h-4 w-4 mr-2" />
               Clear
             </Button>
-
-            <Button type="submit" disabled={isLoading} className="flex items-center gap-2">
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Login
-                </>
-              )}
-            </Button>
+            <div className="flex space-x-2">
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+            </div>
           </div>
         </form>
 
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium mb-2">Demo Accounts:</h4>
-          <div className="text-xs space-y-1">
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Accounts:</h4>
+          <div className="text-xs text-blue-700 space-y-1">
             <div>
-              👑 <strong>Admin:</strong> admin / admin123
+              <strong>Admin:</strong> admin / admin123
             </div>
             <div>
-              ✏️ <strong>Editor:</strong> editor / editor123
+              <strong>Editor:</strong> editor / editor123
             </div>
             <div>
-              👁️ <strong>Viewer:</strong> viewer / viewer123
+              <strong>Viewer:</strong> viewer / viewer123
             </div>
           </div>
         </div>
