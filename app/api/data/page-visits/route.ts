@@ -6,29 +6,54 @@ const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
 
 export async function POST() {
   try {
-    // Try to load existing data
-    let data
+    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
+
+    // Ensure data directory exists
+    const dataDir = path.dirname(DATA_FILE)
     try {
-      const fileContent = await fs.readFile(DATA_FILE, "utf8")
-      data = JSON.parse(fileContent)
+      await fs.access(dataDir)
     } catch {
-      // If file doesn't exist, return success but don't increment
-      return NextResponse.json({ success: true, pageVisits: 0 })
+      await fs.mkdir(dataDir, { recursive: true })
     }
 
-    // Increment page visits
-    data.pageVisits = (data.pageVisits || 0) + 1
+    // Read current data
+    let data
+    try {
+      const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+      data = JSON.parse(fileContent)
+    } catch {
+      // If file doesn't exist, create minimal structure
+      data = {
+        categories: [],
+        users: [],
+        auditLog: [],
+        pageVisits: 0,
+      }
+    }
 
-    // Save updated data
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    // Increment page visits safely
+    const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
+    const newVisits = currentVisits + 1
+
+    // Update data
+    const updatedData = {
+      ...data,
+      pageVisits: newVisits,
+    }
+
+    // Write back to file
+    await fs.writeFile(DATA_FILE, JSON.stringify(updatedData, null, 2))
+
+    console.log(`✅ API POST /api/data/page-visits - Page visits incremented to ${newVisits}`)
 
     return NextResponse.json({
       success: true,
-      pageVisits: data.pageVisits,
+      pageVisits: newVisits,
     })
   } catch (error) {
-    console.error("Error incrementing page visits:", error)
-    // Return success to prevent blocking the app
+    console.error("❌ API POST /api/data/page-visits - Error:", error)
+
+    // Return success with 0 to prevent blocking the app
     return NextResponse.json({
       success: true,
       pageVisits: 0,

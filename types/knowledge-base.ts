@@ -4,16 +4,9 @@ export interface User {
   password: string
   role: "admin" | "editor" | "viewer"
   email: string
-  createdAt: string
-  lastLogin: string | null
-}
-
-export interface Category {
-  id: string
-  name: string
-  description: string
-  parentId: string | null
-  articles: Article[]
+  isActive: boolean
+  createdAt: string | Date
+  lastLogin: string | Date | null
 }
 
 export interface Article {
@@ -21,19 +14,47 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  authorId: string
-  createdAt: string
-  updatedAt: string
+  subcategoryId?: string
   tags: string[]
-  isPublished: boolean
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
+export interface Subcategory {
+  id: string
+  name: string
+  description: string
+  parentId: string
+  articles: Article[]
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
+export interface Category {
+  id: string
+  name: string
+  description: string
+  icon?: string
+  parentId?: string | null
+  articles: Article[]
+  subcategories?: Subcategory[]
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
-  userId: string
-  timestamp: string
+  timestamp: string | Date
+  username: string
+  performedBy: string
   details: string
+  articleId?: string
+  articleTitle?: string
+  categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
 }
 
 export interface KnowledgeBaseData {
@@ -43,5 +64,5 @@ export interface KnowledgeBaseData {
   pageVisits: number
 }
 
-// Backward compatibility
+// Backward compatibility alias
 export type KnowledgeBaseUser = User

@@ -9,17 +9,33 @@ const DEFAULT_DATA = {
   categories: [
     {
       id: "1",
-      name: "General",
-      description: "General knowledge articles",
-      parentId: null,
-      articles: [],
+      name: "Getting Started",
+      description: "Basic information and setup guides",
+      icon: "BookOpen",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      articles: [
+        {
+          id: "1",
+          title: "Welcome to Knowledge Base",
+          content: "This is your knowledge base system. You can add, edit, and organize articles here.",
+          categoryId: "1",
+          tags: ["welcome", "introduction"],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      subcategories: [],
     },
     {
       id: "2",
-      name: "Technical",
-      description: "Technical documentation",
-      parentId: null,
+      name: "Administration",
+      description: "Admin tools and management",
+      icon: "Settings",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       articles: [],
+      subcategories: [],
     },
   ],
   users: [
@@ -29,6 +45,7 @@ const DEFAULT_DATA = {
       password: "admin123",
       role: "admin",
       email: "admin@example.com",
+      isActive: true,
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -38,6 +55,7 @@ const DEFAULT_DATA = {
       password: "editor123",
       role: "editor",
       email: "editor@example.com",
+      isActive: true,
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -47,6 +65,7 @@ const DEFAULT_DATA = {
       password: "viewer123",
       role: "viewer",
       email: "viewer@example.com",
+      isActive: true,
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -54,10 +73,11 @@ const DEFAULT_DATA = {
   auditLog: [
     {
       id: "1",
-      action: "system_init",
-      userId: "system",
+      action: "system_initialized",
       timestamp: new Date().toISOString(),
-      details: "System initialized with default data",
+      username: "system",
+      performedBy: "system",
+      details: "Knowledge base system initialized",
     },
   ],
   pageVisits: 0,
@@ -76,9 +96,18 @@ async function loadData() {
   try {
     await ensureDataDirectory()
     const data = await fs.readFile(DATA_FILE, "utf8")
-    return JSON.parse(data)
+    const parsed = JSON.parse(data)
+
+    // Ensure all required properties exist with defaults
+    return {
+      categories: Array.isArray(parsed.categories) ? parsed.categories : DEFAULT_DATA.categories,
+      users: Array.isArray(parsed.users) ? parsed.users : DEFAULT_DATA.users,
+      auditLog: Array.isArray(parsed.auditLog) ? parsed.auditLog : DEFAULT_DATA.auditLog,
+      pageVisits: typeof parsed.pageVisits === "number" ? parsed.pageVisits : DEFAULT_DATA.pageVisits,
+    }
   } catch (error) {
-    console.log("No existing data file, using defaults")
+    console.log("No existing data file, creating with defaults")
+    await saveData(DEFAULT_DATA)
     return DEFAULT_DATA
   }
 }
@@ -86,7 +115,16 @@ async function loadData() {
 async function saveData(data: any) {
   try {
     await ensureDataDirectory()
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+
+    // Ensure data structure is valid
+    const validData = {
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      users: Array.isArray(data.users) ? data.users : [],
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
+      pageVisits: typeof data.pageVisits === "number" ? data.pageVisits : 0,
+    }
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(validData, null, 2))
     return true
   } catch (error) {
     console.error("Error saving data:", error)
@@ -96,27 +134,72 @@ async function saveData(data: any) {
 
 export async function GET() {
   try {
+    console.log("📖 API GET /api/data - Loading data...")
     const data = await loadData()
-    return NextResponse.json(data)
+
+    console.log("✅ API GET /api/data - Data loaded successfully:", {
+      categories: data.categories?.length || 0,
+      users: data.users?.length || 0,
+      auditLog: data.auditLog?.length || 0,
+      pageVisits: data.pageVisits || 0,
+    })
+
+    return NextResponse.json({
+      success: true,
+      ...data,
+    })
   } catch (error) {
-    console.error("Error loading data:", error)
-    return NextResponse.json(DEFAULT_DATA)
+    console.error("❌ API GET /api/data - Error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to load data",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const newData = await request.json()
+    console.log("💾 API POST /api/data - Saving data...")
 
-    // Validate data structure
-    if (!newData || typeof newData !== "object") {
-      return NextResponse.json({ error: "Invalid data format" }, { status: 400 })
+    const body = await request.json()
+
+    if (!body || typeof body !== "object") {
+      throw new Error("Invalid request body")
     }
 
-    await saveData(newData)
-    return NextResponse.json({ success: true })
+    // Load current data first
+    const currentData = await loadData()
+
+    // Merge with new data, preserving structure
+    const updatedData = {
+      categories: Array.isArray(body.categories) ? body.categories : currentData.categories,
+      users: Array.isArray(body.users) ? body.users : currentData.users,
+      auditLog: Array.isArray(body.auditLog) ? body.auditLog : currentData.auditLog,
+      pageVisits: typeof body.pageVisits === "number" ? body.pageVisits : currentData.pageVisits,
+    }
+
+    // Save updated data
+    await saveData(updatedData)
+
+    console.log("✅ API POST /api/data - Data saved successfully")
+
+    return NextResponse.json({
+      success: true,
+      message: "Data saved successfully",
+    })
   } catch (error) {
-    console.error("Error saving data:", error)
-    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
+    console.error("❌ API POST /api/data - Error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to save data",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
