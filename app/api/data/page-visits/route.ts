@@ -2,58 +2,33 @@ import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
-const DATA_DIR = path.join(process.cwd(), "data")
-const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
+const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
 
 export async function POST() {
   try {
-    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
-
-    // Ensure data directory exists
-    try {
-      await fs.access(DATA_DIR)
-    } catch {
-      await fs.mkdir(DATA_DIR, { recursive: true })
-    }
-
-    // Read current data
+    // Try to load existing data
     let data
     try {
-      const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+      const fileContent = await fs.readFile(DATA_FILE, "utf8")
       data = JSON.parse(fileContent)
     } catch {
-      // If file doesn't exist, create minimal structure
-      data = {
-        categories: [],
-        users: [],
-        auditLog: [],
-        pageVisits: 0,
-      }
+      // If file doesn't exist, return success but don't increment
+      return NextResponse.json({ success: true, pageVisits: 0 })
     }
 
     // Increment page visits
-    const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
-    const newVisits = currentVisits + 1
+    data.pageVisits = (data.pageVisits || 0) + 1
 
-    // Update data
-    const updatedData = {
-      ...data,
-      pageVisits: newVisits,
-    }
-
-    // Write back to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(updatedData, null, 2))
-
-    console.log(`✅ API POST /api/data/page-visits - Page visits incremented to ${newVisits}`)
+    // Save updated data
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
 
     return NextResponse.json({
       success: true,
-      pageVisits: newVisits,
+      pageVisits: data.pageVisits,
     })
   } catch (error) {
-    console.error("❌ API POST /api/data/page-visits - Error:", error)
-
-    // Return success with 0 to prevent blocking the app
+    console.error("Error incrementing page visits:", error)
+    // Return success to prevent blocking the app
     return NextResponse.json({
       success: true,
       pageVisits: 0,

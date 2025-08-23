@@ -1,5 +1,5 @@
 // API Database utility for handling server communication
-import type { Category, User, AuditLogEntry, Article } from "@/types/knowledge-base"
+import type { KnowledgeBaseData, User, Category, Article, AuditLogEntry } from "@/types/knowledge-base"
 
 interface DatabaseData {
   categories: Category[]
@@ -9,58 +9,36 @@ interface DatabaseData {
 }
 
 class ApiDatabase {
-  private baseUrl = "/api"
+  private baseUrl = "/api/data"
 
   // Load all data from server
-  async loadData(): Promise<DatabaseData> {
+  async loadData(): Promise<KnowledgeBaseData> {
+    console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
     try {
-      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
-
-      const response = await fetch(`${this.baseUrl}/data`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      })
-
+      const response = await fetch(this.baseUrl)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-
       const data = await response.json()
-
       console.log("✅ ApiDatabase.loadData() - Data received:", {
         categories: data.categories?.length || 0,
         users: data.users?.length || 0,
-        usernames: data.users?.map((u: any) => u.username) || [],
+        usernames: data.users?.map((u: User) => u.username) || [],
         auditLog: data.auditLog?.length || 0,
         pageVisits: data.pageVisits || 0,
       })
-
-      return {
-        categories: data.categories || [],
-        users: data.users || [],
-        auditLog: data.auditLog || [],
-        pageVisits: data.pageVisits || 0,
-      }
+      return data
     } catch (error) {
-      console.error("❌ ApiDatabase.loadData() - Error loading data:", error)
-      throw new Error(`Failed to load data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
+      console.error("❌ ApiDatabase.loadData() - Error:", error)
+      throw new Error(`Failed to load data from server: ${error}`)
     }
   }
 
   // Save all data to server with better error handling
-  async saveData(data: Partial<DatabaseData>): Promise<void> {
+  async saveData(data: KnowledgeBaseData): Promise<void> {
+    console.log("💾 ApiDatabase.saveData() - Saving data to server...")
     try {
-      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
-
-      // Validate data before sending
-      if (!data || typeof data !== "object") {
-        throw new Error("Invalid data structure provided")
-      }
-
-      const response = await fetch(`${this.baseUrl}/data`, {
+      const response = await fetch(this.baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,51 +47,34 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(`HTTP error! status: ${response.status}, details: ${errorData.details || "Unknown error"}`)
-      }
-
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || "Save operation failed")
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error saving data:", error)
-      throw new Error(`Failed to save data to server: ${error instanceof Error ? error.message : "Unknown error"}`)
+      throw new Error(`Failed to save data to server: ${error}`)
     }
   }
 
   // Increment page visits with graceful failure
   async incrementPageVisits(): Promise<number> {
+    console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
     try {
-      console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
-
-      const response = await fetch(`${this.baseUrl}/data/page-visits`, {
+      const response = await fetch(`${this.baseUrl}/page-visits`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
       })
 
       if (!response.ok) {
-        console.warn("⚠️ Failed to increment page visits, continuing...")
-        return 0
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data = await response.json()
-
-      if (data.success) {
-        console.log(`✅ Page visits incremented to: ${data.pageVisits}`)
-        return data.pageVisits || 0
-      } else {
-        console.warn("⚠️ Page visits increment returned failure, continuing...")
-        return 0
-      }
+      const result = await response.json()
+      console.log("✅ ApiDatabase.incrementPageVisits() - Success:", result.pageVisits)
+      return result.pageVisits
     } catch (error) {
-      console.warn("⚠️ Error incrementing page visits:", error)
-      return 0
+      console.error("❌ ApiDatabase.incrementPageVisits() - Error:", error)
+      throw new Error(`Failed to increment page visits: ${error}`)
     }
   }
 
@@ -268,116 +229,48 @@ class ApiDatabase {
   }
 
   // Update user last login
-  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
+  async updateUserLastLogin(userId: string): Promise<void> {
     console.log("👤 ApiDatabase.updateUserLastLogin() - Updating last login for user:", userId)
-
-    const updatedUsers = users.map((user) => (user.id === userId ? { ...user, lastLogin: new Date() } : user))
-
-    // Save to server
-    await this.saveData({ users: updatedUsers })
-
-    console.log("✅ User last login updated successfully")
-    return updatedUsers
+    try {
+      const data = await this.loadData()
+      const user = data.users.find((u) => u.id === userId)
+      if (user) {
+        user.lastLogin = new Date().toISOString()
+        await this.saveData(data)
+        console.log("✅ ApiDatabase.updateUserLastLogin() - Updated successfully")
+      }
+    } catch (error) {
+      console.error("❌ ApiDatabase.updateUserLastLogin() - Error:", error)
+      throw new Error(`Failed to update last login: ${error}`)
+    }
   }
 
   // Add audit entry
-  async addAuditEntry(
-    auditLog: AuditLogEntry[],
-    entry: {
-      action: string
-      articleId?: string
-      articleTitle?: string
-      categoryId?: string
-      categoryName?: string
-      subcategoryName?: string
-      userId?: string
-      username?: string
-      performedBy: string
-      details: string
-    },
-  ): Promise<AuditLogEntry[]> {
-    console.log("📋 ApiDatabase.addAuditEntry() - Adding audit entry:", entry.action)
-
-    const newEntry: AuditLogEntry = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      timestamp: new Date(),
-      username: entry.performedBy,
-      ...entry,
+  async addAuditLogEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): Promise<void> {
+    try {
+      const data = await this.loadData()
+      const newEntry: AuditLogEntry = {
+        ...entry,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+      }
+      data.auditLog.push(newEntry)
+      await this.saveData(data)
+    } catch (error) {
+      console.error("Error adding audit log entry:", error)
+      throw new Error(`Failed to add audit log entry: ${error}`)
     }
-
-    const updatedAuditLog = [newEntry, ...auditLog]
-
-    // Keep only last 1000 entries
-    if (updatedAuditLog.length > 1000) {
-      updatedAuditLog.splice(1000)
-    }
-
-    // Save to server
-    await this.saveData({ auditLog: updatedAuditLog })
-
-    console.log("✅ Audit entry added successfully")
-    return updatedAuditLog
   }
 
   // Import data with better error handling
-  async importData(importData: any): Promise<void> {
+  async importData(importedData: KnowledgeBaseData): Promise<void> {
+    console.log("📥 ApiDatabase.importData() - Starting data import...")
     try {
-      console.log("📥 ApiDatabase.importData() - Starting data import...")
-
-      if (!importData || typeof importData !== "object") {
-        throw new Error("Invalid import data structure")
-      }
-
-      // Process and validate the data
-      const processedData = {
-        categories: Array.isArray(importData.categories) ? importData.categories : [],
-        users: Array.isArray(importData.users) ? importData.users : [],
-        auditLog: Array.isArray(importData.auditLog) ? importData.auditLog : [],
-        pageVisits:
-          typeof importData.pageVisits === "number" ? importData.pageVisits : importData.settings?.pageVisits || 0,
-      }
-
-      // Ensure proper date handling
-      processedData.categories = processedData.categories.map((cat: any) => ({
-        ...cat,
-        createdAt: new Date(cat.createdAt || Date.now()),
-        updatedAt: new Date(cat.updatedAt || Date.now()),
-        articles: (cat.articles || []).map((article: any) => ({
-          ...article,
-          createdAt: new Date(article.createdAt || Date.now()),
-          updatedAt: new Date(article.updatedAt || Date.now()),
-        })),
-        subcategories: (cat.subcategories || []).map((sub: any) => ({
-          ...sub,
-          createdAt: new Date(sub.createdAt || Date.now()),
-          updatedAt: new Date(sub.updatedAt || Date.now()),
-          articles: (sub.articles || []).map((article: any) => ({
-            ...article,
-            createdAt: new Date(article.createdAt || Date.now()),
-            updatedAt: new Date(article.updatedAt || Date.now()),
-          })),
-        })),
-      }))
-
-      processedData.users = processedData.users.map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt || Date.now()),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin) : null,
-        isActive: user.isActive !== false, // Default to true
-      }))
-
-      processedData.auditLog = processedData.auditLog.map((entry: any) => ({
-        ...entry,
-        timestamp: new Date(entry.timestamp || Date.now()),
-      }))
-
-      // Save all data to server
-      await this.saveData(processedData)
-
+      await this.saveData(importedData)
       console.log("✅ ApiDatabase.importData() - Data imported successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.importData() - Error importing data:", error)
-      throw new Error(`Failed to import data to server: ${error instanceof Error ? error.message : "Unknown error"}`)
+      throw new Error(`Failed to import data to server: ${error}`)
     }
   }
 
@@ -403,7 +296,7 @@ class ApiDatabase {
       return exportData
     } catch (error) {
       console.error("❌ ApiDatabase.exportData() - Error exporting data:", error)
-      throw new Error(`Failed to export data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
+      throw new Error(`Failed to export data from server: ${error}`)
     }
   }
 
@@ -422,7 +315,7 @@ class ApiDatabase {
       console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
-      throw new Error(`Failed to clear data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
+      throw new Error(`Failed to clear data from server: ${error}`)
     }
   }
 }
