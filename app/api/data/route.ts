@@ -1,186 +1,155 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
+import type { KnowledgeBaseData } from "@/types/knowledge-base"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 // Default data structure
-const DEFAULT_DATA = {
-  users: [
-    {
-      id: "1",
-      username: "admin",
-      password: "admin123",
-      role: "admin" as const,
-      isActive: true,
-      lastLogin: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      username: "editor",
-      password: "editor123",
-      role: "editor" as const,
-      isActive: true,
-      lastLogin: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      username: "viewer",
-      password: "viewer123",
-      role: "viewer" as const,
-      isActive: true,
-      lastLogin: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ],
+const DEFAULT_DATA: KnowledgeBaseData = {
   categories: [
     {
-      id: "1",
+      id: "getting-started",
       name: "Getting Started",
-      description: "Basic information and setup guides",
-      parentId: null,
-      order: 1,
-      isActive: true,
+      description: "Essential guides to get you up and running",
+      icon: "BookOpen",
+      articles: [
+        {
+          id: "welcome",
+          title: "Welcome to the Knowledge Base",
+          content:
+            "This is your comprehensive knowledge base system. Here you can find guides, documentation, and helpful resources.",
+          categoryId: "getting-started",
+          tags: ["welcome", "introduction"],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      subcategories: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
     {
-      id: "2",
-      name: "User Guides",
-      description: "Step-by-step user instructions",
-      parentId: null,
-      order: 2,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
+      id: "technical",
       name: "Technical Documentation",
-      description: "Technical specifications and API documentation",
-      parentId: null,
-      order: 3,
-      isActive: true,
+      description: "Technical guides and API documentation",
+      icon: "Code",
+      articles: [],
+      subcategories: [
+        {
+          id: "api-docs",
+          name: "API Documentation",
+          description: "REST API endpoints and usage examples",
+          articles: [
+            {
+              id: "api-overview",
+              title: "API Overview",
+              content: "Learn about our REST API endpoints, authentication, and best practices for integration.",
+              categoryId: "api-docs",
+              tags: ["api", "rest", "documentation"],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
   ],
-  articles: [
+  users: [
     {
-      id: "1",
-      title: "Welcome to the Knowledge Base",
-      content: "This is your knowledge base system. You can create, edit, and organize articles here.",
-      categoryId: "1",
-      authorId: "1",
-      status: "published" as const,
-      tags: ["welcome", "introduction"],
+      id: "admin-1",
+      username: "admin",
+      password: "admin123",
+      role: "admin",
+      email: "admin@example.com",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      publishedAt: new Date().toISOString(),
     },
     {
-      id: "2",
-      title: "How to Create Articles",
-      content: 'To create a new article, click the "Add Article" button and fill in the required information.',
-      categoryId: "2",
-      authorId: "1",
-      status: "published" as const,
-      tags: ["tutorial", "articles"],
+      id: "editor-1",
+      username: "editor",
+      password: "editor123",
+      role: "editor",
+      email: "editor@example.com",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: "viewer-1",
+      username: "viewer",
+      password: "viewer123",
+      role: "viewer",
+      email: "viewer@example.com",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
   ],
   auditLog: [
     {
-      id: "1",
-      action: "system_init",
-      userId: "system",
-      details: "Knowledge base system initialized",
+      id: "audit-1",
+      action: "system_initialized",
+      username: "system",
+      details: "Knowledge base system initialized with default data",
       timestamp: new Date().toISOString(),
-      ipAddress: "127.0.0.1",
     },
   ],
-  pageVisits: [],
+  pageVisits: 0,
 }
 
-async function ensureDataFile() {
+// Ensure data directory exists
+async function ensureDataDir() {
   try {
-    // Ensure data directory exists
+    await fs.access(DATA_DIR)
+  } catch {
     await fs.mkdir(DATA_DIR, { recursive: true })
-
-    // Check if data file exists
-    try {
-      await fs.access(DATA_FILE)
-    } catch {
-      // File doesn't exist, create it with default data
-      console.log("📁 Creating default data file...")
-      await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2))
-      console.log("✅ Default data file created successfully")
-    }
-  } catch (error) {
-    console.error("❌ Error ensuring data file:", error)
-    throw error
   }
 }
 
-async function loadData() {
+// Load data from file
+async function loadData(): Promise<KnowledgeBaseData> {
   try {
-    await ensureDataFile()
-    const data = await fs.readFile(DATA_FILE, "utf8")
+    await ensureDataDir()
+    const data = await fs.readFile(DATA_FILE, "utf-8")
     const parsedData = JSON.parse(data)
 
-    // Validate data structure
-    if (!parsedData.users || !Array.isArray(parsedData.users)) {
-      throw new Error("Invalid data structure: users array missing")
+    // Ensure all required fields exist
+    return {
+      categories: parsedData.categories || DEFAULT_DATA.categories,
+      users: parsedData.users || DEFAULT_DATA.users,
+      auditLog: parsedData.auditLog || DEFAULT_DATA.auditLog,
+      pageVisits: parsedData.pageVisits || 0,
     }
-    if (!parsedData.categories || !Array.isArray(parsedData.categories)) {
-      throw new Error("Invalid data structure: categories array missing")
-    }
-    if (!parsedData.articles || !Array.isArray(parsedData.articles)) {
-      throw new Error("Invalid data structure: articles array missing")
-    }
-    if (!parsedData.auditLog || !Array.isArray(parsedData.auditLog)) {
-      throw new Error("Invalid data structure: auditLog array missing")
-    }
-    if (!parsedData.pageVisits || !Array.isArray(parsedData.pageVisits)) {
-      parsedData.pageVisits = []
-    }
-
-    return parsedData
   } catch (error) {
-    console.error("❌ Error loading data:", error)
-    // Return default data if file is corrupted
+    console.log("📁 Creating default data file...")
+    await saveData(DEFAULT_DATA)
     return DEFAULT_DATA
   }
 }
 
-async function saveData(data: any) {
-  try {
-    await ensureDataFile()
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
-    console.log("✅ Data saved successfully")
-    return true
-  } catch (error) {
-    console.error("❌ Error saving data:", error)
-    throw error
-  }
+// Save data to file
+async function saveData(data: KnowledgeBaseData): Promise<void> {
+  await ensureDataDir()
+  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
 }
 
 export async function GET() {
   try {
-    console.log("📊 GET /api/data - Loading data...")
     const data = await loadData()
-    return NextResponse.json(data)
+    return NextResponse.json({
+      success: true,
+      categories: data.categories.length,
+      users: data.users.length,
+      auditLog: data.auditLog.length,
+      pageVisits: data.pageVisits,
+    })
   } catch (error) {
     console.error("❌ GET /api/data - Error:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to get data summary" }, { status: 500 })
   }
 }
 
@@ -189,32 +158,56 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, data: requestData } = body
 
-    console.log(`📊 POST /api/data - Action: ${action}`)
+    console.log(`📡 POST /api/data - Action: ${action}`)
 
     switch (action) {
-      case "load":
+      case "load": {
         const data = await loadData()
-        return NextResponse.json(data)
+        console.log("✅ Data loaded successfully:", {
+          categories: data.categories.length,
+          users: data.users.length,
+          auditLog: data.auditLog.length,
+          pageVisits: data.pageVisits,
+        })
+        return NextResponse.json({
+          success: true,
+          ...data,
+        })
+      }
 
-      case "save":
+      case "save": {
         if (!requestData) {
-          return NextResponse.json({ error: "No data provided" }, { status: 400 })
+          return NextResponse.json({ success: false, error: "No data provided" }, { status: 400 })
         }
-        await saveData(requestData)
-        return NextResponse.json({ success: true })
 
-      case "import":
-        if (!requestData) {
-          return NextResponse.json({ error: "No data provided for import" }, { status: 400 })
-        }
         await saveData(requestData)
+        console.log("✅ Data saved successfully")
         return NextResponse.json({ success: true })
+      }
+
+      case "import": {
+        if (!requestData) {
+          return NextResponse.json({ success: false, error: "No data provided for import" }, { status: 400 })
+        }
+
+        // Validate import data structure
+        const importData: KnowledgeBaseData = {
+          categories: requestData.categories || [],
+          users: requestData.users || [],
+          auditLog: requestData.auditLog || [],
+          pageVisits: requestData.pageVisits || 0,
+        }
+
+        await saveData(importData)
+        console.log("✅ Data imported successfully")
+        return NextResponse.json({ success: true })
+      }
 
       default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+        return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 })
     }
   } catch (error) {
     console.error("❌ POST /api/data - Error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

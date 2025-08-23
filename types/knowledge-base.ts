@@ -3,11 +3,11 @@ export interface User {
   username: string
   password: string
   role: "admin" | "editor" | "viewer"
-  email: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-  lastLogin: string | null
+  email?: string
+  lastLogin?: Date | string
+  createdAt: Date | string
+  updatedAt: Date | string
+  isActive?: boolean
 }
 
 export interface Article {
@@ -15,57 +15,65 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  authorId: string
-  status: "draft" | "published" | "archived"
-  tags: string[]
-  createdAt: string
-  updatedAt: string
+  tags?: string[]
+  createdAt: Date | string
+  updatedAt: Date | string
+  authorId?: string
+  status?: "draft" | "published" | "archived"
   publishedAt?: string
+}
+
+export interface Subcategory {
+  id: string
+  name: string
+  description?: string
+  articles?: Article[]
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export interface Category {
   id: string
   name: string
-  description: string
+  description?: string
   icon?: string
-  createdAt: string | Date
-  updatedAt: string | Date
-  articles: Article[]
-  subcategories: Category[]
-  parentId: string | null
-  order: number
-  isActive: boolean
+  articles?: Article[]
+  subcategories?: Subcategory[]
+  createdAt: Date | string
+  updatedAt: Date | string
+  parentId?: string
+  order?: number
+  isActive?: boolean
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
-  timestamp: string
-  username: string
-  performedBy: string
-  details: string
   articleId?: string
   articleTitle?: string
   categoryId?: string
   categoryName?: string
   subcategoryName?: string
   userId?: string
-  ipAddress?: string
+  username: string
+  performedBy?: string
+  details: string
+  timestamp: Date | string
 }
 
 export interface PageVisit {
   id: string
   page: string
   timestamp: string
-  userAgent: string
-  ipAddress: string
+  userAgent?: string
+  ip?: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits: PageVisit[]
+  pageVisits: number
 }
 
 export interface SearchResult {
