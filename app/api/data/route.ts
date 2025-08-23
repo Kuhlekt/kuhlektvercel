@@ -1,245 +1,153 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
-import type { KnowledgeBaseData } from "@/types/knowledge-base"
 
-const DATA_DIR = path.join(process.cwd(), "data")
-const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
-
-// Default data structure
-const getDefaultData = (): KnowledgeBaseData => ({
-  categories: [
-    {
-      id: "cat-1",
-      name: "Getting Started",
-      description: "Essential information for new users",
-      articles: [
-        {
-          id: "art-1",
-          title: "Welcome to the Knowledge Base",
-          content:
-            "This is your comprehensive knowledge base system. Here you can find articles, guides, and documentation organized by categories.",
-          categoryId: "cat-1",
-          author: "System",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: ["welcome", "introduction"],
-          views: 0,
-        },
-      ],
-    },
-    {
-      id: "cat-2",
-      name: "User Guide",
-      description: "How to use the system effectively",
-      articles: [
-        {
-          id: "art-2",
-          title: "How to Search Articles",
-          content:
-            "Use the search bar at the top of the page to find articles by title, content, or tags. You can also browse by category using the sidebar.",
-          categoryId: "cat-2",
-          author: "System",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: ["search", "navigation"],
-          views: 0,
-        },
-      ],
-    },
-    {
-      id: "cat-3",
-      name: "Administration",
-      description: "Admin tools and settings",
-      articles: [
-        {
-          id: "art-3",
-          title: "Managing Users",
-          content:
-            "Administrators can create, edit, and delete user accounts. Users can have different roles: Admin, Editor, or Viewer.",
-          categoryId: "cat-3",
-          author: "System",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: ["admin", "users"],
-          views: 0,
-        },
-      ],
-    },
-  ],
-  users: [
-    {
-      id: "user-1",
-      username: "admin",
-      email: "admin@example.com",
-      role: "admin",
-      password: "admin123",
-      createdAt: new Date(),
-    },
-    {
-      id: "user-2",
-      username: "editor",
-      email: "editor@example.com",
-      role: "editor",
-      password: "editor123",
-      createdAt: new Date(),
-    },
-    {
-      id: "user-3",
-      username: "viewer",
-      email: "viewer@example.com",
-      role: "viewer",
-      password: "viewer123",
-      createdAt: new Date(),
-    },
-  ],
-  auditLog: [],
-  pageVisits: 0,
-  lastUpdated: new Date(),
-})
+const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
 
 // Ensure data directory exists
-async function ensureDataDir() {
+async function ensureDataDirectory() {
+  const dataDir = path.dirname(DATA_FILE)
   try {
-    await fs.access(DATA_DIR)
+    await fs.access(dataDir)
   } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true })
+    await fs.mkdir(dataDir, { recursive: true })
   }
 }
 
-// Load data from file
-async function loadData(): Promise<KnowledgeBaseData> {
-  try {
-    await ensureDataDir()
-    const data = await fs.readFile(DATA_FILE, "utf-8")
-    const parsed = JSON.parse(data)
-
-    // Convert date strings back to Date objects
-    if (parsed.categories) {
-      parsed.categories.forEach((cat: any) => {
-        if (cat.articles) {
-          cat.articles.forEach((art: any) => {
-            art.createdAt = new Date(art.createdAt)
-            art.updatedAt = new Date(art.updatedAt)
-          })
-        }
-        if (cat.subcategories) {
-          cat.subcategories.forEach((sub: any) => {
-            if (sub.articles) {
-              sub.articles.forEach((art: any) => {
-                art.createdAt = new Date(art.createdAt)
-                art.updatedAt = new Date(art.updatedAt)
-              })
-            }
-          })
-        }
-      })
-    }
-
-    if (parsed.users) {
-      parsed.users.forEach((user: any) => {
-        user.createdAt = new Date(user.createdAt)
-        if (user.lastLogin) {
-          user.lastLogin = new Date(user.lastLogin)
-        }
-      })
-    }
-
-    if (parsed.auditLog) {
-      parsed.auditLog.forEach((entry: any) => {
-        entry.timestamp = new Date(entry.timestamp)
-      })
-    }
-
-    if (parsed.lastUpdated) {
-      parsed.lastUpdated = new Date(parsed.lastUpdated)
-    }
-
-    console.log("✅ Data loaded successfully:", {
-      categories: parsed.categories?.length || 0,
-      users: parsed.users?.length || 0,
-      auditLog: parsed.auditLog?.length || 0,
-    })
-
-    return parsed
-  } catch (error) {
-    console.log("No existing data file found, creating default data")
-    const defaultData = getDefaultData()
-    await saveData(defaultData)
-    return defaultData
-  }
-}
-
-// Save data to file
-async function saveData(data: KnowledgeBaseData): Promise<void> {
-  try {
-    await ensureDataDir()
-
-    // Create backup
-    try {
-      await fs.access(DATA_FILE)
-      const backupFile = path.join(DATA_DIR, `knowledge-base-backup-${Date.now()}.json`)
-      await fs.copyFile(DATA_FILE, backupFile)
-    } catch {
-      // No existing file to backup
-    }
-
-    // Update last modified timestamp
-    data.lastUpdated = new Date()
-
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf-8")
-    console.log("✅ Data saved successfully")
-  } catch (error) {
-    console.error("Error saving data:", error)
-    throw new Error("Failed to save data")
-  }
-}
-
+// GET - Load data
 export async function GET() {
   try {
-    console.log("🔄 GET /api/data - Loading data...")
-    const data = await loadData()
-    return NextResponse.json(data)
+    console.log("📖 API Route - Loading data from:", DATA_FILE)
+
+    await ensureDataDirectory()
+
+    try {
+      const data = await fs.readFile(DATA_FILE, "utf8")
+      const parsedData = JSON.parse(data)
+      console.log("✅ API Route - Data loaded successfully")
+      return NextResponse.json({ success: true, data: parsedData })
+    } catch (error) {
+      console.log("📝 API Route - No existing data file, creating initial data")
+
+      // Create initial data structure
+      const initialData = {
+        categories: [
+          {
+            id: "cat-1",
+            name: "Getting Started",
+            description: "Basic information and setup guides",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            articleCount: 0,
+          },
+          {
+            id: "cat-2",
+            name: "Documentation",
+            description: "Technical documentation and guides",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            articleCount: 0,
+          },
+          {
+            id: "cat-3",
+            name: "FAQ",
+            description: "Frequently asked questions",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            articleCount: 0,
+          },
+        ],
+        articles: [],
+        users: [
+          {
+            id: "user-1",
+            username: "admin",
+            password: "admin123",
+            role: "admin",
+            email: "admin@example.com",
+            createdAt: new Date().toISOString(),
+            isActive: true,
+          },
+          {
+            id: "user-2",
+            username: "editor",
+            password: "editor123",
+            role: "editor",
+            email: "editor@example.com",
+            createdAt: new Date().toISOString(),
+            isActive: true,
+          },
+          {
+            id: "user-3",
+            username: "viewer",
+            password: "viewer123",
+            role: "viewer",
+            email: "viewer@example.com",
+            createdAt: new Date().toISOString(),
+            isActive: true,
+          },
+        ],
+        auditLog: [],
+        pageVisits: 0,
+        lastUpdated: new Date().toISOString(),
+      }
+
+      await fs.writeFile(DATA_FILE, JSON.stringify(initialData, null, 2))
+      console.log("✅ API Route - Initial data created successfully")
+      return NextResponse.json({ success: true, data: initialData })
+    }
   } catch (error) {
-    console.error("GET /api/data error:", error)
-    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
+    console.error("❌ API Route - Error loading data:", error)
+    return NextResponse.json({ success: false, error: "Failed to load data" }, { status: 500 })
   }
 }
 
+// POST - Save data
 export async function POST(request: NextRequest) {
   try {
-    console.log("💾 POST /api/data - Processing request...")
+    console.log("💾 API Route - Saving data...")
+
     const body = await request.json()
+    console.log("📦 API Route - Request body keys:", Object.keys(body))
+    console.log("📦 API Route - Request body structure:", JSON.stringify(body, null, 2).substring(0, 500))
 
-    console.log("📝 Request body keys:", Object.keys(body || {}))
+    // Handle different data structures
+    let dataToSave
 
-    if (!body || typeof body !== "object") {
-      console.error("❌ Invalid request body")
-      return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 })
-    }
-
-    // Handle direct data object (new format)
-    let dataToSave: KnowledgeBaseData
-    if (body.categories && body.users) {
-      dataToSave = body
-    } else if (body.data && body.data.categories && body.data.users) {
-      // Handle wrapped data object (old format)
+    if (body.data) {
+      // Data is wrapped in a 'data' property
       dataToSave = body.data
+      console.log("📦 API Route - Using wrapped data structure")
+    } else if (body.categories || body.users || body.auditLog || body.articles) {
+      // Data is directly in the body
+      dataToSave = body
+      console.log("📦 API Route - Using direct data structure")
     } else {
-      console.error("❌ No valid data structure found in request")
+      console.error("❌ API Route - Invalid data structure:", Object.keys(body))
       return NextResponse.json({ success: false, error: "No valid data provided" }, { status: 400 })
     }
 
-    console.log("📊 Data to save:", {
-      categories: dataToSave.categories?.length || 0,
-      users: dataToSave.users?.length || 0,
-      auditLog: dataToSave.auditLog?.length || 0,
-    })
+    // Validate required fields
+    if (!dataToSave.categories && !dataToSave.users && !dataToSave.auditLog) {
+      console.error("❌ API Route - Missing required data fields")
+      return NextResponse.json({ success: false, error: "Missing required data fields" }, { status: 400 })
+    }
 
-    await saveData(dataToSave)
+    await ensureDataDirectory()
+
+    // Add metadata
+    const dataWithMetadata = {
+      ...dataToSave,
+      lastUpdated: new Date().toISOString(),
+      pageVisits: dataToSave.pageVisits || 0,
+    }
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(dataWithMetadata, null, 2))
+    console.log("✅ API Route - Data saved successfully")
+
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("POST /api/data error:", error)
+    console.error("❌ API Route - Error saving data:", error)
     return NextResponse.json({ success: false, error: "Failed to save data" }, { status: 500 })
   }
 }
