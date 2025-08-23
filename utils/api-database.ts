@@ -34,31 +34,14 @@ class ApiDatabase {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      this.data = await response.json()
+      const result = await response.json()
 
-      // Ensure data structure is valid
-      if (!this.data || typeof this.data !== "object") {
-        throw new Error("Invalid data structure received")
-      }
-
-      if (!Array.isArray(this.data.categories)) {
-        this.data.categories = []
-      }
-
-      if (!Array.isArray(this.data.articles)) {
-        this.data.articles = []
-      }
-
-      if (!Array.isArray(this.data.users)) {
-        this.data.users = []
-      }
-
-      if (!Array.isArray(this.data.auditLog)) {
-        this.data.auditLog = []
-      }
-
-      if (typeof this.data.pageVisits !== "number") {
-        this.data.pageVisits = 0
+      // Handle error response with default data fallback
+      if (result.error && result.defaultData) {
+        console.warn("⚠️ Using default data due to server error:", result.error)
+        this.data = result.defaultData
+      } else {
+        this.data = result
       }
 
       console.log("✅ ApiDatabase.loadData() - Data loaded successfully")
@@ -78,21 +61,6 @@ class ApiDatabase {
 
     try {
       console.log("💾 ApiDatabase.saveData() - Saving data to server...")
-
-      // Validate data before sending
-      if (!Array.isArray(this.data.categories)) {
-        throw new Error("Categories must be an array")
-      }
-      if (!Array.isArray(this.data.articles)) {
-        throw new Error("Articles must be an array")
-      }
-      if (!Array.isArray(this.data.users)) {
-        throw new Error("Users must be an array")
-      }
-      if (!Array.isArray(this.data.auditLog)) {
-        throw new Error("Audit log must be an array")
-      }
-
       const response = await fetch("/api/data", {
         method: "POST",
         headers: {
@@ -121,7 +89,6 @@ class ApiDatabase {
 
   async incrementPageVisits(): Promise<number> {
     try {
-      console.log("📊 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
         headers: {
@@ -130,20 +97,19 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        console.warn("⚠️ Failed to increment page visits")
+        console.warn("Failed to increment page visits")
         return 0
       }
 
       const result = await response.json()
       if (result.success) {
-        console.log("✅ Page visits incremented:", result.totalVisits)
         return result.totalVisits || 0
       } else {
-        console.warn("⚠️ Page visits increment returned failure")
+        console.warn("Page visits increment returned failure:", result.error)
         return 0
       }
     } catch (error) {
-      console.warn("⚠️ Error incrementing page visits (non-critical):", error)
+      console.warn("Error incrementing page visits:", error)
       return 0
     }
   }
@@ -348,33 +314,8 @@ class ApiDatabase {
   }
 
   async importData(data: KnowledgeBaseData): Promise<void> {
-    // Validate imported data
-    if (!data || typeof data !== "object") {
-      throw new Error("Invalid data format")
-    }
-
-    if (!Array.isArray(data.categories)) {
-      throw new Error("Categories must be an array")
-    }
-
-    if (!Array.isArray(data.articles)) {
-      throw new Error("Articles must be an array")
-    }
-
-    if (!Array.isArray(data.users)) {
-      throw new Error("Users must be an array")
-    }
-
-    if (!Array.isArray(data.auditLog)) {
-      throw new Error("Audit log must be an array")
-    }
-
     this.data = data
     await this.saveData()
-  }
-
-  clearCache(): void {
-    this.data = null
   }
 }
 

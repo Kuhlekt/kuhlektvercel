@@ -6,9 +6,6 @@ import type { KnowledgeBaseData } from "@/types/knowledge-base"
 const DATA_DIR = path.join(process.cwd(), "data")
 const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
-console.log("📁 API Data Route - Data directory:", DATA_DIR)
-console.log("📄 API Data Route - Data file:", DATA_FILE)
-
 // Default data structure
 const DEFAULT_DATA: KnowledgeBaseData = {
   categories: [
@@ -99,16 +96,16 @@ const DEFAULT_DATA: KnowledgeBaseData = {
 
 async function ensureDataFile(): Promise<void> {
   try {
-    console.log("🔍 Ensuring data directory exists...")
+    // Ensure data directory exists
     await fs.mkdir(DATA_DIR, { recursive: true })
-    console.log("✅ Data directory ensured")
 
+    // Check if data file exists
     try {
       await fs.access(DATA_FILE)
       console.log("✅ Data file exists")
     } catch {
       console.log("📄 Creating default data file...")
-      await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2), "utf-8")
+      await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2))
       console.log("✅ Default data file created")
     }
   } catch (error) {
@@ -123,29 +120,32 @@ async function loadData(): Promise<KnowledgeBaseData> {
     await ensureDataFile()
 
     const fileContent = await fs.readFile(DATA_FILE, "utf-8")
-    const data = JSON.parse(fileContent)
+    let data: KnowledgeBaseData
 
-    // Validate data structure
-    if (!data || typeof data !== "object") {
-      throw new Error("Invalid data format")
+    try {
+      data = JSON.parse(fileContent)
+    } catch (parseError) {
+      console.error("❌ JSON parse error, using defaults:", parseError)
+      return DEFAULT_DATA
     }
 
-    if (!Array.isArray(data.categories)) {
+    // Validate and fix data structure
+    if (!data.categories || !Array.isArray(data.categories)) {
       console.warn("⚠️ Invalid categories, using defaults")
       data.categories = DEFAULT_DATA.categories
     }
 
-    if (!Array.isArray(data.articles)) {
-      console.warn("⚠️ Invalid articles, using defaults")
-      data.articles = DEFAULT_DATA.articles
-    }
-
-    if (!Array.isArray(data.users)) {
+    if (!data.users || !Array.isArray(data.users)) {
       console.warn("⚠️ Invalid users, using defaults")
       data.users = DEFAULT_DATA.users
     }
 
-    if (!Array.isArray(data.auditLog)) {
+    if (!data.articles || !Array.isArray(data.articles)) {
+      console.warn("⚠️ Invalid articles, using defaults")
+      data.articles = DEFAULT_DATA.articles
+    }
+
+    if (!data.auditLog || !Array.isArray(data.auditLog)) {
       console.warn("⚠️ Invalid audit log, using defaults")
       data.auditLog = DEFAULT_DATA.auditLog
     }
@@ -156,8 +156,8 @@ async function loadData(): Promise<KnowledgeBaseData> {
 
     console.log("✅ Data loaded successfully:", {
       categories: data.categories.length,
-      articles: data.articles.length,
       users: data.users.length,
+      articles: data.articles.length,
       auditLog: data.auditLog.length,
       pageVisits: data.pageVisits,
     })
@@ -172,31 +172,41 @@ async function loadData(): Promise<KnowledgeBaseData> {
 async function saveData(data: KnowledgeBaseData): Promise<void> {
   try {
     console.log("💾 Saving data to file...")
-    await ensureDataFile()
 
     // Validate data before saving
     if (!data || typeof data !== "object") {
-      throw new Error("Invalid data format")
+      throw new Error("Invalid data: must be an object")
     }
 
     if (!Array.isArray(data.categories)) {
-      throw new Error("Categories must be an array")
-    }
-
-    if (!Array.isArray(data.articles)) {
-      throw new Error("Articles must be an array")
+      throw new Error("Invalid data: categories must be an array")
     }
 
     if (!Array.isArray(data.users)) {
-      throw new Error("Users must be an array")
+      throw new Error("Invalid data: users must be an array")
+    }
+
+    if (!Array.isArray(data.articles)) {
+      throw new Error("Invalid data: articles must be an array")
     }
 
     if (!Array.isArray(data.auditLog)) {
-      throw new Error("Audit log must be an array")
+      throw new Error("Invalid data: auditLog must be an array")
     }
 
-    const jsonString = JSON.stringify(data, null, 2)
-    await fs.writeFile(DATA_FILE, jsonString, "utf-8")
+    await ensureDataFile()
+
+    // Create backup of existing data
+    try {
+      const backupFile = DATA_FILE + ".backup"
+      const existingContent = await fs.readFile(DATA_FILE, "utf-8")
+      await fs.writeFile(backupFile, existingContent)
+    } catch (backupError) {
+      console.warn("⚠️ Could not create backup:", backupError)
+    }
+
+    // Write new data
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
     console.log("✅ Data saved successfully")
   } catch (error) {
     console.error("❌ Error saving data:", error)
@@ -214,9 +224,9 @@ export async function GET() {
     console.error("❌ GET /api/data - Error:", error)
     return NextResponse.json(
       {
-        success: false,
         error: "Failed to load data",
         details: error instanceof Error ? error.message : "Unknown error",
+        defaultData: DEFAULT_DATA,
       },
       { status: 500 },
     )
@@ -225,11 +235,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("💾 POST /api/data - Processing save request...")
+    console.log("💾 POST /api/data - Processing request...")
 
     const contentType = request.headers.get("content-type")
+    console.log("📋 Content-Type:", contentType)
+
     if (!contentType?.includes("application/json")) {
-      console.error("❌ Invalid content type:", contentType)
       return NextResponse.json({ success: false, error: "Content-Type must be application/json" }, { status: 400 })
     }
 
@@ -237,10 +248,14 @@ export async function POST(request: NextRequest) {
     try {
       data = await request.json()
       console.log("📝 Request data received:", {
-        categories: data?.categories?.length || 0,
-        articles: data?.articles?.length || 0,
-        users: data?.users?.length || 0,
-        auditLog: data?.auditLog?.length || 0,
+        hasCategories: Array.isArray(data?.categories),
+        categoriesCount: data?.categories?.length || 0,
+        hasUsers: Array.isArray(data?.users),
+        usersCount: data?.users?.length || 0,
+        hasArticles: Array.isArray(data?.articles),
+        articlesCount: data?.articles?.length || 0,
+        hasAuditLog: Array.isArray(data?.auditLog),
+        auditLogCount: data?.auditLog?.length || 0,
       })
     } catch (parseError) {
       console.error("❌ JSON parse error:", parseError)
@@ -248,7 +263,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!data) {
-      console.error("❌ No data provided")
       return NextResponse.json({ success: false, error: "No data provided" }, { status: 400 })
     }
 

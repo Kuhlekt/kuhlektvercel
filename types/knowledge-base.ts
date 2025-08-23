@@ -142,15 +142,3 @@ export const USER_ROLES: Record<string, UserRole> = {
     canViewAudit: false,
   },
 }
-
-export interface LoginCredentials {
-  username: string
-  password: string
-}
-
-export interface AuthUser {
-  id: string
-  username: string
-  role: "admin" | "editor" | "viewer"
-  email: string
-}
