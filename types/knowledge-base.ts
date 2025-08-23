@@ -5,8 +5,9 @@ export interface User {
   role: "admin" | "editor" | "viewer"
   email: string
   isActive: boolean
-  createdAt: string | Date
-  lastLogin: string | Date | null
+  createdAt: string
+  updatedAt: string
+  lastLogin: string | null
 }
 
 export interface Article {
@@ -14,9 +15,12 @@ export interface Article {
   title: string
   content: string
   categoryId: string
+  authorId: string
+  status: "draft" | "published" | "archived"
   tags: string[]
-  createdAt: string | Date
-  updatedAt: string | Date
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
 }
 
 export interface Category {
@@ -28,12 +32,15 @@ export interface Category {
   updatedAt: string | Date
   articles: Article[]
   subcategories: Category[]
+  parentId: string | null
+  order: number
+  isActive: boolean
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
-  timestamp: string | Date
+  timestamp: string
   username: string
   performedBy: string
   details: string
@@ -43,13 +50,22 @@ export interface AuditLogEntry {
   categoryName?: string
   subcategoryName?: string
   userId?: string
+  ipAddress?: string
+}
+
+export interface PageVisit {
+  id: string
+  page: string
+  timestamp: string
+  userAgent: string
+  ipAddress: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
+  pageVisits: PageVisit[]
 }
 
 export interface SearchResult {
@@ -61,6 +77,7 @@ export interface SearchResult {
   subcategoryName?: string
   tags?: string[]
   relevanceScore: number
+  relevance: number
 }
 
 export interface UserSession {

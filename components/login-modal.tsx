@@ -18,7 +18,7 @@ interface LoginModalProps {
   users: UserType[]
 }
 
-export default function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -217,3 +217,5 @@ export default function LoginModal({ isOpen, onClose, onLogin, users }: LoginMod
     </Dialog>
   )
 }
+
+export default LoginModal
