@@ -2,62 +2,44 @@ import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
-const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
+const DATA_DIR = path.join(process.cwd(), "data")
+const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
+
+async function loadData() {
+  try {
+    const data = await fs.readFile(DATA_FILE, "utf8")
+    return JSON.parse(data)
+  } catch (error) {
+    return { pageVisits: 0 }
+  }
+}
+
+async function saveData(data: any) {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true })
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    return true
+  } catch (error) {
+    console.error("Error saving page visits:", error)
+    return false
+  }
+}
 
 export async function POST() {
   try {
-    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
+    const data = await loadData()
+    data.pageVisits = (data.pageVisits || 0) + 1
 
-    // Ensure data directory exists
-    const dataDir = path.dirname(DATA_FILE)
-    try {
-      await fs.access(dataDir)
-    } catch {
-      await fs.mkdir(dataDir, { recursive: true })
+    const saved = await saveData(data)
+    if (saved) {
+      return NextResponse.json({ pageVisits: data.pageVisits })
+    } else {
+      // Return success even if save fails to not block the app
+      return NextResponse.json({ pageVisits: data.pageVisits - 1 })
     }
-
-    // Read current data
-    let data
-    try {
-      const fileContent = await fs.readFile(DATA_FILE, "utf-8")
-      data = JSON.parse(fileContent)
-    } catch {
-      // If file doesn't exist, create minimal structure
-      data = {
-        categories: [],
-        users: [],
-        auditLog: [],
-        pageVisits: 0,
-      }
-    }
-
-    // Increment page visits safely
-    const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
-    const newVisits = currentVisits + 1
-
-    // Update data
-    const updatedData = {
-      ...data,
-      pageVisits: newVisits,
-    }
-
-    // Write back to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(updatedData, null, 2))
-
-    console.log(`✅ API POST /api/data/page-visits - Page visits incremented to ${newVisits}`)
-
-    return NextResponse.json({
-      success: true,
-      pageVisits: newVisits,
-    })
   } catch (error) {
-    console.error("❌ API POST /api/data/page-visits - Error:", error)
-
-    // Return success with 0 to prevent blocking the app
-    return NextResponse.json({
-      success: true,
-      pageVisits: 0,
-      error: "Failed to increment but continuing",
-    })
+    console.error("Error incrementing page visits:", error)
+    // Return success to not block the app
+    return NextResponse.json({ pageVisits: 0 })
   }
 }

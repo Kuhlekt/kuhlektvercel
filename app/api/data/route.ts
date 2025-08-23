@@ -2,40 +2,36 @@ import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
-const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
+const DATA_DIR = path.join(process.cwd(), "data")
+const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 // Default data structure
 const DEFAULT_DATA = {
   categories: [
     {
       id: "1",
-      name: "Getting Started",
-      description: "Basic information and setup guides",
-      icon: "BookOpen",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      name: "General",
+      description: "General knowledge articles",
+      parentId: null,
       articles: [
         {
           id: "1",
-          title: "Welcome to Knowledge Base",
+          title: "Welcome to Kuhlekt Knowledge Base",
           content: "This is your knowledge base system. You can add, edit, and organize articles here.",
           categoryId: "1",
           tags: ["welcome", "introduction"],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          createdBy: "1",
         },
       ],
-      subcategories: [],
     },
     {
       id: "2",
-      name: "Administration",
-      description: "Admin tools and management",
-      icon: "Settings",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      name: "Technical",
+      description: "Technical documentation and guides",
+      parentId: null,
       articles: [],
-      subcategories: [],
     },
   ],
   users: [
@@ -44,8 +40,7 @@ const DEFAULT_DATA = {
       username: "admin",
       password: "admin123",
       role: "admin",
-      email: "admin@example.com",
-      isActive: true,
+      email: "admin@kuhlekt.com",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -54,8 +49,7 @@ const DEFAULT_DATA = {
       username: "editor",
       password: "editor123",
       role: "editor",
-      email: "editor@example.com",
-      isActive: true,
+      email: "editor@kuhlekt.com",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -64,8 +58,7 @@ const DEFAULT_DATA = {
       username: "viewer",
       password: "viewer123",
       role: "viewer",
-      email: "viewer@example.com",
-      isActive: true,
+      email: "viewer@kuhlekt.com",
       createdAt: new Date().toISOString(),
       lastLogin: null,
     },
@@ -73,10 +66,9 @@ const DEFAULT_DATA = {
   auditLog: [
     {
       id: "1",
-      action: "system_initialized",
+      action: "system_init",
+      userId: "1",
       timestamp: new Date().toISOString(),
-      username: "system",
-      performedBy: "system",
       details: "Knowledge base system initialized",
     },
   ],
@@ -84,11 +76,10 @@ const DEFAULT_DATA = {
 }
 
 async function ensureDataDirectory() {
-  const dataDir = path.dirname(DATA_FILE)
   try {
-    await fs.access(dataDir)
+    await fs.access(DATA_DIR)
   } catch {
-    await fs.mkdir(dataDir, { recursive: true })
+    await fs.mkdir(DATA_DIR, { recursive: true })
   }
 }
 
@@ -96,17 +87,9 @@ async function loadData() {
   try {
     await ensureDataDirectory()
     const data = await fs.readFile(DATA_FILE, "utf8")
-    const parsed = JSON.parse(data)
-
-    // Ensure all required properties exist with defaults
-    return {
-      categories: Array.isArray(parsed.categories) ? parsed.categories : DEFAULT_DATA.categories,
-      users: Array.isArray(parsed.users) ? parsed.users : DEFAULT_DATA.users,
-      auditLog: Array.isArray(parsed.auditLog) ? parsed.auditLog : DEFAULT_DATA.auditLog,
-      pageVisits: typeof parsed.pageVisits === "number" ? parsed.pageVisits : DEFAULT_DATA.pageVisits,
-    }
+    return JSON.parse(data)
   } catch (error) {
-    console.log("No existing data file, creating with defaults")
+    console.log("No existing data file, creating default data")
     await saveData(DEFAULT_DATA)
     return DEFAULT_DATA
   }
@@ -115,16 +98,7 @@ async function loadData() {
 async function saveData(data: any) {
   try {
     await ensureDataDirectory()
-
-    // Ensure data structure is valid
-    const validData = {
-      categories: Array.isArray(data.categories) ? data.categories : [],
-      users: Array.isArray(data.users) ? data.users : [],
-      auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
-      pageVisits: typeof data.pageVisits === "number" ? data.pageVisits : 0,
-    }
-
-    await fs.writeFile(DATA_FILE, JSON.stringify(validData, null, 2))
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
     return true
   } catch (error) {
     console.error("Error saving data:", error)
@@ -134,72 +108,53 @@ async function saveData(data: any) {
 
 export async function GET() {
   try {
-    console.log("📖 API GET /api/data - Loading data...")
     const data = await loadData()
 
-    console.log("✅ API GET /api/data - Data loaded successfully:", {
+    // Return summary data for the client
+    const summary = {
       categories: data.categories?.length || 0,
       users: data.users?.length || 0,
+      usernames: data.users?.map((u: any) => u.username) || [],
       auditLog: data.auditLog?.length || 0,
       pageVisits: data.pageVisits || 0,
-    })
+    }
 
-    return NextResponse.json({
-      success: true,
-      ...data,
-    })
+    return NextResponse.json(summary)
   } catch (error) {
-    console.error("❌ API GET /api/data - Error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to load data",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error loading data:", error)
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("💾 API POST /api/data - Saving data...")
-
     const body = await request.json()
 
-    if (!body || typeof body !== "object") {
-      throw new Error("Invalid request body")
+    if (body.action === "save") {
+      await saveData(body.data)
+      return NextResponse.json({ success: true })
     }
 
-    // Load current data first
-    const currentData = await loadData()
-
-    // Merge with new data, preserving structure
-    const updatedData = {
-      categories: Array.isArray(body.categories) ? body.categories : currentData.categories,
-      users: Array.isArray(body.users) ? body.users : currentData.users,
-      auditLog: Array.isArray(body.auditLog) ? body.auditLog : currentData.auditLog,
-      pageVisits: typeof body.pageVisits === "number" ? body.pageVisits : currentData.pageVisits,
+    if (body.action === "load") {
+      const data = await loadData()
+      return NextResponse.json(data)
     }
 
-    // Save updated data
-    await saveData(updatedData)
+    if (body.action === "import") {
+      const importData = body.data
 
-    console.log("✅ API POST /api/data - Data saved successfully")
+      // Validate import data structure
+      if (!importData.categories || !importData.users) {
+        return NextResponse.json({ error: "Invalid import data structure" }, { status: 400 })
+      }
 
-    return NextResponse.json({
-      success: true,
-      message: "Data saved successfully",
-    })
+      await saveData(importData)
+      return NextResponse.json({ success: true })
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 })
   } catch (error) {
-    console.error("❌ API POST /api/data - Error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to save data",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error processing request:", error)
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
   }
 }
