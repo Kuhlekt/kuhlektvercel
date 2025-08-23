@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { X, Eye, EyeOff, Trash2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, EyeOff, LogIn, X } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -23,17 +24,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [error, setError] = useState("")
 
   // Clear form when modal opens
-  useEffect(() => {
-    if (isOpen) {
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
       setUsername("")
       setPassword("")
       setError("")
       setShowPassword(false)
+    } else {
+      onClose()
     }
-  }, [isOpen])
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!username.trim() || !password.trim()) {
       setError("Please enter both username and password")
       return
@@ -44,12 +48,20 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
     try {
       const success = await onLogin(username.trim(), password)
-      if (!success) {
+
+      if (success) {
+        // Clear form on successful login
+        setUsername("")
+        setPassword("")
+        setError("")
+        setShowPassword(false)
+      } else {
         setError("Invalid username or password")
         // Clear password on failed login
         setPassword("")
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
       setPassword("")
     } finally {
@@ -57,56 +69,42 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     }
   }
 
-  const clearForm = () => {
+  const handleClear = () => {
     setUsername("")
     setPassword("")
     setError("")
     setShowPassword(false)
   }
 
-  const handleClose = () => {
-    clearForm()
-    onClose()
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            Login Required
-            <Button variant="ghost" size="sm" onClick={handleClose} className="h-6 w-6 p-0">
-              <X className="h-4 w-4" />
-            </Button>
+          <DialogTitle className="flex items-center gap-2">
+            <LogIn className="h-5 w-5" />
+            Login to Knowledge Base
           </DialogTitle>
-          <DialogDescription>Please enter your credentials to access the admin features.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
-            <div className="relative">
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isLoading}
-                className="pr-10"
-              />
-              {username && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setUsername("")}
-                  className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 p-0 hover:bg-transparent"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            <Input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              disabled={isLoading}
+              autoComplete="username"
+              autoFocus
+            />
           </div>
 
           <div className="space-y-2">
@@ -115,60 +113,68 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
                 disabled={isLoading}
-                className="pr-20"
+                autoComplete="current-password"
+                className="pr-10"
               />
-              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center space-x-1">
-                {password && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPassword("")}
-                    className="h-6 w-6 p-0 hover:bg-transparent"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="h-6 w-6 p-0 hover:bg-transparent"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+              </Button>
             </div>
           </div>
 
-          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
-
-          <div className="flex items-center justify-between space-x-2">
+          <div className="flex justify-between gap-3 pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={clearForm}
-              className="flex items-center space-x-2 bg-transparent"
+              onClick={handleClear}
+              disabled={isLoading}
+              className="flex-1 bg-transparent"
             >
-              <Trash2 className="h-4 w-4" />
-              <span>Clear</span>
+              <X className="h-4 w-4 mr-2" />
+              Clear
             </Button>
-
-            <div className="flex space-x-2">
-              <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </div>
+            <Button type="submit" disabled={isLoading || !username.trim() || !password.trim()} className="flex-1">
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Logging in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login
+                </>
+              )}
+            </Button>
           </div>
         </form>
+
+        <div className="text-sm text-gray-500 mt-4 p-3 bg-gray-50 rounded-lg">
+          <p className="font-medium mb-2">Default Accounts:</p>
+          <div className="space-y-1 text-xs">
+            <p>
+              <strong>Admin:</strong> admin / admin123
+            </p>
+            <p>
+              <strong>Editor:</strong> editor / editor123
+            </p>
+            <p>
+              <strong>Viewer:</strong> viewer / viewer123
+            </p>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

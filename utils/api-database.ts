@@ -1,4 +1,4 @@
-import type { Category, User, AuditLogEntry } from "@/types/knowledge-base"
+import type { Category, User, AuditLogEntry, Article } from "@/types/knowledge-base"
 
 interface DatabaseData {
   categories: Category[]
@@ -194,6 +194,175 @@ class ApiDatabase {
     } catch (error) {
       console.error("❌ ApiDatabase.addAuditEntry() - Error:", error)
       throw new Error(`Failed to add audit entry`)
+    }
+  }
+
+  // Add article
+  async addArticle(
+    categories: Category[],
+    articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Article> {
+    console.log("📝 ApiDatabase.addArticle() - Adding new article:", articleData.title)
+
+    try {
+      const newArticle: Article = {
+        ...articleData,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const updatedCategories = categories.map((category) => {
+        if (category.id === articleData.categoryId) {
+          return {
+            ...category,
+            articles: [...(category.articles || []), newArticle],
+          }
+        }
+
+        if (category.subcategories) {
+          const updatedSubcategories = category.subcategories.map((subcategory) => {
+            if (subcategory.id === articleData.categoryId) {
+              return {
+                ...subcategory,
+                articles: [...(subcategory.articles || []), newArticle],
+              }
+            }
+            return subcategory
+          })
+
+          return {
+            ...category,
+            subcategories: updatedSubcategories,
+          }
+        }
+
+        return category
+      })
+
+      await this.saveData({ categories: updatedCategories })
+
+      console.log("✅ Article added successfully")
+      return newArticle
+    } catch (error) {
+      console.error("❌ ApiDatabase.addArticle() - Error:", error)
+      throw new Error(`Failed to add article`)
+    }
+  }
+
+  // Update article
+  async updateArticle(
+    categories: Category[],
+    articleId: string,
+    updatedArticle: Omit<Article, "createdAt">,
+  ): Promise<Category[]> {
+    console.log("📝 ApiDatabase.updateArticle() - Updating article:", articleId)
+
+    try {
+      const updatedCategories = categories.map((category) => {
+        // Check main category articles
+        if (category.articles) {
+          const articleIndex = category.articles.findIndex((article) => article.id === articleId)
+          if (articleIndex !== -1) {
+            const updatedArticles = [...category.articles]
+            updatedArticles[articleIndex] = {
+              ...updatedArticle,
+              createdAt: updatedArticles[articleIndex].createdAt,
+              updatedAt: new Date(),
+            }
+            return {
+              ...category,
+              articles: updatedArticles,
+            }
+          }
+        }
+
+        // Check subcategory articles
+        if (category.subcategories) {
+          const updatedSubcategories = category.subcategories.map((subcategory) => {
+            if (subcategory.articles) {
+              const articleIndex = subcategory.articles.findIndex((article) => article.id === articleId)
+              if (articleIndex !== -1) {
+                const updatedArticles = [...subcategory.articles]
+                updatedArticles[articleIndex] = {
+                  ...updatedArticle,
+                  createdAt: updatedArticles[articleIndex].createdAt,
+                  updatedAt: new Date(),
+                }
+                return {
+                  ...subcategory,
+                  articles: updatedArticles,
+                }
+              }
+            }
+            return subcategory
+          })
+
+          return {
+            ...category,
+            subcategories: updatedSubcategories,
+          }
+        }
+
+        return category
+      })
+
+      await this.saveData({ categories: updatedCategories })
+
+      console.log("✅ Article updated successfully")
+      return updatedCategories
+    } catch (error) {
+      console.error("❌ ApiDatabase.updateArticle() - Error:", error)
+      throw new Error(`Failed to update article`)
+    }
+  }
+
+  // Delete article
+  async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
+    console.log("🗑️ ApiDatabase.deleteArticle() - Deleting article:", articleId)
+
+    try {
+      const updatedCategories = categories.map((category) => {
+        // Check main category articles
+        if (category.articles) {
+          const filteredArticles = category.articles.filter((article) => article.id !== articleId)
+          if (filteredArticles.length !== category.articles.length) {
+            return {
+              ...category,
+              articles: filteredArticles,
+            }
+          }
+        }
+
+        // Check subcategory articles
+        if (category.subcategories) {
+          const updatedSubcategories = category.subcategories.map((subcategory) => {
+            if (subcategory.articles) {
+              const filteredArticles = subcategory.articles.filter((article) => article.id !== articleId)
+              return {
+                ...subcategory,
+                articles: filteredArticles,
+              }
+            }
+            return subcategory
+          })
+
+          return {
+            ...category,
+            subcategories: updatedSubcategories,
+          }
+        }
+
+        return category
+      })
+
+      await this.saveData({ categories: updatedCategories })
+
+      console.log("✅ Article deleted successfully")
+      return updatedCategories
+    } catch (error) {
+      console.error("❌ ApiDatabase.deleteArticle() - Error:", error)
+      throw new Error(`Failed to delete article`)
     }
   }
 
