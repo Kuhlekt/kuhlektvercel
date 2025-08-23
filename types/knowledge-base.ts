@@ -15,8 +15,7 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  subcategoryId?: string
-  tags?: string[]
+  tags: string[]
   createdAt: string
   updatedAt: string
 }
@@ -24,21 +23,21 @@ export interface Article {
 export interface Subcategory {
   id: string
   name: string
-  description?: string
-  articles?: Article[]
-  createdAt: Date | string
-  updatedAt: Date | string
+  description: string
+  articles: Article[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Category {
   id: string
   name: string
-  description?: string
+  description: string
   icon?: string
-  articles?: Article[]
-  subcategories?: Subcategory[]
-  createdAt: Date | string
-  updatedAt: Date | string
+  articles: Article[]
+  subcategories: Subcategory[]
+  createdAt: string
+  updatedAt: string
   parentId?: string
   order?: number
   isActive?: boolean
@@ -52,7 +51,7 @@ export interface AuditLogEntry {
   categoryId?: string
   performedBy: string
   timestamp: string
-  details?: string
+  details: string
 }
 
 export interface PageVisit {
@@ -67,7 +66,7 @@ export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
+  pageVisits?: number
 }
 
 export interface SearchResult {

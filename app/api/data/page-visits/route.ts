@@ -1,57 +1,85 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const VISITS_FILE = path.join(DATA_DIR, "page-visits.json")
 
-// Ensure data directory exists
-async function ensureDataDir() {
+async function ensureVisitsFile() {
   try {
-    await fs.access(DATA_DIR)
-  } catch {
     await fs.mkdir(DATA_DIR, { recursive: true })
+
+    try {
+      await fs.access(VISITS_FILE)
+    } catch {
+      // File doesn't exist, create it
+      const initialData = {
+        totalVisits: 0,
+        visits: [],
+      }
+      await fs.writeFile(VISITS_FILE, JSON.stringify(initialData, null, 2))
+    }
+  } catch (error) {
+    console.error("❌ Error ensuring visits file:", error)
   }
 }
 
-// Load page visits
-async function loadPageVisits() {
+async function loadVisits() {
   try {
-    await ensureDataDir()
+    await ensureVisitsFile()
     const data = await fs.readFile(VISITS_FILE, "utf-8")
     return JSON.parse(data)
-  } catch {
-    return { visits: 0, lastVisit: null }
+  } catch (error) {
+    console.error("❌ Error loading visits:", error)
+    return { totalVisits: 0, visits: [] }
   }
 }
 
-// Save page visits
-async function savePageVisits(data: any) {
-  await ensureDataDir()
-  await fs.writeFile(VISITS_FILE, JSON.stringify(data, null, 2))
+async function saveVisits(data: any) {
+  try {
+    await ensureVisitsFile()
+    await fs.writeFile(VISITS_FILE, JSON.stringify(data, null, 2))
+  } catch (error) {
+    console.error("❌ Error saving visits:", error)
+  }
 }
 
 export async function GET() {
   try {
-    const data = await loadPageVisits()
-    return NextResponse.json(data)
+    const data = await loadVisits()
+    return NextResponse.json({
+      success: true,
+      totalVisits: data.totalVisits || 0,
+      visits: data.visits || [],
+    })
   } catch (error) {
-    console.error("❌ Page Visits API Error (GET):", error)
-    return NextResponse.json({ error: "Failed to load page visits" }, { status: 500 })
+    console.error("❌ GET /api/data/page-visits - Error:", error)
+    return NextResponse.json({ success: false, error: "Failed to load page visits" }, { status: 500 })
   }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const data = await loadPageVisits()
-    const updatedData = {
-      visits: (data.visits || 0) + 1,
-      lastVisit: new Date().toISOString(),
+    const data = await loadVisits()
+
+    const newVisit = {
+      timestamp: new Date().toISOString(),
+      page: "/",
     }
-    await savePageVisits(updatedData)
-    return NextResponse.json(updatedData)
+
+    const updatedData = {
+      totalVisits: (data.totalVisits || 0) + 1,
+      visits: [...(data.visits || []), newVisit].slice(-100), // Keep last 100 visits
+    }
+
+    await saveVisits(updatedData)
+
+    return NextResponse.json({
+      success: true,
+      totalVisits: updatedData.totalVisits,
+    })
   } catch (error) {
-    console.error("❌ Page Visits API Error (POST):", error)
-    return NextResponse.json({ error: "Failed to increment page visits" }, { status: 500 })
+    console.error("❌ POST /api/data/page-visits - Error:", error)
+    return NextResponse.json({ success: false, error: "Failed to record page visit" }, { status: 500 })
   }
 }
