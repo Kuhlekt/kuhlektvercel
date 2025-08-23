@@ -40,56 +40,49 @@ async function saveData(data: any) {
   }
 }
 
-export async function POST() {
+export async function GET() {
   try {
-    console.log("📈 API POST /api/data/page-visits - Incrementing page visits...")
-
     const data = await loadData()
-    const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
-    const newVisits = currentVisits + 1
-
-    const updatedData = {
-      ...data,
-      pageVisits: newVisits,
-    }
-
-    await saveData(updatedData)
-
-    console.log(`✅ Page visits incremented to: ${newVisits}`)
-
     return NextResponse.json({
       success: true,
-      pageVisits: newVisits,
+      pageVisits: data.pageVisits || 0,
     })
   } catch (error) {
-    console.error("❌ API POST /api/data/page-visits - Error:", error)
+    console.error("Error getting page visits:", error)
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to increment page visits",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "Failed to get page visits",
+        pageVisits: 0,
       },
       { status: 500 },
     )
   }
 }
 
-export async function GET() {
+export async function POST() {
   try {
     const data = await loadData()
-    const pageVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
+    const newPageVisits = (data.pageVisits || 0) + 1
+
+    const updatedData = {
+      ...data,
+      pageVisits: newPageVisits,
+    }
+
+    await saveData(updatedData)
 
     return NextResponse.json({
       success: true,
-      pageVisits,
+      pageVisits: newPageVisits,
     })
   } catch (error) {
-    console.error("❌ API GET /api/data/page-visits - Error:", error)
+    console.error("Error incrementing page visits:", error)
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to get page visits",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "Failed to increment page visits",
+        pageVisits: 0,
       },
       { status: 500 },
     )

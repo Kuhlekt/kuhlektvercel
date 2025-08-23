@@ -1,26 +1,3 @@
-export interface Category {
-  id: string
-  name: string
-  description: string
-  icon?: string
-  parentId?: string | null
-  createdAt: Date | string
-  updatedAt: Date | string
-  articles?: Article[]
-  subcategories?: Category[]
-}
-
-export interface Article {
-  id: string
-  title: string
-  content: string
-  categoryId: string
-  tags?: string[]
-  createdAt: Date | string
-  updatedAt: Date | string
-  createdBy?: string
-}
-
 export interface User {
   id: string
   username: string
@@ -28,14 +5,35 @@ export interface User {
   role: "admin" | "editor" | "viewer"
   email: string
   isActive: boolean
-  createdAt: Date | string
-  lastLogin: Date | string | null
+  createdAt: string | Date
+  lastLogin: string | Date | null
+}
+
+export interface Article {
+  id: string
+  title: string
+  content: string
+  categoryId: string
+  tags: string[]
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
+export interface Category {
+  id: string
+  name: string
+  description: string
+  icon?: string
+  createdAt: string | Date
+  updatedAt: string | Date
+  articles: Article[]
+  subcategories: Category[]
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
-  timestamp: Date | string
+  timestamp: string | Date
   username: string
   performedBy: string
   details: string
@@ -52,4 +50,49 @@ export interface KnowledgeBaseData {
   users: User[]
   auditLog: AuditLogEntry[]
   pageVisits: number
+}
+
+export interface SearchResult {
+  type: "article" | "category"
+  id: string
+  title: string
+  content?: string
+  categoryName: string
+  relevance: number
+}
+
+export interface UserRole {
+  canRead: boolean
+  canWrite: boolean
+  canDelete: boolean
+  canManageUsers: boolean
+  canManageCategories: boolean
+  canViewAudit: boolean
+}
+
+export const USER_ROLES: Record<string, UserRole> = {
+  admin: {
+    canRead: true,
+    canWrite: true,
+    canDelete: true,
+    canManageUsers: true,
+    canManageCategories: true,
+    canViewAudit: true,
+  },
+  editor: {
+    canRead: true,
+    canWrite: true,
+    canDelete: true,
+    canManageUsers: false,
+    canManageCategories: true,
+    canViewAudit: false,
+  },
+  viewer: {
+    canRead: true,
+    canWrite: false,
+    canDelete: false,
+    canManageUsers: false,
+    canManageCategories: false,
+    canViewAudit: false,
+  },
 }
