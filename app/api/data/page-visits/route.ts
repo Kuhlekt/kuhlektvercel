@@ -2,43 +2,45 @@ import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
 
-const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
+const DATA_DIR = path.join(process.cwd(), "data")
+const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 export async function POST() {
   try {
-    // Try to read existing data
-    let data
-    try {
-      const fileContent = await fs.readFile(DATA_FILE, "utf8")
-      data = JSON.parse(fileContent)
-    } catch {
-      // If file doesn't exist or is invalid, create default structure
-      data = {
-        categories: [],
-        articles: [],
-        users: [],
-        auditLog: [],
-        pageVisits: 0,
-      }
-    }
+    console.log("📈 API: Incrementing page visits...")
+
+    // Read current data
+    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+    const data = JSON.parse(fileContent)
 
     // Increment page visits
-    data.pageVisits = (data.pageVisits || 0) + 1
+    const currentVisits = typeof data.pageVisits === "number" ? data.pageVisits : 0
+    const newVisits = currentVisits + 1
 
-    // Save back to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+    // Update data
+    const updatedData = {
+      ...data,
+      pageVisits: newVisits,
+    }
+
+    // Write back to file
+    await fs.writeFile(DATA_FILE, JSON.stringify(updatedData, null, 2))
+
+    console.log(`✅ API: Page visits incremented to ${newVisits}`)
 
     return NextResponse.json({
       success: true,
-      pageVisits: data.pageVisits,
+      pageVisits: newVisits,
     })
   } catch (error) {
-    console.error("Error incrementing page visits:", error)
-    // Return success even on error to prevent blocking the app
-    return NextResponse.json({
-      success: true,
-      pageVisits: 0,
-      error: "Failed to increment but continuing",
-    })
+    console.error("❌ API: Error incrementing page visits:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to increment page visits",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

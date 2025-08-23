@@ -1,53 +1,73 @@
-export interface User {
+export interface Article {
   id: string
-  username: string
-  password: string
-  role: "admin" | "editor" | "viewer"
-  email?: string
-  createdAt: string
-  lastLogin?: string
-  isActive: boolean
+  title: string
+  content: string
+  categoryId: string
+  subcategoryId?: string
+  tags?: string[]
+  createdAt: Date | string
+  updatedAt: Date | string
+}
+
+export interface Subcategory {
+  id: string
+  name: string
+  description?: string
+  articles?: Article[]
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export interface Category {
   id: string
   name: string
   description?: string
-  parentId?: string
-  order: number
-  createdAt: string
-  updatedAt: string
+  icon?: string
+  articles?: Article[]
+  subcategories?: Subcategory[]
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
-export interface Article {
+export interface User {
   id: string
-  title: string
-  content: string
-  categoryId: string
-  authorId: string
-  tags: string[]
-  isPublished: boolean
-  createdAt: string
-  updatedAt: string
-  viewCount: number
+  username: string
+  password: string
+  role: "admin" | "editor" | "viewer"
+  email?: string
+  isActive: boolean
+  createdAt: Date | string
+  lastLogin?: Date | string | null
 }
+
+// Alias for backward compatibility
+export type KnowledgeBaseUser = User
 
 export interface AuditLogEntry {
   id: string
-  userId: string
+  timestamp: Date | string
   action: string
+  articleId?: string
+  articleTitle?: string
+  categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
+  username: string
+  performedBy?: string
   details: string
-  timestamp: string
-  ipAddress?: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
-  articles: Article[]
+  articles?: Article[]
   users: User[]
   auditLog: AuditLogEntry[]
   pageVisits: number
 }
 
-// Backward compatibility
-export type KnowledgeBaseUser = User
+export interface SearchResult {
+  article: Article
+  category: Category
+  subcategory?: Subcategory
+}
