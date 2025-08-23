@@ -3,32 +3,38 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { User } from "@/types/knowledge-base"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
   onLogin: (username: string, password: string) => Promise<boolean>
-  users: User[]
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError("")
+
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password")
+      return
+    }
 
     try {
-      const success = await onLogin(username, password)
+      setIsLoading(true)
+      setError(null)
+
+      const success = await onLogin(username.trim(), password)
+
       if (success) {
         setUsername("")
         setPassword("")
@@ -36,30 +42,38 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
       } else {
         setError("Invalid username or password")
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const demoAccounts = [
-    { username: "admin", password: "admin123", role: "Admin" },
-    { username: "editor", password: "editor123", role: "Editor" },
-    { username: "viewer", password: "viewer123", role: "Viewer" },
-  ]
+  const handleClose = () => {
+    setUsername("")
+    setPassword("")
+    setError(null)
+    onClose()
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent aria-describedby="login-description">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
+          <DialogDescription id="login-description">
+            Enter your credentials to access the knowledge base system.
+          </DialogDescription>
         </DialogHeader>
-        <div id="login-description" className="sr-only">
-          Enter your username and password to access the knowledge base
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -67,9 +81,9 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              required
+              placeholder="Enter your username"
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
@@ -80,29 +94,34 @@ export function LoginModal({ isOpen, onClose, onLogin, users }: LoginModalProps)
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              required
+              placeholder="Enter your password"
               disabled={isLoading}
+              autoComplete="current-password"
             />
           </div>
 
-          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
+          <div className="flex space-x-2 pt-4">
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+          </div>
         </form>
 
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-sm font-medium mb-2">Demo Accounts:</h4>
-          <div className="space-y-1 text-xs text-gray-600">
-            {demoAccounts.map((account) => (
-              <div key={account.username} className="flex justify-between">
-                <span>{account.username}</span>
-                <span>{account.password}</span>
-                <span className="text-gray-400">({account.role})</span>
-              </div>
-            ))}
+        <div className="mt-4 p-3 bg-gray-50 rounded-md">
+          <p className="text-sm text-gray-600 mb-2">Demo Accounts:</p>
+          <div className="text-xs space-y-1">
+            <div>
+              <strong>Admin:</strong> admin / admin123
+            </div>
+            <div>
+              <strong>Editor:</strong> editor / editor123
+            </div>
+            <div>
+              <strong>Viewer:</strong> viewer / viewer123
+            </div>
           </div>
         </div>
       </DialogContent>

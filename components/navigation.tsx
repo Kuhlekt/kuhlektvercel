@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LogIn, LogOut, Plus, Settings, Home } from "lucide-react"
 import type { User as UserType } from "../types/knowledge-base"
 
 interface NavigationProps {
@@ -59,7 +58,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                   onClick={() => onViewChange("browse")}
                   size="sm"
                 >
-                  <Home className="h-4 w-4 mr-2" />
+                  <span className="mr-2">🏠</span>
                   Browse
                 </Button>
 
@@ -69,7 +68,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                     onClick={() => onViewChange("add")}
                     size="sm"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="mr-2">➕</span>
                     Add Article
                   </Button>
                 )}
@@ -80,7 +79,7 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                     onClick={() => onViewChange("admin")}
                     size="sm"
                   >
-                    <Settings className="h-4 w-4 mr-2" />
+                    <span className="mr-2">⚙️</span>
                     Admin
                   </Button>
                 )}
@@ -100,13 +99,13 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                   </Badge>
                 </div>
                 <Button variant="outline" onClick={onLogout} size="sm">
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="mr-2">🚪</span>
                   Logout
                 </Button>
               </div>
             ) : (
               <Button onClick={onLogin} size="sm">
-                <LogIn className="h-4 w-4 mr-2" />
+                <span className="mr-2">🔐</span>
                 Login
               </Button>
             )}

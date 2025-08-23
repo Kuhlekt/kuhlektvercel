@@ -6,39 +6,34 @@ const DATA_FILE = path.join(process.cwd(), "data", "knowledge-base.json")
 
 export async function POST() {
   try {
-    console.log("📈 Page Visits API - Incrementing page visits")
-
     // Read current data
-    let currentData
+    let data
     try {
-      const data = await fs.readFile(DATA_FILE, "utf8")
-      currentData = JSON.parse(data)
-    } catch (error) {
-      console.log("📝 Page Visits API - No existing data, creating initial structure")
-      currentData = {
+      const fileContent = await fs.readFile(DATA_FILE, "utf8")
+      data = JSON.parse(fileContent)
+    } catch {
+      // File doesn't exist, create default structure
+      data = {
         categories: [],
         articles: [],
         users: [],
         auditLog: [],
         pageVisits: 0,
-        lastUpdated: new Date().toISOString(),
       }
     }
 
     // Increment page visits
-    currentData.pageVisits = (currentData.pageVisits || 0) + 1
-    currentData.lastUpdated = new Date().toISOString()
+    data.pageVisits = (data.pageVisits || 0) + 1
 
     // Save updated data
-    await fs.writeFile(DATA_FILE, JSON.stringify(currentData, null, 2))
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
 
-    console.log("✅ Page Visits API - Page visits incremented to:", currentData.pageVisits)
     return NextResponse.json({
       success: true,
-      pageVisits: currentData.pageVisits,
+      pageVisits: data.pageVisits,
     })
   } catch (error) {
-    console.error("❌ Page Visits API - Error:", error)
+    console.error("Error incrementing page visits:", error)
     return NextResponse.json({ success: false, error: "Failed to increment page visits" }, { status: 500 })
   }
 }

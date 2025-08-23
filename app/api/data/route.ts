@@ -14,102 +14,101 @@ async function ensureDataDirectory() {
   }
 }
 
-// GET - Load data
+// Default data structure
+const getDefaultData = () => ({
+  categories: [
+    {
+      id: "cat-1",
+      name: "Getting Started",
+      description: "Basic information and setup guides",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "cat-2",
+      name: "Technical Documentation",
+      description: "Detailed technical guides and references",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: "cat-3",
+      name: "FAQ",
+      description: "Frequently asked questions and answers",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+  articles: [],
+  users: [
+    {
+      id: "user-1",
+      username: "admin",
+      password: "admin123",
+      email: "admin@example.com",
+      role: "admin",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+    },
+    {
+      id: "user-2",
+      username: "editor",
+      password: "editor123",
+      email: "editor@example.com",
+      role: "editor",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+    },
+    {
+      id: "user-3",
+      username: "viewer",
+      password: "viewer123",
+      email: "viewer@example.com",
+      role: "viewer",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+    },
+  ],
+  auditLog: [],
+  pageVisits: 0,
+})
+
 export async function GET() {
   try {
-    console.log("📖 API Route - Loading data from:", DATA_FILE)
-
     await ensureDataDirectory()
 
     try {
       const data = await fs.readFile(DATA_FILE, "utf8")
       const parsedData = JSON.parse(data)
-      console.log("✅ API Route - Data loaded successfully")
-      return NextResponse.json({ success: true, data: parsedData })
-    } catch (error) {
-      console.log("📝 API Route - No existing data file, creating initial data")
 
-      // Create initial data structure
-      const initialData = {
-        categories: [
-          {
-            id: "cat-1",
-            name: "Getting Started",
-            description: "Basic information and setup guides",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            articleCount: 0,
-          },
-          {
-            id: "cat-2",
-            name: "Documentation",
-            description: "Technical documentation and guides",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            articleCount: 0,
-          },
-          {
-            id: "cat-3",
-            name: "FAQ",
-            description: "Frequently asked questions",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            articleCount: 0,
-          },
-        ],
-        articles: [],
-        users: [
-          {
-            id: "user-1",
-            username: "admin",
-            password: "admin123",
-            role: "admin",
-            email: "admin@example.com",
-            createdAt: new Date().toISOString(),
-            isActive: true,
-          },
-          {
-            id: "user-2",
-            username: "editor",
-            password: "editor123",
-            role: "editor",
-            email: "editor@example.com",
-            createdAt: new Date().toISOString(),
-            isActive: true,
-          },
-          {
-            id: "user-3",
-            username: "viewer",
-            password: "viewer123",
-            role: "viewer",
-            email: "viewer@example.com",
-            createdAt: new Date().toISOString(),
-            isActive: true,
-          },
-        ],
-        auditLog: [],
-        pageVisits: 0,
-        lastUpdated: new Date().toISOString(),
+      // Ensure all required fields exist
+      const completeData = {
+        ...getDefaultData(),
+        ...parsedData,
       }
 
-      await fs.writeFile(DATA_FILE, JSON.stringify(initialData, null, 2))
-      console.log("✅ API Route - Initial data created successfully")
-      return NextResponse.json({ success: true, data: initialData })
+      return NextResponse.json({ success: true, data: completeData })
+    } catch (error) {
+      // File doesn't exist or is invalid, create with default data
+      const defaultData = getDefaultData()
+      await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
+      return NextResponse.json({ success: true, data: defaultData })
     }
   } catch (error) {
-    console.error("❌ API Route - Error loading data:", error)
+    console.error("Error loading data:", error)
     return NextResponse.json({ success: false, error: "Failed to load data" }, { status: 500 })
   }
 }
 
-// POST - Save data
 export async function POST(request: NextRequest) {
   try {
-    console.log("💾 API Route - Saving data...")
+    await ensureDataDirectory()
 
     const body = await request.json()
-    console.log("📦 API Route - Request body keys:", Object.keys(body))
-    console.log("📦 API Route - Request body structure:", JSON.stringify(body, null, 2).substring(0, 500))
+    console.log("📥 POST /api/data - Received body:", JSON.stringify(body, null, 2))
 
     // Handle different data structures
     let dataToSave
@@ -117,37 +116,50 @@ export async function POST(request: NextRequest) {
     if (body.data) {
       // Data is wrapped in a 'data' property
       dataToSave = body.data
-      console.log("📦 API Route - Using wrapped data structure")
-    } else if (body.categories || body.users || body.auditLog || body.articles) {
-      // Data is directly in the body
+    } else if (body.categories || body.users || body.articles || body.auditLog) {
+      // Data properties are at root level
       dataToSave = body
-      console.log("📦 API Route - Using direct data structure")
     } else {
-      console.error("❌ API Route - Invalid data structure:", Object.keys(body))
-      return NextResponse.json({ success: false, error: "No valid data provided" }, { status: 400 })
+      console.error("❌ No valid data structure found in request body")
+      return NextResponse.json({ success: false, error: "No data provided" }, { status: 400 })
     }
 
     // Validate required fields
-    if (!dataToSave.categories && !dataToSave.users && !dataToSave.auditLog) {
-      console.error("❌ API Route - Missing required data fields")
-      return NextResponse.json({ success: false, error: "Missing required data fields" }, { status: 400 })
+    if (!dataToSave.categories && !dataToSave.users && !dataToSave.articles && !dataToSave.auditLog) {
+      console.error("❌ No valid data fields found")
+      return NextResponse.json({ success: false, error: "Invalid data structure" }, { status: 400 })
     }
 
-    await ensureDataDirectory()
+    // Load existing data and merge
+    let existingData = getDefaultData()
+    try {
+      const existingFile = await fs.readFile(DATA_FILE, "utf8")
+      existingData = JSON.parse(existingFile)
+    } catch {
+      // File doesn't exist, use defaults
+    }
 
-    // Add metadata
-    const dataWithMetadata = {
+    // Merge data
+    const mergedData = {
+      ...existingData,
       ...dataToSave,
-      lastUpdated: new Date().toISOString(),
-      pageVisits: dataToSave.pageVisits || 0,
+      // Ensure pageVisits is preserved if not provided
+      pageVisits: dataToSave.pageVisits !== undefined ? dataToSave.pageVisits : existingData.pageVisits,
     }
 
-    await fs.writeFile(DATA_FILE, JSON.stringify(dataWithMetadata, null, 2))
-    console.log("✅ API Route - Data saved successfully")
+    console.log("💾 Saving merged data:", {
+      categories: mergedData.categories?.length || 0,
+      articles: mergedData.articles?.length || 0,
+      users: mergedData.users?.length || 0,
+      auditLog: mergedData.auditLog?.length || 0,
+      pageVisits: mergedData.pageVisits,
+    })
 
-    return NextResponse.json({ success: true })
+    await fs.writeFile(DATA_FILE, JSON.stringify(mergedData, null, 2))
+
+    return NextResponse.json({ success: true, data: mergedData })
   } catch (error) {
-    console.error("❌ API Route - Error saving data:", error)
+    console.error("❌ Error saving data:", error)
     return NextResponse.json({ success: false, error: "Failed to save data" }, { status: 500 })
   }
 }

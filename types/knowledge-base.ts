@@ -3,10 +3,20 @@ export interface User {
   username: string
   password: string
   role: "admin" | "editor" | "viewer"
-  email?: string
-  lastLogin?: string
-  createdAt: string
   isActive: boolean
+  createdAt: Date
+  lastLogin: Date | null
+}
+
+export interface KnowledgeBaseUser {
+  id: string
+  username: string
+  password: string
+  email: string
+  role: "admin" | "editor" | "viewer"
+  isActive: boolean
+  createdAt: Date
+  lastLogin: Date | null
 }
 
 export interface Category {
@@ -16,8 +26,8 @@ export interface Category {
   parentId?: string
   children?: Category[]
   articleCount?: number
-  createdAt: string
-  updatedAt: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Article {
@@ -25,52 +35,28 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  authorId: string
   tags: string[]
+  author: string
+  createdAt: Date
+  updatedAt: Date
   isPublished: boolean
-  createdAt: string
-  updatedAt: string
-  viewCount: number
-  lastViewedAt?: string
+  views: number
 }
 
 export interface AuditLogEntry {
   id: string
-  userId: string
-  username: string
   action: string
+  performedBy: string
+  timestamp: Date
   details: string
-  timestamp: string
-  ipAddress?: string
-  userAgent?: string
+  articleId?: string
+  articleTitle?: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
   articles: Article[]
-  users: User[]
+  users: KnowledgeBaseUser[]
   auditLog: AuditLogEntry[]
   pageVisits: number
-  lastUpdated: string
-}
-
-export interface SearchResult {
-  type: "article" | "category"
-  id: string
-  title: string
-  content?: string
-  categoryName?: string
-  relevance: number
-}
-
-export interface ImportData {
-  categories?: Category[]
-  articles?: Article[]
-  users?: User[]
-  auditLog?: AuditLogEntry[]
-}
-
-export interface ExportData extends ImportData {
-  exportedAt: string
-  version: string
 }
