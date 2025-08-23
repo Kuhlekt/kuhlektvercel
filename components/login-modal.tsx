@@ -3,11 +3,11 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -19,22 +19,15 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password")
-      return
-    }
+    setIsLoading(true)
+    setError("")
 
     try {
-      setIsLoading(true)
-      setError(null)
-
-      const success = await onLogin(username.trim(), password)
-
+      const success = await onLogin(username, password)
       if (success) {
         setUsername("")
         setPassword("")
@@ -43,7 +36,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
         setError("Invalid username or password")
       }
     } catch (error) {
-      console.error("Login error:", error)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -53,27 +45,21 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const handleClose = () => {
     setUsername("")
     setPassword("")
-    setError(null)
+    setError("")
     onClose()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent aria-describedby="login-description">
+      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle>Login to Knowledge Base</DialogTitle>
-          <DialogDescription id="login-description">
-            Enter your credentials to access the knowledge base system.
-          </DialogDescription>
+          <DialogTitle>Sign In</DialogTitle>
         </DialogHeader>
+        <div id="login-description" className="text-sm text-gray-600 mb-4">
+          Enter your credentials to access the knowledge base
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -81,9 +67,9 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Enter username"
+              required
               disabled={isLoading}
-              autoComplete="username"
             />
           </div>
 
@@ -94,33 +80,39 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Enter password"
+              required
               disabled={isLoading}
-              autoComplete="current-password"
             />
           </div>
 
-          <div className="flex space-x-2 pt-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </div>
         </form>
 
         <div className="mt-4 p-3 bg-gray-50 rounded-md">
-          <p className="text-sm text-gray-600 mb-2">Demo Accounts:</p>
-          <div className="text-xs space-y-1">
+          <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
+          <div className="text-xs text-gray-600 space-y-1">
             <div>
-              <strong>Admin:</strong> admin / admin123
+              👑 <strong>admin</strong> / admin123 (Full access)
             </div>
             <div>
-              <strong>Editor:</strong> editor / editor123
+              ✏️ <strong>editor</strong> / editor123 (Edit articles)
             </div>
             <div>
-              <strong>Viewer:</strong> viewer / viewer123
+              👁️ <strong>viewer</strong> / viewer123 (Read only)
             </div>
           </div>
         </div>
@@ -128,5 +120,3 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     </Dialog>
   )
 }
-
-export default LoginModal

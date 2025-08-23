@@ -1,11 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: []
-  },
-  images: {
-    domains: ['localhost'],
-    unoptimized: true,
+    serverComponentsExternalPackages: [],
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,34 +9,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Enable static file serving
-  trailingSlash: false,
-  // Optimize for production
-  swcMinify: true,
-  // Enable compression
-  compress: true,
-  // Configure headers for security
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-        ],
-      },
-    ]
+  images: {
+    domains: ['localhost'],
+    unoptimized: true,
   },
+  // Ensure static file serving works properly
+  trailingSlash: false,
+  // Enable static exports for better compatibility
+  output: 'standalone',
 }
 
 export default nextConfig

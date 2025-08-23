@@ -1,11 +1,17 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import type { User as UserType } from "../types/knowledge-base"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import type { User } from "@/types/knowledge-base"
 
 interface NavigationProps {
-  currentUser: UserType | null
+  currentUser: User | null
   onLogin: () => void
   onLogout: () => void
   onViewChange: (view: "browse" | "add" | "admin") => void
@@ -13,63 +19,46 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentUser, onLogin, onLogout, onViewChange, currentView }: NavigationProps) {
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "destructive"
-      case "editor":
-        return "default"
-      case "viewer":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "👑"
-      case "editor":
-        return "✏️"
-      case "viewer":
-        return "👁️"
-      default:
-        return "👤"
-    }
-  }
-
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-4">
-            <img src="/images/kuhlekt-logo.png" alt="Logo" className="h-8 w-auto" />
-            <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
+            <img
+              src="/images/kuhlekt-logo.png"
+              alt="Kuhlekt Logo"
+              className="h-8 w-auto"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = "none"
+              }}
+            />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Knowledge Base</h1>
+              <p className="text-sm text-gray-500">Kuhlekt Information System</p>
+            </div>
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Navigation Links */}
           <div className="flex items-center space-x-4">
             {currentUser && (
-              <>
+              <div className="flex items-center space-x-2">
                 <Button
                   variant={currentView === "browse" ? "default" : "ghost"}
                   onClick={() => onViewChange("browse")}
-                  size="sm"
+                  className="text-sm"
                 >
-                  <span className="mr-2">🏠</span>
-                  Browse
+                  📚 Browse
                 </Button>
 
                 {(currentUser.role === "admin" || currentUser.role === "editor") && (
                   <Button
                     variant={currentView === "add" ? "default" : "ghost"}
                     onClick={() => onViewChange("add")}
-                    size="sm"
+                    className="text-sm"
                   >
-                    <span className="mr-2">➕</span>
-                    Add Article
+                    ➕ Add Article
                   </Button>
                 )}
 
@@ -77,36 +66,53 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
                   <Button
                     variant={currentView === "admin" ? "default" : "ghost"}
                     onClick={() => onViewChange("admin")}
-                    size="sm"
+                    className="text-sm"
                   >
-                    <span className="mr-2">⚙️</span>
-                    Admin
+                    ⚙️ Admin
                   </Button>
                 )}
-              </>
+              </div>
             )}
 
-            {/* User Info and Login/Logout */}
+            {/* User Menu */}
             {currentUser ? (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
-                    <span className="text-sm">{getRoleIcon(currentUser.role)}</span>
-                    <span className="text-sm font-medium text-gray-700">{currentUser.username}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {currentUser.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <div className="text-sm font-medium">{currentUser.username}</div>
+                      <div className="text-xs text-gray-500 capitalize">{currentUser.role}</div>
+                    </div>
+                    <span className="text-gray-400">▼</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium">{currentUser.username}</p>
+                    <p className="text-xs text-gray-500">{currentUser.email}</p>
+                    <p className="text-xs text-gray-500 capitalize">Role: {currentUser.role}</p>
                   </div>
-                  <Badge variant={getRoleBadgeVariant(currentUser.role)} className="text-xs">
-                    {currentUser.role}
-                  </Badge>
-                </div>
-                <Button variant="outline" onClick={onLogout} size="sm">
-                  <span className="mr-2">🚪</span>
-                  Logout
-                </Button>
-              </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onViewChange("browse")}>📚 Browse Articles</DropdownMenuItem>
+                  {(currentUser.role === "admin" || currentUser.role === "editor") && (
+                    <DropdownMenuItem onClick={() => onViewChange("add")}>➕ Add Article</DropdownMenuItem>
+                  )}
+                  {currentUser.role === "admin" && (
+                    <DropdownMenuItem onClick={() => onViewChange("admin")}>⚙️ Admin Dashboard</DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-red-600">
+                    🚪 Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <Button onClick={onLogin} size="sm">
-                <span className="mr-2">🔐</span>
-                Login
+              <Button onClick={onLogin} className="flex items-center space-x-2">
+                <span>🔐</span>
+                <span>Sign In</span>
               </Button>
             )}
           </div>

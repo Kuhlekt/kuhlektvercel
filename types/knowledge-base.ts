@@ -2,10 +2,11 @@ export interface User {
   id: string
   username: string
   password: string
+  email: string
   role: "admin" | "editor" | "viewer"
   isActive: boolean
-  createdAt: Date
-  lastLogin: Date | null
+  createdAt: Date | string
+  lastLogin?: Date | string | null
 }
 
 export interface KnowledgeBaseUser {
@@ -15,19 +16,27 @@ export interface KnowledgeBaseUser {
   email: string
   role: "admin" | "editor" | "viewer"
   isActive: boolean
-  createdAt: Date
-  lastLogin: Date | null
+  createdAt: Date | string
+  lastLogin?: Date | string | null
 }
 
 export interface Category {
   id: string
   name: string
-  description?: string
-  parentId?: string
-  children?: Category[]
-  articleCount?: number
-  createdAt: Date
-  updatedAt: Date
+  description: string
+  createdAt: Date | string
+  updatedAt: Date | string
+  subcategories?: Subcategory[]
+  articles?: Article[]
+}
+
+export interface Subcategory {
+  id: string
+  name: string
+  description: string
+  createdAt: Date | string
+  updatedAt: Date | string
+  articles?: Article[]
 }
 
 export interface Article {
@@ -35,28 +44,37 @@ export interface Article {
   title: string
   content: string
   categoryId: string
-  tags: string[]
+  subcategoryId?: string
   author: string
-  createdAt: Date
-  updatedAt: Date
-  isPublished: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
+  tags: string[]
   views: number
+  createdBy?: string
+  lastEditedBy?: string
+  editCount?: number
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
-  performedBy: string
-  timestamp: Date
-  details: string
   articleId?: string
   articleTitle?: string
+  categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
+  username?: string
+  performedBy: string
+  timestamp: Date | string
+  details: string
 }
 
 export interface KnowledgeBaseData {
   categories: Category[]
-  articles: Article[]
+  articles?: Article[]
   users: KnowledgeBaseUser[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
+  pageVisits?: number
+  lastUpdated?: Date | string
 }
