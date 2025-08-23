@@ -31,6 +31,7 @@ async function savePageVisits(visits: number): Promise<void> {
   try {
     await ensureDataDir()
     await fs.writeFile(VISITS_FILE, JSON.stringify({ visits, lastUpdated: new Date() }, null, 2))
+    console.log("✅ Page visits saved:", visits)
   } catch (error) {
     console.error("Error saving page visits:", error)
     throw new Error("Failed to save page visits")
@@ -39,6 +40,7 @@ async function savePageVisits(visits: number): Promise<void> {
 
 export async function GET() {
   try {
+    console.log("📊 GET /api/data/page-visits - Loading visits...")
     const visits = await loadPageVisits()
     return NextResponse.json({ success: true, visits })
   } catch (error) {
@@ -49,6 +51,7 @@ export async function GET() {
 
 export async function POST() {
   try {
+    console.log("📊 POST /api/data/page-visits - Incrementing visits...")
     const currentVisits = await loadPageVisits()
     const newVisits = currentVisits + 1
     await savePageVisits(newVisits)

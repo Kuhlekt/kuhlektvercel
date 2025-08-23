@@ -155,6 +155,12 @@ async function loadData(): Promise<KnowledgeBaseData> {
       parsed.lastUpdated = new Date(parsed.lastUpdated)
     }
 
+    console.log("✅ Data loaded successfully:", {
+      categories: parsed.categories?.length || 0,
+      users: parsed.users?.length || 0,
+      auditLog: parsed.auditLog?.length || 0,
+    })
+
     return parsed
   } catch (error) {
     console.log("No existing data file found, creating default data")
@@ -182,6 +188,7 @@ async function saveData(data: KnowledgeBaseData): Promise<void> {
     data.lastUpdated = new Date()
 
     await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf-8")
+    console.log("✅ Data saved successfully")
   } catch (error) {
     console.error("Error saving data:", error)
     throw new Error("Failed to save data")
@@ -190,23 +197,46 @@ async function saveData(data: KnowledgeBaseData): Promise<void> {
 
 export async function GET() {
   try {
+    console.log("🔄 GET /api/data - Loading data...")
     const data = await loadData()
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json(data)
   } catch (error) {
     console.error("GET /api/data error:", error)
-    return NextResponse.json({ success: false, error: "Failed to load data" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("💾 POST /api/data - Processing request...")
     const body = await request.json()
 
-    if (!body.data) {
-      return NextResponse.json({ success: false, error: "No data provided" }, { status: 400 })
+    console.log("📝 Request body keys:", Object.keys(body || {}))
+
+    if (!body || typeof body !== "object") {
+      console.error("❌ Invalid request body")
+      return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 })
     }
 
-    await saveData(body.data)
+    // Handle direct data object (new format)
+    let dataToSave: KnowledgeBaseData
+    if (body.categories && body.users) {
+      dataToSave = body
+    } else if (body.data && body.data.categories && body.data.users) {
+      // Handle wrapped data object (old format)
+      dataToSave = body.data
+    } else {
+      console.error("❌ No valid data structure found in request")
+      return NextResponse.json({ success: false, error: "No valid data provided" }, { status: 400 })
+    }
+
+    console.log("📊 Data to save:", {
+      categories: dataToSave.categories?.length || 0,
+      users: dataToSave.users?.length || 0,
+      auditLog: dataToSave.auditLog?.length || 0,
+    })
+
+    await saveData(dataToSave)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("POST /api/data error:", error)

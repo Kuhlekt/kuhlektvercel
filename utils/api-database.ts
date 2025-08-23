@@ -1,61 +1,83 @@
 import type { Category, Article, User, AuditLogEntry, KnowledgeBaseData } from "@/types/knowledge-base"
 
 class ApiDatabase {
-  private baseUrl = "/api"
+  private data: KnowledgeBaseData | null = null
+  private isLoading = false
 
   async loadData(): Promise<KnowledgeBaseData> {
-    console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
+    if (this.isLoading) {
+      // Wait for current load to complete
+      while (this.isLoading) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+      return this.data!
+    }
 
+    if (this.data) {
+      return this.data
+    }
+
+    this.isLoading = true
     try {
-      const response = await fetch(`${this.baseUrl}/data`, {
+      console.log("🔍 ApiDatabase.loadData() - Fetching data from server...")
+      const response = await fetch("/api/data", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
       })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to load data")
-      }
-
+      this.data = await response.json()
       console.log("✅ ApiDatabase.loadData() - Data loaded successfully")
-      return result.data
+      return this.data!
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error:", error)
       throw new Error("Failed to load data from server")
+    } finally {
+      this.isLoading = false
     }
   }
 
-  async saveData(data: KnowledgeBaseData): Promise<void> {
-    console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+  async saveData(data?: KnowledgeBaseData): Promise<void> {
+    const dataToSave = data || this.data
+    if (!dataToSave) {
+      throw new Error("No data to save")
+    }
 
     try {
-      const response = await fetch(`${this.baseUrl}/data`, {
+      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+      console.log("📊 Data structure:", {
+        categories: dataToSave.categories?.length || 0,
+        users: dataToSave.users?.length || 0,
+        auditLog: dataToSave.auditLog?.length || 0,
+      })
+
+      const response = await fetch("/api/data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify(dataToSave),
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.log("❌ Save Error Response:", errorData)
+        console.error("❌ Save Error Response:", errorData)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
-
       if (!result.success) {
         throw new Error(result.error || "Failed to save data")
       }
 
+      // Update local cache
+      this.data = dataToSave
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error:", error)
@@ -65,7 +87,7 @@ class ApiDatabase {
 
   async incrementPageVisits(): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/data/page-visits`, {
+      const response = await fetch("/api/data/page-visits", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -73,18 +95,19 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        console.warn("Failed to increment page visits")
+        return 0
       }
 
       const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to increment page visits")
+      if (result.success) {
+        return result.visits
+      } else {
+        console.warn("Page visits increment failed:", result.error)
+        return 0
       }
-
-      return result.visits
     } catch (error) {
-      console.error("Failed to increment page visits:", error)
+      console.warn("Failed to increment page visits:", error)
       return 0
     }
   }
@@ -128,13 +151,11 @@ class ApiDatabase {
       return category
     })
 
-    const data: KnowledgeBaseData = {
-      categories: updatedCategories,
-      users: [],
-      auditLog: [],
+    if (this.data) {
+      this.data.categories = updatedCategories
+      await this.saveData()
     }
 
-    await this.saveData(data)
     return newArticle
   }
 
@@ -181,6 +202,11 @@ class ApiDatabase {
       return category
     })
 
+    if (this.data) {
+      this.data.categories = updatedCategories
+      await this.saveData()
+    }
+
     return updatedCategories
   }
 
@@ -209,6 +235,11 @@ class ApiDatabase {
       return category
     })
 
+    if (this.data) {
+      this.data.categories = updatedCategories
+      await this.saveData()
+    }
+
     return updatedCategories
   }
 
@@ -220,6 +251,11 @@ class ApiDatabase {
       }
       return user
     })
+
+    if (this.data) {
+      this.data.users = updatedUsers
+      await this.saveData()
+    }
 
     return updatedUsers
   }
@@ -235,7 +271,19 @@ class ApiDatabase {
       timestamp: new Date(),
     }
 
-    return [newEntry, ...auditLog]
+    const updatedAuditLog = [newEntry, ...auditLog]
+
+    if (this.data) {
+      this.data.auditLog = updatedAuditLog
+      await this.saveData()
+    }
+
+    return updatedAuditLog
+  }
+
+  async importData(data: KnowledgeBaseData): Promise<void> {
+    this.data = data
+    await this.saveData(data)
   }
 }
 

@@ -1,14 +1,12 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, User, Lock, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, User, Lock } from 'lucide-react'
 
 interface LoginModalProps {
   isOpen: boolean
@@ -25,7 +23,6 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!username.trim() || !password.trim()) {
       setError("Please enter both username and password")
       return
@@ -38,12 +35,10 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
       const success = await onLogin(username, password)
       if (!success) {
         setError("Invalid username or password")
-        setPassword("")
       }
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("Authentication error:", error)
       setError("Login failed. Please try again.")
-      setPassword("")
     } finally {
       setIsLoading(false)
     }
@@ -57,106 +52,84 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     onClose()
   }
 
-  const clearForm = () => {
-    setUsername("")
-    setPassword("")
-    setError("")
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md" aria-describedby="login-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <span>Login to Knowledge Base</span>
-          </DialogTitle>
+          <DialogTitle>Login to Knowledge Base</DialogTitle>
           <DialogDescription id="login-description">
-            Enter your credentials to access the knowledge base administration features.
+            Enter your credentials to access the knowledge base system.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              disabled={isLoading}
-              autoComplete="username"
-            />
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="pl-10"
+                disabled={isLoading}
+                autoComplete="username"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                className="pl-10 pr-10"
                 disabled={isLoading}
                 autoComplete="current-password"
-                className="pr-10"
               />
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 disabled={isLoading}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-              </Button>
+              </button>
             </div>
           </div>
 
           {error && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="flex justify-between space-x-2">
-            <Button type="button" variant="outline" onClick={clearForm} disabled={isLoading}>
-              <Lock className="h-4 w-4 mr-2" />
-              Clear
-            </Button>
-            <div className="flex space-x-2">
-              <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">Demo Accounts:</h4>
+            <div className="text-xs text-gray-600 space-y-1">
+              <div>Admin: admin / admin123</div>
+              <div>Editor: editor / editor123</div>
+              <div>Viewer: viewer / viewer123</div>
             </div>
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
           </div>
         </form>
-
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Accounts:</h4>
-          <div className="text-xs text-blue-700 space-y-1">
-            <div>
-              <strong>Admin:</strong> admin / admin123
-            </div>
-            <div>
-              <strong>Editor:</strong> editor / editor123
-            </div>
-            <div>
-              <strong>Viewer:</strong> viewer / viewer123
-            </div>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   )
 }
-
-export default LoginModal
