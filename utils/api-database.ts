@@ -46,14 +46,19 @@ class ApiDatabase {
       }
     } catch (error) {
       console.error("❌ ApiDatabase.loadData() - Error loading data:", error)
-      throw new Error(`Failed to load data from server: ${error.message}`)
+      throw new Error(`Failed to load data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
-  // Save all data to server
+  // Save all data to server with better error handling
   async saveData(data: Partial<DatabaseData>): Promise<void> {
     try {
       console.log("💾 ApiDatabase.saveData() - Saving data to server...")
+
+      // Validate data before sending
+      if (!data || typeof data !== "object") {
+        throw new Error("Invalid data structure provided")
+      }
 
       const response = await fetch(`${this.baseUrl}/data`, {
         method: "POST",
@@ -64,17 +69,23 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`HTTP error! status: ${response.status}, details: ${errorData.details || "Unknown error"}`)
+      }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || "Save operation failed")
       }
 
       console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error saving data:", error)
-      throw new Error(`Failed to save data to server: ${error.message}`)
+      throw new Error(`Failed to save data to server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
-  // Increment page visits
+  // Increment page visits with graceful failure
   async incrementPageVisits(): Promise<number> {
     try {
       console.log("📈 ApiDatabase.incrementPageVisits() - Incrementing page visits...")
@@ -92,8 +103,14 @@ class ApiDatabase {
       }
 
       const data = await response.json()
-      console.log(`✅ Page visits incremented to: ${data.pageVisits}`)
-      return data.pageVisits || 0
+
+      if (data.success) {
+        console.log(`✅ Page visits incremented to: ${data.pageVisits}`)
+        return data.pageVisits || 0
+      } else {
+        console.warn("⚠️ Page visits increment returned failure, continuing...")
+        return 0
+      }
     } catch (error) {
       console.warn("⚠️ Error incrementing page visits:", error)
       return 0
@@ -302,17 +319,22 @@ class ApiDatabase {
     return updatedAuditLog
   }
 
-  // Import data
+  // Import data with better error handling
   async importData(importData: any): Promise<void> {
     try {
       console.log("📥 ApiDatabase.importData() - Starting data import...")
 
+      if (!importData || typeof importData !== "object") {
+        throw new Error("Invalid import data structure")
+      }
+
       // Process and validate the data
       const processedData = {
-        categories: importData.categories || [],
-        users: importData.users || [],
-        auditLog: importData.auditLog || [],
-        pageVisits: importData.settings?.pageVisits || importData.pageVisits || 0,
+        categories: Array.isArray(importData.categories) ? importData.categories : [],
+        users: Array.isArray(importData.users) ? importData.users : [],
+        auditLog: Array.isArray(importData.auditLog) ? importData.auditLog : [],
+        pageVisits:
+          typeof importData.pageVisits === "number" ? importData.pageVisits : importData.settings?.pageVisits || 0,
       }
 
       // Ensure proper date handling
@@ -355,7 +377,7 @@ class ApiDatabase {
       console.log("✅ ApiDatabase.importData() - Data imported successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.importData() - Error importing data:", error)
-      throw new Error(`Failed to import data to server: ${error.message}`)
+      throw new Error(`Failed to import data to server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -381,7 +403,7 @@ class ApiDatabase {
       return exportData
     } catch (error) {
       console.error("❌ ApiDatabase.exportData() - Error exporting data:", error)
-      throw new Error(`Failed to export data from server: ${error.message}`)
+      throw new Error(`Failed to export data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 
@@ -400,7 +422,7 @@ class ApiDatabase {
       console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
     } catch (error) {
       console.error("❌ ApiDatabase.clearAllData() - Error clearing data:", error)
-      throw new Error(`Failed to clear data from server: ${error.message}`)
+      throw new Error(`Failed to clear data from server: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 }

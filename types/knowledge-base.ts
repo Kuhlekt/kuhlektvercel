@@ -1,10 +1,10 @@
-export interface Category {
+export interface Article {
   id: string
-  name: string
-  description: string
-  icon?: string
-  articles?: Article[]
-  subcategories?: Subcategory[]
+  title: string
+  content: string
+  categoryId: string
+  subcategoryId?: string
+  tags?: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -13,27 +13,19 @@ export interface Subcategory {
   id: string
   name: string
   description: string
-  parentId: string
   articles?: Article[]
   createdAt: Date
   updatedAt: Date
 }
 
-export interface Article {
+export interface Category {
   id: string
-  title: string
-  content: string
-  summary?: string
-  categoryId: string
-  subcategoryId?: string
-  tags?: string[]
-  author: string
-  status: "draft" | "published" | "archived"
-  priority: "low" | "medium" | "high"
+  name: string
+  description: string
+  articles?: Article[]
+  subcategories?: Subcategory[]
   createdAt: Date
   updatedAt: Date
-  viewCount?: number
-  lastViewedAt?: Date
 }
 
 export interface User {
@@ -47,7 +39,7 @@ export interface User {
   lastLogin: Date | null
 }
 
-// Alias for backward compatibility
+// Backward compatibility alias
 export type KnowledgeBaseUser = User
 
 export interface AuditLogEntry {
@@ -56,22 +48,18 @@ export interface AuditLogEntry {
   articleId?: string
   articleTitle?: string
   categoryId?: string
+  categoryName?: string
+  subcategoryName?: string
+  userId?: string
+  username: string
   performedBy: string
   timestamp: Date
   details: string
 }
 
-export interface SystemStats {
-  totalArticles: number
-  totalCategories: number
-  totalUsers: number
-  pageViews: number
-  lastUpdated: Date
-}
-
-export interface DatabaseData {
+export interface KnowledgeBaseData {
   categories: Category[]
   users: User[]
   auditLog: AuditLogEntry[]
-  stats?: SystemStats
+  pageVisits: number
 }

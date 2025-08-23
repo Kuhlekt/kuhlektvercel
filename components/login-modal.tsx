@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -74,7 +74,10 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <DialogTitle className="text-xl font-semibold">Login</DialogTitle>
+          <div className="space-y-2">
+            <DialogTitle className="text-xl font-semibold">Login</DialogTitle>
+            <DialogDescription>Enter your credentials to access the knowledge base admin features</DialogDescription>
+          </div>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={clearForm} className="h-8 px-2 text-xs" disabled={isLoading}>
               Clear

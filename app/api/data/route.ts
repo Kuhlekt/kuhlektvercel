@@ -165,11 +165,25 @@ async function loadData() {
   }
 }
 
-// Save data to file
+// Save data to file with better error handling
 async function saveData(data: any) {
   try {
     await ensureDataDirectory()
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
+
+    // Validate data structure before saving
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid data structure provided")
+    }
+
+    // Ensure required fields exist
+    const validatedData = {
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      users: Array.isArray(data.users) ? data.users : [],
+      auditLog: Array.isArray(data.auditLog) ? data.auditLog : [],
+      pageVisits: typeof data.pageVisits === "number" ? data.pageVisits : 0,
+    }
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(validatedData, null, 2))
     console.log("💾 Data saved successfully")
   } catch (error) {
     console.error("❌ Error saving data:", error)
@@ -208,12 +222,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     console.log("💾 API POST /api/data - Saving data...")
-    const newData = await request.json()
+
+    let newData
+    try {
+      newData = await request.json()
+    } catch (parseError) {
+      console.error("❌ Error parsing request JSON:", parseError)
+      return NextResponse.json({ error: "Invalid JSON data" }, { status: 400 })
+    }
+
+    if (!newData || typeof newData !== "object") {
+      console.error("❌ Invalid data structure received")
+      return NextResponse.json({ error: "Invalid data structure" }, { status: 400 })
+    }
 
     // Load current data first
     const currentData = await loadData()
 
-    // Merge with new data
+    // Merge with new data, preserving existing data if new data fields are undefined
     const updatedData = {
       categories: newData.categories !== undefined ? newData.categories : currentData.categories,
       users: newData.users !== undefined ? newData.users : currentData.users,
@@ -227,6 +253,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("❌ API POST /api/data - Error:", error)
-    return NextResponse.json({ error: "Failed to save data" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to save data",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
