@@ -25,6 +25,7 @@ class ApiDatabase {
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store",
       })
 
       if (!response.ok) {
@@ -48,6 +49,7 @@ class ApiDatabase {
     }
 
     try {
+      console.log("💾 ApiDatabase.saveData() - Saving data to server...")
       const response = await fetch("/api/data", {
         method: "POST",
         headers: {
@@ -57,17 +59,19 @@ class ApiDatabase {
       })
 
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ Save Error Response:", errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      console.log("✅ Data saved successfully")
+      console.log("✅ ApiDatabase.saveData() - Data saved successfully")
     } catch (error) {
-      console.error("❌ Error saving data:", error)
-      throw new Error("Failed to save data")
+      console.error("❌ ApiDatabase.saveData() - Error:", error)
+      throw new Error("Failed to save data to server")
     }
   }
 
-  async incrementPageVisits(): Promise<void> {
+  async incrementPageVisits(): Promise<number> {
     try {
       const response = await fetch("/api/data/page-visits", {
         method: "POST",
@@ -78,180 +82,219 @@ class ApiDatabase {
 
       if (!response.ok) {
         console.warn("Failed to increment page visits")
-        return
+        return 0
       }
 
       const result = await response.json()
-      if (this.data) {
-        this.data.pageVisits = result.count
-      }
+      return result.totalVisits || 0
     } catch (error) {
-      console.warn("Failed to increment page visits:", error)
+      console.warn("Error incrementing page visits:", error)
+      return 0
     }
   }
 
-  // User methods
-  async getUsers(): Promise<User[]> {
-    const data = await this.loadData()
-    return data.users || []
-  }
-
-  async getUserByCredentials(username: string, password: string): Promise<User | null> {
-    const users = await this.getUsers()
-    return users.find((u) => u.username === username && u.password === password && u.isActive) || null
-  }
-
-  async updateUserLastLogin(userId: string): Promise<void> {
-    try {
-      const data = await this.loadData()
-      const user = data.users.find((u) => u.id === userId)
-      if (user) {
-        user.lastLogin = new Date().toISOString()
-        await this.saveData()
-      }
-    } catch (error) {
-      console.error("Failed to update user last login:", error)
-      throw error
-    }
-  }
-
-  // Category methods
-  async getCategories(): Promise<Category[]> {
-    const data = await this.loadData()
-    return data.categories || []
-  }
-
-  async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category> {
-    const data = await this.loadData()
-    const newCategory: Category = {
-      ...category,
-      id: Date.now().toString(),
+  async addArticle(
+    categories: Category[],
+    articleData: Omit<Article, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Article> {
+    const newArticle: Article = {
+      ...articleData,
+      id: `article-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    data.categories.push(newCategory)
-    await this.saveData()
-    return newCategory
-  }
 
-  async updateCategory(id: string, updates: Partial<Category>): Promise<void> {
-    const data = await this.loadData()
-    const index = data.categories.findIndex((c) => c.id === id)
-    if (index !== -1) {
-      data.categories[index] = {
-        ...data.categories[index],
-        ...updates,
-        updatedAt: new Date().toISOString(),
+    const updatedCategories = categories.map((category) => {
+      if (category.id === articleData.categoryId) {
+        return {
+          ...category,
+          articles: [...(category.articles || []), newArticle],
+        }
       }
+
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.id === articleData.categoryId) {
+            return {
+              ...subcategory,
+              articles: [...(subcategory.articles || []), newArticle],
+            }
+          }
+          return subcategory
+        })
+
+        return {
+          ...category,
+          subcategories: updatedSubcategories,
+        }
+      }
+
+      return category
+    })
+
+    if (this.data) {
+      this.data.categories = updatedCategories
+      this.data.articles = [...(this.data.articles || []), newArticle]
       await this.saveData()
     }
-  }
 
-  async deleteCategory(id: string): Promise<void> {
-    const data = await this.loadData()
-    data.categories = data.categories.filter((c) => c.id !== id)
-    await this.saveData()
-  }
-
-  // Article methods
-  async getArticles(): Promise<Article[]> {
-    const data = await this.loadData()
-    return data.articles || []
-  }
-
-  async getArticleById(id: string): Promise<Article | null> {
-    const articles = await this.getArticles()
-    return articles.find((a) => a.id === id) || null
-  }
-
-  async addArticle(article: Omit<Article, "id" | "createdAt" | "updatedAt" | "viewCount">): Promise<Article> {
-    const data = await this.loadData()
-    const newArticle: Article = {
-      ...article,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      viewCount: 0,
-    }
-    data.articles.push(newArticle)
-    await this.saveData()
     return newArticle
   }
 
-  async updateArticle(id: string, updates: Partial<Article>): Promise<void> {
-    const data = await this.loadData()
-    const index = data.articles.findIndex((a) => a.id === id)
-    if (index !== -1) {
-      data.articles[index] = {
-        ...data.articles[index],
-        ...updates,
-        updatedAt: new Date().toISOString(),
+  async updateArticle(
+    categories: Category[],
+    articleId: string,
+    updatedArticle: Omit<Article, "createdAt">,
+  ): Promise<Category[]> {
+    const updatedCategories = categories.map((category) => {
+      // Check main category articles
+      if (category.articles) {
+        const articleIndex = category.articles.findIndex((a) => a.id === articleId)
+        if (articleIndex !== -1) {
+          const originalArticle = category.articles[articleIndex]
+          const updated = [...category.articles]
+          updated[articleIndex] = {
+            ...updatedArticle,
+            createdAt: originalArticle.createdAt,
+            updatedAt: new Date().toISOString(),
+          }
+          return { ...category, articles: updated }
+        }
+      }
+
+      // Check subcategory articles
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const articleIndex = subcategory.articles.findIndex((a) => a.id === articleId)
+            if (articleIndex !== -1) {
+              const originalArticle = subcategory.articles[articleIndex]
+              const updated = [...subcategory.articles]
+              updated[articleIndex] = {
+                ...updatedArticle,
+                createdAt: originalArticle.createdAt,
+                updatedAt: new Date().toISOString(),
+              }
+              return { ...subcategory, articles: updated }
+            }
+          }
+          return subcategory
+        })
+
+        return { ...category, subcategories: updatedSubcategories }
+      }
+
+      return category
+    })
+
+    if (this.data) {
+      this.data.categories = updatedCategories
+      // Also update in articles array
+      const articleIndex = this.data.articles.findIndex((a) => a.id === articleId)
+      if (articleIndex !== -1) {
+        const originalArticle = this.data.articles[articleIndex]
+        this.data.articles[articleIndex] = {
+          ...updatedArticle,
+          createdAt: originalArticle.createdAt,
+          updatedAt: new Date().toISOString(),
+        }
       }
       await this.saveData()
     }
+
+    return updatedCategories
   }
 
-  async deleteArticle(id: string): Promise<void> {
-    const data = await this.loadData()
-    data.articles = data.articles.filter((a) => a.id !== id)
-    await this.saveData()
-  }
+  async deleteArticle(categories: Category[], articleId: string): Promise<Category[]> {
+    const updatedCategories = categories.map((category) => {
+      // Check main category articles
+      if (category.articles) {
+        const filtered = category.articles.filter((a) => a.id !== articleId)
+        if (filtered.length !== category.articles.length) {
+          return { ...category, articles: filtered }
+        }
+      }
 
-  async incrementArticleViews(id: string): Promise<void> {
-    const data = await this.loadData()
-    const article = data.articles.find((a) => a.id === id)
-    if (article) {
-      article.viewCount = (article.viewCount || 0) + 1
-      article.lastViewedAt = new Date().toISOString()
+      // Check subcategory articles
+      if (category.subcategories) {
+        const updatedSubcategories = category.subcategories.map((subcategory) => {
+          if (subcategory.articles) {
+            const filtered = subcategory.articles.filter((a) => a.id !== articleId)
+            return { ...subcategory, articles: filtered }
+          }
+          return subcategory
+        })
+
+        return { ...category, subcategories: updatedSubcategories }
+      }
+
+      return category
+    })
+
+    if (this.data) {
+      this.data.categories = updatedCategories
+      this.data.articles = this.data.articles.filter((a) => a.id !== articleId)
       await this.saveData()
     }
+
+    return updatedCategories
   }
 
-  // Audit log methods
-  async addAuditLogEntry(entry: Omit<AuditLogEntry, "id" | "timestamp">): Promise<void> {
-    const data = await this.loadData()
+  async updateUserLastLogin(users: User[], userId: string): Promise<User[]> {
+    if (!Array.isArray(users)) {
+      throw new Error("Users parameter must be an array")
+    }
+
+    const updatedUsers = users.map((user) => {
+      if (user.id === userId) {
+        return {
+          ...user,
+          lastLogin: new Date().toISOString(),
+        }
+      }
+      return user
+    })
+
+    if (this.data) {
+      this.data.users = updatedUsers
+      await this.saveData()
+    }
+
+    return updatedUsers
+  }
+
+  async addAuditEntry(
+    auditLog: AuditLogEntry[],
+    entry: Omit<AuditLogEntry, "id" | "timestamp">,
+  ): Promise<AuditLogEntry[]> {
+    if (!Array.isArray(auditLog)) {
+      throw new Error("AuditLog parameter must be an array")
+    }
+
     const newEntry: AuditLogEntry = {
       ...entry,
-      id: Date.now().toString(),
+      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
     }
-    if (!data.auditLog) {
-      data.auditLog = []
+
+    const updatedAuditLog = [newEntry, ...auditLog]
+
+    // Keep only last 1000 entries
+    if (updatedAuditLog.length > 1000) {
+      updatedAuditLog.splice(1000)
     }
-    data.auditLog.push(newEntry)
+
+    if (this.data) {
+      this.data.auditLog = updatedAuditLog
+      await this.saveData()
+    }
+
+    return updatedAuditLog
+  }
+
+  async importData(data: KnowledgeBaseData): Promise<void> {
+    this.data = data
     await this.saveData()
-  }
-
-  async getAuditLog(): Promise<AuditLogEntry[]> {
-    const data = await this.loadData()
-    return (data.auditLog || []).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }
-
-  // Search methods
-  async searchArticles(query: string): Promise<Article[]> {
-    const articles = await this.getArticles()
-    const searchTerm = query.toLowerCase()
-
-    return articles.filter(
-      (article) =>
-        article.title.toLowerCase().includes(searchTerm) ||
-        article.content.toLowerCase().includes(searchTerm) ||
-        article.tags.some((tag) => tag.toLowerCase().includes(searchTerm)),
-    )
-  }
-
-  // Data management
-  async exportData(): Promise<KnowledgeBaseData> {
-    return await this.loadData()
-  }
-
-  async importData(newData: KnowledgeBaseData): Promise<void> {
-    this.data = newData
-    await this.saveData()
-  }
-
-  async clearCache(): void {
-    this.data = null
   }
 }
 

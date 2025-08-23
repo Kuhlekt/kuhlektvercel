@@ -7,169 +7,140 @@ const DATA_DIR = path.join(process.cwd(), "data")
 const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
 
 // Default data structure
-const getDefaultData = (): KnowledgeBaseData => ({
-  users: [
-    {
-      id: "1",
-      username: "admin",
-      password: "admin123",
-      role: "admin",
-      email: "admin@kuhlekt.com",
-      createdAt: new Date().toISOString(),
-      isActive: true,
-    },
-    {
-      id: "2",
-      username: "editor",
-      password: "editor123",
-      role: "editor",
-      email: "editor@kuhlekt.com",
-      createdAt: new Date().toISOString(),
-      isActive: true,
-    },
-    {
-      id: "3",
-      username: "viewer",
-      password: "viewer123",
-      role: "viewer",
-      email: "viewer@kuhlekt.com",
-      createdAt: new Date().toISOString(),
-      isActive: true,
-    },
-  ],
+const DEFAULT_DATA: KnowledgeBaseData = {
   categories: [
     {
-      id: "1",
+      id: "cat-1",
       name: "Getting Started",
       description: "Basic information and setup guides",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      articles: [
+        {
+          id: "art-1",
+          title: "Welcome to the Knowledge Base",
+          content: "This is your first article. You can edit or delete it.",
+          categoryId: "cat-1",
+          authorId: "user-1",
+          tags: ["welcome", "introduction"],
+          isPublished: true,
+          viewCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
     },
     {
-      id: "2",
-      name: "Technical Documentation",
-      description: "Detailed technical guides and references",
+      id: "cat-2",
+      name: "Documentation",
+      description: "Technical documentation and guides",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      articles: [],
     },
     {
-      id: "3",
+      id: "cat-3",
       name: "FAQ",
       description: "Frequently asked questions",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      articles: [],
     },
   ],
   articles: [
     {
-      id: "1",
-      title: "Welcome to Kuhlekt Knowledge Base",
-      content:
-        "This is your comprehensive knowledge base system. You can create, edit, and organize articles to share information with your team.",
-      categoryId: "1",
-      authorId: "1",
+      id: "art-1",
+      title: "Welcome to the Knowledge Base",
+      content: "This is your first article. You can edit or delete it.",
+      categoryId: "cat-1",
+      authorId: "user-1",
       tags: ["welcome", "introduction"],
-      status: "published",
+      isPublished: true,
+      viewCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      viewCount: 0,
+    },
+  ],
+  users: [
+    {
+      id: "user-1",
+      username: "admin",
+      password: "admin123",
+      email: "admin@example.com",
+      role: "admin",
+      isActive: true,
+      createdAt: new Date().toISOString(),
     },
     {
-      id: "2",
-      title: "How to Create Articles",
-      content:
-        'To create a new article, click the "Add Article" button and fill in the required information including title, content, and category.',
-      categoryId: "1",
-      authorId: "1",
-      tags: ["tutorial", "articles"],
-      status: "published",
+      id: "user-2",
+      username: "editor",
+      password: "editor123",
+      email: "editor@example.com",
+      role: "editor",
+      isActive: true,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      viewCount: 0,
+    },
+    {
+      id: "user-3",
+      username: "viewer",
+      password: "viewer123",
+      email: "viewer@example.com",
+      role: "viewer",
+      isActive: true,
+      createdAt: new Date().toISOString(),
     },
   ],
   auditLog: [],
   pageVisits: 0,
-  lastUpdated: new Date().toISOString(),
-})
+}
 
-async function ensureDataFile(): Promise<KnowledgeBaseData> {
+async function ensureDataFile(): Promise<void> {
   try {
-    // Ensure data directory exists
+    await fs.access(DATA_DIR)
+  } catch {
     await fs.mkdir(DATA_DIR, { recursive: true })
-
-    // Check if file exists
-    try {
-      const data = await fs.readFile(DATA_FILE, "utf8")
-      const parsedData = JSON.parse(data)
-
-      // Validate data structure
-      if (!parsedData.users || !parsedData.categories || !parsedData.articles) {
-        throw new Error("Invalid data structure")
-      }
-
-      return parsedData
-    } catch (error) {
-      // File doesn't exist or is invalid, create default
-      console.log("Creating default data file...")
-      const defaultData = getDefaultData()
-      await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2))
-      return defaultData
-    }
-  } catch (error) {
-    console.error("Error ensuring data file:", error)
-    return getDefaultData()
   }
+
+  try {
+    await fs.access(DATA_FILE)
+  } catch {
+    await fs.writeFile(DATA_FILE, JSON.stringify(DEFAULT_DATA, null, 2))
+  }
+}
+
+async function loadData(): Promise<KnowledgeBaseData> {
+  await ensureDataFile()
+  try {
+    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
+    return JSON.parse(fileContent)
+  } catch (error) {
+    console.error("Error loading data, using defaults:", error)
+    return DEFAULT_DATA
+  }
+}
+
+async function saveData(data: KnowledgeBaseData): Promise<void> {
+  await ensureDataFile()
+  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
 }
 
 export async function GET() {
   try {
-    console.log("📖 GET /api/data - Loading data...")
-    const data = await ensureDataFile()
-
-    console.log("✅ Data loaded successfully:", {
-      users: data.users?.length || 0,
-      categories: data.categories?.length || 0,
-      articles: data.articles?.length || 0,
-      auditLog: data.auditLog?.length || 0,
-    })
-
+    const data = await loadData()
     return NextResponse.json(data)
   } catch (error) {
-    console.error("❌ Error in GET /api/data:", error)
-    return NextResponse.json(
-      { error: "Failed to load data", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 },
-    )
+    console.error("Error in GET /api/data:", error)
+    return NextResponse.json(DEFAULT_DATA)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("💾 POST /api/data - Saving data...")
-    const newData: KnowledgeBaseData = await request.json()
-
-    // Validate required fields
-    if (!newData.users || !newData.categories || !newData.articles) {
-      return NextResponse.json({ error: "Invalid data structure" }, { status: 400 })
-    }
-
-    // Ensure data directory exists
-    await fs.mkdir(DATA_DIR, { recursive: true })
-
-    // Update timestamp
-    newData.lastUpdated = new Date().toISOString()
-
-    // Write data to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(newData, null, 2))
-
-    console.log("✅ Data saved successfully")
-    return NextResponse.json({ success: true, message: "Data saved successfully" })
+    const data = await request.json()
+    await saveData(data)
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("❌ Error in POST /api/data:", error)
-    return NextResponse.json(
-      { error: "Failed to save data", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 },
-    )
+    console.error("Error in POST /api/data:", error)
+    return NextResponse.json({ success: false, error: "Failed to save data" }, { status: 500 })
   }
 }
