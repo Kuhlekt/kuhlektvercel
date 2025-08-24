@@ -1,45 +1,49 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Plus, X, Save, ArrowLeft, AlertCircle } from "lucide-react"
-import type { Category, Article, User } from "../types/knowledge-base"
+import { ArrowLeft, Save, Plus, X, Trash2 } from "lucide-react"
+import { apiDatabase } from "../utils/api-database"
+import type { Article, Category, User, KnowledgeBaseData } from "../types/knowledge-base"
 
 interface EditArticleFormProps {
   article: Article
   categories: Category[]
-  currentUser: User | null
-  onSubmit: (article: Omit<Article, "createdAt">) => Promise<void>
+  currentUser: User
+  onArticleUpdated: (data: KnowledgeBaseData) => void
   onCancel: () => void
 }
 
-export function EditArticleForm({ article, categories, currentUser, onSubmit, onCancel }: EditArticleFormProps) {
+export function EditArticleForm({
+  article,
+  categories = [],
+  currentUser,
+  onArticleUpdated,
+  onCancel,
+}: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title)
   const [content, setContent] = useState(article.content)
   const [categoryId, setCategoryId] = useState(article.categoryId)
-  const [subcategoryId, setSubcategoryId] = useState(article.subcategoryId || "")
   const [tags, setTags] = useState<string[]>(article.tags || [])
-  const [tagInput, setTagInput] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [newTag, setNewTag] = useState("")
+  const [isPublished, setIsPublished] = useState(article.isPublished)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const selectedCategory = categories.find((cat) => cat.id === categoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
+  const safeCategories = Array.isArray(categories) ? categories : []
 
   const handleAddTag = () => {
-    const trimmedTag = tagInput.trim().toLowerCase()
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag])
-      setTagInput("")
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()])
+      setNewTag("")
     }
   }
 
@@ -47,222 +51,275 @@ export function EditArticleForm({ article, categories, currentUser, onSubmit, on
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
       e.preventDefault()
       handleAddTag()
     }
   }
 
-  const handleCategoryChange = (newCategoryId: string) => {
-    setCategoryId(newCategoryId)
-    setSubcategoryId("") // Reset subcategory when category changes
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!title.trim()) {
-      setError("Title is required")
-      return
-    }
-
-    if (!content.trim()) {
-      setError("Content is required")
-      return
-    }
-
-    if (!categoryId) {
-      setError("Category is required")
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim() || !categoryId) {
+      alert("Please fill in all required fields")
       return
     }
 
     try {
-      setIsSubmitting(true)
-      setError(null)
+      setIsSaving(true)
 
+      // Load current data
+      const currentData = await apiDatabase.loadData()
+
+      // Update article
       const updatedArticle = {
-        id: article.id,
+        ...article,
         title: title.trim(),
         content: content.trim(),
         categoryId,
-        subcategoryId: subcategoryId || undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        updatedAt: new Date(),
+        tags,
+        isPublished,
+        updatedAt: new Date().toISOString(),
       }
 
-      await onSubmit(updatedArticle)
-    } catch (err) {
-      setError("Failed to update article. Please try again.")
-      console.error("Error updating article:", err)
+      // Update categories - remove from old category and add to new one
+      const updatedCategories = currentData.categories.map((category) => {
+        // Remove from old category
+        if (category.id === article.categoryId) {
+          return {
+            ...category,
+            articles: (category.articles || []).filter((a) => a.id !== article.id),
+          }
+        }
+        // Add to new category
+        if (category.id === categoryId) {
+          const existingArticles = category.articles || []
+          const articleExists = existingArticles.some((a) => a.id === article.id)
+          return {
+            ...category,
+            articles: articleExists
+              ? existingArticles.map((a) => (a.id === article.id ? updatedArticle : a))
+              : [...existingArticles, updatedArticle],
+          }
+        }
+        return category
+      })
+
+      // Update articles array
+      const updatedArticles = (currentData.articles || []).map((a) => (a.id === article.id ? updatedArticle : a))
+
+      // Create audit log entry
+      const auditEntry = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        action: "update_article",
+        performedBy: currentUser.username,
+        timestamp: new Date().toISOString(),
+        details: `Updated article "${title}"`,
+      }
+
+      const updatedData = {
+        ...currentData,
+        categories: updatedCategories,
+        articles: updatedArticles,
+        auditLog: [...(currentData.auditLog || []), auditEntry],
+      }
+
+      // Save to database
+      await apiDatabase.saveData(updatedData)
+
+      // Notify parent component
+      onArticleUpdated(updatedData)
+
+      console.log("✅ Article updated successfully:", updatedArticle.title)
+    } catch (error) {
+      console.error("❌ Failed to update article:", error)
+      alert("Failed to update article. Please try again.")
     } finally {
-      setIsSubmitting(false)
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete "${article.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+
+      // Load current data
+      const currentData = await apiDatabase.loadData()
+
+      // Remove article from categories
+      const updatedCategories = currentData.categories.map((category) => ({
+        ...category,
+        articles: (category.articles || []).filter((a) => a.id !== article.id),
+      }))
+
+      // Remove from articles array
+      const updatedArticles = (currentData.articles || []).filter((a) => a.id !== article.id)
+
+      // Create audit log entry
+      const auditEntry = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        action: "delete_article",
+        performedBy: currentUser.username,
+        timestamp: new Date().toISOString(),
+        details: `Deleted article "${article.title}"`,
+      }
+
+      const updatedData = {
+        ...currentData,
+        categories: updatedCategories,
+        articles: updatedArticles,
+        auditLog: [...(currentData.auditLog || []), auditEntry],
+      }
+
+      // Save to database
+      await apiDatabase.saveData(updatedData)
+
+      // Notify parent component
+      onArticleUpdated(updatedData)
+
+      console.log("✅ Article deleted successfully:", article.title)
+    } catch (error) {
+      console.error("❌ Failed to delete article:", error)
+      alert("Failed to delete article. Please try again.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Navigation */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Article</h1>
-          <p className="text-gray-600">Make changes to the article</p>
-        </div>
-        <Button variant="ghost" onClick={onCancel}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Cancel
+        <Button variant="ghost" onClick={onCancel} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back</span>
         </Button>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex items-center space-x-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+          </Button>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} className="flex items-center space-x-2">
+            <Save className="h-4 w-4" />
+            <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Article Details</CardTitle>
-          <CardDescription>Update the information below to modify the article</CardDescription>
+          <CardTitle>Edit Article</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+        <CardContent className="space-y-6">
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title">Title *</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter article title..."
+              className="text-lg"
+            />
+          </div>
 
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+          {/* Category */}
+          <div className="space-y-2">
+            <Label htmlFor="category">Category *</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {safeCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Content */}
+          <div className="space-y-2">
+            <Label htmlFor="content">Content *</Label>
+            <Textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Write your article content here..."
+              className="min-h-[300px] resize-y"
+            />
+            <p className="text-sm text-gray-500">
+              You can use basic Markdown formatting (# for headers, - for lists, etc.)
+            </p>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
+            <div className="flex items-center space-x-2">
               <Input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter article title"
-                disabled={isSubmitting}
-                required
+                id="tags"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add a tag..."
+                className="flex-1"
               />
-            </div>
-
-            {/* Category Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select value={categoryId} onValueChange={handleCategoryChange} disabled={isSubmitting} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {availableSubcategories.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select value={subcategoryId} onValueChange={setSubcategoryId} disabled={isSubmitting}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subcategory (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {availableSubcategories.map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-3">
-              <Label htmlFor="tags">Tags</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="tags"
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyPress}
-                  placeholder="Add tags (press Enter or comma to add)"
-                  disabled={isSubmitting}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddTag}
-                  disabled={!tagInput.trim() || isSubmitting}
-                  variant="outline"
-                  size="icon"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        disabled={isSubmitting}
-                        className="ml-1 hover:text-red-500"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="space-y-2">
-              <Label htmlFor="content">Content *</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here..."
-                disabled={isSubmitting}
-                rows={15}
-                className="resize-y min-h-[300px]"
-                required
-              />
-              <div className="text-sm text-gray-500">
-                {content.length} characters, ~{Math.ceil(content.split(/\s+/).length)} words
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex space-x-4 pt-4">
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Updating Article...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Update Article
-                  </>
-                )}
-              </Button>
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-                Cancel
+              <Button type="button" onClick={handleAddTag} size="sm">
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-          </form>
+
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center space-x-1">
+                    <span>{tag}</span>
+                    <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Publish Status */}
+          <div className="flex items-center space-x-2">
+            <Switch id="published" checked={isPublished} onCheckedChange={setIsPublished} />
+            <Label htmlFor="published">{isPublished ? "Published" : "Save as Draft"}</Label>
+          </div>
+
+          {/* Article Info */}
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <p className="text-sm text-gray-600">
+              <strong>Original Author:</strong> {article.author}
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Created:</strong> {new Date(article.createdAt).toLocaleDateString()}
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Last Updated:</strong> {new Date(article.updatedAt).toLocaleDateString()}
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Views:</strong> {article.views || 0}
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,150 +1,222 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Calendar, Edit, Trash2, Tag, User, Folder } from "lucide-react"
-import type { Article, Category, User as UserType } from "../types/knowledge-base"
+import { ArrowLeft, Edit, Eye, Calendar, User, Tag, Star, Share2 } from "lucide-react"
+import type { Article } from "../types/knowledge-base"
 
 interface ArticleViewerProps {
   article: Article
-  categories: Category[]
-  currentUser: UserType | null
   onBack: () => void
-  onEdit?: (article: Article) => void
-  onDelete?: (articleId: string) => void
+  onEdit?: () => void
+  onAddToSelected?: () => void
+  isInSelected?: boolean
 }
 
-export function ArticleViewer({ article, categories, currentUser, onBack, onEdit, onDelete }: ArticleViewerProps) {
-  const getCategoryName = (categoryId: string, subcategoryId?: string): string => {
-    const category = categories.find((cat) => cat.id === categoryId)
-    if (!category) return "Unknown Category"
+export function ArticleViewer({ article, onBack, onEdit, onAddToSelected, isInSelected = false }: ArticleViewerProps) {
+  const [isStarred, setIsStarred] = useState(isInSelected)
 
-    if (subcategoryId) {
-      const subcategory = category.subcategories?.find((sub) => sub.id === subcategoryId)
-      if (subcategory) {
-        return `${category.name} > ${subcategory.name}`
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
+  const handleStar = () => {
+    setIsStarred(!isStarred)
+    if (onAddToSelected) {
+      onAddToSelected()
+    }
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article.title,
+          text: article.content.substring(0, 200) + "...",
+          url: window.location.href,
+        })
+      } catch (error) {
+        console.log("Error sharing:", error)
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href)
+        alert("Link copied to clipboard!")
+      } catch (error) {
+        console.log("Error copying to clipboard:", error)
       }
     }
-
-    return category.name
   }
-
-  const formatDate = (date: Date | string): string => {
-    const dateObj = typeof date === "string" ? new Date(date) : date
-    return dateObj.toLocaleDateString() + " " + dateObj.toLocaleTimeString()
-  }
-
-  const canEdit = currentUser && (currentUser.role === "admin" || currentUser.role === "editor")
-  const canDelete = currentUser && currentUser.role === "admin"
 
   return (
     <div className="space-y-6">
-      {/* Navigation */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="flex items-center">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Articles
+        <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Articles</span>
         </Button>
 
-        {currentUser && (
-          <div className="flex items-center space-x-2">
-            {canEdit && onEdit && (
-              <Button variant="outline" onClick={() => onEdit(article)} size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {canDelete && onDelete && (
-              <Button variant="destructive" onClick={() => onDelete(article.id)} size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleStar}
+            className={`${
+              isStarred ? "text-amber-600 hover:text-amber-700 bg-amber-50" : "text-gray-600 hover:text-amber-600"
+            }`}
+          >
+            <Star className={`h-4 w-4 ${isStarred ? "fill-current" : ""}`} />
+          </Button>
+
+          <Button variant="ghost" size="sm" onClick={handleShare}>
+            <Share2 className="h-4 w-4" />
+          </Button>
+
+          {onEdit && (
+            <Button onClick={onEdit} className="flex items-center space-x-2">
+              <Edit className="h-4 w-4" />
+              <span>Edit</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Article Content */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{article.title}</CardTitle>
-          <CardDescription className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="flex items-center">
-              <Folder className="h-3 w-3 mr-1" />
-              {getCategoryName(article.categoryId, article.subcategoryId)}
-            </span>
-            <span className="flex items-center">
-              <Calendar className="h-3 w-3 mr-1" />
-              Created: {formatDate(article.createdAt)}
-            </span>
-            {article.updatedAt !== article.createdAt && (
-              <span className="flex items-center">
-                <Calendar className="h-3 w-3 mr-1" />
-                Updated: {formatDate(article.updatedAt)}
-              </span>
-            )}
-          </CardDescription>
-        </CardHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-3xl font-bold">{article.title}</CardTitle>
+              {!article.isPublished && (
+                <Badge variant="secondary" className="text-sm">
+                  Draft
+                </Badge>
+              )}
+            </div>
 
-        <CardContent className="space-y-6">
-          {/* Tags */}
-          {article.tags && article.tags.length > 0 && (
-            <div className="flex items-center space-x-2">
-              <Tag className="h-4 w-4 text-gray-400" />
-              <div className="flex flex-wrap gap-2">
-                {article.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
+            {/* Article Meta */}
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4" />
+                <span>By {article.author}</span>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>Updated {formatDate(article.updatedAt)}</span>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Eye className="h-4 w-4" />
+                <span>{article.views || 0} views</span>
               </div>
             </div>
-          )}
 
-          <Separator />
+            {/* Tags */}
+            {article.tags && article.tags.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <Tag className="h-4 w-4 text-gray-400" />
+                <div className="flex flex-wrap gap-2">
+                  {article.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-sm">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardHeader>
 
-          {/* Content */}
+        <Separator />
+
+        <CardContent className="pt-6">
           <div className="prose prose-gray max-w-none">
-            <div className="whitespace-pre-wrap text-gray-900 leading-relaxed">{article.content}</div>
+            {article.content.split("\n").map((paragraph, index) => {
+              if (paragraph.trim() === "") {
+                return <br key={index} />
+              }
+
+              // Handle headers
+              if (paragraph.startsWith("# ")) {
+                return (
+                  <h1 key={index} className="text-2xl font-bold mt-8 mb-4">
+                    {paragraph.substring(2)}
+                  </h1>
+                )
+              }
+              if (paragraph.startsWith("## ")) {
+                return (
+                  <h2 key={index} className="text-xl font-semibold mt-6 mb-3">
+                    {paragraph.substring(3)}
+                  </h2>
+                )
+              }
+              if (paragraph.startsWith("### ")) {
+                return (
+                  <h3 key={index} className="text-lg font-medium mt-4 mb-2">
+                    {paragraph.substring(4)}
+                  </h3>
+                )
+              }
+
+              // Handle lists
+              if (paragraph.startsWith("- ") || paragraph.startsWith("* ")) {
+                return (
+                  <li key={index} className="ml-4 mb-1">
+                    {paragraph.substring(2)}
+                  </li>
+                )
+              }
+
+              // Handle numbered lists
+              if (/^\d+\.\s/.test(paragraph)) {
+                return (
+                  <li key={index} className="ml-4 mb-1 list-decimal">
+                    {paragraph.replace(/^\d+\.\s/, "")}
+                  </li>
+                )
+              }
+
+              // Regular paragraphs
+              return (
+                <p key={index} className="mb-4 leading-relaxed">
+                  {paragraph}
+                </p>
+              )
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Article Metadata */}
+      {/* Article Footer */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center">
-            <User className="h-4 w-4 mr-2" />
-            Article Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between text-sm text-gray-600">
             <div>
-              <label className="font-medium text-gray-600">Article ID</label>
-              <p className="text-gray-900 font-mono">{article.id}</p>
+              <p>Created on {formatDate(article.createdAt)}</p>
+              {article.createdAt !== article.updatedAt && <p>Last updated on {formatDate(article.updatedAt)}</p>}
             </div>
-            <div>
-              <label className="font-medium text-gray-600">Category</label>
-              <p className="text-gray-900">{getCategoryName(article.categoryId, article.subcategoryId)}</p>
-            </div>
-            <div>
-              <label className="font-medium text-gray-600">Created</label>
-              <p className="text-gray-900">{formatDate(article.createdAt)}</p>
-            </div>
-            <div>
-              <label className="font-medium text-gray-600">Last Updated</label>
-              <p className="text-gray-900">{formatDate(article.updatedAt)}</p>
-            </div>
-            <div>
-              <label className="font-medium text-gray-600">Word Count</label>
-              <p className="text-gray-900">{article.content.split(/\s+/).length} words</p>
-            </div>
-            <div>
-              <label className="font-medium text-gray-600">Character Count</label>
-              <p className="text-gray-900">{article.content.length} characters</p>
+
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm" onClick={handleStar}>
+                <Star className={`h-4 w-4 mr-1 ${isStarred ? "fill-current text-amber-500" : ""}`} />
+                {isStarred ? "Starred" : "Star"}
+              </Button>
+
+              <Button variant="ghost" size="sm" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-1" />
+                Share
+              </Button>
             </div>
           </div>
         </CardContent>

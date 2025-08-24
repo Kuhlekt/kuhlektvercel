@@ -1,22 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: []
+  },
   images: {
     domains: ['localhost'],
-    unoptimized: true,
-  },
-  // Ensure static export works properly
-  trailingSlash: false,
-  // Enable standalone output for deployment
-  output: 'standalone',
+    unoptimized: true
+  }
 }
 
 export default nextConfig

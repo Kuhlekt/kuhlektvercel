@@ -1,136 +1,94 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft, Users, FileText, Folder, Eye, Activity, Settings } from "lucide-react"
 import { CategoryManagement } from "./category-management"
 import { UserManagementTable } from "./user-management-table"
 import { AuditLog } from "./audit-log"
 import { DataManagement } from "./data-management"
-import { BarChart3, Users, FileText, Activity, Database, Settings } from "lucide-react"
 import type { Category, User, AuditLogEntry } from "../types/knowledge-base"
 
 interface AdminDashboardProps {
   categories: Category[]
+  articles: any[]
   users: User[]
   auditLog: AuditLogEntry[]
-  onCategoriesUpdate: () => void
-  onUsersUpdate: () => void
-  onAuditLogUpdate: () => void
+  pageVisits: number
+  onDataUpdate: () => void
+  onBack: () => void
+  currentUser: User
 }
 
 export function AdminDashboard({
-  categories,
-  users,
-  auditLog,
-  onCategoriesUpdate,
-  onUsersUpdate,
-  onAuditLogUpdate,
+  categories = [],
+  articles = [],
+  users = [],
+  auditLog = [],
+  pageVisits = 0,
+  onDataUpdate,
+  onBack,
+  currentUser,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
-  // Calculate statistics
-  const totalCategories = categories.length
-  const totalSubcategories = categories.reduce((sum, cat) => sum + (cat.subcategories?.length || 0), 0)
-  const totalArticles = categories.reduce((sum, cat) => {
-    const categoryArticles = cat.articles?.length || 0
-    const subcategoryArticles = cat.subcategories?.reduce((subSum, sub) => subSum + (sub.articles?.length || 0), 0) || 0
-    return sum + categoryArticles + subcategoryArticles
-  }, 0)
-  const totalUsers = users.length
-  const totalAuditEntries = auditLog.length
+  // Safe array handling
+  const safeCategories = Array.isArray(categories) ? categories : []
+  const safeArticles = Array.isArray(articles) ? articles : []
+  const safeUsers = Array.isArray(users) ? users : []
+  const safeAuditLog = Array.isArray(auditLog) ? auditLog : []
+
+  // Calculate stats
+  const totalArticles = safeArticles.length
+  const totalCategories = safeCategories.length
+  const totalUsers = safeUsers.length
+  const totalViews = safeArticles.reduce((sum, article) => sum + (article.views || 0), 0)
+  const publishedArticles = safeArticles.filter((article) => article.isPublished).length
+  const draftArticles = totalArticles - publishedArticles
+  const activeUsers = safeUsers.filter((user) => user.isActive).length
 
   // Recent activity (last 10 entries)
-  const recentActivity = auditLog.slice(0, 10)
-
-  // User role distribution
-  const userRoles = users.reduce(
-    (acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-
-  // Helper function to safely format dates
-  const formatDateTime = (date: any): string => {
-    try {
-      if (!date) return "Unknown"
-
-      let dateObj: Date
-      if (date instanceof Date) {
-        dateObj = date
-      } else if (typeof date === "string") {
-        dateObj = new Date(date)
-      } else {
-        return "Invalid Date"
-      }
-
-      if (isNaN(dateObj.getTime())) {
-        return "Invalid Date"
-      }
-
-      return dateObj.toLocaleDateString() + " " + dateObj.toLocaleTimeString()
-    } catch (error) {
-      console.error("Error formatting date:", error)
-      return "Date Error"
-    }
-  }
-
-  const handleDataUpdate = async () => {
-    console.log("Admin dashboard triggering data update...")
-    await onCategoriesUpdate()
-    await onUsersUpdate()
-    await onAuditLogUpdate()
-    console.log("Admin dashboard data update completed")
-  }
+  const recentActivity = safeAuditLog
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 10)
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Admin Dashboard</h2>
-        <p className="text-gray-600">Manage your knowledge base content, users, and system settings</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" onClick={onBack} className="flex items-center space-x-2">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Browse</span>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center">
+              <Settings className="h-8 w-8 mr-3" />
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-600">Manage your knowledge base</p>
+          </div>
+        </div>
+        <Badge variant="outline" className="text-sm">
+          Logged in as {currentUser.username}
+        </Badge>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
-            <BarChart3 className="h-4 w-4" />
-            <span>Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center space-x-2">
-            <Database className="h-4 w-4" />
-            <span>Categories</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
-            <span>Users</span>
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="flex items-center space-x-2">
-            <Activity className="h-4 w-4" />
-            <span>Audit Log</span>
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span>Data</span>
-          </TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Statistics Cards */}
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalCategories}</div>
-                <p className="text-xs text-muted-foreground">{totalSubcategories} subcategories</p>
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
@@ -138,35 +96,42 @@ export function AdminDashboard({
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalArticles}</div>
-                <p className="text-xs text-muted-foreground">Across all categories</p>
+                <p className="text-xs text-muted-foreground">
+                  {publishedArticles} published, {draftArticles} drafts
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+                <Folder className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalCategories}</div>
+                <p className="text-xs text-muted-foreground">Organized content structure</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalUsers}</div>
-                <div className="flex space-x-1 mt-1">
-                  {Object.entries(userRoles).map(([role, count]) => (
-                    <Badge key={role} variant="secondary" className="text-xs">
-                      {count} {role}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-xs text-muted-foreground">{activeUsers} active users</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Audit Entries</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalAuditEntries}</div>
-                <p className="text-xs text-muted-foreground">Total system activities</p>
+                <div className="text-2xl font-bold">{totalViews + pageVisits}</div>
+                <p className="text-xs text-muted-foreground">{pageVisits} page visits</p>
               </CardContent>
             </Card>
           </div>
@@ -174,30 +139,25 @@ export function AdminDashboard({
           {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest system activities and changes</CardDescription>
+              <CardTitle className="flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                Recent Activity
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {recentActivity.length > 0 ? (
                 <div className="space-y-4">
                   {recentActivity.map((entry) => (
-                    <div key={entry.id} className="flex items-start space-x-4 pb-4 border-b last:border-b-0">
-                      <div className="flex-shrink-0">
-                        <Activity className="h-4 w-4 text-blue-500 mt-1" />
+                    <div key={entry.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{entry.details}</p>
+                        <p className="text-xs text-gray-500">
+                          by {entry.performedBy} • {new Date(entry.timestamp).toLocaleString()}
+                        </p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="text-xs">
-                            {entry.action.replace(/_/g, " ").toUpperCase()}
-                          </Badge>
-                          <span className="text-sm text-gray-500">by {entry.performedBy}</span>
-                        </div>
-                        <p className="text-sm text-gray-900 mt-1">{entry.details}</p>
-                        {entry.articleTitle && (
-                          <p className="text-xs text-gray-500 mt-1">Article: {entry.articleTitle}</p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1">{formatDateTime(entry.timestamp)}</p>
-                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {entry.action.replace(/_/g, " ")}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -206,60 +166,22 @@ export function AdminDashboard({
               )}
             </CardContent>
           </Card>
-
-          {/* Category Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Category Overview</CardTitle>
-              <CardDescription>Articles distribution across categories</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {categories.length > 0 ? (
-                <div className="space-y-4">
-                  {categories.map((category) => {
-                    const categoryArticles = category.articles?.length || 0
-                    const subcategoryArticles =
-                      category.subcategories?.reduce((sum, sub) => sum + (sub.articles?.length || 0), 0) || 0
-                    const totalCategoryArticles = categoryArticles + subcategoryArticles
-
-                    return (
-                      <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{category.name}</h4>
-                          <p className="text-sm text-gray-500">{category.description}</p>
-                          {category.subcategories && category.subcategories.length > 0 && (
-                            <p className="text-xs text-gray-400 mt-1">{category.subcategories.length} subcategories</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-semibold">{totalCategoryArticles}</div>
-                          <div className="text-xs text-gray-500">articles</div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No categories found</p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="categories">
-          <CategoryManagement categories={categories} onCategoriesUpdate={onCategoriesUpdate} />
+          <CategoryManagement categories={safeCategories} onDataUpdate={onDataUpdate} currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagementTable users={users} onUsersUpdate={onUsersUpdate} />
+          <UserManagementTable users={safeUsers} onDataUpdate={onDataUpdate} currentUser={currentUser} />
         </TabsContent>
 
         <TabsContent value="audit">
-          <AuditLog auditLog={auditLog} onAuditLogUpdate={onAuditLogUpdate} />
+          <AuditLog auditLog={safeAuditLog} />
         </TabsContent>
 
         <TabsContent value="data">
-          <DataManagement onDataUpdate={handleDataUpdate} />
+          <DataManagement onDataUpdate={onDataUpdate} />
         </TabsContent>
       </Tabs>
     </div>

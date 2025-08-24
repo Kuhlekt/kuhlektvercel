@@ -1,5 +1,7 @@
 "use client"
 
+import { CardDescription } from "@/components/ui/card"
+
 import type React from "react"
 
 import { useState } from "react"
@@ -7,37 +9,36 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Plus, X, Save, ArrowLeft, AlertCircle } from "lucide-react"
-import type { Category, Article } from "../types/knowledge-base"
+import { Plus, X, Save, ArrowLeft } from "lucide-react"
+import { apiDatabase } from "../utils/api-database"
+import type { Category, User, KnowledgeBaseData } from "../types/knowledge-base"
 
 interface AddArticleFormProps {
   categories: Category[]
-  onSubmit: (article: Omit<Article, "id" | "createdAt" | "updatedAt">) => Promise<void>
+  currentUser: User
+  onArticleAdded: (data: KnowledgeBaseData) => void
   onCancel: () => void
 }
 
-export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFormProps) {
+export function AddArticleForm({ categories = [], currentUser, onArticleAdded, onCancel }: AddArticleFormProps) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [categoryId, setCategoryId] = useState("")
-  const [subcategoryId, setSubcategoryId] = useState("")
   const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [newTag, setNewTag] = useState("")
+  const [isPublished, setIsPublished] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const selectedCategory = categories.find((cat) => cat.id === categoryId)
-  const availableSubcategories = selectedCategory?.subcategories || []
+  const safeCategories = Array.isArray(categories) ? categories : []
 
   const handleAddTag = () => {
-    const trimmedTag = tagInput.trim().toLowerCase()
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag])
-      setTagInput("")
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()])
+      setNewTag("")
     }
   }
 
@@ -45,54 +46,78 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
       e.preventDefault()
       handleAddTag()
     }
   }
 
-  const handleCategoryChange = (newCategoryId: string) => {
-    setCategoryId(newCategoryId)
-    setSubcategoryId("") // Reset subcategory when category changes
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!title.trim()) {
-      setError("Title is required")
-      return
-    }
-
-    if (!content.trim()) {
-      setError("Content is required")
-      return
-    }
-
-    if (!categoryId) {
-      setError("Category is required")
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim() || !categoryId) {
+      alert("Please fill in all required fields")
       return
     }
 
     try {
-      setIsSubmitting(true)
-      setError(null)
+      setIsSaving(true)
 
-      const articleData = {
+      // Load current data
+      const currentData = await apiDatabase.loadData()
+
+      // Create new article
+      const newArticle = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         title: title.trim(),
         content: content.trim(),
         categoryId,
-        subcategoryId: subcategoryId || undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        author: currentUser.username,
+        tags,
+        isPublished,
+        views: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
 
-      await onSubmit(articleData)
-    } catch (err) {
-      setError("Failed to create article. Please try again.")
-      console.error("Error creating article:", err)
+      // Add article to the appropriate category
+      const updatedCategories = currentData.categories.map((category) => {
+        if (category.id === categoryId) {
+          return {
+            ...category,
+            articles: [...(category.articles || []), newArticle],
+          }
+        }
+        return category
+      })
+
+      // Create audit log entry
+      const auditEntry = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        action: "create_article",
+        performedBy: currentUser.username,
+        timestamp: new Date().toISOString(),
+        details: `Created article "${title}" in category "${safeCategories.find((c) => c.id === categoryId)?.name || "Unknown"}"`,
+      }
+
+      const updatedData = {
+        ...currentData,
+        categories: updatedCategories,
+        articles: [...(currentData.articles || []), newArticle],
+        auditLog: [...(currentData.auditLog || []), auditEntry],
+      }
+
+      // Save to database
+      await apiDatabase.saveData(updatedData)
+
+      // Notify parent component
+      onArticleAdded(updatedData)
+
+      console.log("✅ Article created successfully:", newArticle.title)
+    } catch (error) {
+      console.error("❌ Failed to create article:", error)
+      alert("Failed to create article. Please try again.")
     } finally {
-      setIsSubmitting(false)
+      setIsSaving(false)
     }
   }
 
@@ -117,14 +142,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
           <CardDescription>Fill in the information below to create a new article</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
+          <form className="space-y-6">
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
@@ -134,7 +152,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter article title"
-                disabled={isSubmitting}
+                disabled={isSaving}
                 required
               />
             </div>
@@ -143,12 +161,12 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Select value={categoryId} onValueChange={handleCategoryChange} disabled={isSubmitting} required>
+                <Select value={categoryId} onValueChange={setCategoryId} disabled={isSaving} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {safeCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
                       </SelectItem>
@@ -156,25 +174,6 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                   </SelectContent>
                 </Select>
               </div>
-
-              {availableSubcategories.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategory</Label>
-                  <Select value={subcategoryId} onValueChange={setSubcategoryId} disabled={isSubmitting}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subcategory (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {availableSubcategories.map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
 
             {/* Tags */}
@@ -184,17 +183,17 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 <Input
                   id="tags"
                   type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyPress}
-                  placeholder="Add tags (press Enter or comma to add)"
-                  disabled={isSubmitting}
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Add tags (press Enter to add)"
+                  disabled={isSaving}
                   className="flex-1"
                 />
                 <Button
                   type="button"
                   onClick={handleAddTag}
-                  disabled={!tagInput.trim() || isSubmitting}
+                  disabled={!newTag.trim() || isSaving}
                   variant="outline"
                   size="icon"
                 >
@@ -210,7 +209,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        disabled={isSubmitting}
+                        disabled={isSaving}
                         className="ml-1 hover:text-red-500"
                       >
                         <X className="h-3 w-3" />
@@ -229,7 +228,7 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write your article content here..."
-                disabled={isSubmitting}
+                disabled={isSaving}
                 rows={15}
                 className="resize-y min-h-[300px]"
                 required
@@ -239,22 +238,38 @@ export function AddArticleForm({ categories, onSubmit, onCancel }: AddArticleFor
               </div>
             </div>
 
+            {/* Publish Status */}
+            <div className="flex items-center space-x-2">
+              <Switch id="published" checked={isPublished} onCheckedChange={setIsPublished} />
+              <Label htmlFor="published">{isPublished ? "Published" : "Save as Draft"}</Label>
+            </div>
+
+            {/* Author Info */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">
+                <strong>Author:</strong> {currentUser.username}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Created:</strong> {new Date().toLocaleDateString()}
+              </p>
+            </div>
+
             {/* Actions */}
             <div className="flex space-x-4 pt-4">
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? (
+              <Button onClick={handleSave} disabled={isSaving} className="flex-1">
+                {isSaving ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating Article...
+                    Saving Article...
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Create Article
+                    Save Article
                   </>
                 )}
               </Button>
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
                 Cancel
               </Button>
             </div>

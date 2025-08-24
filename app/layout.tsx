@@ -7,10 +7,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Kuhlekt Knowledge Base",
-  description: "Comprehensive knowledge management system",
-  icons: {
-    icon: "/favicon.gif",
-  },
+  description: "A comprehensive knowledge management system",
     generator: 'v0.app'
 }
 
