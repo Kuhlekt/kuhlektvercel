@@ -2,27 +2,31 @@ export interface User {
   id: string
   username: string
   password: string
-  email?: string
+  email: string
   role: "admin" | "editor" | "viewer"
   isActive: boolean
-  createdAt: string | Date
-  lastLogin?: string | Date
+  createdAt: string
+  lastLogin?: string | Date | null
 }
 
-export interface KnowledgeBaseUser extends User {
-  // Extended user interface for knowledge base specific fields
+export interface KnowledgeBaseUser {
+  id: string
+  username: string
+  password: string
+  email: string
+  role: "admin" | "editor" | "viewer"
+  isActive: boolean
+  createdAt: string
+  lastLogin?: string | Date | null
 }
 
 export interface Category {
   id: string
   name: string
   description: string
-  parentId?: string
-  color?: string
-  icon?: string
-  isActive: boolean
-  createdAt: string | Date
-  updatedAt: string | Date
+  isActive?: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Article {
@@ -34,17 +38,27 @@ export interface Article {
   tags: string[]
   isPublished: boolean
   views: number
-  createdAt: string | Date
-  updatedAt: string | Date
+  createdAt: string
+  updatedAt: string
 }
 
 export interface AuditLogEntry {
   id: string
   action: string
+  performedBy: string
   userId?: string
   username?: string
-  performedBy: string
   timestamp: string | Date
+  details: string
+}
+
+export interface AuditLog {
+  id: string
+  action: string
+  performedBy: string
+  userId?: string
+  username?: string
+  timestamp: string
   details: string
 }
 
@@ -53,13 +67,17 @@ export interface KnowledgeBaseData {
   articles: Article[]
   users: KnowledgeBaseUser[]
   auditLog: AuditLogEntry[]
-  pageVisits: number
-}
-
-export interface Stats {
-  totalUsers: number
-  totalArticles: number
-  totalCategories: number
-  totalViews: number
-  recentActivity: AuditLogEntry[]
+  pageVisits?: number
+  settings?: {
+    siteName: string
+    description: string
+    version: string
+  }
+  stats?: {
+    totalUsers: number
+    totalArticles: number
+    totalCategories: number
+    totalViews: number
+    lastUpdated: string
+  }
 }

@@ -20,6 +20,7 @@ class ApiDatabase {
         headers: {
           "Content-Type": "application/json",
         },
+        cache: "no-store", // Always fetch fresh data
       })
 
       if (!response.ok) {

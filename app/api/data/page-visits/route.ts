@@ -1,41 +1,26 @@
-import { NextResponse } from "next/server"
-import { promises as fs } from "fs"
-import path from "path"
-import type { KnowledgeBaseData } from "@/types/knowledge-base"
+import { type NextRequest, NextResponse } from "next/server"
+import { database } from "@/utils/database"
 
-const DATA_DIR = path.join(process.cwd(), "data")
-const DATA_FILE = path.join(DATA_DIR, "knowledge-base.json")
-
-async function loadData(): Promise<KnowledgeBaseData | null> {
+export async function POST(request: NextRequest) {
   try {
-    const fileContent = await fs.readFile(DATA_FILE, "utf-8")
-    return JSON.parse(fileContent)
-  } catch {
-    return null
-  }
-}
+    console.log("📈 POST /api/data/page-visits - Incrementing page visits...")
 
-async function saveData(data: KnowledgeBaseData): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2))
-}
-
-export async function POST() {
-  try {
-    const data = await loadData()
-
-    if (!data) {
-      return NextResponse.json({ success: false, error: "Data not found" }, { status: 404 })
-    }
-
-    data.pageVisits = (data.pageVisits || 0) + 1
-    await saveData(data)
+    const pageVisits = await database.incrementPageVisits()
 
     return NextResponse.json({
       success: true,
-      pageVisits: data.pageVisits,
+      pageVisits,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Error incrementing page visits:", error)
-    return NextResponse.json({ success: false, error: "Failed to increment page visits" }, { status: 500 })
+    console.error("❌ POST /api/data/page-visits error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to increment page visits",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    )
   }
 }

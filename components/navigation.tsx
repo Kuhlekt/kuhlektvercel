@@ -16,15 +16,18 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo/Brand */}
+          {/* Logo and Title */}
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold text-gray-900">📚 Knowledge Base</h1>
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">📚</span>
+              <h1 className="text-xl font-bold text-gray-900">Kuhlekt Knowledge Base</h1>
+            </div>
           </div>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-4">
             <Button variant={currentView === "browse" ? "default" : "ghost"} onClick={() => onViewChange("browse")}>
-              🏠 Browse
+              📖 Browse
             </Button>
 
             {currentUser && (currentUser.role === "admin" || currentUser.role === "editor") && (
@@ -40,18 +43,20 @@ export function Navigation({ currentUser, onLogin, onLogout, onViewChange, curre
             )}
 
             {/* User Actions */}
-            {currentUser ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-600">
-                  👋 {currentUser.username} ({currentUser.role})
-                </span>
-                <Button variant="outline" onClick={onLogout}>
-                  🚪 Logout
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={onLogin}>🔐 Login</Button>
-            )}
+            <div className="flex items-center space-x-2 border-l pl-4">
+              {currentUser ? (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">
+                    👤 {currentUser.username} ({currentUser.role})
+                  </span>
+                  <Button variant="outline" size="sm" onClick={onLogout}>
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={onLogin}>Login</Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

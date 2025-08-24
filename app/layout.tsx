@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Kuhlekt Knowledge Base",
-  description: "A comprehensive knowledge base for documentation and guides",
+  description: "Comprehensive knowledge management system",
     generator: 'v0.app'
 }
 
@@ -18,9 +18,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.gif" type="image/gif" />
-      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )

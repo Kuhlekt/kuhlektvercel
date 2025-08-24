@@ -3,11 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -51,14 +50,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="login-description">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Login to Knowledge Base</DialogTitle>
+          <DialogDescription>Enter your credentials to access the knowledge base features.</DialogDescription>
         </DialogHeader>
-        <div id="login-description" className="sr-only">
-          Enter your username and password to access the knowledge base
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
@@ -67,12 +63,11 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              placeholder="Enter your username"
               required
               disabled={isLoading}
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -80,18 +75,12 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder="Enter your password"
               required
               disabled={isLoading}
             />
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
+          {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancel
@@ -101,13 +90,18 @@ export function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
             </Button>
           </div>
         </form>
-
-        <div className="mt-4 p-3 bg-gray-50 rounded-md">
-          <p className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</p>
-          <div className="text-xs text-gray-600 space-y-1">
-            <div>👑 Admin: admin / admin123</div>
-            <div>✏️ Editor: editor / editor123</div>
-            <div>👁️ Viewer: viewer / viewer123</div>
+        <div className="mt-4 p-3 bg-blue-50 rounded text-sm">
+          <p className="font-medium mb-2">Demo Accounts:</p>
+          <div className="space-y-1 text-xs">
+            <div>
+              <strong>admin</strong> / admin123 - Full access
+            </div>
+            <div>
+              <strong>editor</strong> / editor123 - Create & edit articles
+            </div>
+            <div>
+              <strong>viewer</strong> / viewer123 - Read-only access
+            </div>
           </div>
         </div>
       </DialogContent>
