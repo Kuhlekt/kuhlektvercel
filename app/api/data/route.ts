@@ -1,96 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { database } from "@/utils/database"
+import { getDatabase, updateDatabase, initializeDatabase } from "@/lib/database"
 import type { KnowledgeBaseData } from "@/types/knowledge-base"
-
-// Default data structure
-const getDefaultData = (): KnowledgeBaseData => ({
-  categories: [
-    {
-      id: "1",
-      name: "Getting Started",
-      description: "Basic information and setup guides",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      name: "Documentation",
-      description: "Technical documentation and guides",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      name: "FAQ",
-      description: "Frequently asked questions",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ],
-  articles: [
-    {
-      id: "1",
-      title: "Welcome to the Knowledge Base",
-      content: "This is your first article in the knowledge base. You can edit this content or create new articles.",
-      categoryId: "1",
-      author: "System",
-      tags: ["welcome", "getting-started"],
-      isPublished: true,
-      views: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ],
-  users: [
-    {
-      id: "1",
-      username: "admin",
-      password: "admin123",
-      email: "admin@example.com",
-      role: "admin",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      username: "editor",
-      password: "editor123",
-      email: "editor@example.com",
-      role: "editor",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      username: "viewer",
-      password: "viewer123",
-      email: "viewer@example.com",
-      role: "viewer",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  auditLog: [
-    {
-      id: "1",
-      action: "system_init",
-      performedBy: "System",
-      timestamp: new Date().toISOString(),
-      details: "Knowledge base initialized with default data",
-    },
-  ],
-  pageVisits: 0,
-})
 
 // GET - Load data
 export async function GET() {
   try {
     console.log("🔍 GET /api/data - Loading data...")
 
-    const data = await database.loadData()
+    // Initialize database if needed
+    const data = getDatabase()
+
+    console.log("✅ Data loaded successfully:", {
+      categories: data.categories?.length || 0,
+      articles: data.articles?.length || 0,
+      users: data.users?.length || 0,
+      auditLog: data.auditLog?.length || 0,
+      pageVisits: data.pageVisits || 0,
+    })
 
     return NextResponse.json({
       success: true,
@@ -99,14 +25,27 @@ export async function GET() {
     })
   } catch (error) {
     console.error("❌ GET /api/data error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to load data",
+
+    // Fallback: reinitialize database
+    try {
+      const fallbackData = initializeDatabase()
+      return NextResponse.json({
+        success: true,
+        data: fallbackData,
         timestamp: new Date().toISOString(),
-      },
-      { status: 500 },
-    )
+        warning: "Fallback data loaded after error",
+      })
+    } catch (fallbackError) {
+      console.error("❌ Fallback initialization failed:", fallbackError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to load data and fallback failed",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 500 },
+      )
+    }
   }
 }
 
@@ -116,26 +55,58 @@ export async function POST(request: NextRequest) {
     console.log("💾 POST /api/data - Saving data...")
 
     const body = await request.json()
+    console.log("📦 Request body received:", {
+      hasData: !!body.data,
+      hasCategories: !!body.categories,
+      hasUsers: !!body.users,
+      hasArticles: !!body.articles,
+      hasAuditLog: !!body.auditLog,
+    })
 
     // Handle both direct data and wrapped data
-    const data = body.data || body
+    const dataToSave = body.data || body
 
-    if (!data || typeof data !== "object") {
+    if (!dataToSave || typeof dataToSave !== "object") {
+      console.error("❌ Invalid data structure")
       return NextResponse.json(
         {
           success: false,
-          error: "No valid data provided",
+          error: "Invalid data structure provided",
           timestamp: new Date().toISOString(),
         },
         { status: 400 },
       )
     }
 
-    await database.saveData(data)
+    // Validate that we have at least some data
+    const hasValidData = dataToSave.categories || dataToSave.articles || dataToSave.users || dataToSave.auditLog
+
+    if (!hasValidData) {
+      console.error("❌ No valid data fields provided")
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No valid data fields provided",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 },
+      )
+    }
+
+    // Update the database
+    const updatedData = updateDatabase(dataToSave as Partial<KnowledgeBaseData>)
+
+    console.log("✅ Data saved successfully:", {
+      categories: updatedData.categories.length,
+      articles: updatedData.articles.length,
+      users: updatedData.users.length,
+      auditLog: updatedData.auditLog.length,
+    })
 
     return NextResponse.json({
       success: true,
       message: "Data saved successfully",
+      stats: updatedData.stats,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
@@ -144,6 +115,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: "Failed to save data",
+        details: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
       { status: 500 },

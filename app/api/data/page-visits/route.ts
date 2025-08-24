@@ -1,19 +1,27 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { database } from "@/utils/database"
+import { NextResponse } from "next/server"
+import { getDatabase, updateDatabase } from "@/lib/database"
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    console.log("📈 POST /api/data/page-visits - Incrementing page visits...")
+    console.log("📈 Incrementing page visits...")
 
-    const pageVisits = await database.incrementPageVisits()
+    const currentData = getDatabase()
+    const newPageVisits = (currentData.pageVisits || 0) + 1
+
+    // Update page visits
+    const updatedData = updateDatabase({
+      pageVisits: newPageVisits,
+    })
+
+    console.log("✅ Page visits incremented to:", newPageVisits)
 
     return NextResponse.json({
       success: true,
-      pageVisits,
+      pageVisits: newPageVisits,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("❌ POST /api/data/page-visits error:", error)
+    console.error("❌ Error incrementing page visits:", error)
     return NextResponse.json(
       {
         success: false,

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { database } from "@/utils/database"
+import { getDatabase, updateDatabase } from "@/lib/database"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,30 +9,37 @@ export async function POST(request: NextRequest) {
     const { username, password } = body
 
     if (!username || !password) {
+      console.log("❌ Missing username or password")
       return NextResponse.json({ success: false, message: "Username and password are required" }, { status: 400 })
     }
 
-    // Load users from database
-    const data = await database.loadData()
-    const users = data.users || []
-
+    // Get current database
+    const data = getDatabase()
     console.log(
       "👥 Available users:",
-      users.map((u) => ({ username: u.username, role: u.role, isActive: u.isActive })),
+      data.users.map((u) => ({
+        username: u.username,
+        role: u.role,
+        isActive: u.isActive,
+      })),
     )
 
-    const user = users.find((u) => u.username === username && u.password === password && u.isActive)
+    // Find user
+    const user = data.users.find((u) => u.username === username && u.password === password && u.isActive)
 
     if (!user) {
       console.log("❌ Login failed for username:", username)
       return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 })
     }
 
-    console.log("✅ Login successful for user:", { id: user.id, username: user.username, role: user.role })
+    console.log("✅ Login successful for user:", {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    })
 
     // Update last login time
-    const updatedUser = { ...user, lastLogin: new Date().toISOString() }
-    const updatedUsers = users.map((u) => (u.id === user.id ? updatedUser : u))
+    const updatedUsers = data.users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date().toISOString() } : u))
 
     // Add audit log entry
     const auditEntry = {
@@ -45,23 +52,22 @@ export async function POST(request: NextRequest) {
       details: `User ${user.username} logged in successfully`,
     }
 
-    const updatedAuditLog = [...(data.auditLog || []), auditEntry]
+    const updatedAuditLog = [...data.auditLog, auditEntry]
 
-    // Save updated data
-    try {
-      await database.saveData({
-        users: updatedUsers,
-        auditLog: updatedAuditLog,
-      })
-    } catch (error) {
-      console.warn("⚠️ Failed to update login info, but continuing:", error)
-    }
+    // Update database
+    updateDatabase({
+      users: updatedUsers,
+      auditLog: updatedAuditLog,
+    })
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user
     return NextResponse.json({
       success: true,
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        lastLogin: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error("❌ Login API error:", error)

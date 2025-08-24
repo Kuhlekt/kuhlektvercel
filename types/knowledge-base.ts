@@ -5,7 +5,7 @@ export interface User {
   email: string
   role: "admin" | "editor" | "viewer"
   isActive: boolean
-  createdAt: string
+  createdAt: string | Date
   lastLogin?: string | Date | null
 }
 
@@ -16,7 +16,7 @@ export interface KnowledgeBaseUser {
   email: string
   role: "admin" | "editor" | "viewer"
   isActive: boolean
-  createdAt: string
+  createdAt: string | Date
   lastLogin?: string | Date | null
 }
 
@@ -25,8 +25,8 @@ export interface Category {
   name: string
   description: string
   isActive?: boolean
-  createdAt: string
-  updatedAt: string
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
 export interface Article {
@@ -38,8 +38,8 @@ export interface Article {
   tags: string[]
   isPublished: boolean
   views: number
-  createdAt: string
-  updatedAt: string
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
 export interface AuditLogEntry {
@@ -52,22 +52,14 @@ export interface AuditLogEntry {
   details: string
 }
 
-export interface AuditLog {
-  id: string
-  action: string
-  performedBy: string
-  userId?: string
-  username?: string
-  timestamp: string
-  details: string
-}
+export type AuditLog = AuditLogEntry
 
 export interface KnowledgeBaseData {
   categories: Category[]
   articles: Article[]
   users: KnowledgeBaseUser[]
   auditLog: AuditLogEntry[]
-  pageVisits?: number
+  pageVisits: number
   settings?: {
     siteName: string
     description: string
@@ -80,4 +72,13 @@ export interface KnowledgeBaseData {
     totalViews: number
     lastUpdated: string
   }
+}
+
+export interface DatabaseStats {
+  totalUsers: number
+  totalArticles: number
+  totalCategories: number
+  totalViews: number
+  pageVisits: number
+  lastUpdated: string
 }
