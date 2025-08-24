@@ -8,6 +8,15 @@ interface DatabaseData {
   pageVisits?: number
 }
 
+interface ExportData extends DatabaseData {
+  settings?: {
+    exportedAt: string
+    version: string
+  }
+  exportedAt?: string
+  version?: string
+}
+
 class ApiDatabase {
   private baseUrl = ""
   private cache: DatabaseData | null = null
@@ -115,6 +124,120 @@ class ApiDatabase {
     } catch (error) {
       console.error("❌ ApiDatabase.saveData() - Error:", error)
       throw new Error(`Failed to save data: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  async exportData(): Promise<ExportData> {
+    try {
+      console.log("📤 ApiDatabase.exportData() - Exporting all data...")
+
+      // Load current data
+      const data = await this.loadData()
+
+      // Create export object with metadata
+      const exportData: ExportData = {
+        ...data,
+        settings: {
+          exportedAt: new Date().toISOString(),
+          version: "1.0.0",
+        },
+        exportedAt: new Date().toISOString(),
+        version: "1.0.0",
+      }
+
+      console.log("✅ ApiDatabase.exportData() - Data exported successfully:", {
+        categories: exportData.categories?.length || 0,
+        articles: exportData.articles?.length || 0,
+        users: exportData.users?.length || 0,
+        auditLog: exportData.auditLog?.length || 0,
+        pageVisits: exportData.pageVisits || 0,
+      })
+
+      return exportData
+    } catch (error) {
+      console.error("❌ ApiDatabase.exportData() - Error:", error)
+      throw new Error(`Failed to export data: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  async importData(importData: ExportData): Promise<void> {
+    try {
+      console.log("📥 ApiDatabase.importData() - Importing data...")
+      console.log("📊 Import data structure:", {
+        categories: importData.categories?.length || 0,
+        articles: importData.articles?.length || 0,
+        users: importData.users?.length || 0,
+        auditLog: importData.auditLog?.length || 0,
+        pageVisits: importData.pageVisits || 0,
+      })
+
+      // Validate import data structure
+      if (!importData || typeof importData !== "object") {
+        throw new Error("Invalid import data format")
+      }
+
+      // Prepare data for import (exclude metadata)
+      const dataToImport: DatabaseData = {
+        categories: Array.isArray(importData.categories) ? importData.categories : [],
+        articles: Array.isArray(importData.articles) ? importData.articles : [],
+        users: Array.isArray(importData.users) ? importData.users : [],
+        auditLog: Array.isArray(importData.auditLog) ? importData.auditLog : [],
+        pageVisits: typeof importData.pageVisits === "number" ? importData.pageVisits : 0,
+      }
+
+      // Add import audit log entry
+      const importAuditEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        userId: "system",
+        username: "System",
+        action: "data_import",
+        details: `Imported ${dataToImport.categories?.length || 0} categories, ${dataToImport.articles?.length || 0} articles, ${dataToImport.users?.length || 0} users`,
+        ipAddress: "127.0.0.1",
+      }
+
+      dataToImport.auditLog = [...(dataToImport.auditLog || []), importAuditEntry]
+
+      // Save the imported data
+      await this.saveData(dataToImport)
+
+      console.log("✅ ApiDatabase.importData() - Data imported successfully")
+    } catch (error) {
+      console.error("❌ ApiDatabase.importData() - Error:", error)
+      throw new Error(`Failed to import data: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  async clearAllData(): Promise<void> {
+    try {
+      console.log("🗑️ ApiDatabase.clearAllData() - Clearing all data...")
+
+      // Create empty data structure with system audit entry
+      const clearAuditEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        userId: "system",
+        username: "System",
+        action: "data_clear",
+        details: "All data cleared by administrator",
+        ipAddress: "127.0.0.1",
+      }
+
+      const emptyData: DatabaseData = {
+        categories: [],
+        articles: [],
+        users: [],
+        auditLog: [clearAuditEntry],
+        pageVisits: 0,
+      }
+
+      // Save empty data
+      await this.saveData(emptyData)
+
+      console.log("✅ ApiDatabase.clearAllData() - All data cleared successfully")
+    } catch (error) {
+      console.error("❌ ApiDatabase.clearAllData() - Error:", error)
+      throw new Error(`Failed to clear data: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
   }
 

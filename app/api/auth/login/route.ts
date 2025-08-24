@@ -1,77 +1,95 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase, updateDatabase } from "@/lib/database"
+import type { AuditLogEntry } from "@/types/knowledge-base"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🔐 POST /api/auth/login - Processing login request...")
+    console.log("📡 API: POST /api/auth/login - Processing login...")
 
-    const body = await request.json()
-    const { username, password } = body
+    const { username, password } = await request.json()
 
     if (!username || !password) {
-      console.log("❌ Missing username or password")
-      return NextResponse.json({ success: false, message: "Username and password are required" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Username and password are required",
+        },
+        { status: 400 },
+      )
     }
 
-    // Get current database
     const data = getDatabase()
-    console.log(
-      "👥 Available users:",
-      data.users.map((u) => ({
-        username: u.username,
-        role: u.role,
-        isActive: u.isActive,
-      })),
-    )
-
-    // Find user
     const user = data.users.find((u) => u.username === username && u.password === password && u.isActive)
 
     if (!user) {
-      console.log("❌ Login failed for username:", username)
-      return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 })
+      console.log("❌ API: Invalid credentials for username:", username)
+
+      // Add failed login audit entry
+      const auditEntry: AuditLogEntry = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        userId: "unknown",
+        username: username,
+        action: "login_failed",
+        details: `Failed login attempt for username: ${username}`,
+        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+      }
+
+      updateDatabase({
+        auditLog: [...data.auditLog, auditEntry],
+      })
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid username or password",
+        },
+        { status: 401 },
+      )
     }
 
-    console.log("✅ Login successful for user:", {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    })
-
-    // Update last login time
+    // Update last login
     const updatedUsers = data.users.map((u) => (u.id === user.id ? { ...u, lastLogin: new Date().toISOString() } : u))
 
-    // Add audit log entry
-    const auditEntry = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      action: "user_login",
-      performedBy: user.username,
+    // Add successful login audit entry
+    const auditEntry: AuditLogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
       userId: user.id,
       username: user.username,
-      timestamp: new Date().toISOString(),
-      details: `User ${user.username} logged in successfully`,
+      action: "login_success",
+      details: `User logged in successfully`,
+      ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
     }
 
-    const updatedAuditLog = [...data.auditLog, auditEntry]
-
-    // Update database
     updateDatabase({
       users: updatedUsers,
-      auditLog: updatedAuditLog,
+      auditLog: [...data.auditLog, auditEntry],
     })
 
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user
+    console.log("✅ API: Login successful for user:", user.username)
+
     return NextResponse.json({
       success: true,
       user: {
-        ...userWithoutPassword,
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
         lastLogin: new Date().toISOString(),
       },
     })
   } catch (error) {
-    console.error("❌ Login API error:", error)
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
+    console.error("❌ API: Login error:", error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
 
