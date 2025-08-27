@@ -51,6 +51,7 @@ export default function RootLayout({
             `,
           }}
         />
+        <script src="//code.tidio.co/cqpecqjlg18crvtdezszocsiflmpnp9k.js" async></script>
       </head>
       <body className={inter.className}>
         <GlobalErrorHandler />
