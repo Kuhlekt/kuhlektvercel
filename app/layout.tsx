@@ -6,28 +6,52 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
-import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { NewVisitorBanner } from "@/components/new-visitor-banner"
-import { Suspense } from "react"
+import Script from "next/script"
 
-const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Kuhlekt - AR Automation & Digital Collections Platform",
+  title: "Kuhlekt - AR Automation & Digital Collections",
   description:
-    "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO, improve cash flow, and streamline collections.",
-  keywords: "accounts receivable, AR automation, digital collections, cash flow management, invoice processing",
-  icons: {
-    icon: [
+    "Transform your accounts receivable process with Kuhlekt's automated AR solutions. Reduce DSO, improve cash flow, and streamline collections with our enterprise-grade platform.",
+  keywords:
+    "accounts receivable, AR automation, digital collections, cash flow management, DSO reduction, credit management",
+  authors: [{ name: "Kuhlekt" }],
+  openGraph: {
+    title: "Kuhlekt - AR Automation & Digital Collections",
+    description: "Transform your accounts receivable process with automated AR solutions",
+    url: "https://kuhlekt.com",
+    siteName: "Kuhlekt",
+    images: [
       {
-        url: "/favicon.gif",
-        type: "image/gif",
+        url: "/images/kuhlekt-dashboard-interface.png",
+        width: 1200,
+        height: 630,
+        alt: "Kuhlekt AR Dashboard Interface",
       },
     ],
-    shortcut: "/favicon.gif",
-    apple: "/favicon.gif",
+    locale: "en_US",
+    type: "website",
   },
-  generator: "v0.app",
+  twitter: {
+    card: "summary_large_image",
+    title: "Kuhlekt - AR Automation & Digital Collections",
+    description: "Transform your accounts receivable process with automated AR solutions",
+    images: ["/images/kuhlekt-dashboard-interface.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -38,35 +62,28 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.gif" type="image/gif" />
-        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
-        <link rel="apple-touch-icon" href="/favicon.gif" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-942617128');
-            `,
-          }}
-        />
+        {/* Google Analytics */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-Z5H3V9LW83" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-Z5H3V9LW83');
+          `}
+        </Script>
       </head>
       <body className={inter.className}>
-        <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <Suspense fallback={null}>
-            <NewVisitorBanner />
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-            <VisitorTracker />
-          </Suspense>
+          <VisitorTracker />
+          <NewVisitorBanner />
+          <Header />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
         </ThemeProvider>
-        <script src="//code.tidio.co/cqpecqjlg18crvtdezszocsiflmpnp9k.js" async></script>
+
+        {/* Tidio Chat Script */}
+        <Script src="//code.tidio.co/cqpecqjlg18crvtdezszocsiflmpnp9k.js" strategy="lazyOnload" />
       </body>
     </html>
   )

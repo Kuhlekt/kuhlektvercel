@@ -8,13 +8,13 @@ export function NewVisitorBanner() {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
-    // Check if we're still in September 2024
+    // Check if we're still in September 2025
     const currentDate = new Date()
     const currentMonth = currentDate.getMonth() // 0-based, so September is 8
     const currentYear = currentDate.getFullYear()
 
-    // Only show banner during September 2024
-    if (currentMonth !== 8 || currentYear !== 2024) {
+    // Only show banner during September 2025
+    if (currentMonth !== 8 || currentYear !== 2025) {
       return
     }
 
