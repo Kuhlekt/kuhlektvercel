@@ -7,6 +7,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { VisitorTracker } from "@/components/visitor-tracker"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
+import { NewVisitorBanner } from "@/components/new-visitor-banner"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
@@ -56,6 +57,7 @@ export default function RootLayout({
         <GlobalErrorHandler />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Suspense fallback={null}>
+            <NewVisitorBanner />
             <div className="flex flex-col min-h-screen">
               <Header />
               <main className="flex-1">{children}</main>
