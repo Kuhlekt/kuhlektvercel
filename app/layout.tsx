@@ -41,17 +41,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.gif" type="image/gif" />
         <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
         <link rel="apple-touch-icon" href="/favicon.gif" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-942617128');
-            `,
-          }}
-        />
       </head>
       <body className={inter.className}>
         <GlobalErrorHandler />
@@ -60,6 +49,18 @@ export default function RootLayout({
             <NewVisitorBanner />
             <div className="flex flex-col min-h-screen">
               <Header />
+              {/* Google tag (gtag.js) */}
+              <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN"></script>
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', 'G-B25J90XFDN');
+                  `,
+                }}
+              />
               <main className="flex-1">{children}</main>
               <Footer />
             </div>
