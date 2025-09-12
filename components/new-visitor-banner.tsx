@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { X, Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 export function NewVisitorBanner() {
@@ -10,29 +10,25 @@ export function NewVisitorBanner() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const checkShouldShow = () => {
-      // Check if it's September 2025
-      const now = new Date()
-      const currentMonth = now.getMonth() // 0-based, so September is 8
-      const currentYear = now.getFullYear()
+    // Check if it's September 2025
+    const now = new Date()
+    const currentMonth = now.getMonth() // 0-11 (September = 8)
+    const currentYear = now.getFullYear()
 
-      if (currentMonth !== 8 || currentYear !== 2025) {
-        setIsLoading(false)
-        return
-      }
-
-      // Check if banner was dismissed today
-      const today = now.toDateString()
-      const dismissedDate = localStorage.getItem("banner-dismissed-date")
-
-      if (dismissedDate !== today) {
-        setIsVisible(true)
-      }
-
+    if (currentMonth !== 8 || currentYear !== 2025) {
       setIsLoading(false)
+      return
     }
 
-    checkShouldShow()
+    // Check if banner was dismissed today
+    const today = now.toDateString()
+    const dismissedDate = localStorage.getItem("banner-dismissed-date")
+
+    if (dismissedDate !== today) {
+      setIsVisible(true)
+    }
+
+    setIsLoading(false)
   }, [])
 
   const handleClose = () => {
@@ -46,40 +42,37 @@ export function NewVisitorBanner() {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 text-white py-3 px-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
+    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 relative">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4 flex-1">
           <div className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-yellow-300" />
-            <span className="bg-yellow-400 text-black px-2 py-1 rounded-full text-xs font-bold">SEPTEMBER ONLY</span>
+            <Calendar className="h-5 w-5" />
+            <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-semibold">SEPTEMBER ONLY</span>
           </div>
 
           <div className="hidden md:block">
-            <span className="text-lg font-semibold">🎉 Free Setup for September!</span>
-            <span className="ml-2 text-blue-100">Get your AR automation platform configured at no cost.</span>
+            <span className="text-lg font-bold">🎉 Free Setup for September!</span>
+            <span className="ml-2 text-sm opacity-90">
+              Get your AR automation platform set up at no cost this month.
+            </span>
           </div>
 
           <div className="md:hidden">
-            <div className="text-sm font-semibold">🎉 Free Setup for September!</div>
-            <div className="text-xs text-blue-100">AR automation platform setup at no cost</div>
+            <div className="text-sm font-bold">🎉 Free Setup for September!</div>
+            <div className="text-xs opacity-90">Get AR automation set up free this month</div>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
           <Link href="/demo">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="bg-white text-blue-600 hover:bg-blue-50 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
+            <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
               Schedule a Demo Now
             </Button>
           </Link>
 
           <button
             onClick={handleClose}
-            className="text-white hover:text-yellow-300 transition-colors p-1 hover:bg-white/10 rounded"
+            className="text-white/80 hover:text-white transition-colors p-1"
             aria-label="Close banner"
           >
             <X className="h-4 w-4" />
