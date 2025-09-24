@@ -2,24 +2,22 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import VisitorTracker from "@/components/visitor-tracker"
-import NewVisitorBanner from "@/components/new-visitor-banner"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { NewVisitorBanner } from "@/components/new-visitor-banner"
+import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
   description:
-    "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
-  keywords: "accounts receivable, AR automation, debt collection, AI collections, DSO reduction, invoice management",
-  authors: [{ name: "Kuhlekt" }],
+    "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and improve cash flow with intelligent automation.",
+  keywords: "accounts receivable, AR automation, debt collection, DSO reduction, cash flow management, AI collections",
   openGraph: {
     title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
     description:
-      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
+      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and improve cash flow.",
     url: "https://kuhlekt.com",
     siteName: "Kuhlekt",
     images: [
@@ -37,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
     description:
-      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
+      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and improve cash flow.",
     images: ["/images/kuhlekt-dashboard-interface.png"],
   },
   robots: {
@@ -60,36 +58,28 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          <VisitorTracker />
+        <Suspense fallback={null}>
           <NewVisitorBanner />
-          <Header />
+        </Suspense>
+        <Header />
 
-          {/* Google Analytics */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                <!-- Google tag (gtag.js) -->
-                (function() {
-                  var script = document.createElement('script');
-                  script.async = true;
-                  script.src = 'https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN';
-                  document.head.appendChild(script);
-                  
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', 'G-B25J90XFDN');
-                })();
-              `,
-            }}
-          />
+        {/* Google Analytics */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-B25J90XFDN');
+            `,
+          }}
+        />
 
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </ThemeProvider>
+        <main>{children}</main>
+        <Footer />
       </body>
     </html>
   )

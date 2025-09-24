@@ -18,7 +18,7 @@ export default function HomePage() {
                   AI-Powered Collections Platform
                 </Badge>
                 <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Transform Your <span className="text-cyan-600">Accounts Receivable</span> Process
+                  Transform Your <span className="text-cyan-600">Invoice to Cash</span> Process
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed">
                   Kuhlekt's AI-driven platform automates your entire AR workflow, reduces DSO by up to 40%, and
