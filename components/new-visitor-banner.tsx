@@ -1,21 +1,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { X, Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
-export function NewVisitorBanner() {
+export default function NewVisitorBanner() {
   const [isVisible, setIsVisible] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Check if it's September 2025
     const now = new Date()
-    const currentMonth = now.getMonth() // 0-11 (September = 8)
+    const currentMonth = now.getMonth() // 0-based (8 = September)
     const currentYear = now.getFullYear()
 
     if (currentMonth !== 8 || currentYear !== 2025) {
-      return // Don't show banner if not September 2025
+      setIsLoading(false)
+      return
     }
 
     // Check if banner was dismissed today
@@ -25,6 +27,8 @@ export function NewVisitorBanner() {
     if (dismissedDate !== today) {
       setIsVisible(true)
     }
+
+    setIsLoading(false)
   }, [])
 
   const handleClose = () => {
@@ -33,34 +37,33 @@ export function NewVisitorBanner() {
     setIsVisible(false)
   }
 
-  if (!isVisible) return null
+  if (isLoading || !isVisible) {
+    return null
+  }
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 relative">
+    <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 px-4 relative">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
-            <span className="bg-white/20 px-2 py-1 rounded text-xs font-semibold">SEPTEMBER ONLY</span>
+            <span className="bg-yellow-400 text-gray-900 px-2 py-1 rounded-full text-xs font-bold">SEPTEMBER ONLY</span>
           </div>
           <div className="hidden sm:block">
-            <span className="text-lg font-bold">Free Setup for September!</span>
-            <span className="ml-2 text-sm opacity-90">Get started with zero implementation costs</span>
+            <span className="text-lg font-semibold">🎉 Free Setup for September - Schedule a Demo Now!</span>
           </div>
           <div className="sm:hidden">
-            <span className="font-bold">Free Setup!</span>
+            <span className="text-sm font-semibold">🎉 Free Setup - Demo Now!</span>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          <Link href="/demo">
-            <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
-              Schedule a Demo Now
-            </Button>
-          </Link>
+          <Button asChild size="sm" className="bg-white text-cyan-600 hover:bg-gray-100 font-semibold">
+            <Link href="/demo">Schedule Demo</Link>
+          </Button>
           <button
             onClick={handleClose}
-            className="text-white/80 hover:text-white transition-colors"
+            className="text-white hover:text-gray-200 transition-colors"
             aria-label="Close banner"
           >
             <X className="h-5 w-5" />

@@ -3,31 +3,55 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { VisitorTracker } from "@/components/visitor-tracker"
-import { GlobalErrorHandler } from "@/components/global-error-handler"
-import { NewVisitorBanner } from "@/components/new-visitor-banner"
-import { Suspense } from "react"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
+import VisitorTracker from "@/components/visitor-tracker"
+import NewVisitorBanner from "@/components/new-visitor-banner"
 
-const inter = Inter({ subsets: ["latin"], display: "swap", preload: true })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Kuhlekt - AR Automation & Digital Collections Platform",
+  title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
   description:
-    "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO, improve cash flow, and streamline collections.",
-  keywords: "accounts receivable, AR automation, digital collections, cash flow management, invoice processing",
-  icons: {
-    icon: [
+    "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
+  keywords: "accounts receivable, AR automation, debt collection, AI collections, DSO reduction, invoice management",
+  authors: [{ name: "Kuhlekt" }],
+  openGraph: {
+    title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
+    description:
+      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
+    url: "https://kuhlekt.com",
+    siteName: "Kuhlekt",
+    images: [
       {
-        url: "/favicon.gif",
-        type: "image/gif",
+        url: "/images/kuhlekt-dashboard-interface.png",
+        width: 1200,
+        height: 630,
+        alt: "Kuhlekt AR Dashboard Interface",
       },
     ],
-    shortcut: "/favicon.gif",
-    apple: "/favicon.gif",
+    locale: "en_US",
+    type: "website",
   },
-  generator: "v0.app",
+  twitter: {
+    card: "summary_large_image",
+    title: "Kuhlekt - AI-Powered Accounts Receivable Automation",
+    description:
+      "Transform your AR process with Kuhlekt's AI-driven platform. Reduce DSO by 40%, automate collections, and maintain customer relationships.",
+    images: ["/images/kuhlekt-dashboard-interface.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -37,35 +61,34 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.gif" type="image/gif" />
-        <link rel="shortcut icon" href="/favicon.gif" type="image/gif" />
-        <link rel="apple-touch-icon" href="/favicon.gif" />
-      </head>
       <body className={inter.className}>
-        <GlobalErrorHandler />
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <Suspense fallback={null}>
-            <NewVisitorBanner />
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              {/* Google tag (gtag.js) */}
-              <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN"></script>
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-                    window.dataLayer = window.dataLayer || [];
-                    function gtag(){dataLayer.push(arguments);}
-                    gtag('js', new Date());
-                    gtag('config', 'G-B25J90XFDN');
-                  `,
-                }}
-              />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-            <VisitorTracker />
-          </Suspense>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+          <VisitorTracker />
+          <NewVisitorBanner />
+          <Header />
+
+          {/* Google Analytics */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                <!-- Google tag (gtag.js) -->
+                (function() {
+                  var script = document.createElement('script');
+                  script.async = true;
+                  script.src = 'https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN';
+                  document.head.appendChild(script);
+                  
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', 'G-B25J90XFDN');
+                })();
+              `,
+            }}
+          />
+
+          <main className="flex-1">{children}</main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>
