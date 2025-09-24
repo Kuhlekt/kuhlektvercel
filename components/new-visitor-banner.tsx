@@ -1,38 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { X, Calendar } from "lucide-react"
 import Link from "next/link"
 
-export default function NewVisitorBanner() {
+export function NewVisitorBanner() {
   const [isVisible, setIsVisible] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const checkBannerVisibility = () => {
-      const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() // 0-based (0 = January, 8 = September)
+    // Check if it's September 2025
+    const now = new Date()
+    const currentMonth = now.getMonth() // 0-11 (September = 8)
+    const currentYear = now.getFullYear()
 
-      // Only show during September 2025
-      if (currentYear !== 2025 || currentMonth !== 8) {
-        setIsLoading(false)
-        return
-      }
-
-      // Check if banner was dismissed today
-      const today = now.toDateString()
-      const dismissedDate = localStorage.getItem("banner-dismissed-date")
-
-      if (dismissedDate !== today) {
-        setIsVisible(true)
-      }
-
-      setIsLoading(false)
+    if (currentMonth !== 8 || currentYear !== 2025) {
+      return // Don't show banner if not September 2025
     }
 
-    checkBannerVisibility()
+    // Check if banner was dismissed today
+    const today = now.toDateString()
+    const dismissedDate = localStorage.getItem("banner-dismissed-date")
+
+    if (dismissedDate !== today) {
+      setIsVisible(true)
+    }
   }, [])
 
   const handleClose = () => {
@@ -41,24 +33,26 @@ export default function NewVisitorBanner() {
     setIsVisible(false)
   }
 
-  if (isLoading || !isVisible) {
-    return null
-  }
+  if (!isVisible) return null
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 relative">
-      <div className="container mx-auto flex items-center justify-between">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
-            <span className="font-semibold">Free Setup for September!</span>
+            <span className="bg-white/20 px-2 py-1 rounded text-xs font-semibold">SEPTEMBER ONLY</span>
           </div>
-          <div className="hidden md:block">
-            <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">SEPTEMBER ONLY</span>
+          <div className="hidden sm:block">
+            <span className="text-lg font-bold">Free Setup for September!</span>
+            <span className="ml-2 text-sm opacity-90">Get started with zero implementation costs</span>
+          </div>
+          <div className="sm:hidden">
+            <span className="font-bold">Free Setup!</span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           <Link href="/demo">
             <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
               Schedule a Demo Now
@@ -66,17 +60,12 @@ export default function NewVisitorBanner() {
           </Link>
           <button
             onClick={handleClose}
-            className="text-white hover:text-gray-200 transition-colors"
+            className="text-white/80 hover:text-white transition-colors"
             aria-label="Close banner"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-      </div>
-
-      {/* Mobile layout */}
-      <div className="md:hidden mt-2 text-center">
-        <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">SEPTEMBER ONLY</span>
       </div>
     </div>
   )
