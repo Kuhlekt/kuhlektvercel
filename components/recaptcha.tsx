@@ -123,3 +123,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     </div>
   )
 }
+
+// Named export for compatibility
+export { Recaptcha as ReCAPTCHA }
