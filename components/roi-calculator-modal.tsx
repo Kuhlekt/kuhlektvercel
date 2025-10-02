@@ -13,6 +13,8 @@ import { Calculator, TrendingUp, DollarSign, Clock, Users, HelpCircle, ArrowLeft
 import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface ROICalculatorModalProps {
   isOpen: boolean
@@ -174,10 +176,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         console.log("[v0] Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
         console.log("[v0] Detailed results:", results)
-        if (!results || typeof results.roi === "undefined" || typeof results.paybackMonths === "undefined") {
-          console.error("[v0] Invalid results received:", results)
-          throw new Error("Invalid calculation results")
-        }
         setDetailedResults(results)
         setStep("detailed-results")
       }
@@ -738,7 +736,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
                     <div className="text-sm text-gray-600 mb-2">Payback Period</div>
                     <div className="text-4xl font-bold text-red-500 mb-2">
-                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"} months
+                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"}
                     </div>
                     <div className="text-xs text-gray-500">Months</div>
                   </div>
@@ -790,7 +788,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <td className="py-3 px-4">{Math.round((detailedResults.currentDSO || 0) * 1.2)} days</td>
                         <td className="py-3 px-4">{Math.round((detailedResults.newDSO || 0) * 1.2)} days</td>
                         <td className="py-3 px-4 text-cyan-600 font-semibold">
-                          {Math.round((detailedResults.currentDSO || 0) * 1.2 - (detailedResults.newDSO || 0) * 1.2)}
+                          {Math.round((detailedResults.currentDSO || 0) * 1.2 - (detailedResults.newDSO || 0) * 1.2)}{" "}
                           days
                         </td>
                       </tr>
@@ -909,6 +907,133 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
               </div>
 
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-cyan-600" />
+                  Investment vs Annual Savings
+                </h3>
+
+                <ChartContainer
+                  config={{
+                    investment: {
+                      label: "Investment",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    savings: {
+                      label: "Annual Savings",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        {
+                          name: "Investment",
+                          value: detailedResults.totalImplementationAndAnnualCost || 0,
+                        },
+                        {
+                          name: "Annual Savings",
+                          value: detailedResults.totalAnnualBenefit || 0,
+                        },
+                      ]}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="value" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-cyan-600" />
+                  Cumulative Savings Over Time (3 Years)
+                </h3>
+
+                <ChartContainer
+                  config={{
+                    savings: {
+                      label: "Cumulative Savings",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={Array.from({ length: 37 }, (_, i) => ({
+                        month: i,
+                        savings:
+                          i === 0
+                            ? 0
+                            : (detailedResults.totalAnnualBenefit || 0) * (i / 12) -
+                              (detailedResults.totalImplementationAndAnnualCost || 0),
+                      }))}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="month"
+                        label={{ value: "Months", position: "insideBottom", offset: -10 }}
+                        ticks={[0, 6, 12, 18, 24, 30, 36]}
+                      />
+                      <YAxis label={{ value: "Savings ($)", angle: -90, position: "insideLeft" }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="savings" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-cyan-600" />
+                  DSO Comparison
+                </h3>
+
+                <ChartContainer
+                  config={{
+                    current: {
+                      label: "Current DSO",
+                      color: "hsl(var(--chart-1))",
+                    },
+                    improved: {
+                      label: "Improved DSO",
+                      color: "hsl(var(--chart-2))",
+                    },
+                  }}
+                  className="h-[300px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        {
+                          name: "Current DSO",
+                          days: detailedResults.currentDSO || 0,
+                        },
+                        {
+                          name: "Improved DSO",
+                          days: detailedResults.newDSO || 0,
+                        },
+                      ]}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis label={{ value: "Days", angle: -90, position: "insideLeft" }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="days" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+
               {/* Savings Assumptions */}
               <div className="border rounded-lg p-6 bg-white">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1011,7 +1136,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold mb-4 text-cyan-900">Summary</h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  By implementing the Invoice-to-cash solution with automation, you can expect to achieve a{" "}
+                  By implementing the Invoice-to-cash solution with automation, you can achieve a{" "}
                   <strong className="text-cyan-600">{detailedData.dsoImprovement}% improvement</strong> in your DSO,
                   freeing up{" "}
                   <strong className="text-cyan-600">

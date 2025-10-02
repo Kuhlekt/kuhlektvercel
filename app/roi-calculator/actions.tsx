@@ -76,18 +76,18 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
   try {
     console.log("[v0] Starting detailed ROI calculation with inputs:", inputs)
 
-    const implementationCost = Number.parseFloat(inputs.implementationCost)
-    const monthlyCost = Number.parseFloat(inputs.monthlyCost)
+    const implementationCost = Number.parseFloat(inputs.implementationCost) || 0
+    const monthlyCost = Number.parseFloat(inputs.monthlyCost) || 0
     const annualCost = monthlyCost * 12
-    const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
-    const interestRate = Number.parseFloat(inputs.interestRate) / 100
-    const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
-    const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
-    const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
-    const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
+    const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts) || 0
+    const interestRate = (Number.parseFloat(inputs.interestRate) || 0) / 100
+    const averageBadDebtPercent = (Number.parseFloat(inputs.averageBadDebt) || 0) / 100
+    const currentBadDebts = Number.parseFloat(inputs.currentBadDebts) || 0
+    const labourSavingsPercent = (Number.parseFloat(inputs.labourSavings) || 0) / 100
+    const dsoImprovementPercent = (Number.parseFloat(inputs.dsoImprovement) || 0) / 100
     const daysSales = 365
-    const currentDSO = Number.parseFloat(inputs.currentDSODays)
-    const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
+    const currentDSO = Number.parseFloat(inputs.currentDSODays) || 0
+    const debtorsBalance = Number.parseFloat(inputs.debtorsBalance) || 0
 
     console.log("[v0] Parsed values:", {
       implementationCost,
@@ -101,8 +101,8 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
       labourSavingsPercent,
     })
 
-    if (isNaN(implementationCost) || isNaN(monthlyCost) || isNaN(currentDSO) || isNaN(debtorsBalance)) {
-      throw new Error("Invalid input values - please check all required fields are filled correctly")
+    if (currentDSO <= 0 || debtorsBalance <= 0) {
+      throw new Error("Current DSO and Debtors Balance are required and must be greater than 0")
     }
 
     // Calculate annual revenue from debtors balance and DSO
@@ -110,7 +110,7 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
 
     // DSO Improvement
     const dsoReductionDays = currentDSO * dsoImprovementPercent
-    const newDSO = currentDSO - dsoReductionDays
+    const newDSO = Math.max(0, currentDSO - dsoReductionDays)
 
     // Working Capital Released
     const dailyRevenue = annualRevenue / daysSales
@@ -139,17 +139,17 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
     const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
 
     const results = {
-      currentDSO,
-      newDSO,
-      dsoReductionDays,
-      workingCapitalReleased,
-      labourCostSavings,
-      badDebtReduction,
-      interestSavings,
-      totalAnnualBenefit,
-      totalImplementationAndAnnualCost,
-      roi,
-      paybackMonths,
+      currentDSO: isNaN(currentDSO) ? 0 : currentDSO,
+      newDSO: isNaN(newDSO) ? 0 : newDSO,
+      dsoReductionDays: isNaN(dsoReductionDays) ? 0 : dsoReductionDays,
+      workingCapitalReleased: isNaN(workingCapitalReleased) ? 0 : workingCapitalReleased,
+      labourCostSavings: isNaN(labourCostSavings) ? 0 : labourCostSavings,
+      badDebtReduction: isNaN(badDebtReduction) ? 0 : badDebtReduction,
+      interestSavings: isNaN(interestSavings) ? 0 : interestSavings,
+      totalAnnualBenefit: isNaN(totalAnnualBenefit) ? 0 : totalAnnualBenefit,
+      totalImplementationAndAnnualCost: isNaN(totalImplementationAndAnnualCost) ? 0 : totalImplementationAndAnnualCost,
+      roi: isNaN(roi) ? 0 : roi,
+      paybackMonths: isNaN(paybackMonths) ? 0 : paybackMonths,
     }
 
     console.log("[v0] Calculation results:", results)
@@ -328,10 +328,10 @@ export async function sendROIEmail(data: {
                 <div class="section-title">🎯 Next Steps</div>
                 <p style="margin: 10px 0;">Thank you for using our ROI Calculator! Here's what you can do next:</p>
                 <ol style="margin: 10px 0; padding-left: 20px;">
-                  <li style="margin: 5px 0;">Schedule a personalized demo to see Kuhlekt in action</li>
-                  <li style="margin: 5px 0;">Review detailed case studies from similar companies</li>
-                  <li style="margin: 5px 0;">Discuss implementation timeline and pricing</li>
-                  <li style="margin: 5px 0;">Contact us at enquiries@kuhlekt.com for any questions</li>
+                  <li style="margin: 5px 0;">Contact us at enquiries@kuhlekt.com to discuss your results</li>
+                  <li style="margin: 5px 0;">Arrange a personalized demonstration to see Kuhlekt in action</li>
+                  <li style="margin: 5px 0;">Pricing discussion tailored to your business needs</li>
+                  <li style="margin: 5px 0;">Implementation plan and timeline review</li>
                 </ol>
               </div>
 
