@@ -11,7 +11,6 @@ interface ROIReportPDFProps {
 
 export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFProps) {
   const generatePDF = () => {
-    // Create a new window for printing
     const printWindow = window.open("", "_blank")
     if (!printWindow) return
 
@@ -20,6 +19,8 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
       month: "long",
       day: "numeric",
     })
+
+    const logoUrl = `${window.location.origin}/images/kuhlekt-logo-tm.png`
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -50,11 +51,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               border-bottom: 3px solid #0891b2;
             }
             
+            .logo-container {
+              margin-bottom: 20px;
+            }
+            
             .logo {
-              font-size: 32px;
-              font-weight: bold;
-              color: #0891b2;
-              margin-bottom: 10px;
+              max-width: 300px;
+              height: auto;
             }
             
             .report-title {
@@ -232,7 +235,9 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
         </head>
         <body>
           <div class="header">
-            <div class="logo">KUHLEKT</div>
+            <div class="logo-container">
+              <img src="${logoUrl}" alt="Kuhlekt Logo" class="logo" />
+            </div>
             <h1 class="report-title">ROI Analysis Report</h1>
             <p class="report-subtitle">${calculatorType === "simple" ? "Simple ROI Calculator" : "Comprehensive Invoice-to-Cash Analysis"}</p>
             <p class="report-date">Generated on ${currentDate}</p>
@@ -241,7 +246,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
           ${
             calculatorType === "simple"
               ? `
-            <!-- Simple Calculator Report -->
+             Simple Calculator Report 
             <div class="summary-box">
               <div class="summary-label">Estimated Annual Savings</div>
               <div class="summary-value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -318,7 +323,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             </div>
           `
               : `
-            <!-- Detailed Calculator Report -->
+             Detailed Calculator Report 
             <div class="summary-box">
               <div class="summary-label">Total Annual Benefit</div>
               <div class="summary-value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -510,7 +515,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
     printWindow.document.write(htmlContent)
     printWindow.document.close()
 
-    // Wait for content to load then trigger print
     setTimeout(() => {
       printWindow.print()
     }, 250)
