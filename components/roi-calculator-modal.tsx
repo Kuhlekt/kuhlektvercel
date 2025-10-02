@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2, AlertCircle, HelpCircle } from "lucide-react"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { submitROICalculator } from "@/app/roi-calculator/actions"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 
@@ -376,306 +377,363 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
               )}
 
-              <div className="space-y-6">
+              <Accordion
+                type="multiple"
+                defaultValue={["costs", "interest", "debt", "savings", "metrics", "terms", "team"]}
+                className="space-y-2"
+              >
                 {/* Cost Structure */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <DollarSign className="h-5 w-5" />
-                    Cost Structure
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="implementationCost" className={!implementationCost ? "text-red-600" : ""}>
-                        Implementation Cost ($) {!implementationCost && "*"}
-                      </Label>
-                      <Input
-                        id="implementationCost"
-                        type="number"
-                        placeholder="50000"
-                        value={implementationCost}
-                        onChange={(e) => setImplementationCost(e.target.value)}
-                        min="0"
-                        className={!implementationCost ? "border-red-300" : ""}
-                      />
+                <AccordionItem value="costs" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Cost Structure</span>
+                      {(!implementationCost || !monthlyCost || !perAnnumDirectLabourCosts) && (
+                        <span className="ml-2 text-xs text-red-600">*Required</span>
+                      )}
                     </div>
-                    <div>
-                      <Label htmlFor="monthlyCost" className={!monthlyCost ? "text-red-600" : ""}>
-                        Monthly Cost ($) {!monthlyCost && "*"}
-                      </Label>
-                      <Input
-                        id="monthlyCost"
-                        type="number"
-                        placeholder="8500"
-                        value={monthlyCost}
-                        onChange={(e) => setMonthlyCost(e.target.value)}
-                        min="0"
-                        className={!monthlyCost ? "border-red-300" : ""}
-                      />
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="implementationCost" className={!implementationCost ? "text-red-600" : ""}>
+                            Implementation Cost ($) {!implementationCost && "*"}
+                          </Label>
+                          <Input
+                            id="implementationCost"
+                            type="number"
+                            placeholder="50000"
+                            value={implementationCost}
+                            onChange={(e) => setImplementationCost(e.target.value)}
+                            min="0"
+                            className={!implementationCost ? "border-red-300" : ""}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="monthlyCost" className={!monthlyCost ? "text-red-600" : ""}>
+                            Monthly Cost ($) {!monthlyCost && "*"}
+                          </Label>
+                          <Input
+                            id="monthlyCost"
+                            type="number"
+                            placeholder="8500"
+                            value={monthlyCost}
+                            onChange={(e) => setMonthlyCost(e.target.value)}
+                            min="0"
+                            className={!monthlyCost ? "border-red-300" : ""}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label
+                          htmlFor="perAnnumDirectLabourCosts"
+                          className={!perAnnumDirectLabourCosts ? "text-red-600" : ""}
+                        >
+                          Per Annum Direct Labour Costs ($) {!perAnnumDirectLabourCosts && "*"}
+                        </Label>
+                        <Input
+                          id="perAnnumDirectLabourCosts"
+                          type="number"
+                          placeholder="500000"
+                          value={perAnnumDirectLabourCosts}
+                          onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
+                          min="0"
+                          className={!perAnnumDirectLabourCosts ? "border-red-300" : ""}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="perAnnumDirectLabourCosts"
-                      className={!perAnnumDirectLabourCosts ? "text-red-600" : ""}
-                    >
-                      Per Annum Direct Labour Costs ($) {!perAnnumDirectLabourCosts && "*"}
-                    </Label>
-                    <Input
-                      id="perAnnumDirectLabourCosts"
-                      type="number"
-                      placeholder="500000"
-                      value={perAnnumDirectLabourCosts}
-                      onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
-                      min="0"
-                      className={!perAnnumDirectLabourCosts ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
 
                 {/* Bank Interest */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <TrendingUp className="h-5 w-5" />
-                    Bank Interest
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
+                <AccordionItem value="interest" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Bank Interest</span>
+                      {!interestRate && <span className="ml-2 text-xs text-red-600">*Required</span>}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="interestType">Interest Type</Label>
+                        <Select value={interestType} onValueChange={setInterestType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
+                            <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="interestRate" className={!interestRate ? "text-red-600" : ""}>
+                          Interest Rate (%) {!interestRate && "*"}
+                        </Label>
+                        <Input
+                          id="interestRate"
+                          type="number"
+                          placeholder="5"
+                          value={interestRate}
+                          onChange={(e) => setInterestRate(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          className={!interestRate ? "border-red-300" : ""}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Bad Debt */}
+                <AccordionItem value="debt" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Bad Debt</span>
+                      {(!averageBadDebt || !currentBadDebts) && (
+                        <span className="ml-2 text-xs text-red-600">*Required</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="averageBadDebt" className={!averageBadDebt ? "text-red-600" : ""}>
+                          Average Bad Debt (%) {!averageBadDebt && "*"}
+                        </Label>
+                        <Input
+                          id="averageBadDebt"
+                          type="number"
+                          placeholder="0.0355"
+                          value={averageBadDebt}
+                          onChange={(e) => setAverageBadDebt(e.target.value)}
+                          min="0"
+                          step="0.0001"
+                          className={!averageBadDebt ? "border-red-300" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="currentBadDebts" className={!currentBadDebts ? "text-red-600" : ""}>
+                          Current Bad Debts ($) {!currentBadDebts && "*"}
+                        </Label>
+                        <Input
+                          id="currentBadDebts"
+                          type="number"
+                          placeholder="20000"
+                          value={currentBadDebts}
+                          onChange={(e) => setCurrentBadDebts(e.target.value)}
+                          min="0"
+                          className={!currentBadDebts ? "border-red-300" : ""}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Expected Savings */}
+                <AccordionItem value="savings" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Expected Savings</span>
+                      {(!labourSavings || !dsoImprovement) && (
+                        <span className="ml-2 text-xs text-red-600">*Required</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="labourSavings" className={!labourSavings ? "text-red-600" : ""}>
+                          Labour Savings (%) {!labourSavings && "*"}
+                        </Label>
+                        <Input
+                          id="labourSavings"
+                          type="number"
+                          placeholder="40"
+                          value={labourSavings}
+                          onChange={(e) => setLabourSavings(e.target.value)}
+                          min="0"
+                          max="100"
+                          className={!labourSavings ? "border-red-300" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dsoImprovement" className={!dsoImprovement ? "text-red-600" : ""}>
+                          DSO Improvement (%) {!dsoImprovement && "*"}
+                        </Label>
+                        <Input
+                          id="dsoImprovement"
+                          type="number"
+                          placeholder="30"
+                          value={dsoImprovement}
+                          onChange={(e) => setDsoImprovement(e.target.value)}
+                          min="0"
+                          max="100"
+                          className={!dsoImprovement ? "border-red-300" : ""}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Financial Metrics */}
+                <AccordionItem value="metrics" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Financial Metrics</span>
+                      {(!daysSales || !currentDSODays || !debtorsBalance) && (
+                        <span className="ml-2 text-xs text-red-600">*Required</span>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="daysSales" className={!daysSales ? "text-red-600" : ""}>
+                            Days Sales {!daysSales && "*"}
+                          </Label>
+                          <Input
+                            id="daysSales"
+                            type="number"
+                            placeholder="365"
+                            value={daysSales}
+                            onChange={(e) => setDaysSales(e.target.value)}
+                            min="0"
+                            className={!daysSales ? "border-red-300" : ""}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="currentDSODays" className={!currentDSODays ? "text-red-600" : ""}>
+                            Current DSO (Days) {!currentDSODays && "*"}
+                          </Label>
+                          <Input
+                            id="currentDSODays"
+                            type="number"
+                            placeholder="45"
+                            value={currentDSODays}
+                            onChange={(e) => setCurrentDSODays(e.target.value)}
+                            min="0"
+                            className={!currentDSODays ? "border-red-300" : ""}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="debtorsBalance" className={!debtorsBalance ? "text-red-600" : ""}>
+                          Debtors Balance ($) {!debtorsBalance && "*"}
+                        </Label>
+                        <Input
+                          id="debtorsBalance"
+                          type="number"
+                          placeholder="1000000"
+                          value={debtorsBalance}
+                          onChange={(e) => setDebtorsBalance(e.target.value)}
+                          min="0"
+                          className={!debtorsBalance ? "border-red-300" : ""}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Payment Terms */}
+                <AccordionItem value="terms" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Payment Terms</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
                     <div>
-                      <Label htmlFor="interestType">Interest Type</Label>
-                      <Select value={interestType} onValueChange={setInterestType}>
+                      <Label htmlFor="averagePaymentTerms">Average Payment Terms (Days)</Label>
+                      <Select value={averagePaymentTerms} onValueChange={setAveragePaymentTerms}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder="Select terms" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
-                          <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                          <SelectItem value="net7">Net 7</SelectItem>
+                          <SelectItem value="net15">Net 15</SelectItem>
+                          <SelectItem value="net30">Net 30</SelectItem>
+                          <SelectItem value="net45">Net 45</SelectItem>
+                          <SelectItem value="net60">Net 60</SelectItem>
+                          <SelectItem value="net90">Net 90</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="interestRate" className={!interestRate ? "text-red-600" : ""}>
-                        Interest Rate (%) {!interestRate && "*"}
-                      </Label>
-                      <Input
-                        id="interestRate"
-                        type="number"
-                        placeholder="5"
-                        value={interestRate}
-                        onChange={(e) => setInterestRate(e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className={!interestRate ? "border-red-300" : ""}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bad Debt */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <Clock className="h-5 w-5" />
-                    Bad Debt
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="averageBadDebt" className={!averageBadDebt ? "text-red-600" : ""}>
-                        Average Bad Debt (%) {!averageBadDebt && "*"}
-                      </Label>
-                      <Input
-                        id="averageBadDebt"
-                        type="number"
-                        placeholder="0.0355"
-                        value={averageBadDebt}
-                        onChange={(e) => setAverageBadDebt(e.target.value)}
-                        min="0"
-                        step="0.0001"
-                        className={!averageBadDebt ? "border-red-300" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="currentBadDebts" className={!currentBadDebts ? "text-red-600" : ""}>
-                        Current Bad Debts ($) {!currentBadDebts && "*"}
-                      </Label>
-                      <Input
-                        id="currentBadDebts"
-                        type="number"
-                        placeholder="20000"
-                        value={currentBadDebts}
-                        onChange={(e) => setCurrentBadDebts(e.target.value)}
-                        min="0"
-                        className={!currentBadDebts ? "border-red-300" : ""}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expected Savings */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <CheckCircle2 className="h-5 w-5" />
-                    Expected Savings
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="labourSavings" className={!labourSavings ? "text-red-600" : ""}>
-                        Labour Savings (%) {!labourSavings && "*"}
-                      </Label>
-                      <Input
-                        id="labourSavings"
-                        type="number"
-                        placeholder="40"
-                        value={labourSavings}
-                        onChange={(e) => setLabourSavings(e.target.value)}
-                        min="0"
-                        max="100"
-                        className={!labourSavings ? "border-red-300" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="dsoImprovement" className={!dsoImprovement ? "text-red-600" : ""}>
-                        DSO Improvement (%) {!dsoImprovement && "*"}
-                      </Label>
-                      <Input
-                        id="dsoImprovement"
-                        type="number"
-                        placeholder="30"
-                        value={dsoImprovement}
-                        onChange={(e) => setDsoImprovement(e.target.value)}
-                        min="0"
-                        max="100"
-                        className={!dsoImprovement ? "border-red-300" : ""}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Metrics */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <TrendingUp className="h-5 w-5" />
-                    Financial Metrics
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="daysSales" className={!daysSales ? "text-red-600" : ""}>
-                        Days Sales {!daysSales && "*"}
-                      </Label>
-                      <Input
-                        id="daysSales"
-                        type="number"
-                        placeholder="365"
-                        value={daysSales}
-                        onChange={(e) => setDaysSales(e.target.value)}
-                        min="0"
-                        className={!daysSales ? "border-red-300" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="currentDSODays" className={!currentDSODays ? "text-red-600" : ""}>
-                        Current DSO (Days) {!currentDSODays && "*"}
-                      </Label>
-                      <Input
-                        id="currentDSODays"
-                        type="number"
-                        placeholder="45"
-                        value={currentDSODays}
-                        onChange={(e) => setCurrentDSODays(e.target.value)}
-                        min="0"
-                        className={!currentDSODays ? "border-red-300" : ""}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="debtorsBalance" className={!debtorsBalance ? "text-red-600" : ""}>
-                      Debtors Balance ($) {!debtorsBalance && "*"}
-                    </Label>
-                    <Input
-                      id="debtorsBalance"
-                      type="number"
-                      placeholder="1000000"
-                      value={debtorsBalance}
-                      onChange={(e) => setDebtorsBalance(e.target.value)}
-                      min="0"
-                      className={!debtorsBalance ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
-
-                {/* Payment Terms */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <Clock className="h-5 w-5" />
-                    Payment Terms
-                  </h3>
-                  <div>
-                    <Label htmlFor="averagePaymentTerms">Average Payment Terms (Days)</Label>
-                    <Select value={averagePaymentTerms} onValueChange={setAveragePaymentTerms}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select terms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="net7">Net 7</SelectItem>
-                        <SelectItem value="net15">Net 15</SelectItem>
-                        <SelectItem value="net30">Net 30</SelectItem>
-                        <SelectItem value="net45">Net 45</SelectItem>
-                        <SelectItem value="net60">Net 60</SelectItem>
-                        <SelectItem value="net90">Net 90</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
 
                 {/* Team Structure & Growth */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                    <CheckCircle2 className="h-5 w-5" />
-                    Team Structure & Growth
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="numberOfDebtors" className={!numberOfDebtors ? "text-red-600" : ""}>
-                        Number of Debtors {!numberOfDebtors && "*"}
-                      </Label>
-                      <Input
-                        id="numberOfDebtors"
-                        type="number"
-                        placeholder="500"
-                        value={numberOfDebtors}
-                        onChange={(e) => setNumberOfDebtors(e.target.value)}
-                        min="0"
-                        className={!numberOfDebtors ? "border-red-300" : ""}
-                      />
+                <AccordionItem value="team" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                      <span className="font-semibold text-lg text-cyan-600">Team Structure & Growth</span>
+                      {(!numberOfDebtors || !numberOfCollectors || !projectedCustomerGrowth) && (
+                        <span className="ml-2 text-xs text-red-600">*Required</span>
+                      )}
                     </div>
-                    <div>
-                      <Label htmlFor="numberOfCollectors" className={!numberOfCollectors ? "text-red-600" : ""}>
-                        Number of Collectors {!numberOfCollectors && "*"}
-                      </Label>
-                      <Input
-                        id="numberOfCollectors"
-                        type="number"
-                        placeholder="5"
-                        value={numberOfCollectors}
-                        onChange={(e) => setNumberOfCollectors(e.target.value)}
-                        min="0"
-                        className={!numberOfCollectors ? "border-red-300" : ""}
-                      />
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4 pb-2">
+                    <div className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="numberOfDebtors" className={!numberOfDebtors ? "text-red-600" : ""}>
+                            Number of Debtors {!numberOfDebtors && "*"}
+                          </Label>
+                          <Input
+                            id="numberOfDebtors"
+                            type="number"
+                            placeholder="500"
+                            value={numberOfDebtors}
+                            onChange={(e) => setNumberOfDebtors(e.target.value)}
+                            min="0"
+                            className={!numberOfDebtors ? "border-red-300" : ""}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="numberOfCollectors" className={!numberOfCollectors ? "text-red-600" : ""}>
+                            Number of Collectors {!numberOfCollectors && "*"}
+                          </Label>
+                          <Input
+                            id="numberOfCollectors"
+                            type="number"
+                            placeholder="5"
+                            value={numberOfCollectors}
+                            onChange={(e) => setNumberOfCollectors(e.target.value)}
+                            min="0"
+                            className={!numberOfCollectors ? "border-red-300" : ""}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label
+                          htmlFor="projectedCustomerGrowth"
+                          className={!projectedCustomerGrowth ? "text-red-600" : ""}
+                        >
+                          Projected Customer Growth (%) {!projectedCustomerGrowth && "*"}
+                        </Label>
+                        <Input
+                          id="projectedCustomerGrowth"
+                          type="number"
+                          placeholder="50"
+                          value={projectedCustomerGrowth}
+                          onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
+                          min="0"
+                          className={!projectedCustomerGrowth ? "border-red-300" : ""}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="projectedCustomerGrowth" className={!projectedCustomerGrowth ? "text-red-600" : ""}>
-                      Projected Customer Growth (%) {!projectedCustomerGrowth && "*"}
-                    </Label>
-                    <Input
-                      id="projectedCustomerGrowth"
-                      type="number"
-                      placeholder="50"
-                      value={projectedCustomerGrowth}
-                      onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
-                      min="0"
-                      className={!projectedCustomerGrowth ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
