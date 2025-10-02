@@ -9,8 +9,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Calculator, TrendingUp, DollarSign, Clock, Users, HelpCircle, ArrowLeft, ArrowRight } from "lucide-react"
+import {
+  Calculator,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  Users,
+  HelpCircle,
+  ArrowLeft,
+  ArrowRight,
+  Mail,
+  Shield,
+} from "lucide-react"
 import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
+import { sendVerificationCode, verifyCode } from "@/lib/roi-verification"
 import { ROIReportPDF } from "./roi-report-pdf"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
@@ -23,11 +35,17 @@ interface ROICalculatorModalProps {
 
 export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
   const [step, setStep] = useState<
-    "select" | "simple" | "detailed" | "contact" | "simple-results" | "detailed-results"
+    "select" | "simple" | "detailed" | "contact" | "verify-email" | "simple-results" | "detailed-results"
   >("select")
   const [isCalculating, setIsCalculating] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [calculatorType, setCalculatorType] = useState<"simple" | "detailed">("simple")
+
+  // Verification state
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [verificationError, setVerificationError] = useState("")
+  const [isSendingCode, setIsSendingCode] = useState(false)
 
   // Simple calculator state
   const [simpleData, setSimpleData] = useState({
@@ -99,6 +117,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setContactData({ name: "", email: "", phone: "", company: "" })
     setEmailSent(false)
     setCalculatorType("simple")
+    setVerificationCode("")
+    setVerificationError("")
   }
 
   const handleSimpleSubmit = (e?: React.MouseEvent) => {
@@ -162,39 +182,110 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       return
     }
 
-    setIsCalculating(true)
+    setIsSendingCode(true)
+    setVerificationError("")
 
     try {
-      let results
-      if (calculatorType === "simple") {
-        console.log("[v0] Calculating simple ROI with data:", simpleData)
-        results = await calculateSimpleROI(simpleData)
-        console.log("[v0] Simple results:", results)
-        setSimpleResults(results)
-        setStep("simple-results")
-      } else {
-        console.log("[v0] Calculating detailed ROI with data:", detailedData)
-        results = await calculateDetailedROI(detailedData)
-        console.log("[v0] Detailed results:", results)
-        setDetailedResults(results)
-        setStep("detailed-results")
-      }
-
-      await sendROIEmail({
+      const result = await sendVerificationCode({
         name: contactData.name,
         email: contactData.email,
-        company: contactData.company || "",
+        company: contactData.company,
+        phone: contactData.phone,
         calculatorType,
-        results,
         inputs: calculatorType === "simple" ? simpleData : detailedData,
       })
 
-      setEmailSent(true)
+      if (result.success) {
+        setStep("verify-email")
+      } else {
+        alert(result.error || "Failed to send verification code. Please try again.")
+      }
     } catch (error) {
-      console.error("[v0] Error:", error)
-      alert(`Error calculating ROI or sending email: ${error instanceof Error ? error.message : "Please try again."}`)
+      console.error("Error sending verification code:", error)
+      alert("An error occurred. Please try again.")
     } finally {
-      setIsCalculating(false)
+      setIsSendingCode(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setVerificationError("Please enter a valid 6-digit code")
+      return
+    }
+
+    setIsVerifying(true)
+    setVerificationError("")
+
+    try {
+      const result = await verifyCode(contactData.email, verificationCode)
+
+      if (result.success && result.data) {
+        // Email verified successfully, now calculate ROI and send results
+        setIsCalculating(true)
+
+        let results
+        if (calculatorType === "simple") {
+          console.log("[v0] Calculating simple ROI with data:", simpleData)
+          results = await calculateSimpleROI(simpleData)
+          console.log("[v0] Simple results:", results)
+          setSimpleResults(results)
+          setStep("simple-results")
+        } else {
+          console.log("[v0] Calculating detailed ROI with data:", detailedData)
+          results = await calculateDetailedROI(detailedData)
+          console.log("[v0] Detailed results:", results)
+          setDetailedResults(results)
+          setStep("detailed-results")
+        }
+
+        await sendROIEmail({
+          name: contactData.name,
+          email: contactData.email,
+          company: contactData.company || "",
+          calculatorType,
+          results,
+          inputs: calculatorType === "simple" ? simpleData : detailedData,
+        })
+
+        setEmailSent(true)
+        setIsCalculating(false)
+      } else {
+        setVerificationError(result.error || "Invalid verification code")
+      }
+    } catch (error) {
+      console.error("Error verifying code:", error)
+      setVerificationError("An error occurred. Please try again.")
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    setIsSendingCode(true)
+    setVerificationError("")
+    setVerificationCode("")
+
+    try {
+      const result = await sendVerificationCode({
+        name: contactData.name,
+        email: contactData.email,
+        company: contactData.company,
+        phone: contactData.phone,
+        calculatorType,
+        inputs: calculatorType === "simple" ? simpleData : detailedData,
+      })
+
+      if (result.success) {
+        alert("A new verification code has been sent to your email")
+      } else {
+        setVerificationError(result.error || "Failed to resend code")
+      }
+    } catch (error) {
+      console.error("Error resending code:", error)
+      setVerificationError("An error occurred. Please try again.")
+    } finally {
+      setIsSendingCode(false)
     }
   }
 
@@ -225,6 +316,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               {step === "simple" && "Quick ROI calculation based on DSO improvement"}
               {step === "detailed" && "Comprehensive invoice-to-cash analysis"}
               {step === "contact" && "Your contact information to receive results"}
+              {step === "verify-email" && "Verify your email address to view results"}
               {(step === "simple-results" || step === "detailed-results") && "Your ROI analysis results"}
             </DialogDescription>
           </DialogHeader>
@@ -596,8 +688,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-lg mb-2">Almost there!</h3>
                 <p className="text-sm text-gray-700">
-                  Please provide your contact information to see your personalized ROI results. We'll also email you a
-                  detailed report.
+                  Please provide your contact information. We'll send you a verification code to confirm your email
+                  address before showing your personalized ROI results.
                 </p>
               </div>
 
@@ -657,11 +749,74 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </Button>
                 <Button
                   onClick={handleContactSubmit}
-                  disabled={isCalculating}
+                  disabled={isSendingCode}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >
-                  {isCalculating ? "Calculating..." : "View Results"}
-                  {!isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
+                  {isSendingCode ? "Sending Code..." : "Send Verification Code"}
+                  {!isSendingCode && <Mail className="ml-2 h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "verify-email" && (
+            <div className="space-y-6 py-4">
+              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="bg-cyan-100 rounded-full p-4">
+                    <Shield className="h-8 w-8 text-cyan-600" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Check Your Email</h3>
+                <p className="text-sm text-gray-700">
+                  We've sent a 6-digit verification code to <strong>{contactData.email}</strong>
+                </p>
+                <p className="text-xs text-gray-500 mt-2">The code will expire in 10 minutes</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Verification Code *</Label>
+                  <Input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+                      setVerificationCode(value)
+                      setVerificationError("")
+                    }}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest font-mono"
+                    required
+                  />
+                  {verificationError && <p className="text-sm text-red-600 mt-2">{verificationError}</p>}
+                </div>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={isSendingCode}
+                    className="text-sm text-cyan-600 hover:text-cyan-700 underline disabled:opacity-50"
+                  >
+                    {isSendingCode ? "Sending..." : "Resend Code"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep("contact")} className="flex-1" disabled={isVerifying}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleVerifyCode}
+                  disabled={isVerifying || isCalculating || verificationCode.length !== 6}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                >
+                  {isVerifying || isCalculating ? "Verifying..." : "Verify & View Results"}
+                  {!isVerifying && !isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </div>
             </div>
