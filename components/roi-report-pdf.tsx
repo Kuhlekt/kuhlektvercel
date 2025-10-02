@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
+import { useState } from "react"
 
 interface ROIReportPDFProps {
   calculatorType: "simple" | "detailed"
@@ -10,14 +11,38 @@ interface ROIReportPDFProps {
 }
 
 export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFProps) {
-  const handleDownloadPDF = () => {
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) return
+  const [isGenerating, setIsGenerating] = useState(false)
 
-    const siteUrl = typeof window !== "undefined" ? window.location.origin : ""
-    const logoUrl = `${siteUrl}/images/kuhlekt-logo-tm.png`
+  const getImageAsBase64 = async (imagePath: string): Promise<string> => {
+    try {
+      const response = await fetch(imagePath)
+      const blob = await response.blob()
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } catch (error) {
+      console.error("Error loading image:", error)
+      return ""
+    }
+  }
 
-    const htmlContent = `
+  const handleDownloadPDF = async () => {
+    setIsGenerating(true)
+
+    try {
+      // Convert logo to base64
+      const logoBase64 = await getImageAsBase64("/images/kuhlekt-logo-tm.png")
+
+      const printWindow = window.open("", "_blank")
+      if (!printWindow) {
+        setIsGenerating(false)
+        return
+      }
+
+      const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -223,9 +248,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
         </head>
         <body>
           <div class="container">
-            <div class="logo-container">
-              <img src="${logoUrl}" alt="Kuhlekt" class="logo" onerror="this.style.display='none'" />
-            </div>
+            ${
+              logoBase64
+                ? `<div class="logo-container">
+              <img src="${logoBase64}" alt="Kuhlekt" class="logo" />
+            </div>`
+                : '<div class="logo-container"><h2 style="color: #0891b2;">Kuhlekt</h2></div>'
+            }
             
             <div class="header">
               <h1>${calculatorType === "simple" ? "Simple ROI Analysis Report" : "Detailed ROI Analysis Report"}</h1>
@@ -482,22 +511,25 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
       </html>
     `
 
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
 
-    // Wait for images to load before printing
-    printWindow.onload = () => {
+      // Wait a moment for rendering, then print
       setTimeout(() => {
         printWindow.print()
-      }, 250)
+        setIsGenerating(false)
+      }, 500)
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      setIsGenerating(false)
     }
   }
 
   return (
     <div className="flex justify-center">
-      <Button onClick={handleDownloadPDF} variant="outline" className="gap-2 bg-transparent">
+      <Button onClick={handleDownloadPDF} variant="outline" className="gap-2 bg-transparent" disabled={isGenerating}>
         <Download className="h-4 w-4" />
-        Download PDF Report
+        {isGenerating ? "Generating PDF..." : "Download PDF Report"}
       </Button>
     </div>
   )
