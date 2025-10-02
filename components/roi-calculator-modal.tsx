@@ -119,6 +119,25 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     return /^[\d\s\-+()]+$/.test(phone) && phone.replace(/\D/g, "").length >= 10
   }
 
+  const isDetailedFormValid = () => {
+    return (
+      implementationCost &&
+      monthlyCost &&
+      perAnnumDirectLabourCosts &&
+      interestRate &&
+      averageBadDebt &&
+      currentBadDebts &&
+      labourSavings &&
+      dsoImprovement &&
+      daysSales &&
+      currentDSODays &&
+      debtorsBalance &&
+      numberOfDebtors &&
+      numberOfCollectors &&
+      projectedCustomerGrowth
+    )
+  }
+
   const handleContactSubmit = async () => {
     if (!validateEmail(email)) {
       alert("Please enter a valid email address")
@@ -579,22 +598,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <Button
                 onClick={handleInputsNext}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                disabled={
-                  !implementationCost ||
-                  !monthlyCost ||
-                  !perAnnumDirectLabourCosts ||
-                  !interestRate ||
-                  !averageBadDebt ||
-                  !currentBadDebts ||
-                  !labourSavings ||
-                  !dsoImprovement ||
-                  !daysSales ||
-                  !currentDSODays ||
-                  !debtorsBalance ||
-                  !numberOfDebtors ||
-                  !numberOfCollectors ||
-                  !projectedCustomerGrowth
-                }
+                disabled={!isDetailedFormValid()}
               >
                 Continue
               </Button>
