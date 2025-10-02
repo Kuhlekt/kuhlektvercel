@@ -23,6 +23,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Simple calculator inputs
+  const [simpleDSOImprovement, setSimpleDSOImprovement] = useState("30")
+  const [simpleCostOfCapital, setSimpleCostOfCapital] = useState("5")
   const [currentDSO, setCurrentDSO] = useState("")
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
@@ -68,6 +70,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const resetForm = () => {
     setStep("calculator-type")
     setCalculatorType("simple")
+    setSimpleDSOImprovement("30")
+    setSimpleCostOfCapital("5")
     setCurrentDSO("")
     setAverageInvoiceValue("")
     setMonthlyInvoices("")
@@ -131,6 +135,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     const data =
       calculatorType === "simple"
         ? {
+            simpleDSOImprovement: Number.parseFloat(simpleDSOImprovement),
+            simpleCostOfCapital: Number.parseFloat(simpleCostOfCapital),
             currentDSO: Number.parseFloat(currentDSO),
             averageInvoiceValue: Number.parseFloat(averageInvoiceValue),
             monthlyInvoices: Number.parseFloat(monthlyInvoices),
@@ -220,6 +226,35 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         {step === "simple-inputs" && (
           <div className="space-y-6 py-4">
             <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="simpleDSOImprovement">Expected DSO Improvement (%)</Label>
+                  <Input
+                    id="simpleDSOImprovement"
+                    type="number"
+                    placeholder="30"
+                    value={simpleDSOImprovement}
+                    onChange={(e) => setSimpleDSOImprovement(e.target.value)}
+                    min="0"
+                    max="100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Typical improvement: 20-40%</p>
+                </div>
+                <div>
+                  <Label htmlFor="simpleCostOfCapital">Cost of Capital (%)</Label>
+                  <Input
+                    id="simpleCostOfCapital"
+                    type="number"
+                    placeholder="5"
+                    value={simpleCostOfCapital}
+                    onChange={(e) => setSimpleCostOfCapital(e.target.value)}
+                    min="0"
+                    step="0.1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Your annual interest rate</p>
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding)</Label>
                 <Input
@@ -264,7 +299,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <Button
                 onClick={handleInputsNext}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                disabled={!currentDSO || !averageInvoiceValue || !monthlyInvoices}
+                disabled={
+                  !simpleDSOImprovement ||
+                  !simpleCostOfCapital ||
+                  !currentDSO ||
+                  !averageInvoiceValue ||
+                  !monthlyInvoices
+                }
               >
                 Continue
               </Button>
@@ -656,7 +697,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       <p className="font-semibold">New DSO</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{results.newDSO?.toFixed(0)} days</p>
-                    <p className="text-sm text-green-600">30% improvement</p>
+                    <p className="text-sm text-green-600">{results.dsoImprovementPercent}% improvement</p>
                   </div>
                 </div>
               </div>

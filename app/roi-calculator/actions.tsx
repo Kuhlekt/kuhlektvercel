@@ -4,6 +4,8 @@ import { sendEmail } from "@/lib/aws-ses"
 
 interface ROICalculatorData {
   // Simple calculator fields
+  simpleDSOImprovement?: number
+  simpleCostOfCapital?: number
   currentDSO?: number
   averageInvoiceValue?: number
   monthlyInvoices?: number
@@ -38,6 +40,7 @@ interface ROIResults {
   newDSO?: number
   cashReleased?: number
   annualSavings?: number
+  dsoImprovementPercent?: number
 
   // Detailed results
   currentDSO?: number
@@ -65,19 +68,21 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
       const currentDSO = data.currentDSO || 0
       const avgInvoiceValue = data.averageInvoiceValue || 0
       const monthlyInvoices = data.monthlyInvoices || 0
+      const dsoImprovementPercent = (data.simpleDSOImprovement || 30) / 100
+      const costOfCapitalPercent = (data.simpleCostOfCapital || 5) / 100
 
       const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
-      const dsoReduction = 0.3 // 30% reduction
-      const newDSO = currentDSO * (1 - dsoReduction)
+      const newDSO = currentDSO * (1 - dsoImprovementPercent)
       const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
       const cashReleased = currentCashTied - newCashTied
-      const annualSavings = cashReleased * 12 * 0.05 // Assuming 5% cost of capital
+      const annualSavings = cashReleased * 12 * costOfCapitalPercent
 
       results = {
         currentCashTied,
         newDSO,
         cashReleased,
         annualSavings,
+        dsoImprovementPercent: data.simpleDSOImprovement || 30,
       }
     } else {
       // Detailed ROI Calculations (matching the comprehensive calculator)
@@ -200,6 +205,14 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
               <div class="section">
                 <div class="section-title">📊 Input Data</div>
                 <div class="metric">
+                  <span class="label">Expected DSO Improvement:</span>
+                  <span class="value">${data.simpleDSOImprovement}%</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cost of Capital:</span>
+                  <span class="value">${data.simpleCostOfCapital}%</span>
+                </div>
+                <div class="metric">
                   <span class="label">Current DSO:</span>
                   <span class="value">${data.currentDSO} days</span>
                 </div>
@@ -226,7 +239,7 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
                   <span class="value">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">New DSO (30% reduction):</span>
+                  <span class="label">New DSO (${data.simpleDSOImprovement}% reduction):</span>
                   <span class="value">${results.newDSO?.toFixed(0)} days</span>
                 </div>
                 <div class="metric">
