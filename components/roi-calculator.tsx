@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Calculator, TrendingUp, DollarSign, Clock, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Calculator, TrendingUp, DollarSign, Clock } from "lucide-react"
 import { submitROICalculation } from "@/app/roi-calculator/actions"
 
 interface ROICalculatorProps {
@@ -60,7 +60,7 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     const timeSaved = Math.round(hours * 0.8 * 52) // 80% time saved annually
     const hourlyCost = 50 // Average hourly cost
     const laborSavings = timeSaved * hourlyCost
-    const annualSavings = laborSavings + Math.round(cashFlowImprovement * 0.05) // 5% opportunity cost
+    const annualSavings = laborSavings + cashFlowImprovement * 0.05 // 5% opportunity cost
     const roiPercentage = 350 // Average ROI percentage
 
     return {
@@ -88,7 +88,7 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     }
 
     if (!validatePhone(phone)) {
-      setContactError("Please enter a valid phone number (minimum 10 digits)")
+      setContactError("Please enter a valid phone number")
       return
     }
 
@@ -101,7 +101,7 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     // Submit to server
     setSubmitting(true)
     try {
-      const response = await submitROICalculation({
+      await submitROICalculation({
         annualRevenue,
         currentDSO,
         invoicesPerMonth,
@@ -110,10 +110,6 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
         phone,
         results: calculatedResults,
       })
-
-      if (!response.success) {
-        console.error("Failed to submit ROI calculation:", response.error)
-      }
     } catch (error) {
       console.error("Error submitting ROI calculation:", error)
     } finally {
@@ -144,10 +140,6 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     }).format(value)
   }
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("en-US").format(value)
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -160,33 +152,28 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
 
         {step === "inputs" && (
           <div className="space-y-6 py-4">
-            <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-              <p className="text-cyan-900 font-medium flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Calculate your potential return on investment with Kuhlekt's Invoice to Cash automation platform.
-              </p>
-            </div>
+            <p className="text-gray-600">
+              Calculate your potential return on investment with Kuhlekt's Invoice to Cash automation platform.
+            </p>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="revenue" className="text-base font-medium text-gray-900">
-                  Annual Revenue ($) *
+                <Label htmlFor="revenue" className="text-base font-medium">
+                  Annual Revenue ($)
                 </Label>
                 <Input
                   id="revenue"
                   type="number"
-                  placeholder="e.g., 5,000,000"
+                  placeholder="e.g., 5000000"
                   value={annualRevenue}
                   onChange={(e) => setAnnualRevenue(e.target.value)}
-                  className="mt-2 text-lg"
-                  min="0"
+                  className="mt-2"
                 />
-                <p className="text-sm text-gray-500 mt-1">Your company's total annual revenue</p>
               </div>
 
               <div>
-                <Label htmlFor="dso" className="text-base font-medium text-gray-900">
-                  Current DSO (Days Sales Outstanding) *
+                <Label htmlFor="dso" className="text-base font-medium">
+                  Current DSO (Days Sales Outstanding)
                 </Label>
                 <Input
                   id="dso"
@@ -194,15 +181,13 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
                   placeholder="e.g., 45"
                   value={currentDSO}
                   onChange={(e) => setCurrentDSO(e.target.value)}
-                  className="mt-2 text-lg"
-                  min="0"
+                  className="mt-2"
                 />
-                <p className="text-sm text-gray-500 mt-1">Average days to collect payment</p>
               </div>
 
               <div>
-                <Label htmlFor="invoices" className="text-base font-medium text-gray-900">
-                  Invoices Processed Per Month *
+                <Label htmlFor="invoices" className="text-base font-medium">
+                  Invoices Processed Per Month
                 </Label>
                 <Input
                   id="invoices"
@@ -210,15 +195,13 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
                   placeholder="e.g., 500"
                   value={invoicesPerMonth}
                   onChange={(e) => setInvoicesPerMonth(e.target.value)}
-                  className="mt-2 text-lg"
-                  min="0"
+                  className="mt-2"
                 />
-                <p className="text-sm text-gray-500 mt-1">Total number of invoices sent monthly</p>
               </div>
 
               <div>
-                <Label htmlFor="hours" className="text-base font-medium text-gray-900">
-                  Hours Spent on AR Per Week *
+                <Label htmlFor="hours" className="text-base font-medium">
+                  Hours Spent on AR Per Week
                 </Label>
                 <Input
                   id="hours"
@@ -226,40 +209,33 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
                   placeholder="e.g., 20"
                   value={hoursSpentPerWeek}
                   onChange={(e) => setHoursSpentPerWeek(e.target.value)}
-                  className="mt-2 text-lg"
-                  min="0"
+                  className="mt-2"
                 />
-                <p className="text-sm text-gray-500 mt-1">Team hours dedicated to accounts receivable</p>
               </div>
             </div>
 
             <Button
               onClick={handleCalculate}
               disabled={!annualRevenue || !currentDSO || !invoicesPerMonth || !hoursSpentPerWeek}
-              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white text-lg py-6"
+              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white"
               size="lg"
             >
-              Calculate My ROI →
+              Calculate ROI
             </Button>
           </div>
         )}
 
         {step === "contact" && (
           <div className="space-y-6 py-4">
-            <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-5">
-              <h3 className="text-cyan-900 font-semibold text-lg mb-2 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                Almost There!
-              </h3>
-              <p className="text-cyan-800">
-                Please provide your contact information to see your personalized ROI results and receive a detailed
-                report.
+            <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+              <p className="text-cyan-900 font-medium">
+                Please provide your contact information to see your personalized ROI results.
               </p>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="email" className="text-base font-medium text-gray-900">
+                <Label htmlFor="email" className="text-base font-medium">
                   Business Email *
                 </Label>
                 <Input
@@ -268,12 +244,12 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
                   placeholder="your.name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-2 text-lg"
+                  className="mt-2"
                 />
               </div>
 
               <div>
-                <Label htmlFor="phone" className="text-base font-medium text-gray-900">
+                <Label htmlFor="phone" className="text-base font-medium">
                   Phone Number *
                 </Label>
                 <Input
@@ -282,120 +258,97 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
                   placeholder="+1 (555) 123-4567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="mt-2 text-lg"
+                  className="mt-2"
                 />
               </div>
 
-              {contactError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-700 text-sm flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {contactError}
-                  </p>
-                </div>
-              )}
+              {contactError && <p className="text-red-600 text-sm">{contactError}</p>}
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button onClick={() => setStep("inputs")} variant="outline" className="flex-1 text-base py-5">
-                ← Back
+            <div className="flex gap-3">
+              <Button onClick={() => setStep("inputs")} variant="outline" className="flex-1">
+                Back
               </Button>
               <Button
                 onClick={handleSubmitContact}
                 disabled={calculating || submitting}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white text-base py-5"
+                className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
               >
-                {calculating || submitting ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                    Calculating...
-                  </>
-                ) : (
-                  "View My Results →"
-                )}
+                {calculating || submitting ? "Calculating..." : "View Results"}
               </Button>
             </div>
-
-            <p className="text-xs text-gray-500 text-center">
-              By submitting, you agree to receive communications from Kuhlekt about our products and services.
-            </p>
           </div>
         )}
 
         {step === "results" && (
           <div className="space-y-6 py-4">
-            <div className="bg-gradient-to-br from-cyan-600 to-blue-600 rounded-lg p-8 text-white text-center">
-              <h3 className="text-xl font-semibold mb-3">Your Estimated ROI with Kuhlekt</h3>
-              <div className="text-7xl font-bold mb-2">{results.roiPercentage}%</div>
-              <p className="text-cyan-100 text-lg">Average return on investment in the first year</p>
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg p-6 border border-cyan-200">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Potential ROI</h3>
+              <div className="text-5xl font-bold text-cyan-600">{results.roiPercentage}%</div>
+              <p className="text-gray-600 mt-2">Average return on investment in the first year</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-white border-2 border-cyan-200 rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-cyan-100 p-3 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-cyan-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-cyan-100 p-2 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-cyan-600" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">DSO Reduction</h4>
+                  <h4 className="font-semibold text-gray-900">DSO Reduction</h4>
                 </div>
-                <p className="text-4xl font-bold text-gray-900">{results.dsoReduction} days</p>
-                <p className="text-sm text-gray-600 mt-2">Faster cash collection cycle</p>
+                <p className="text-3xl font-bold text-gray-900">{results.dsoReduction} days</p>
+                <p className="text-sm text-gray-600 mt-1">Faster cash collection</p>
               </div>
 
-              <div className="bg-white border-2 border-green-200 rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-green-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-green-100 p-2 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-green-600" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Cash Flow Impact</h4>
+                  <h4 className="font-semibold text-gray-900">Cash Flow Impact</h4>
                 </div>
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(results.cashFlowImprovement)}</p>
-                <p className="text-sm text-gray-600 mt-2">Additional working capital freed up</p>
+                <p className="text-3xl font-bold text-gray-900">{formatCurrency(results.cashFlowImprovement)}</p>
+                <p className="text-sm text-gray-600 mt-1">Additional working capital</p>
               </div>
 
-              <div className="bg-white border-2 border-purple-200 rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-purple-100 p-3 rounded-lg">
-                    <Clock className="h-6 w-6 text-purple-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <Clock className="h-5 w-5 text-purple-600" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Time Saved</h4>
+                  <h4 className="font-semibold text-gray-900">Time Saved</h4>
                 </div>
-                <p className="text-4xl font-bold text-gray-900">{formatNumber(results.timesSaved)} hrs</p>
-                <p className="text-sm text-gray-600 mt-2">Annually on manual AR tasks</p>
+                <p className="text-3xl font-bold text-gray-900">{results.timesSaved} hrs</p>
+                <p className="text-sm text-gray-600 mt-1">Per year on manual tasks</p>
               </div>
 
-              <div className="bg-white border-2 border-amber-200 rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="bg-amber-100 p-3 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-amber-600" />
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-amber-100 p-2 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-amber-600" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Total Annual Savings</h4>
+                  <h4 className="font-semibold text-gray-900">Annual Savings</h4>
                 </div>
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(results.annualSavings)}</p>
-                <p className="text-sm text-gray-600 mt-2">Combined labor and opportunity cost</p>
+                <p className="text-3xl font-bold text-gray-900">{formatCurrency(results.annualSavings)}</p>
+                <p className="text-sm text-gray-600 mt-1">Combined cost reduction</p>
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-              <p className="text-blue-900 text-sm leading-relaxed">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-900 text-sm">
                 <strong>Note:</strong> These calculations are estimates based on industry averages and your inputs.
-                Actual results may vary based on your specific business conditions. Schedule a personalized demo with
-                our team to get a detailed analysis tailored to your organization.
+                Actual results may vary. Schedule a demo to get a personalized analysis from our team.
               </p>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button onClick={handleReset} variant="outline" className="flex-1 text-base py-5 bg-transparent">
+            <div className="flex gap-3">
+              <Button onClick={handleReset} variant="outline" className="flex-1 bg-transparent">
                 Calculate Again
               </Button>
-              <Button asChild className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white text-base py-5">
-                <a href="/demo">Schedule a Demo →</a>
+              <Button asChild className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">
+                <a href="/demo">Schedule a Demo</a>
               </Button>
             </div>
-
-            <p className="text-xs text-gray-500 text-center">
-              A detailed ROI report has been sent to your email address.
-            </p>
           </div>
         )}
       </DialogContent>
