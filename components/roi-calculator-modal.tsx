@@ -26,13 +26,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
 
-  // Detailed calculator inputs (from v0 ROI Calculator)
+  // Detailed calculator inputs
   const [annualRevenue, setAnnualRevenue] = useState("")
+  const [averageOrderValue, setAverageOrderValue] = useState("")
   const [invoicesPerYear, setInvoicesPerYear] = useState("")
   const [averageDSO, setAverageDSO] = useState("")
-  const [percentPastDue, setPercentPastDue] = useState("")
-  const [arStaffCount, setArStaffCount] = useState("")
-  const [avgStaffSalary, setAvgStaffSalary] = useState("")
+  const [collectionCost, setCollectionCost] = useState("")
+  const [badDebtRate, setBadDebtRate] = useState("")
 
   // Contact info
   const [email, setEmail] = useState("")
@@ -48,11 +48,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setAverageInvoiceValue("")
     setMonthlyInvoices("")
     setAnnualRevenue("")
+    setAverageOrderValue("")
     setInvoicesPerYear("")
     setAverageDSO("")
-    setPercentPastDue("")
-    setArStaffCount("")
-    setAvgStaffSalary("")
+    setCollectionCost("")
+    setBadDebtRate("")
     setEmail("")
     setPhone("")
     setResults(null)
@@ -106,12 +106,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           }
         : {
             annualRevenue: Number.parseFloat(annualRevenue),
-            invoicesPerMonth: Number.parseFloat(invoicesPerYear) / 12,
-            averagePaymentDays: Number.parseFloat(averageDSO),
-            arTeamSize: Number.parseFloat(arStaffCount),
-            avgHourlyRate: Number.parseFloat(avgStaffSalary) / 2080,
-            hoursPerWeekOnAR: 40 * Number.parseFloat(arStaffCount),
-            badDebtPercentage: Number.parseFloat(percentPastDue),
+            averageOrderValue: Number.parseFloat(averageOrderValue),
+            invoicesPerYear: Number.parseFloat(invoicesPerYear),
+            averageDSO: Number.parseFloat(averageDSO),
+            collectionCost: Number.parseFloat(collectionCost),
+            badDebtRate: Number.parseFloat(badDebtRate),
             email,
             phone,
             calculatorType,
@@ -167,7 +166,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   </div>
                   <h3 className="font-semibold text-lg">Detailed Analysis</h3>
                 </div>
-                <p className="text-sm text-gray-600">Invoice to Cash comprehensive ROI analysis</p>
+                <p className="text-sm text-gray-600">Comprehensive ROI analysis with all metrics</p>
               </button>
             </div>
           </div>
@@ -229,7 +228,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         )}
 
-        {/* Step 2b: Detailed Calculator Inputs (Invoice to Cash from v0) */}
+        {/* Step 2b: Detailed Calculator Inputs */}
         {step === "detailed-inputs" && (
           <div className="space-y-6 py-4">
             <div className="space-y-4">
@@ -246,11 +245,23 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
+                <Label htmlFor="averageOrderValue">Average Order/Invoice Value ($)</Label>
+                <Input
+                  id="averageOrderValue"
+                  type="number"
+                  placeholder="5000"
+                  value={averageOrderValue}
+                  onChange={(e) => setAverageOrderValue(e.target.value)}
+                  min="0"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="invoicesPerYear">Number of Invoices per Year</Label>
                 <Input
                   id="invoicesPerYear"
                   type="number"
-                  placeholder="5000"
+                  placeholder="2000"
                   value={invoicesPerYear}
                   onChange={(e) => setInvoicesPerYear(e.target.value)}
                   min="0"
@@ -258,7 +269,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
-                <Label htmlFor="averageDSO">Average Days Sales Outstanding (DSO)</Label>
+                <Label htmlFor="averageDSO">Current Average DSO (Days)</Label>
                 <Input
                   id="averageDSO"
                   type="number"
@@ -270,41 +281,29 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
-                <Label htmlFor="percentPastDue">Percent of Invoices Past Due (%)</Label>
+                <Label htmlFor="collectionCost">Annual Collection Cost ($)</Label>
                 <Input
-                  id="percentPastDue"
+                  id="collectionCost"
                   type="number"
-                  placeholder="15"
-                  value={percentPastDue}
-                  onChange={(e) => setPercentPastDue(e.target.value)}
+                  placeholder="150000"
+                  value={collectionCost}
+                  onChange={(e) => setCollectionCost(e.target.value)}
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">Include staff salaries, tools, and overhead</p>
+              </div>
+
+              <div>
+                <Label htmlFor="badDebtRate">Bad Debt Rate (%)</Label>
+                <Input
+                  id="badDebtRate"
+                  type="number"
+                  placeholder="2.5"
+                  value={badDebtRate}
+                  onChange={(e) => setBadDebtRate(e.target.value)}
                   min="0"
                   max="100"
                   step="0.1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="arStaffCount">Number of AR Staff (FTE)</Label>
-                <Input
-                  id="arStaffCount"
-                  type="number"
-                  placeholder="3"
-                  value={arStaffCount}
-                  onChange={(e) => setArStaffCount(e.target.value)}
-                  min="0"
-                  step="0.5"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="avgStaffSalary">Average AR Staff Salary (Annual $)</Label>
-                <Input
-                  id="avgStaffSalary"
-                  type="number"
-                  placeholder="60000"
-                  value={avgStaffSalary}
-                  onChange={(e) => setAvgStaffSalary(e.target.value)}
-                  min="0"
                 />
               </div>
             </div>
@@ -318,11 +317,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 disabled={
                   !annualRevenue ||
+                  !averageOrderValue ||
                   !invoicesPerYear ||
                   !averageDSO ||
-                  !percentPastDue ||
-                  !arStaffCount ||
-                  !avgStaffSalary
+                  !collectionCost ||
+                  !badDebtRate
                 }
               >
                 Continue
@@ -433,19 +432,25 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             ) : (
               <div className="space-y-4">
                 <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg text-center border-2 border-cyan-200">
-                  <p className="text-sm text-gray-600 mb-2">Projected ROI</p>
-                  <p className="text-5xl font-bold text-cyan-600">{results.roi?.toFixed(0)}%</p>
-                  <p className="text-sm text-gray-600 mt-2">Payback in {results.paybackMonths?.toFixed(1)} months</p>
+                  <p className="text-sm text-gray-600 mb-2">Total Annual Benefit</p>
+                  <p className="text-5xl font-bold text-cyan-600">
+                    ${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    ROI: {results.roi?.toFixed(0)}% | Payback: {results.paybackMonths?.toFixed(1)} months
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">DSO Reduction</p>
+                      <p className="font-semibold">DSO Improvement</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{results.dsoReductionDays?.toFixed(0)} days</p>
-                    <p className="text-sm text-gray-600">{results.dsoReduction?.toFixed(0)}% improvement</p>
+                    <p className="text-sm text-gray-600">
+                      From {results.currentDSO} to {results.newDSO?.toFixed(0)} days
+                    </p>
                   </div>
 
                   <div className="bg-white p-4 rounded-lg border">
@@ -461,23 +466,21 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Time Savings</p>
+                      <p className="font-semibold">Cost Savings</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {results.timeSavingsHours?.toLocaleString(undefined, { maximumFractionDigits: 0 })} hrs
+                      ${results.costSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      ${results.timeSavingsDollars?.toLocaleString(undefined, { maximumFractionDigits: 0 })} saved
-                    </p>
+                    <p className="text-sm text-gray-600">Collection efficiency</p>
                   </div>
 
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Total Annual Benefit</p>
+                      <p className="font-semibold">Bad Debt Reduction</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      ${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      ${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                 </div>

@@ -10,12 +10,11 @@ interface ROICalculatorData {
 
   // Detailed calculator fields
   annualRevenue?: number
-  invoicesPerMonth?: number
-  averagePaymentDays?: number
-  arTeamSize?: number
-  avgHourlyRate?: number
-  hoursPerWeekOnAR?: number
-  badDebtPercentage?: number
+  averageOrderValue?: number
+  invoicesPerYear?: number
+  averageDSO?: number
+  collectionCost?: number
+  badDebtRate?: number
 
   // Contact info
   email: string
@@ -31,11 +30,10 @@ interface ROIResults {
   annualSavings?: number
 
   // Detailed results
-  dsoReduction?: number
+  currentDSO?: number
   dsoReductionDays?: number
   cashFlowImprovement?: number
-  timeSavingsHours?: number
-  timeSavingsDollars?: number
+  costSavings?: number
   badDebtReduction?: number
   totalAnnualBenefit?: number
   roi?: number
@@ -72,33 +70,31 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
     } else {
       // Detailed ROI Calculations
       const annualRevenue = data.annualRevenue || 0
-      const invoicesPerMonth = data.invoicesPerMonth || 0
-      const avgPaymentDays = data.averagePaymentDays || 0
-      const arTeamSize = data.arTeamSize || 0
-      const avgHourlyRate = data.avgHourlyRate || 0
-      const hoursPerWeek = data.hoursPerWeekOnAR || 0
-      const badDebtPercentage = data.badDebtPercentage || 0
+      const averageOrderValue = data.averageOrderValue || 0
+      const invoicesPerYear = data.invoicesPerYear || 0
+      const currentDSO = data.averageDSO || 0
+      const collectionCost = data.collectionCost || 0
+      const badDebtRate = data.badDebtRate || 0
 
       // DSO Reduction (30% improvement)
       const dsoReduction = 0.3
-      const dsoReductionDays = avgPaymentDays * dsoReduction
-      const newDSO = avgPaymentDays - dsoReductionDays
+      const dsoReductionDays = currentDSO * dsoReduction
+      const newDSO = currentDSO - dsoReductionDays
 
       // Cash Flow Improvement
       const dailyRevenue = annualRevenue / 365
       const cashFlowImprovement = dailyRevenue * dsoReductionDays
 
-      // Time Savings (80% reduction in manual work)
-      const timeSavingsPercent = 0.8
-      const annualHours = hoursPerWeek * 52 * arTeamSize
-      const timeSavingsHours = annualHours * timeSavingsPercent
-      const timeSavingsDollars = timeSavingsHours * avgHourlyRate
+      // Collection Cost Savings (50% reduction in collection costs)
+      const costSavings = collectionCost * 0.5
 
-      // Bad Debt Reduction (25% improvement)
-      const badDebtReduction = annualRevenue * (badDebtPercentage / 100) * 0.25
+      // Bad Debt Reduction (40% improvement)
+      const annualBadDebt = annualRevenue * (badDebtRate / 100)
+      const badDebtReduction = annualBadDebt * 0.4
 
       // Total Annual Benefit
-      const totalAnnualBenefit = cashFlowImprovement * 0.05 + timeSavingsDollars + badDebtReduction
+      const workingCapitalBenefit = cashFlowImprovement * 0.05 // 5% cost of capital
+      const totalAnnualBenefit = workingCapitalBenefit + costSavings + badDebtReduction
 
       // ROI Calculation (assuming $50k annual cost)
       const estimatedAnnualCost = 50000
@@ -106,11 +102,11 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
       const paybackMonths = (estimatedAnnualCost / totalAnnualBenefit) * 12
 
       results = {
-        dsoReduction: dsoReduction * 100,
+        currentDSO,
+        newDSO,
         dsoReductionDays,
         cashFlowImprovement,
-        timeSavingsHours,
-        timeSavingsDollars,
+        costSavings,
         badDebtReduction,
         totalAnnualBenefit,
         roi,
@@ -217,28 +213,24 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
                   <span class="value">$${data.annualRevenue?.toLocaleString()}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Invoices Per Month:</span>
-                  <span class="value">${data.invoicesPerMonth?.toLocaleString()}</span>
+                  <span class="label">Average Order Value:</span>
+                  <span class="value">$${data.averageOrderValue?.toLocaleString()}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Average Payment Days (DSO):</span>
-                  <span class="value">${data.averagePaymentDays} days</span>
+                  <span class="label">Invoices Per Year:</span>
+                  <span class="value">${data.invoicesPerYear?.toLocaleString()}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">AR Team Size:</span>
-                  <span class="value">${data.arTeamSize} people</span>
+                  <span class="label">Current DSO:</span>
+                  <span class="value">${data.averageDSO} days</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Average Hourly Rate:</span>
-                  <span class="value">$${data.avgHourlyRate?.toFixed(2)}</span>
+                  <span class="label">Annual Collection Cost:</span>
+                  <span class="value">$${data.collectionCost?.toLocaleString()}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Hours/Week on AR:</span>
-                  <span class="value">${data.hoursPerWeekOnAR} hours</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Bad Debt %:</span>
-                  <span class="value">${data.badDebtPercentage}%</span>
+                  <span class="label">Bad Debt Rate:</span>
+                  <span class="value">${data.badDebtRate}%</span>
                 </div>
               </div>
 
@@ -246,37 +238,26 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
                 <div class="section-title">💰 Calculated Results</div>
                 <div class="highlight">
                   <div style="text-align: center;">
-                    <div style="color: #6b7280; margin-bottom: 10px;">Projected ROI</div>
-                    <div class="highlight-value">${results.roi?.toFixed(0)}%</div>
+                    <div style="color: #6b7280; margin-bottom: 10px;">Total Annual Benefit</div>
+                    <div class="highlight-value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div style="color: #6b7280; margin-top: 10px; font-size: 14px;">ROI: ${results.roi?.toFixed(0)}% | Payback: ${results.paybackMonths?.toFixed(1)} months</div>
                   </div>
                 </div>
                 <div class="metric">
-                  <span class="label">DSO Reduction:</span>
-                  <span class="value">${results.dsoReductionDays?.toFixed(0)} days (${results.dsoReduction?.toFixed(0)}%)</span>
+                  <span class="label">DSO Improvement:</span>
+                  <span class="value">${results.dsoReductionDays?.toFixed(0)} days (${results.currentDSO} → ${results.newDSO?.toFixed(0)})</span>
                 </div>
                 <div class="metric">
                   <span class="label">Cash Flow Improvement:</span>
                   <span class="value">$${results.cashFlowImprovement?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Time Savings:</span>
-                  <span class="value">${results.timeSavingsHours?.toLocaleString(undefined, { maximumFractionDigits: 0 })} hours/year</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Labor Cost Savings:</span>
-                  <span class="value">$${results.timeSavingsDollars?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="label">Collection Cost Savings:</span>
+                  <span class="value">$${results.costSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
                   <span class="label">Bad Debt Reduction:</span>
                   <span class="value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Total Annual Benefit:</span>
-                  <span class="value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Payback Period:</span>
-                  <span class="value">${results.paybackMonths?.toFixed(1)} months</span>
                 </div>
               </div>
       `
