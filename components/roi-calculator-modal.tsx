@@ -182,11 +182,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         setStep("detailed-results")
       }
 
-      // Send email with results
       await sendROIEmail({
         name: contactData.name,
         email: contactData.email,
-        company: contactData.company,
+        company: contactData.company || "",
         calculatorType,
         results,
         inputs: calculatorType === "simple" ? simpleData : detailedData,
@@ -739,7 +738,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
                     <div className="text-sm text-gray-600 mb-2">Payback Period</div>
                     <div className="text-4xl font-bold text-red-500 mb-2">
-                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"}
+                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"} months
                     </div>
                     <div className="text-xs text-gray-500">Months</div>
                   </div>

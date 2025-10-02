@@ -170,7 +170,8 @@ export async function sendROIEmail(data: {
   inputs: any
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const emailSubject = `ROI Calculator Results - ${data.company}`
+    const companyName = data.company || "Not Provided"
+    const emailSubject = data.company ? `ROI Calculator Results - ${data.company}` : `ROI Calculator Results`
 
     let emailHtml = `
       <!DOCTYPE html>
@@ -208,10 +209,16 @@ export async function sendROIEmail(data: {
                   <span class="label">Email:</span>
                   <span class="value">${data.email}</span>
                 </div>
+                ${
+                  data.company
+                    ? `
                 <div class="metric">
                   <span class="label">Company:</span>
                   <span class="value">${data.company}</span>
                 </div>
+                `
+                    : ""
+                }
                 <div class="metric">
                   <span class="label">Date:</span>
                   <span class="value">${new Date().toLocaleDateString()}</span>
@@ -351,7 +358,7 @@ export async function sendROIEmail(data: {
       <h2>New ROI Calculator Lead</h2>
       <p><strong>Name:</strong> ${data.name}</p>
       <p><strong>Email:</strong> ${data.email}</p>
-      <p><strong>Company:</strong> ${data.company}</p>
+      ${data.company ? `<p><strong>Company:</strong> ${data.company}</p>` : ""}
       <p><strong>Calculator Type:</strong> ${data.calculatorType}</p>
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
       <hr>
@@ -360,7 +367,7 @@ export async function sendROIEmail(data: {
 
     await sendEmail({
       to: "enquiries@kuhlekt.com",
-      subject: `New ROI Calculator Lead - ${data.company}`,
+      subject: data.company ? `New ROI Calculator Lead - ${data.company}` : `New ROI Calculator Lead - ${data.name}`,
       html: notificationHtml,
       text: `New ROI calculator submission from ${data.name} (${data.email})`,
     })
