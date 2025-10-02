@@ -16,6 +16,7 @@ interface ROICalculatorProps {
 export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
   const [step, setStep] = useState<"inputs" | "contact" | "results">("inputs")
   const [calculating, setCalculating] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Calculator inputs
   const [annualRevenue, setAnnualRevenue] = useState("")
@@ -98,6 +99,7 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     setResults(calculatedResults)
 
     // Submit to server
+    setSubmitting(true)
     try {
       await submitROICalculation({
         annualRevenue,
@@ -110,6 +112,8 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
       })
     } catch (error) {
       console.error("Error submitting ROI calculation:", error)
+    } finally {
+      setSubmitting(false)
     }
 
     setCalculating(false)
@@ -267,10 +271,10 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
               </Button>
               <Button
                 onClick={handleSubmitContact}
-                disabled={calculating}
+                disabled={calculating || submitting}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
               >
-                {calculating ? "Calculating..." : "View Results"}
+                {calculating || submitting ? "Calculating..." : "View Results"}
               </Button>
             </div>
           </div>
