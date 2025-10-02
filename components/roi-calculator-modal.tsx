@@ -20,9 +20,12 @@ interface ROICalculatorModalProps {
 }
 
 export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
-  const [step, setStep] = useState<"select" | "simple" | "detailed" | "simple-results" | "detailed-results">("select")
+  const [step, setStep] = useState<
+    "select" | "simple" | "detailed" | "contact" | "simple-results" | "detailed-results"
+  >("select")
   const [isCalculating, setIsCalculating] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [calculatorType, setCalculatorType] = useState<"simple" | "detailed">("simple")
 
   // Simple calculator state
   const [simpleData, setSimpleData] = useState({
@@ -54,10 +57,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   })
   const [detailedResults, setDetailedResults] = useState<any>(null)
 
-  // Email state
-  const [emailData, setEmailData] = useState({
+  // Contact info
+  const [contactData, setContactData] = useState({
     name: "",
     email: "",
+    phone: "",
     company: "",
   })
   const [emailSent, setEmailSent] = useState(false)
@@ -90,17 +94,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     })
     setSimpleResults(null)
     setDetailedResults(null)
-    setEmailData({ name: "", email: "", company: "" })
+    setContactData({ name: "", email: "", phone: "", company: "" })
     setEmailSent(false)
+    setCalculatorType("simple")
   }
 
-  const handleSimpleCalculate = async (e?: React.MouseEvent) => {
+  const handleSimpleSubmit = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault()
       e.stopPropagation()
     }
 
-    console.log("Simple calculate button clicked!")
+    console.log("Simple form submitted!")
     console.log("Simple data:", simpleData)
 
     if (!simpleData.currentDSO || !simpleData.averageInvoiceValue || !simpleData.monthlyInvoices) {
@@ -108,28 +113,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       return
     }
 
-    setIsCalculating(true)
-
-    try {
-      const results = await calculateSimpleROI(simpleData)
-      console.log("Simple results:", results)
-      setSimpleResults(results)
-      setStep("simple-results")
-    } catch (error) {
-      console.error("Calculate error:", error)
-      alert("Error calculating ROI. Please try again.")
-    } finally {
-      setIsCalculating(false)
-    }
+    setCalculatorType("simple")
+    setStep("contact")
   }
 
-  const handleDetailedCalculate = async (e?: React.MouseEvent) => {
+  const handleDetailedSubmit = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault()
       e.stopPropagation()
     }
 
-    console.log("Detailed calculate button clicked!")
+    console.log("Detailed form submitted!")
     console.log("Detailed data:", detailedData)
 
     // Check all required fields
@@ -156,23 +150,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       return
     }
 
-    setIsCalculating(true)
-
-    try {
-      const results = await calculateDetailedROI(detailedData)
-      console.log("Detailed results:", results)
-      setDetailedResults(results)
-      setStep("detailed-results")
-    } catch (error) {
-      console.error("Calculate error:", error)
-      alert("Error calculating ROI. Please try again.")
-    } finally {
-      setIsCalculating(false)
-    }
+    setCalculatorType("detailed")
+    setStep("contact")
   }
 
-  const handleSendEmail = async () => {
-    if (!emailData.name || !emailData.email || !emailData.company) {
+  const handleContactSubmit = async () => {
+    if (!contactData.name || !contactData.email || !contactData.phone || !contactData.company) {
       alert("Please fill in all contact fields")
       return
     }
@@ -180,17 +163,35 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setIsCalculating(true)
 
     try {
-      const isSimple = step === "simple-results"
+      let results
+      if (calculatorType === "simple") {
+        console.log("Calculating simple ROI with data:", simpleData)
+        results = await calculateSimpleROI(simpleData)
+        console.log("Simple results:", results)
+        setSimpleResults(results)
+        setStep("simple-results")
+      } else {
+        console.log("Calculating detailed ROI with data:", detailedData)
+        results = await calculateDetailedROI(detailedData)
+        console.log("Detailed results:", results)
+        setDetailedResults(results)
+        setStep("detailed-results")
+      }
+
+      // Send email with results
       await sendROIEmail({
-        ...emailData,
-        calculatorType: isSimple ? "simple" : "detailed",
-        results: isSimple ? simpleResults : detailedResults,
-        inputs: isSimple ? simpleData : detailedData,
+        name: contactData.name,
+        email: contactData.email,
+        company: contactData.company,
+        calculatorType,
+        results,
+        inputs: calculatorType === "simple" ? simpleData : detailedData,
       })
+
       setEmailSent(true)
     } catch (error) {
-      console.error("Email error:", error)
-      alert("Error sending email. Please try again.")
+      console.error("Error:", error)
+      alert("Error calculating ROI or sending email. Please try again.")
     } finally {
       setIsCalculating(false)
     }
@@ -216,6 +217,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               {step === "select" && "Choose the calculator that best fits your needs"}
               {step === "simple" && "Quick ROI calculation based on DSO improvement"}
               {step === "detailed" && "Comprehensive invoice-to-cash analysis"}
+              {step === "contact" && "Your contact information to receive results"}
               {(step === "simple-results" || step === "detailed-results") && "Your ROI analysis results"}
             </DialogDescription>
           </DialogHeader>
@@ -316,12 +318,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   Back
                 </Button>
                 <Button
-                  onClick={handleSimpleCalculate}
+                  onClick={handleSimpleSubmit}
                   disabled={isCalculating}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >
-                  {isCalculating ? "Calculating..." : "Calculate ROI"}
-                  {!isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -570,11 +572,89 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   Back
                 </Button>
                 <Button
-                  onClick={handleDetailedCalculate}
+                  onClick={handleDetailedSubmit}
                   disabled={isCalculating}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >
-                  {isCalculating ? "Calculating..." : "Calculate ROI"}
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Contact Information Form */}
+          {step === "contact" && (
+            <div className="space-y-6 py-4">
+              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6">
+                <h3 className="font-semibold text-lg mb-2">Almost there!</h3>
+                <p className="text-sm text-gray-700">
+                  Please provide your contact information to see your personalized ROI results. We'll also email you a
+                  detailed report.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Full Name *</Label>
+                  <Input
+                    type="text"
+                    value={contactData.name}
+                    onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
+                    placeholder="John Smith"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Email Address *</Label>
+                  <Input
+                    type="email"
+                    value={contactData.email}
+                    onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
+                    placeholder="john.smith@company.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Phone Number *</Label>
+                  <Input
+                    type="tel"
+                    value={contactData.phone}
+                    onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
+                    placeholder="+1 (555) 123-4567"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label>Company Name *</Label>
+                  <Input
+                    type="text"
+                    value={contactData.company}
+                    onChange={(e) => setContactData({ ...contactData, company: e.target.value })}
+                    placeholder="Acme Corporation"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(calculatorType === "simple" ? "simple" : "detailed")}
+                  className="flex-1"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleContactSubmit}
+                  disabled={isCalculating}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                >
+                  {isCalculating ? "Calculating..." : "View Results"}
                   {!isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </div>
@@ -584,6 +664,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           {/* Simple Results */}
           {step === "simple-results" && simpleResults && (
             <div className="space-y-6 py-4">
+              {emailSent && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
+                  ✓ Results sent to {contactData.email}
+                </div>
+              )}
+
               <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 text-center">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">Estimated Annual Savings</h3>
                 <div className="text-5xl font-bold text-cyan-600">
@@ -616,42 +702,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
               <ROIReportPDF calculatorType="simple" results={simpleResults} inputs={simpleData} />
 
-              {!emailSent ? (
-                <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                  <h4 className="font-semibold">Get Results via Email</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Input
-                      placeholder="Name"
-                      value={emailData.name}
-                      onChange={(e) => setEmailData({ ...emailData, name: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Email"
-                      type="email"
-                      value={emailData.email}
-                      onChange={(e) => setEmailData({ ...emailData, email: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Company"
-                      value={emailData.company}
-                      onChange={(e) => setEmailData({ ...emailData, company: e.target.value })}
-                      className="md:col-span-2"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSendEmail}
-                    disabled={isCalculating}
-                    className="w-full bg-cyan-600 hover:bg-cyan-700"
-                  >
-                    {isCalculating ? "Sending..." : "Send Results"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
-                  ✓ Results sent! Check your email.
-                </div>
-              )}
-
               <Button variant="outline" onClick={resetAll} className="w-full bg-transparent">
                 Start New Calculation
               </Button>
@@ -661,6 +711,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           {/* Detailed Results */}
           {step === "detailed-results" && detailedResults && (
             <div className="space-y-6 py-4">
+              {emailSent && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
+                  ✓ Results sent to {contactData.email}
+                </div>
+              )}
+
               <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 text-center">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">Total Annual Benefit</h3>
                 <div className="text-5xl font-bold text-cyan-600">
@@ -710,42 +766,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
               <ROIReportPDF calculatorType="detailed" results={detailedResults} inputs={detailedData} />
 
-              {!emailSent ? (
-                <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                  <h4 className="font-semibold">Get Results via Email</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Input
-                      placeholder="Name"
-                      value={emailData.name}
-                      onChange={(e) => setEmailData({ ...emailData, name: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Email"
-                      type="email"
-                      value={emailData.email}
-                      onChange={(e) => setEmailData({ ...emailData, email: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Company"
-                      value={emailData.company}
-                      onChange={(e) => setEmailData({ ...emailData, company: e.target.value })}
-                      className="md:col-span-2"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSendEmail}
-                    disabled={isCalculating}
-                    className="w-full bg-cyan-600 hover:bg-cyan-700"
-                  >
-                    {isCalculating ? "Sending..." : "Send Results"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
-                  ✓ Results sent! Check your email.
-                </div>
-              )}
-
               <Button variant="outline" onClick={resetAll} className="w-full bg-transparent">
                 Start New Calculation
               </Button>
@@ -754,7 +774,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         </DialogContent>
       </Dialog>
 
-      <ROICalculatorHelpModal open={showHelp} onOpenChange={setShowHelp} calculatorType="simple" currentStep={step} />
+      <ROICalculatorHelpModal
+        open={showHelp}
+        onOpenChange={setShowHelp}
+        calculatorType={calculatorType}
+        currentStep={step}
+      />
     </>
   )
 }
