@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2 } from "lucide-react"
+import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { submitROICalculator } from "@/app/roi-calculator/actions"
 
 interface ROICalculatorModalProps {
@@ -21,6 +21,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [step, setStep] = useState<Step>("calculator-type")
   const [calculatorType, setCalculatorType] = useState<CalculatorType>("simple")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
 
   // Simple calculator inputs
   const [simpleDSOImprovement, setSimpleDSOImprovement] = useState("30")
@@ -95,6 +96,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setPhone("")
     setResults(null)
     setIsSubmitting(false)
+    setErrorMessage("")
   }
 
   const handleClose = () => {
@@ -108,6 +110,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleInputsNext = () => {
+    setErrorMessage("")
     setStep("contact")
   }
 
@@ -138,14 +141,35 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     )
   }
 
+  const getMissingFields = () => {
+    const missing: string[] = []
+    if (!implementationCost) missing.push("Implementation Cost")
+    if (!monthlyCost) missing.push("Monthly Cost")
+    if (!perAnnumDirectLabourCosts) missing.push("Per Annum Direct Labour Costs")
+    if (!interestRate) missing.push("Interest Rate")
+    if (!averageBadDebt) missing.push("Average Bad Debt")
+    if (!currentBadDebts) missing.push("Current Bad Debts")
+    if (!labourSavings) missing.push("Labour Savings")
+    if (!dsoImprovement) missing.push("DSO Improvement")
+    if (!daysSales) missing.push("Days Sales")
+    if (!currentDSODays) missing.push("Current DSO")
+    if (!debtorsBalance) missing.push("Debtors Balance")
+    if (!numberOfDebtors) missing.push("Number of Debtors")
+    if (!numberOfCollectors) missing.push("Number of Collectors")
+    if (!projectedCustomerGrowth) missing.push("Projected Customer Growth")
+    return missing
+  }
+
   const handleContactSubmit = async () => {
+    setErrorMessage("")
+
     if (!validateEmail(email)) {
-      alert("Please enter a valid email address")
+      setErrorMessage("Please enter a valid email address")
       return
     }
 
     if (!validatePhone(phone)) {
-      alert("Please enter a valid phone number")
+      setErrorMessage("Please enter a valid phone number (at least 10 digits)")
       return
     }
 
@@ -193,7 +217,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       setResults(response.results)
       setStep("results")
     } else {
-      alert(response.error || "Something went wrong. Please try again.")
+      setErrorMessage(response.error || "Failed to calculate ROI. Please try again.")
     }
   }
 
@@ -335,6 +359,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         {/* Step 2b: Detailed Calculator Inputs */}
         {step === "detailed-inputs" && (
           <div className="space-y-6 py-4">
+            {!isDetailedFormValid() && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Please fill in all required fields:</p>
+                  <ul className="text-xs text-yellow-700 mt-2 space-y-1">
+                    {getMissingFields().map((field) => (
+                      <li key={field}>• {field}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-6">
               {/* Cost Structure */}
               <div className="space-y-4">
@@ -344,7 +382,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="implementationCost">Implementation Cost ($)</Label>
+                    <Label htmlFor="implementationCost" className={!implementationCost ? "text-red-600" : ""}>
+                      Implementation Cost ($) {!implementationCost && "*"}
+                    </Label>
                     <Input
                       id="implementationCost"
                       type="number"
@@ -352,10 +392,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={implementationCost}
                       onChange={(e) => setImplementationCost(e.target.value)}
                       min="0"
+                      className={!implementationCost ? "border-red-300" : ""}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="monthlyCost">Monthly Cost ($)</Label>
+                    <Label htmlFor="monthlyCost" className={!monthlyCost ? "text-red-600" : ""}>
+                      Monthly Cost ($) {!monthlyCost && "*"}
+                    </Label>
                     <Input
                       id="monthlyCost"
                       type="number"
@@ -363,11 +406,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={monthlyCost}
                       onChange={(e) => setMonthlyCost(e.target.value)}
                       min="0"
+                      className={!monthlyCost ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="perAnnumDirectLabourCosts">Per Annum Direct Labour Costs ($)</Label>
+                  <Label
+                    htmlFor="perAnnumDirectLabourCosts"
+                    className={!perAnnumDirectLabourCosts ? "text-red-600" : ""}
+                  >
+                    Per Annum Direct Labour Costs ($) {!perAnnumDirectLabourCosts && "*"}
+                  </Label>
                   <Input
                     id="perAnnumDirectLabourCosts"
                     type="number"
@@ -375,6 +424,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     value={perAnnumDirectLabourCosts}
                     onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
                     min="0"
+                    className={!perAnnumDirectLabourCosts ? "border-red-300" : ""}
                   />
                 </div>
               </div>
@@ -399,7 +449,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                    <Label htmlFor="interestRate" className={!interestRate ? "text-red-600" : ""}>
+                      Interest Rate (%) {!interestRate && "*"}
+                    </Label>
                     <Input
                       id="interestRate"
                       type="number"
@@ -408,6 +460,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       onChange={(e) => setInterestRate(e.target.value)}
                       min="0"
                       step="0.01"
+                      className={!interestRate ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
@@ -421,7 +474,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="averageBadDebt">Average Bad Debt (%)</Label>
+                    <Label htmlFor="averageBadDebt" className={!averageBadDebt ? "text-red-600" : ""}>
+                      Average Bad Debt (%) {!averageBadDebt && "*"}
+                    </Label>
                     <Input
                       id="averageBadDebt"
                       type="number"
@@ -430,10 +485,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       onChange={(e) => setAverageBadDebt(e.target.value)}
                       min="0"
                       step="0.0001"
+                      className={!averageBadDebt ? "border-red-300" : ""}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="currentBadDebts">Current Bad Debts ($)</Label>
+                    <Label htmlFor="currentBadDebts" className={!currentBadDebts ? "text-red-600" : ""}>
+                      Current Bad Debts ($) {!currentBadDebts && "*"}
+                    </Label>
                     <Input
                       id="currentBadDebts"
                       type="number"
@@ -441,6 +499,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={currentBadDebts}
                       onChange={(e) => setCurrentBadDebts(e.target.value)}
                       min="0"
+                      className={!currentBadDebts ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
@@ -454,7 +513,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="labourSavings">Labour Savings (%)</Label>
+                    <Label htmlFor="labourSavings" className={!labourSavings ? "text-red-600" : ""}>
+                      Labour Savings (%) {!labourSavings && "*"}
+                    </Label>
                     <Input
                       id="labourSavings"
                       type="number"
@@ -463,10 +524,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       onChange={(e) => setLabourSavings(e.target.value)}
                       min="0"
                       max="100"
+                      className={!labourSavings ? "border-red-300" : ""}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="dsoImprovement">DSO Improvement (%)</Label>
+                    <Label htmlFor="dsoImprovement" className={!dsoImprovement ? "text-red-600" : ""}>
+                      DSO Improvement (%) {!dsoImprovement && "*"}
+                    </Label>
                     <Input
                       id="dsoImprovement"
                       type="number"
@@ -475,6 +539,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       onChange={(e) => setDsoImprovement(e.target.value)}
                       min="0"
                       max="100"
+                      className={!dsoImprovement ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
@@ -488,7 +553,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="daysSales">Days Sales</Label>
+                    <Label htmlFor="daysSales" className={!daysSales ? "text-red-600" : ""}>
+                      Days Sales {!daysSales && "*"}
+                    </Label>
                     <Input
                       id="daysSales"
                       type="number"
@@ -496,10 +563,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={daysSales}
                       onChange={(e) => setDaysSales(e.target.value)}
                       min="0"
+                      className={!daysSales ? "border-red-300" : ""}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="currentDSODays">Current DSO (Days)</Label>
+                    <Label htmlFor="currentDSODays" className={!currentDSODays ? "text-red-600" : ""}>
+                      Current DSO (Days) {!currentDSODays && "*"}
+                    </Label>
                     <Input
                       id="currentDSODays"
                       type="number"
@@ -507,11 +577,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={currentDSODays}
                       onChange={(e) => setCurrentDSODays(e.target.value)}
                       min="0"
+                      className={!currentDSODays ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="debtorsBalance">Debtors Balance ($)</Label>
+                  <Label htmlFor="debtorsBalance" className={!debtorsBalance ? "text-red-600" : ""}>
+                    Debtors Balance ($) {!debtorsBalance && "*"}
+                  </Label>
                   <Input
                     id="debtorsBalance"
                     type="number"
@@ -519,6 +592,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     value={debtorsBalance}
                     onChange={(e) => setDebtorsBalance(e.target.value)}
                     min="0"
+                    className={!debtorsBalance ? "border-red-300" : ""}
                   />
                 </div>
               </div>
@@ -555,7 +629,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="numberOfDebtors">Number of Debtors</Label>
+                    <Label htmlFor="numberOfDebtors" className={!numberOfDebtors ? "text-red-600" : ""}>
+                      Number of Debtors {!numberOfDebtors && "*"}
+                    </Label>
                     <Input
                       id="numberOfDebtors"
                       type="number"
@@ -563,10 +639,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={numberOfDebtors}
                       onChange={(e) => setNumberOfDebtors(e.target.value)}
                       min="0"
+                      className={!numberOfDebtors ? "border-red-300" : ""}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="numberOfCollectors">Number of Collectors</Label>
+                    <Label htmlFor="numberOfCollectors" className={!numberOfCollectors ? "text-red-600" : ""}>
+                      Number of Collectors {!numberOfCollectors && "*"}
+                    </Label>
                     <Input
                       id="numberOfCollectors"
                       type="number"
@@ -574,11 +653,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       value={numberOfCollectors}
                       onChange={(e) => setNumberOfCollectors(e.target.value)}
                       min="0"
+                      className={!numberOfCollectors ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="projectedCustomerGrowth">Projected Customer Growth (%)</Label>
+                  <Label htmlFor="projectedCustomerGrowth" className={!projectedCustomerGrowth ? "text-red-600" : ""}>
+                    Projected Customer Growth (%) {!projectedCustomerGrowth && "*"}
+                  </Label>
                   <Input
                     id="projectedCustomerGrowth"
                     type="number"
@@ -586,6 +668,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     value={projectedCustomerGrowth}
                     onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
                     min="0"
+                    className={!projectedCustomerGrowth ? "border-red-300" : ""}
                   />
                 </div>
               </div>
@@ -613,6 +696,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <h3 className="text-xl font-semibold mb-2">See Your Results</h3>
               <p className="text-gray-600">Enter your contact information to view your personalized ROI analysis</p>
             </div>
+
+            {errorMessage && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                <p className="text-sm text-red-800">{errorMessage}</p>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
