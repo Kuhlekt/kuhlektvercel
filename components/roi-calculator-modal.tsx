@@ -348,7 +348,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           type="number"
                           value={detailedData.implementationCost}
                           onChange={(e) => setDetailedData({ ...detailedData, implementationCost: e.target.value })}
-                          placeholder="10000"
+                          placeholder="1500"
                         />
                       </div>
                       <div>
@@ -357,7 +357,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           type="number"
                           value={detailedData.monthlyCost}
                           onChange={(e) => setDetailedData({ ...detailedData, monthlyCost: e.target.value })}
-                          placeholder="500"
+                          placeholder="2000"
                         />
                       </div>
                     </div>
@@ -407,7 +407,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           type="number"
                           value={detailedData.interestRate}
                           onChange={(e) => setDetailedData({ ...detailedData, interestRate: e.target.value })}
-                          placeholder="8.5"
+                          placeholder="4.5"
                         />
                       </div>
                     </div>
@@ -717,51 +717,308 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
               )}
 
-              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 text-center">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Total Annual Benefit</h3>
-                <div className="text-5xl font-bold text-cyan-600">
-                  ${detailedResults.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </div>
-                <div className="flex items-center justify-center gap-6 text-sm text-gray-600 mt-2">
-                  <span>ROI: {detailedResults.roi?.toFixed(0)}%</span>
-                  <span>•</span>
-                  <span>Payback: {detailedResults.paybackMonths?.toFixed(1)} months</span>
+              {/* Your Projected ROI Header */}
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6">
+                <h2 className="text-2xl font-bold text-cyan-600 mb-6 flex items-center gap-2">
+                  <Calculator className="h-6 w-6" />
+                  Your Projected ROI
+                </h2>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white border border-cyan-200 rounded-lg p-6 text-center">
+                    <div className="text-sm text-gray-600 mb-2">ROI</div>
+                    <div className="text-4xl font-bold text-cyan-600 mb-2">{detailedResults.roi?.toFixed(1)}%</div>
+                    <div className="text-xs text-gray-500">Return on Investment</div>
+                  </div>
+
+                  <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
+                    <div className="text-sm text-gray-600 mb-2">Payback Period</div>
+                    <div className="text-4xl font-bold text-red-500 mb-2">
+                      {detailedResults.paybackMonths?.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-500">Months</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">DSO Improvement</div>
-                  <div className="text-2xl font-bold">{detailedResults.dsoReductionDays?.toFixed(0)} days</div>
+              {/* Cash Flow Gain Timing */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900 mb-2">Cash Flow Gain Timing</h3>
+                    <p className="text-sm text-blue-800">
+                      To calculate Monthly Cash Flow improvement, please consider the following:
+                    </p>
+                    <p className="text-sm text-blue-800 mt-2">
+                      <strong>Current DSO:</strong> Currently, your Annual Average cash flow is taking{" "}
+                      {detailedResults.currentDSO} days, and you will see that your improved average is{" "}
+                      {detailedResults.newDSO?.toFixed(0)} days.
+                    </p>
+                  </div>
                 </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Working Capital Released</div>
-                  <div className="text-2xl font-bold text-green-600">
+              </div>
+
+              {/* Payment Terms Impact Analysis */}
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-cyan-600" />
+                  Payment Terms Impact Analysis
+                </h3>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-cyan-600">
+                        <th className="text-left py-3 px-4 font-semibold">Payment Terms</th>
+                        <th className="text-left py-3 px-4 font-semibold">Current DSO</th>
+                        <th className="text-left py-3 px-4 font-semibold">Improved DSO</th>
+                        <th className="text-left py-3 px-4 font-semibold">Estimated Gain</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-3 px-4">
+                          <span className="inline-block bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Net 90
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO * 1.2)} days</td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO * 1.2)} days</td>
+                        <td className="py-3 px-4 text-cyan-600 font-semibold">
+                          {Math.round(detailedResults.currentDSO * 1.2 - detailedResults.newDSO * 1.2)} days
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-3 px-4">
+                          <span className="inline-block bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Net 60
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO)} days</td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO)} days</td>
+                        <td className="py-3 px-4 text-cyan-600 font-semibold">
+                          {Math.round(detailedResults.dsoReductionDays)} days
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-4">
+                          <span className="inline-block bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Net 30
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO * 0.8)} days</td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO * 0.8)} days</td>
+                        <td className="py-3 px-4 text-cyan-600 font-semibold">
+                          {Math.round(detailedResults.dsoReductionDays * 0.8)} days
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-4">
+                  Note: Actual DSO by payment term varies based on customer payment behavior. These estimates assume
+                  proportional improvement across all terms.
+                </p>
+              </div>
+
+              {/* Business Growth Without Additional Headcount */}
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4">Business Growth Without Additional Headcount</h3>
+
+                <div className="grid md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-1">Current Capacity</div>
+                    <div className="text-3xl font-bold text-red-600 mb-1">{detailedData.numberOfDebtors}</div>
+                    <div className="text-xs text-gray-500">customers per month</div>
+                  </div>
+
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-1">New Automation</div>
+                    <div className="text-3xl font-bold text-cyan-600 mb-1">{detailedData.numberOfDebtors}</div>
+                    <div className="text-xs text-gray-500">customers per month</div>
+                  </div>
+                </div>
+
+                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-6">
+                  <div className="text-sm text-gray-600 mb-1">Additional Capacity (No New Hires)</div>
+                  <div className="text-3xl font-bold text-cyan-600 mb-1">
+                    +
+                    {Math.round(
+                      Number.parseFloat(detailedData.numberOfDebtors) *
+                        (Number.parseFloat(detailedData.labourSavings) / 100),
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">customers per month</div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2 mb-3">
+                    <Users className="h-5 w-5 text-green-600 mt-0.5" />
+                    <h4 className="font-semibold text-green-900">
+                      Growth Scenario: {detailedData.projectedCustomerGrowth}% Customer Increase
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-xs text-gray-600 mb-1">Current Customers</div>
+                      <div className="text-2xl font-bold text-green-600">{detailedData.numberOfDebtors}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-600 mb-1">Additional Customers</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {Math.round(
+                          Number.parseFloat(detailedData.numberOfDebtors) *
+                            (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100),
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-600 mb-1">Additional Revenue Boost</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        $
+                        {Math.round(
+                          ((Number.parseFloat(detailedData.debtorsBalance) / 365) *
+                            365 *
+                            (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100)) /
+                            1000,
+                        )}
+                        k
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-600 mt-3">
+                    Without automation, you'd need to hire{" "}
+                    {Math.ceil(
+                      (Number.parseFloat(detailedData.numberOfDebtors) *
+                        (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100)) /
+                        (Number.parseFloat(detailedData.numberOfDebtors) /
+                          Number.parseFloat(detailedData.numberOfCollectors)),
+                    )}{" "}
+                    additional collector(s) to handle this growth. With Kuhlekt, your existing team can manage this
+                    increased volume.
+                  </p>
+                </div>
+              </div>
+
+              {/* Savings Assumptions */}
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-cyan-600" />
+                  Savings Assumptions
+                </h3>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 text-center">
+                    <div className="text-sm text-gray-600 mb-2">DSO Improvement</div>
+                    <div className="text-4xl font-bold text-cyan-600 mb-1">{detailedData.dsoImprovement}%</div>
+                    <div className="text-xs text-gray-500">Expected reduction in collection time</div>
+                  </div>
+
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-sm text-gray-600 mb-2">Labour Savings</div>
+                    <div className="text-4xl font-bold text-red-500 mb-1">{detailedData.labourSavings}%</div>
+                    <div className="text-xs text-gray-500">Reduction in manual collection effort</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Impact */}
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-cyan-600" />
+                  Financial Impact
+                </h3>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="font-medium">Annual Recurring Savings</span>
+                    <span className="text-xl font-bold text-green-600">
+                      ${detailedResults.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-lg">
+                    <span className="font-medium">One-Time Cash Flow Improvement</span>
+                    <span className="text-xl font-bold text-cyan-600">
+                      ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="font-medium">Monthly Operational Savings</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      ${Math.round(detailedResults.totalAnnualBenefit / 12).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <span className="font-medium">Total First Year Investment</span>
+                    <span className="text-xl font-bold text-red-600">
+                      $
+                      {detailedResults.totalImplementationAndAnnualCost?.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DSO Improvement */}
+              <div className="border rounded-lg p-6 bg-white">
+                <h3 className="text-lg font-semibold mb-4">DSO Improvement</h3>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-sm text-gray-600 mb-2">Current DSO</div>
+                    <div className="text-3xl font-bold text-red-600 mb-1">{detailedResults.currentDSO}</div>
+                    <div className="text-xs text-gray-500">days</div>
+                  </div>
+
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 text-center">
+                    <div className="text-sm text-gray-600 mb-2">Improved DSO</div>
+                    <div className="text-3xl font-bold text-cyan-600 mb-1">{Math.round(detailedResults.newDSO)}</div>
+                    <div className="text-xs text-gray-500">days</div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-sm text-gray-600 mb-2">Improvement</div>
+                    <div className="text-3xl font-bold text-green-600 mb-1">
+                      {Math.round(detailedResults.dsoReductionDays)}
+                    </div>
+                    <div className="text-xs text-gray-500">days</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 text-cyan-900">Summary</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  By implementing the Invoice-to-cash solution with automation, you can expect to achieve a{" "}
+                  <strong className="text-cyan-600">{detailedData.dsoImprovement}% improvement</strong> in your DSO,
+                  freeing up{" "}
+                  <strong className="text-cyan-600">
                     ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Interest Savings</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    ${detailedResults.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Labour Savings</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    ${detailedResults.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Bad Debt Reduction</div>
-                  <div className="text-2xl font-bold text-green-600">
+                  </strong>{" "}
+                  in working capital. Your DSO would improve from <strong>{detailedResults.currentDSO} days</strong> to
+                  approximately <strong>{Math.round(detailedResults.newDSO)} days</strong>, significantly improving your
+                  cash flow position.
+                </p>
+                <p className="text-sm text-gray-700 leading-relaxed mt-3">
+                  Additionally, your team will benefit from{" "}
+                  <strong className="text-cyan-600">{detailedData.labourSavings}% labour savings</strong> through
+                  automation, allowing them to focus on higher-value activities without adding headcount. The system
+                  will help reduce bad debt by <strong className="text-cyan-600">40%</strong> through earlier
+                  intervention and better payment tracking, saving an estimated{" "}
+                  <strong className="text-cyan-600">
                     ${detailedResults.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">ROI</div>
-                  <div className="text-2xl font-bold text-cyan-600">{detailedResults.roi?.toFixed(0)}%</div>
-                </div>
+                  </strong>{" "}
+                  annually.
+                </p>
               </div>
 
               <ROIReportPDF calculatorType="detailed" results={detailedResults} inputs={detailedData} />

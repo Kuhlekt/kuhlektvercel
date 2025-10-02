@@ -121,6 +121,39 @@ export function ROICalculatorHelpModal({
                         </li>
                       </ul>
                     </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Additional Analysis Sections:</h4>
+                      <ul className="space-y-2 text-sm text-blue-800">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 mt-1">•</span>
+                          <span>
+                            <strong>Payment Terms Impact Analysis:</strong> Compare how different payment terms (Net 30,
+                            Net 60, Net 90) affect your DSO and estimated gains
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 mt-1">•</span>
+                          <span>
+                            <strong>Business Growth Without Additional Headcount:</strong> See how automation enables
+                            you to handle more customers without hiring additional staff
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 mt-1">•</span>
+                          <span>
+                            <strong>Visual Charts:</strong> Investment vs Annual Savings, Cumulative Savings Over Time,
+                            and DSO Comparison graphs
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 mt-1">•</span>
+                          <span>
+                            <strong>Comprehensive Summary:</strong> Detailed breakdown of all financial impacts and
+                            benefits
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
                   </>
                 )}
               </AccordionContent>
@@ -497,6 +530,53 @@ export function ROICalculatorHelpModal({
                           300% and Payback = 3 months
                         </p>
                       </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">7. Payment Terms Impact Analysis</h4>
+                        <p className="text-sm text-gray-700 mb-2">
+                          Shows how different payment terms affect your cash flow:
+                        </p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          For each payment term (Net 30, Net 60, Net 90):
+                          <br />
+                          Current DSO = Base DSO + Payment Term Days
+                          <br />
+                          Improved DSO = Current DSO × (1 - DSO Improvement %)
+                          <br />
+                          Estimated Gain = (Current DSO - Improved DSO) × Daily Revenue
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          This helps you understand which payment terms offer the greatest improvement opportunity.
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">
+                          8. Business Growth Without Additional Headcount
+                        </h4>
+                        <p className="text-sm text-gray-700 mb-2">Calculate capacity gains from automation:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Current Capacity = Number of Debtors / Number of Collectors
+                          <br />
+                          Automation Efficiency = Labour Savings % (e.g., 40%)
+                          <br />
+                          New Capacity = Current Capacity / (1 - Automation Efficiency)
+                          <br />
+                          Additional Capacity = New Capacity - Current Capacity
+                          <br />
+                          <br />
+                          For 50% Growth Scenario:
+                          <br />
+                          Additional Customers = Current Debtors × 0.50
+                          <br />
+                          Additional Revenue = Additional Customers × Average Revenue per Customer
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          <strong>Example:</strong> If you currently manage 500 customers with 5 collectors (100 each),
+                          and automation provides 40% efficiency, you could handle 833 customers with the same team - an
+                          additional 333 customers without new hires.
+                        </p>
+                      </div>
                     </div>
                   </>
                 )}
@@ -587,6 +667,22 @@ export function ROICalculatorHelpModal({
                       </p>
                     </div>
                   </div>
+
+                  {calculatorType === "detailed" && (
+                    <div className="flex items-start gap-3">
+                      <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        6
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Review All Report Sections</h4>
+                        <p className="text-sm text-gray-600">
+                          The detailed report includes Payment Terms Impact Analysis and Business Growth projections.
+                          Review these sections to understand how automation enables scalability and optimizes different
+                          payment term scenarios.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mt-4">
