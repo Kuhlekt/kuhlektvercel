@@ -10,6 +10,7 @@ import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2, Alert
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { submitROICalculator } from "@/app/roi-calculator/actions"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
+import { ROIReportPDF } from "./roi-report-pdf"
 
 interface ROICalculatorModalProps {
   isOpen: boolean
@@ -148,6 +149,37 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     if (!numberOfCollectors) missing.push("Number of Collectors")
     if (!projectedCustomerGrowth) missing.push("Projected Customer Growth")
     return missing
+  }
+
+  const getInputs = () => {
+    if (calculatorType === "simple") {
+      return {
+        simpleDSOImprovement,
+        simpleCostOfCapital,
+        currentDSO,
+        averageInvoiceValue,
+        monthlyInvoices,
+      }
+    } else {
+      return {
+        implementationCost,
+        monthlyCost,
+        perAnnumDirectLabourCosts,
+        interestType,
+        interestRate,
+        averageBadDebt,
+        currentBadDebts,
+        labourSavings,
+        dsoImprovement,
+        daysSales,
+        currentDSODays,
+        debtorsBalance,
+        averagePaymentTerms,
+        numberOfDebtors,
+        numberOfCollectors,
+        projectedCustomerGrowth,
+      }
+    }
   }
 
   const handleContactSubmit = async () => {
@@ -912,6 +944,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   </div>
                 </div>
               )}
+
+              {/* PDF Download Button */}
+              <div className="pt-4">
+                <ROIReportPDF calculatorType={calculatorType} results={results} inputs={getInputs()} />
+              </div>
 
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={resetForm} className="flex-1 bg-transparent">
