@@ -1,130 +1,163 @@
-"use server"
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
-import { sendEmail } from "@/lib/aws-ses"
-
-// In-memory store for verification codes
-// In production, you might want to use Redis or a database
-const verificationCodes = new Map<
+// In-memory store for verification codes (in production, use Redis or database)
+const verificationStore = new Map<
   string,
   {
     code: string
-    expiresAt: number
+    timestamp: number
     data: any
   }
 >()
 
-// Clean up expired codes every 5 minutes
-setInterval(
-  () => {
-    const now = Date.now()
-    for (const [email, data] of verificationCodes.entries()) {
-      if (data.expiresAt < now) {
-        verificationCodes.delete(email)
-      }
-    }
-  },
-  5 * 60 * 1000,
-)
+// Code expiration time (10 minutes)
+const CODE_EXPIRATION_MS = 10 * 60 * 1000
 
-function generateCode(): string {
+// Initialize SES client
+const sesClient = new SESClient({
+  region: process.env.AWS_SES_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
+  },
+})
+
+// Generate a 6-digit verification code
+function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Clean up expired codes
+function cleanupExpiredCodes() {
+  const now = Date.now()
+  for (const [email, data] of verificationStore.entries()) {
+    if (now - data.timestamp > CODE_EXPIRATION_MS) {
+      verificationStore.delete(email)
+      console.log(`[v0] Cleaned up expired code for ${email}`)
+    }
+  }
 }
 
 export async function sendVerificationCode(data: {
   name: string
   email: string
-  company: string
+  company?: string
   phone: string
-  calculatorType: "simple" | "detailed"
+  calculatorType: string
   inputs: any
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    // Generate 6-digit code
-    const code = generateCode()
-    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
+    console.log("[v0] Starting verification code send process")
+    console.log("[v0] Email:", data.email)
+    console.log("[v0] Calculator type:", data.calculatorType)
 
-    // Store code with user data
-    verificationCodes.set(data.email.toLowerCase(), {
+    // Clean up expired codes first
+    cleanupExpiredCodes()
+
+    // Generate verification code
+    const code = generateVerificationCode()
+    console.log("[v0] Generated verification code:", code)
+
+    // Store the code with user data
+    verificationStore.set(data.email.toLowerCase(), {
       code,
-      expiresAt,
+      timestamp: Date.now(),
       data,
     })
+    console.log("[v0] Stored verification code in memory")
 
-    // Send verification email
+    // Prepare email content
     const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9fafb; padding: 40px 30px; border-radius: 0 0 8px 8px; }
-            .code-box { background: white; border: 3px solid #0891b2; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
-            .code { font-size: 48px; font-weight: bold; color: #0891b2; letter-spacing: 8px; font-family: 'Courier New', monospace; }
-            .info-box { background: #ecfeff; border-left: 4px solid #0891b2; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+            .header { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .code-box { background: white; border: 2px solid #06b6d4; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+            .code { font-size: 36px; font-weight: bold; color: #06b6d4; letter-spacing: 8px; font-family: monospace; }
+            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">🔐 Email Verification</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Kuhlekt ROI Calculator</p>
+              <h1 style="margin: 0;">Kuhlekt ROI Calculator</h1>
+              <p style="margin: 10px 0 0 0;">Email Verification</p>
             </div>
             <div class="content">
-              <p style="font-size: 16px; margin-bottom: 20px;">Hi ${data.name},</p>
+              <p>Hi ${data.name},</p>
+              <p>Thank you for using our ROI Calculator! To view your personalized results, please verify your email address using the code below:</p>
               
-              <p style="font-size: 16px; margin-bottom: 20px;">
-                Thank you for using the Kuhlekt ROI Calculator! To view your personalized results, please verify your email address using the code below:
-              </p>
-
               <div class="code-box">
-                <div style="color: #6b7280; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</div>
                 <div class="code">${code}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 15px;">This code will expire in 10 minutes</div>
               </div>
-
-              <div class="info-box">
-                <p style="margin: 0; font-size: 14px;">
-                  <strong>⏰ Important:</strong> This verification code is valid for 10 minutes only. If it expires, you can request a new code from the calculator.
-                </p>
+              
+              <p><strong>This code will expire in 10 minutes.</strong></p>
+              
+              <p>If you didn't request this code, you can safely ignore this email.</p>
+              
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
               </div>
-
-              <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-                If you didn't request this code, you can safely ignore this email.
-              </p>
-
-              <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                <p style="font-size: 14px; color: #6b7280; margin: 5px 0;">
-                  <strong>What happens next?</strong>
-                </p>
-                <ol style="font-size: 14px; color: #6b7280; margin: 10px 0; padding-left: 20px;">
-                  <li>Enter the verification code in the calculator</li>
-                  <li>View your personalized ROI analysis</li>
-                  <li>Receive a detailed PDF report via email</li>
-                </ol>
-              </div>
-            </div>
-            <div class="footer">
-              <p style="margin: 5px 0;"><strong>Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
-              <p style="margin: 5px 0;">Visit us at <a href="https://kuhlekt.com" style="color: #0891b2; text-decoration: none;">kuhlekt.com</a></p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    await sendEmail({
-      to: data.email,
-      subject: `Your Kuhlekt ROI Calculator Verification Code: ${code}`,
-      html: emailHtml,
-      text: `Your Kuhlekt ROI Calculator verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, you can safely ignore this email.`,
+    const emailText = `
+Hi ${data.name},
+
+Thank you for using our ROI Calculator! To view your personalized results, please verify your email address using the code below:
+
+Verification Code: ${code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, you can safely ignore this email.
+
+© ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+    `
+
+    // Send email via AWS SES
+    console.log("[v0] Preparing to send email via AWS SES")
+    console.log("[v0] From email:", process.env.AWS_SES_FROM_EMAIL)
+    console.log("[v0] To email:", data.email)
+
+    const command = new SendEmailCommand({
+      Source: process.env.AWS_SES_FROM_EMAIL,
+      Destination: {
+        ToAddresses: [data.email],
+      },
+      Message: {
+        Subject: {
+          Data: "Your Kuhlekt ROI Calculator Verification Code",
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: emailHtml,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: emailText,
+            Charset: "UTF-8",
+          },
+        },
+      },
     })
+
+    const response = await sesClient.send(command)
+    console.log("[v0] SES response:", response)
+    console.log("[v0] Email sent successfully!")
 
     return { success: true }
   } catch (error) {
-    console.error("Error sending verification code:", error)
+    console.error("[v0] Error sending verification code:", error)
+    console.error("[v0] Error details:", JSON.stringify(error, null, 2))
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to send verification code",
@@ -137,40 +170,56 @@ export async function verifyCode(
   code: string,
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
-    const stored = verificationCodes.get(email.toLowerCase())
+    console.log("[v0] Starting code verification")
+    console.log("[v0] Email:", email)
+    console.log("[v0] Code:", code)
+
+    // Clean up expired codes first
+    cleanupExpiredCodes()
+
+    const stored = verificationStore.get(email.toLowerCase())
+    console.log("[v0] Stored data found:", !!stored)
 
     if (!stored) {
+      console.log("[v0] No verification code found for this email")
       return {
         success: false,
-        error: "Verification code not found or expired. Please request a new code.",
+        error: "No verification code found. Please request a new code.",
       }
     }
 
-    if (stored.expiresAt < Date.now()) {
-      verificationCodes.delete(email.toLowerCase())
+    // Check if code has expired
+    const now = Date.now()
+    if (now - stored.timestamp > CODE_EXPIRATION_MS) {
+      verificationStore.delete(email.toLowerCase())
+      console.log("[v0] Code has expired")
       return {
         success: false,
         error: "Verification code has expired. Please request a new code.",
       }
     }
 
+    // Verify the code
     if (stored.code !== code) {
+      console.log("[v0] Code mismatch")
       return {
         success: false,
-        error: "Invalid verification code. Please check and try again.",
+        error: "Invalid verification code. Please try again.",
       }
     }
 
-    // Code is valid, return the stored data and clean up
+    console.log("[v0] Code verified successfully!")
+
+    // Return the stored data and remove from store
     const userData = stored.data
-    verificationCodes.delete(email.toLowerCase())
+    verificationStore.delete(email.toLowerCase())
 
     return {
       success: true,
       data: userData,
     }
   } catch (error) {
-    console.error("Error verifying code:", error)
+    console.error("[v0] Error verifying code:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to verify code",

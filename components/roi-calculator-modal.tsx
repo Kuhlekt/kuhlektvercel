@@ -22,7 +22,6 @@ import {
   Shield,
 } from "lucide-react"
 import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
-import { sendVerificationCode, verifyCode } from "@/lib/roi-verification"
 import { ROIReportPDF } from "./roi-report-pdf"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
@@ -186,14 +185,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setVerificationError("")
 
     try {
-      const result = await sendVerificationCode({
-        name: contactData.name,
-        email: contactData.email,
-        company: contactData.company,
-        phone: contactData.phone,
-        calculatorType,
-        inputs: calculatorType === "simple" ? simpleData : detailedData,
+      const response = await fetch("/api/send-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: contactData.name,
+          email: contactData.email,
+          company: contactData.company,
+          phone: contactData.phone,
+          calculatorType,
+          inputs: calculatorType === "simple" ? simpleData : detailedData,
+        }),
       })
+
+      const result = await response.json()
 
       if (result.success) {
         setStep("verify-email")
@@ -218,7 +225,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setVerificationError("")
 
     try {
-      const result = await verifyCode(contactData.email, verificationCode)
+      const response = await fetch("/api/verify-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: contactData.email,
+          code: verificationCode,
+        }),
+      })
+
+      const result = await response.json()
 
       if (result.success && result.data) {
         // Email verified successfully, now calculate ROI and send results
@@ -267,14 +285,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setVerificationCode("")
 
     try {
-      const result = await sendVerificationCode({
-        name: contactData.name,
-        email: contactData.email,
-        company: contactData.company,
-        phone: contactData.phone,
-        calculatorType,
-        inputs: calculatorType === "simple" ? simpleData : detailedData,
+      const response = await fetch("/api/send-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: contactData.name,
+          email: contactData.email,
+          company: contactData.company,
+          phone: contactData.phone,
+          calculatorType,
+          inputs: calculatorType === "simple" ? simpleData : detailedData,
+        }),
       })
+
+      const result = await response.json()
 
       if (result.success) {
         alert("A new verification code has been sent to your email")
