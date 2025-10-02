@@ -15,7 +15,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
     if (!printWindow) return
 
     const siteUrl = typeof window !== "undefined" ? window.location.origin : ""
-    const logoUrl = `${siteUrl}/images/kuhlekt-logo-transparent.png`
+    const logoUrl = `${siteUrl}/images/kuhlekt-logo-tm.png`
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -51,7 +51,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             }
             
             .logo {
-              max-width: 300px;
+              max-width: 250px;
               height: auto;
             }
             
@@ -224,7 +224,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
         <body>
           <div class="container">
             <div class="logo-container">
-              <img src="${logoUrl}" alt="Kuhlekt" class="logo" />
+              <img src="${logoUrl}" alt="Kuhlekt" class="logo" onerror="this.style.display='none'" />
             </div>
             
             <div class="header">
