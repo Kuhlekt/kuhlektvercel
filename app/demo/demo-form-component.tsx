@@ -1,14 +1,14 @@
 "use client"
-import { useState } from "react"
-import { useFormState } from "react-dom"
+
+import type React from "react"
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, TrendingUp, Shield, Clock } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
 import ReCAPTCHA from "@/components/recaptcha"
-import { submitDemoForm } from "./actions"
 
 interface DemoFormState {
   success: boolean
@@ -31,18 +31,78 @@ const initialState: DemoFormState = {
 }
 
 export default function DemoFormComponent() {
-  const [state, formAction] = useFormState(submitDemoForm, initialState)
-  const [isPending, setIsPending] = useState(false)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const [state, setState] = useState<DemoFormState>(initialState)
+  const [isPending, startTransition] = useTransition()
 
-  const handleSubmit = async (formData: FormData) => {
-    if (!recaptchaToken) {
-      return
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+
+    console.log("[v0] Form submission started")
+    const recaptchaToken = formData.get("recaptcha-token")
+    console.log("[v0] reCAPTCHA token from form:", recaptchaToken ? "present" : "missing")
+
+    startTransition(() => {
+      setState({ ...initialState, message: "Submitting..." })
+    })
+
+    try {
+      console.log("[v0] Making fetch request to /api/demo")
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        body: formData,
+      }).catch((fetchError) => {
+        console.error("[v0] Fetch error caught:", fetchError)
+        throw new Error("Network error occurred")
+      })
+
+      console.log("[v0] Fetch response received:", response?.status)
+
+      if (!response) {
+        throw new Error("No response received")
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      console.log("[v0] Parsing JSON response")
+      const result = await response.json().catch((jsonError) => {
+        console.error("[v0] JSON parsing error:", jsonError)
+        throw new Error("Invalid response format")
+      })
+
+      console.log("[v0] JSON response parsed:", result)
+
+      if (!result) {
+        throw new Error("Empty response received")
+      }
+
+      startTransition(() => {
+        setState(result)
+      })
+
+      // Clear form if successful and shouldClearForm is true
+      if (result.success && result.shouldClearForm) {
+        const form = event.currentTarget
+        if (form) {
+          form.reset()
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Form submission error:", error)
+      startTransition(() => {
+        setState({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "There was an error submitting your demo request. Please try again.",
+          errors: {},
+          shouldClearForm: false,
+        })
+      })
     }
-    formData.append("recaptchaToken", recaptchaToken)
-    setIsPending(true)
-    await formAction(formData)
-    setIsPending(false)
   }
 
   return (
@@ -66,12 +126,10 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">
-                        First Name <span className="text-red-500">*</span>
-                      </Label>
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input
                         id="firstName"
                         name="firstName"
@@ -83,9 +141,7 @@ export default function DemoFormComponent() {
                       {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">
-                        Last Name <span className="text-red-500">*</span>
-                      </Label>
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input
                         id="lastName"
                         name="lastName"
@@ -99,9 +155,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">
-                      Business Email <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="email">Business Email *</Label>
                     <Input
                       id="email"
                       name="email"
@@ -114,9 +168,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="company">
-                      Company Name <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="company">Company Name *</Label>
                     <Input
                       id="company"
                       name="company"
@@ -129,9 +181,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">
-                      Phone Number <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="phone">Phone Number *</Label>
                     <Input
                       id="phone"
                       name="phone"
@@ -143,16 +193,30 @@ export default function DemoFormComponent() {
                     {state.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
                   </div>
 
-                  <ReCAPTCHA onVerify={setRecaptchaToken} />
+                  <ReCAPTCHA />
                   {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
 
-                  <Button type="submit" className="w-full" disabled={isPending || !recaptchaToken} size="lg">
-                    {isPending ? "Submitting..." : "Schedule Demo"}
+                  <Button type="submit" className="w-full" disabled={isPending}>
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Scheduling Demo...
+                      </>
+                    ) : (
+                      "Schedule Demo"
+                    )}
                   </Button>
 
-                  {state?.message && (
-                    <Alert variant={state.success ? "default" : "destructive"}>
-                      <AlertDescription>{state.message}</AlertDescription>
+                  {state.message && (
+                    <Alert className={state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
+                      {state.success ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
+                        {state.message}
+                      </AlertDescription>
                     </Alert>
                   )}
                 </form>

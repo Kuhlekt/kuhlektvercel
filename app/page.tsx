@@ -1,25 +1,19 @@
-"use client"
-
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star, Calculator } from "lucide-react"
+import { CheckCircle, Star } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
-import { Suspense, useState } from "react"
-import { ROICalculatorModal } from "@/components/roi-calculator-modal"
+import { ROICalculatorButton } from "@/components/roi-calculator"
+import { Suspense } from "react"
 
 export default function HomePage() {
-  const [isROIModalOpen, setIsROIModalOpen] = useState(false)
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Suspense fallback={null}>
         <VisitorTracker />
       </Suspense>
-
-      <ROICalculatorModal isOpen={isROIModalOpen} onClose={() => setIsROIModalOpen(false)} />
 
       {/* Hero Section */}
       <section className="bg-gray-50 py-20">
@@ -46,15 +40,7 @@ export default function HomePage() {
                     Schedule a Demo →
                   </Button>
                 </Link>
-                <Button
-                  onClick={() => setIsROIModalOpen(true)}
-                  variant="outline"
-                  size="lg"
-                  className="border-cyan-500 text-cyan-600 hover:bg-cyan-50"
-                >
-                  <Calculator className="w-4 h-4 mr-2" />
-                  Calculate Your ROI
-                </Button>
+                <ROICalculatorButton />
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-600">
