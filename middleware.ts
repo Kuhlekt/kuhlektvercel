@@ -12,6 +12,15 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Check admin authentication for admin routes (except login)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const adminAuth = request.cookies.get("admin-auth")
+
+    if (!adminAuth || adminAuth.value !== "authenticated") {
+      return NextResponse.redirect(new URL("/admin/login", request.url))
+    }
+  }
+
   // Add security headers for admin routes
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     const response = NextResponse.next()

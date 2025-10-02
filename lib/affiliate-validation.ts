@@ -403,17 +403,32 @@ export async function formatAffiliateCode(code: string): Promise<string> {
  */
 export async function getAffiliateInfo(code: string): Promise<AffiliateInfo> {
   if (!(await validateAffiliateCode(code))) {
-    return { isValid: false }
+    return {
+      code: "",
+      name: "",
+      commission: 0,
+      isActive: false,
+      isValid: false,
+    }
   }
 
   const upperCode = code.toUpperCase().trim()
   const affiliate = AFFILIATE_CODES[upperCode as keyof typeof AFFILIATE_CODES]
 
+  const hasPartnerName = "partnerName" in affiliate
+  const hasName = "name" in affiliate
+  const hasCommissionRate = "commissionRate" in affiliate
+  const hasCommission = "commission" in affiliate
+
   return {
+    code: upperCode,
+    name: hasPartnerName ? affiliate.partnerName : hasName ? affiliate.name : "",
+    commission: hasCommissionRate ? affiliate.commissionRate : hasCommission ? affiliate.commission : 0,
+    isActive: "isActive" in affiliate ? affiliate.isActive : true,
     isValid: true,
-    partnerName: affiliate.partnerName,
-    discountPercent: affiliate.discountPercent,
-    commissionRate: affiliate.commissionRate,
+    partnerName: hasPartnerName ? affiliate.partnerName : undefined,
+    discountPercent: "discountPercent" in affiliate ? affiliate.discountPercent : undefined,
+    commissionRate: hasCommissionRate ? affiliate.commissionRate : undefined,
   }
 }
 
@@ -426,16 +441,24 @@ export async function getAffiliatesByCategory(category: string): Promise<Affilia
 }
 
 export async function getAllAffiliates(): Promise<AffiliateInfo[]> {
-  return Object.entries(AFFILIATE_CODES).map(([code, info]) => ({
-    code,
-    name: info.name || "",
-    commission: info.commission || 0,
-    isActive: info.isActive || false,
-    isValid: info.isValid,
-    partnerName: info.partnerName,
-    discountPercent: info.discountPercent,
-    commissionRate: info.commissionRate,
-  }))
+  return Object.entries(AFFILIATE_CODES).map(([code, info]) => {
+    const hasPartnerName = "partnerName" in info
+    const hasName = "name" in info
+    const hasCommissionRate = "commissionRate" in info
+    const hasCommission = "commission" in info
+    const hasIsValid = "isValid" in info
+
+    return {
+      code,
+      name: hasPartnerName ? info.partnerName : hasName ? info.name : "",
+      commission: hasCommissionRate ? info.commissionRate : hasCommission ? info.commission : 0,
+      isActive: "isActive" in info ? info.isActive : true,
+      isValid: hasIsValid ? info.isValid : true,
+      partnerName: hasPartnerName ? info.partnerName : undefined,
+      discountPercent: "discountPercent" in info ? info.discountPercent : undefined,
+      commissionRate: hasCommissionRate ? info.commissionRate : undefined,
+    }
+  })
 }
 
 export async function getActiveAffiliates(): Promise<AffiliateInfo[]> {

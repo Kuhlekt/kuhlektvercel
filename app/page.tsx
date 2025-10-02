@@ -1,18 +1,25 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star, Play } from "lucide-react"
+import { CheckCircle, Star, Calculator, Play } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
+import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
 export default function HomePage() {
+  const [isROIModalOpen, setIsROIModalOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Suspense fallback={null}>
         <VisitorTracker />
       </Suspense>
+
+      <ROICalculatorModal isOpen={isROIModalOpen} onClose={() => setIsROIModalOpen(false)} />
 
       {/* Hero Section */}
       <section className="bg-gray-50 py-20">
@@ -33,14 +40,29 @@ export default function HomePage() {
                 debt recovery, and improve cash flow.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Link href="/demo">
-                  <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                  <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white w-full sm:w-auto">
                     Schedule a Demo →
                   </Button>
                 </Link>
+                <Button
+                  onClick={() => setIsROIModalOpen(true)}
+                  variant="outline"
+                  size="lg"
+                  className="border-cyan-500 text-cyan-600 hover:bg-cyan-50 w-full sm:w-auto"
+                >
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Calculate Your ROI
+                </Button>
+              </div>
+
+              <div className="mb-8">
                 <Link href="https://youtu.be/iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="lg" className="border-gray-300 bg-white">
+                  <Button
+                    size="lg"
+                    className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 shadow-md w-full sm:w-auto"
+                  >
                     <Play className="w-4 h-4 mr-2" />
                     Watch Product Tour
                   </Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,17 +8,97 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import { submitContactForm } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
 
-const initialState = {
+interface ContactFormState {
+  success: boolean
+  message: string
+  shouldClearForm?: boolean
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    message?: string
+    recaptcha?: string
+  }
+}
+
+const initialState: ContactFormState = {
   success: false,
   message: "",
   errors: {},
 }
 
 export default function ContactFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
+  const [state, setState] = useState<ContactFormState>(initialState)
+  const [isPending, startTransition] = useTransition()
+
+  const handleSubmit = async (formData: FormData) => {
+    console.log("[v0] Form submission started")
+    startTransition(() => {
+      setState({ ...initialState, message: "Sending..." })
+    })
+
+    try {
+      console.log("[v0] Making fetch request to /api/contact")
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        body: formData,
+      }).catch((fetchError) => {
+        console.error("[v0] Fetch error caught:", fetchError)
+        throw new Error("Network error occurred")
+      })
+
+      console.log("[v0] Fetch response received:", response?.status, response?.ok)
+
+      if (!response) {
+        console.error("[v0] No response received")
+        throw new Error("No response received")
+      }
+
+      if (!response.ok) {
+        console.error("[v0] HTTP error:", response.status)
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      console.log("[v0] Parsing JSON response...")
+      const result = await response.json().catch((jsonError) => {
+        console.error("[v0] JSON parsing error:", jsonError)
+        throw new Error("Invalid response format")
+      })
+
+      console.log("[v0] JSON result:", result)
+
+      if (!result) {
+        console.error("[v0] Empty response received")
+        throw new Error("Empty response received")
+      }
+
+      console.log("[v0] Setting state with result:", result)
+      startTransition(() => {
+        setState(result)
+
+        if (result.success && result.shouldClearForm) {
+          console.log("[v0] Clearing form...")
+          const form = document.querySelector("form") as HTMLFormElement
+          if (form) {
+            form.reset()
+          }
+        }
+      })
+      console.log("[v0] Form submission completed successfully")
+    } catch (error) {
+      console.error("[v0] Form submission error:", error)
+      startTransition(() => {
+        setState({
+          success: false,
+          message:
+            error instanceof Error ? error.message : "There was an error sending your message. Please try again.",
+          errors: {},
+        })
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -41,7 +121,14 @@ export default function ContactFormComponent() {
                 <CardDescription>Fill out the form below and we'll get back to you soon.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={formAction} className="space-y-6">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const formData = new FormData(e.currentTarget)
+                    handleSubmit(formData)
+                  }}
+                  className="space-y-6"
+                >
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>

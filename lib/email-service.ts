@@ -5,7 +5,7 @@ import { sendEmailWithSES } from "./aws-ses"
 interface EmailOptions {
   to: string | string[]
   subject: string
-  text?: string
+  text: string // Made required to match EmailParams
   html?: string
 }
 
@@ -28,14 +28,14 @@ function validateEmailInput(options: EmailOptions): { valid: boolean; errors: st
   }
 
   // Validate content
-  if (!options.text && !options.html) {
-    errors.push("Email must have text or HTML content")
+  if (!options.text) {
+    errors.push("Email must have text content")
   }
 
   // Check for potential injection attempts
   const suspiciousPatterns = [/bcc:/i, /cc:/i, /to:/i, /from:/i, /content-type:/i, /mime-version:/i, /\r\n/g, /\n\r/g]
 
-  const checkContent = `${options.subject} ${options.text || ""} ${options.html || ""}`
+  const checkContent = `${options.subject} ${options.text} ${options.html || ""}`
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(checkContent)) {
       errors.push("Suspicious content detected")
@@ -68,7 +68,7 @@ export async function sendEmail(options: EmailOptions) {
     const result = await sendEmailWithSES({
       to: recipient,
       subject: options.subject,
-      text: options.text || "",
+      text: options.text,
       html: options.html,
     })
 

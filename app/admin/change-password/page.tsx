@@ -59,7 +59,15 @@ export default function ChangePasswordPage() {
             </Alert>
           )}
 
-          <form id="change-password-form" action={handleSubmit} className="space-y-4">
+          <form
+            id="change-password-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              handleSubmit(formData)
+            }}
+            className="space-y-4"
+          >
             <div>
               <Label htmlFor="currentPassword">Current Password</Label>
               <div className="relative">

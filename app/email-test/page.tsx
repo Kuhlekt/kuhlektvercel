@@ -18,7 +18,7 @@ interface TestResult {
     secretKey: boolean
     fromEmail: boolean
   }
-  messageId?: string
+  messageId?: string | null
 }
 
 export default function EmailTestPage() {
@@ -227,7 +227,7 @@ export default function EmailTestPage() {
                       >
                         {emailResult.message}
                       </AlertDescription>
-                      {emailResult.messageId && (
+                      {emailResult.messageId !== undefined && (
                         <p className="text-sm text-green-600 mt-2">Message ID: {emailResult.messageId}</p>
                       )}
                     </div>

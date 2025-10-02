@@ -1,23 +1,109 @@
 "use client"
-import { useActionState } from "react"
+
+import type React from "react"
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
-import { submitDemoRequest } from "./actions"
 import ReCAPTCHA from "@/components/recaptcha"
 
-const initialState = {
+interface DemoFormState {
+  success: boolean
+  message: string
+  shouldClearForm?: boolean
+  errors: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    company?: string
+    phone?: string
+    recaptcha?: string
+  }
+}
+
+const initialState: DemoFormState = {
   success: false,
   message: "",
   errors: {},
 }
 
 export default function DemoFormComponent() {
-  const [state, formAction, isPending] = useActionState(submitDemoRequest, initialState)
+  const [state, setState] = useState<DemoFormState>(initialState)
+  const [isPending, startTransition] = useTransition()
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+
+    console.log("[v0] Form submission started")
+    const recaptchaToken = formData.get("recaptcha-token")
+    console.log("[v0] reCAPTCHA token from form:", recaptchaToken ? "present" : "missing")
+
+    startTransition(() => {
+      setState({ ...initialState, message: "Submitting..." })
+    })
+
+    try {
+      console.log("[v0] Making fetch request to /api/demo")
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        body: formData,
+      }).catch((fetchError) => {
+        console.error("[v0] Fetch error caught:", fetchError)
+        throw new Error("Network error occurred")
+      })
+
+      console.log("[v0] Fetch response received:", response?.status)
+
+      if (!response) {
+        throw new Error("No response received")
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      console.log("[v0] Parsing JSON response")
+      const result = await response.json().catch((jsonError) => {
+        console.error("[v0] JSON parsing error:", jsonError)
+        throw new Error("Invalid response format")
+      })
+
+      console.log("[v0] JSON response parsed:", result)
+
+      if (!result) {
+        throw new Error("Empty response received")
+      }
+
+      startTransition(() => {
+        setState(result)
+      })
+
+      // Clear form if successful and shouldClearForm is true
+      if (result.success && result.shouldClearForm) {
+        const form = event.currentTarget
+        if (form) {
+          form.reset()
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Form submission error:", error)
+      startTransition(() => {
+        setState({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "There was an error submitting your demo request. Please try again.",
+          errors: {},
+          shouldClearForm: false,
+        })
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -40,7 +126,7 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={formAction} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
@@ -107,67 +193,8 @@ export default function DemoFormComponent() {
                     {state.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
-                    <Input id="jobTitle" name="jobTitle" type="text" disabled={isPending} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companySize">Company Size</Label>
-                    <Input
-                      id="companySize"
-                      name="companySize"
-                      type="text"
-                      placeholder="e.g., 50-100 employees"
-                      disabled={isPending}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="currentSolution">Current AR Solution</Label>
-                    <Input
-                      id="currentSolution"
-                      name="currentSolution"
-                      type="text"
-                      placeholder="e.g., QuickBooks, SAP, Manual process"
-                      disabled={isPending}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="timeline">Implementation Timeline</Label>
-                    <Input
-                      id="timeline"
-                      name="timeline"
-                      type="text"
-                      placeholder="e.g., Within 3 months"
-                      disabled={isPending}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="challenges">Current AR Challenges</Label>
-                    <Textarea
-                      id="challenges"
-                      name="challenges"
-                      rows={3}
-                      placeholder="Tell us about your current accounts receivable challenges..."
-                      disabled={isPending}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="affiliateCode">Affiliate Code (Optional)</Label>
-                    <Input
-                      id="affiliateCode"
-                      name="affiliateCode"
-                      type="text"
-                      placeholder="Enter affiliate code if you have one"
-                      disabled={isPending}
-                    />
-                  </div>
-
                   <ReCAPTCHA />
+                  {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
 
                   <Button type="submit" className="w-full" disabled={isPending}>
                     {isPending ? (

@@ -1,24 +1,11 @@
-"use server"
-
+import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail } from "@/lib/aws-ses"
-import { testAWSSESConnection } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
-export interface ContactFormState {
-  success: boolean
-  message: string
-  shouldClearForm?: boolean // Added flag to signal form should be cleared
-  errors: {
-    firstName?: string
-    lastName?: string
-    email?: string
-    message?: string
-    recaptcha?: string
-  }
-}
-
-export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
+export async function POST(request: NextRequest) {
   try {
+    const formData = await request.formData()
+
     // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
     const lastName = formData.get("lastName")?.toString()?.trim()
@@ -43,39 +30,32 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     for (const field of possibleFields) {
       const value = formData.get(field)?.toString()?.trim()
       if (value && value.length > 10) {
-        // reCAPTCHA tokens are typically much longer
         recaptchaToken = value
-        console.log(`Contact form: Found reCAPTCHA token in field '${field}'`)
+        console.log(`Contact form: Found reCAPTCHA token in field '${field}': ${value.substring(0, 20)}...`)
         break
       }
     }
 
-    // Debug logging for all form fields
-    console.log("Contact form submission - All form fields:")
-    for (const [key, value] of formData.entries()) {
-      console.log(
-        `  ${key}: ${typeof value === "string" ? (value.length > 50 ? value.substring(0, 50) + "..." : value) : "[File]"}`,
-      )
-    }
+    console.log("[v0] reCAPTCHA token details:")
+    console.log("[v0] - Token exists:", !!recaptchaToken)
+    console.log("[v0] - Token type:", typeof recaptchaToken)
+    console.log("[v0] - Token value:", recaptchaToken)
+    console.log("[v0] - Token length:", recaptchaToken?.length)
 
     console.log("Contact form submission - reCAPTCHA token received:", !!recaptchaToken)
-    console.log("Contact form submission - reCAPTCHA token length:", recaptchaToken?.length || 0)
 
-    if (!recaptchaToken) {
-      console.warn("Contact form: No reCAPTCHA token found - proceeding without verification for debugging")
-      // Don't return error, just log and continue
-    } else {
+    if (recaptchaToken) {
       console.log("Contact form: Verifying reCAPTCHA token...")
       const recaptchaResult = await verifyRecaptcha(recaptchaToken)
       console.log("Contact form: reCAPTCHA result:", recaptchaResult)
 
       if (!recaptchaResult.success) {
         console.error("Contact form: reCAPTCHA verification failed:", recaptchaResult.error)
-        return {
+        return NextResponse.json({
           success: false,
           message: `reCAPTCHA verification failed: ${recaptchaResult.error}`,
           errors: { recaptcha: "Verification failed. Please try again." },
-        }
+        })
       }
     }
 
@@ -96,13 +76,12 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       errors.email = "Please enter a valid email address"
     }
 
-    // Message is now optional - removed validation requirement
     if (Object.keys(errors).length > 0) {
-      return {
+      return NextResponse.json({
         success: false,
         message: "Please correct the errors below",
         errors,
-      }
+      })
     }
 
     // Prepare email content
@@ -135,37 +114,32 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
       html: emailBody,
-      text: emailText, // Added required text property
+      text: emailText,
     })
 
     if (!emailResult.success) {
       console.error("Failed to send contact form email:", emailResult.message)
-      return {
+      return NextResponse.json({
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
-        shouldClearForm: false, // Don't clear form on error
+        shouldClearForm: false,
         errors: {},
-      }
+      })
     }
 
-    return {
+    return NextResponse.json({
       success: true,
       message: "Thank you for your message! We'll get back to you within 24 hours.",
-      shouldClearForm: true, // Added flag to signal form clearing
+      shouldClearForm: true,
       errors: {},
-    }
+    })
   } catch (error) {
     console.error("Contact form submission error:", error)
-    return {
+    return NextResponse.json({
       success: false,
       message: "An unexpected error occurred. Please try again.",
-      shouldClearForm: false, // Don't clear form on error
+      shouldClearForm: false,
       errors: {},
-    }
+    })
   }
-}
-
-// Added missing testAWSSES server action that was being imported by test page
-export async function testAWSSES() {
-  return await testAWSSESConnection()
 }

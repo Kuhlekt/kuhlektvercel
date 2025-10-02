@@ -37,9 +37,9 @@ export async function sendTestEmail(testEmailAddress: string) {
     }
 
     const result = await sendEmailWithSES({
-      to: [testEmailAddress],
+      to: testEmailAddress,
       subject: "Kuhlekt Email System Test",
-      body: `Hello!
+      text: `Hello!
 
 This is a test email from the Kuhlekt website email system.
 
@@ -57,7 +57,6 @@ You can safely delete this email.
 
 Best regards,
 Kuhlekt Team`,
-      replyTo: testEmailAddress,
     })
 
     if (result.success) {

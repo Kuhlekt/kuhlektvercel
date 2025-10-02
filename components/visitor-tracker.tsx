@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { validateAffiliate } from "@/lib/affiliate-validation"
 
@@ -21,6 +21,9 @@ interface VisitorData {
   pageViews?: number
   firstVisit?: string
   lastVisit?: string
+  isNewUser?: boolean
+  sessionDuration?: number
+  pageHistory?: any[]
 }
 
 // Helper function to get visitor data (can be used by forms)
@@ -50,7 +53,7 @@ export function getPageHistory() {
 }
 
 // Helper function to get all visitors (for admin)
-export function getAllVisitors() {
+export function getAllVisitors(): VisitorData[] {
   if (typeof window === "undefined") return []
 
   try {
@@ -97,7 +100,7 @@ function VisitorTrackerComponent() {
         // Validate affiliate code if present
         let validatedAffiliate: string | undefined
         if (affiliate) {
-          const isValid = validateAffiliate(affiliate)
+          const isValid = await validateAffiliate(affiliate)
           if (isValid) {
             validatedAffiliate = affiliate.toUpperCase()
             // Store validated affiliate in localStorage for future reference
@@ -114,6 +117,17 @@ function VisitorTrackerComponent() {
         // Get existing visitor data
         const existingVisitorData = getVisitorData()
         const isFirstVisit = !existingVisitorData
+        const isNewUser = isFirstVisit || !localStorage.getItem("kuhlekt_visitor_id")
+
+        const sessionStartTime = sessionStorage.getItem("kuhlekt_session_start")
+        const currentTime = Date.now()
+        let sessionDuration = 0
+
+        if (!sessionStartTime) {
+          sessionStorage.setItem("kuhlekt_session_start", currentTime.toString())
+        } else {
+          sessionDuration = Math.floor((currentTime - Number.parseInt(sessionStartTime)) / 1000) // in seconds
+        }
 
         const visitorData: VisitorData = {
           sessionId,
@@ -125,6 +139,9 @@ function VisitorTrackerComponent() {
           pageViews: (existingVisitorData?.pageViews || 0) + 1,
           firstVisit: existingVisitorData?.firstVisit || new Date().toISOString(),
           lastVisit: new Date().toISOString(),
+          isNewUser,
+          sessionDuration,
+          pageHistory: getPageHistory(),
           ...(utmSource && { utmSource }),
           ...(utmMedium && { utmMedium }),
           ...(utmCampaign && { utmCampaign }),
@@ -171,25 +188,36 @@ function VisitorTrackerComponent() {
 
         localStorage.setItem("kuhlekt_all_visitors", JSON.stringify(allVisitors))
 
-        // Dispatch storage event for real-time admin updates
         window.dispatchEvent(
-          new StorageEvent("storage", {
-            key: "kuhlekt_all_visitors",
-            newValue: JSON.stringify(allVisitors),
+          new CustomEvent("kuhlekt-visitor-update", {
+            detail: {
+              type: isNewUser ? "new-user" : "returning-user",
+              visitorData,
+              timestamp: new Date().toISOString(),
+            },
           }),
         )
 
         // Store visitor data in Supabase
-        const response = await fetch("/api/track-visitor", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(visitorData),
-        })
+        try {
+          const response = await fetch("/api/track-visitor", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(visitorData),
+          })
 
-        if (!response.ok) {
-          console.warn("Failed to track visitor:", response.statusText)
+          if (!response.ok) {
+            console.warn("Failed to track visitor:", response.statusText)
+          } else {
+            const result = await response.json().catch(() => null)
+            if (result && !result.success) {
+              console.warn("Visitor tracking returned error:", result.message)
+            }
+          }
+        } catch (fetchError) {
+          console.warn("Error making visitor tracking request:", fetchError)
         }
 
         console.log("🔍 Visitor tracked:", {
@@ -197,6 +225,8 @@ function VisitorTrackerComponent() {
           sessionId: sessionId.slice(0, 16) + "...",
           page: window.location.pathname,
           isFirstVisit,
+          isNewUser,
+          sessionDuration,
           pageViews: visitorData.pageViews,
           utmSource,
           utmCampaign,
@@ -216,10 +246,18 @@ function VisitorTrackerComponent() {
   return null
 }
 
+function VisitorTrackerWithSuspense() {
+  return (
+    <Suspense fallback={null}>
+      <VisitorTrackerComponent />
+    </Suspense>
+  )
+}
+
 export function VisitorTracker() {
   return (
     <div className="visitor-tracker">
-      <VisitorTrackerComponent />
+      <VisitorTrackerWithSuspense />
     </div>
   )
 }

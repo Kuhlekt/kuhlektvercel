@@ -8,13 +8,6 @@ interface EmailParams {
   html?: string
 }
 
-interface EmailOptions {
-  to: string
-  subject: string
-  text: string
-  html?: string
-}
-
 export async function sendEmailWithSES(params: EmailParams) {
   // Check if AWS SES is configured
   const region = process.env.AWS_SES_REGION
@@ -88,8 +81,8 @@ export async function sendEmailWithSES(params: EmailParams) {
     const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
 
     // Create signing key
-    const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-    const kRegion = await hmacSha256(kDate, region)
+    const kDate = await hmacSha256(`AWS4${secretAccessKey!}`, date)
+    const kRegion = await hmacSha256(kDate, region!)
     const kService = await hmacSha256(kRegion, "ses")
     const kSigning = await hmacSha256(kService, "aws4_request")
 
@@ -219,8 +212,8 @@ export async function testAWSSESConnection() {
       const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(payload)}`
       const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
 
-      const kDate = await hmacSha256(`AWS4${secretAccessKey}`, date)
-      const kRegion = await hmacSha256(kDate, region)
+      const kDate = await hmacSha256(`AWS4${secretAccessKey!}`, date)
+      const kRegion = await hmacSha256(kDate, region!)
       const kService = await hmacSha256(kRegion, "ses")
       const kSigning = await hmacSha256(kService, "aws4_request")
 
@@ -381,24 +374,11 @@ async function hmacSha256(
   return signatureArray
 }
 
-export async function sendEmailViaSES(params: EmailParams): Promise<boolean> {
-  try {
-    // Mock AWS SES implementation
-    console.log("AWS SES Email:", {
-      to: params.to,
-      subject: params.subject,
-      preview: params.text.substring(0, 50) + "...",
-    })
-
-    // Simulate email sending delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    return true
-  } catch (error) {
-    console.error("AWS SES Error:", error)
-    return false
-  }
+export async function sendEmail(
+  params: EmailParams,
+): Promise<{ success: boolean; message: string; messageId: string | null }> {
+  return await sendEmailWithSES(params)
 }
 
 // Legacy export for backward compatibility
-export const sendEmail = sendEmailWithSES
+export const sendEmailLegacy = sendEmailWithSES

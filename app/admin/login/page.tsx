@@ -1,30 +1,52 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { adminLogin } from "./actions"
 
 export default function AdminLoginPage() {
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(formData: FormData) {
+    console.log("[v0] Admin login form submission started")
     setIsSubmitting(true)
     setError("")
 
     try {
-      const result = await adminLogin(formData)
-      if (result && !result.success) {
+      console.log("[v0] Making fetch request to /api/admin/login")
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        body: formData,
+      })
+
+      console.log("[v0] Fetch response received:", response.status)
+
+      const result = await response.json()
+      console.log("[v0] API response:", result)
+
+      if (!result.success) {
+        console.log("[v0] Login failed with error:", result.error)
         setError(result.error)
+      } else {
+        console.log("[v0] Login successful, redirecting to:", result.redirectTo)
+        // Redirect to admin dashboard on successful login
+        router.push(result.redirectTo || "/admin/tracking")
       }
     } catch (error) {
+      console.error("[v0] Admin login error caught:", error)
+      console.error("[v0] Error type:", typeof error)
+      console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
+      console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
       setError("An unexpected error occurred")
     } finally {
       setIsSubmitting(false)
+      console.log("[v0] Admin login form submission completed")
     }
   }
 
@@ -42,7 +64,14 @@ export default function AdminLoginPage() {
             </Alert>
           )}
 
-          <form action={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              handleSubmit(formData)
+            }}
+            className="space-y-4"
+          >
             <div>
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required disabled={isSubmitting} className="mt-1" />

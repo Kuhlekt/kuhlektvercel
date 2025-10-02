@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+// FORCE_REBUILD_TIMESTAMP_2024_01_14_15_30_00 - Added to force Git recognition
 // Rate limiting map (in production, use Redis or similar)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
@@ -101,33 +102,86 @@ function isValidIpAddress(ip: string): boolean {
   return ipv4Regex.test(ip) || ipv6Regex.test(ip)
 }
 
+interface PageHistoryItem {
+  page?: string
+  timestamp?: string
+}
+
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Visitor tracking request received")
+
     // Rate limiting
     const rateLimitKey = getRateLimitKey(request)
     if (isRateLimited(rateLimitKey)) {
+      console.log("[v0] Rate limit exceeded for key:", rateLimitKey)
       return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 })
     }
 
     const data = await request.json()
+    console.log("[v0] Visitor data received:", {
+      visitorId: data.visitorId?.substring(0, 16) + "...",
+      sessionId: data.sessionId?.substring(0, 16) + "...",
+      page: data.page,
+      isNewUser: data.isNewUser,
+    })
 
-    // Validate input data
     const validation = validateVisitorData(data)
     if (!validation.isValid) {
-      console.warn("Invalid visitor data:", validation.errors)
+      console.warn("[v0] Invalid visitor data:", validation.errors)
       return NextResponse.json({ success: false, error: "Invalid data", details: validation.errors }, { status: 400 })
     }
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    console.log("[v0] Supabase environment check:", {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      urlFormat: supabaseUrl?.startsWith("https://") ? "valid" : "invalid",
+    })
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("[v0] Missing Supabase environment variables")
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Database configuration error - missing environment variables",
+        },
+        { status: 500 },
+      )
+    }
+
+    if (!supabaseUrl.startsWith("https://")) {
+      console.error("[v0] Invalid Supabase URL format:", supabaseUrl)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Database configuration error - invalid URL format",
+        },
+        { status: 500 },
+      )
+    }
+
+    console.log("[v0] Creating Supabase client")
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
+      db: {
+        schema: "public",
+      },
+      global: {
+        headers: {
+          "x-application-name": "kuhlekt-tracking-system",
+        },
+      },
     })
 
     const validIpAddress = getValidIpAddress(request)
+    console.log("[v0] IP address extracted:", validIpAddress || "none")
 
-    // Sanitize data before storing
     const sanitizedData = {
       visitor_id: data.visitorId.substring(0, 100),
       session_id: data.sessionId.substring(0, 100),
@@ -143,29 +197,127 @@ export async function POST(request: NextRequest) {
       page_views: Math.min(Math.max(data.pageViews || 1, 1), 10000),
       first_visit: data.firstVisit || new Date().toISOString(),
       last_visit: data.lastVisit || new Date().toISOString(),
-      ip_address: validIpAddress, // Use validated IP or null instead of "unknown"
+      ip_address: validIpAddress,
+      is_new_user: data.isNewUser || false,
+      session_duration: data.sessionDuration || 0,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
 
+    console.log("[v0] Data sanitized, attempting database connection test")
+
     if (typeof supabase.from !== "function") {
-      console.error("Supabase client not properly configured")
+      console.error("[v0] Supabase client not properly configured")
       return NextResponse.json({ success: false, error: "Database configuration error" }, { status: 500 })
     }
 
-    // Store in Supabase with upsert to handle duplicate visitors
-    const { error } = await supabase.from("visitor_tracking").upsert(sanitizedData, {
-      onConflict: "visitor_id",
-      ignoreDuplicates: false,
-    })
-
-    if (error) {
-      console.error("Supabase error:", error)
-      return NextResponse.json({ success: false, error: "Database error" }, { status: 500 })
+    const { error: healthError } = await supabase.from("visitor_tracking").select("id").limit(1)
+    if (healthError) {
+      console.error("[v0] Database health check failed:", {
+        code: healthError.code,
+        message: healthError.message,
+        details: healthError.details,
+      })
+      if (healthError.code === "PGRST301") {
+        return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
+      }
+    } else {
+      console.log("[v0] Database health check passed")
     }
 
-    return NextResponse.json({ success: true })
+    console.log("[v0] Attempting to upsert visitor data")
+    const { data: upsertData, error: upsertError } = await supabase
+      .from("visitor_tracking")
+      .upsert(sanitizedData, {
+        onConflict: "visitor_id",
+        ignoreDuplicates: false,
+      })
+      .select("id, is_new_user, session_duration")
+
+    if (upsertError) {
+      console.error("[v0] Supabase upsert error:", {
+        code: upsertError.code,
+        message: upsertError.message,
+        details: upsertError.details,
+        hint: upsertError.hint,
+      })
+
+      // Handle specific Supabase errors
+      if (upsertError.code === "23505") {
+        console.log("[v0] Duplicate visitor ID detected, attempting update")
+        const { error: updateError } = await supabase
+          .from("visitor_tracking")
+          .update({
+            ...sanitizedData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("visitor_id", sanitizedData.visitor_id)
+
+        if (updateError) {
+          console.error("[v0] Supabase update error:", updateError)
+          return NextResponse.json({ success: false, error: "Database update failed" }, { status: 500 })
+        } else {
+          console.log("[v0] Visitor data updated successfully")
+        }
+      } else {
+        return NextResponse.json({ success: false, error: "Database operation failed" }, { status: 500 })
+      }
+    } else {
+      console.log("[v0] Visitor data upserted successfully:", {
+        recordId: upsertData?.[0]?.id,
+        isNewUser: upsertData?.[0]?.is_new_user,
+      })
+    }
+
+    // CORRECTED_PAGE_HISTORY_PROCESSING - No filter functions used here
+    if (data.pageHistory && Array.isArray(data.pageHistory) && data.pageHistory.length > 0) {
+      const pageHistoryData: Array<{
+        session_id: string
+        page: string
+        timestamp: string
+        visitor_id: string
+      }> = []
+
+      // Process each page history item individually using for-loop (no filter/map)
+      for (const item of data.pageHistory) {
+        if (item && typeof item === "object" && item.page && item.timestamp) {
+          pageHistoryData.push({
+            session_id: data.sessionId,
+            page: item.page.substring(0, 500),
+            timestamp: item.timestamp,
+            visitor_id: data.visitorId,
+          })
+        }
+      }
+
+      if (pageHistoryData.length > 0) {
+        const { error: historyError } = await supabase.from("page_history").insert(pageHistoryData).select("id")
+
+        if (historyError) {
+          console.warn("Page history insertion failed:", historyError)
+          // Don't fail the main request if page history fails
+        }
+      }
+    }
+
+    if (data.isNewUser) {
+      console.log("🆕 New user detected:", {
+        visitorId: data.visitorId.substring(0, 16) + "...",
+        timestamp: new Date().toISOString(),
+        page: data.page,
+        referrer: data.referrer,
+        utmSource: data.utmSource,
+      })
+    }
+
+    console.log("[v0] Visitor tracking completed successfully")
+    return NextResponse.json({
+      success: true,
+      isNewUser: data.isNewUser,
+      timestamp: new Date().toISOString(),
+    })
   } catch (error) {
-    console.error("Visitor tracking error:", error)
+    console.error("[v0] Visitor tracking error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
