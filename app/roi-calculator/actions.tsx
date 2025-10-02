@@ -230,7 +230,7 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
                 </div>
                 <div class="metric">
                   <span class="label">Average Hourly Rate:</span>
-                  <span class="value">$${data.avgHourlyRate}</span>
+                  <span class="value">$${data.avgHourlyRate?.toFixed(2)}</span>
                 </div>
                 <div class="metric">
                   <span class="label">Hours/Week on AR:</span>

@@ -26,13 +26,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
 
-  // Detailed calculator inputs (from ROI Calculator - Invoice to Cash)
+  // Detailed calculator inputs (from v0 ROI Calculator)
   const [annualRevenue, setAnnualRevenue] = useState("")
-  const [invoicesPerMonth, setInvoicesPerMonth] = useState("")
-  const [currentAverageDSO, setCurrentAverageDSO] = useState("")
-  const [collectorFTE, setCollectorFTE] = useState("")
-  const [avgCollectorSalary, setAvgCollectorSalary] = useState("")
-  const [currentBadDebtPercent, setCurrentBadDebtPercent] = useState("")
+  const [invoicesPerYear, setInvoicesPerYear] = useState("")
+  const [averageDSO, setAverageDSO] = useState("")
+  const [percentPastDue, setPercentPastDue] = useState("")
+  const [arStaffCount, setArStaffCount] = useState("")
+  const [avgStaffSalary, setAvgStaffSalary] = useState("")
 
   // Contact info
   const [email, setEmail] = useState("")
@@ -48,11 +48,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setAverageInvoiceValue("")
     setMonthlyInvoices("")
     setAnnualRevenue("")
-    setInvoicesPerMonth("")
-    setCurrentAverageDSO("")
-    setCollectorFTE("")
-    setAvgCollectorSalary("")
-    setCurrentBadDebtPercent("")
+    setInvoicesPerYear("")
+    setAverageDSO("")
+    setPercentPastDue("")
+    setArStaffCount("")
+    setAvgStaffSalary("")
     setEmail("")
     setPhone("")
     setResults(null)
@@ -106,12 +106,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           }
         : {
             annualRevenue: Number.parseFloat(annualRevenue),
-            invoicesPerMonth: Number.parseFloat(invoicesPerMonth),
-            averagePaymentDays: Number.parseFloat(currentAverageDSO),
-            arTeamSize: Number.parseFloat(collectorFTE),
-            avgHourlyRate: Number.parseFloat(avgCollectorSalary) / 2080, // Convert annual to hourly
-            hoursPerWeekOnAR: 40 * Number.parseFloat(collectorFTE), // Full time hours
-            badDebtPercentage: Number.parseFloat(currentBadDebtPercent),
+            invoicesPerMonth: Number.parseFloat(invoicesPerYear) / 12,
+            averagePaymentDays: Number.parseFloat(averageDSO),
+            arTeamSize: Number.parseFloat(arStaffCount),
+            avgHourlyRate: Number.parseFloat(avgStaffSalary) / 2080,
+            hoursPerWeekOnAR: 40 * Number.parseFloat(arStaffCount),
+            badDebtPercentage: Number.parseFloat(percentPastDue),
             email,
             phone,
             calculatorType,
@@ -229,7 +229,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         )}
 
-        {/* Step 2b: Detailed Calculator Inputs (Invoice to Cash) */}
+        {/* Step 2b: Detailed Calculator Inputs (Invoice to Cash from v0) */}
         {step === "detailed-inputs" && (
           <div className="space-y-6 py-4">
             <div className="space-y-4">
@@ -238,7 +238,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <Input
                   id="annualRevenue"
                   type="number"
-                  placeholder="e.g., 10000000"
+                  placeholder="10000000"
                   value={annualRevenue}
                   onChange={(e) => setAnnualRevenue(e.target.value)}
                   min="0"
@@ -246,64 +246,65 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
-                <Label htmlFor="invoicesPerMonth">Number of Invoices Per Month</Label>
+                <Label htmlFor="invoicesPerYear">Number of Invoices per Year</Label>
                 <Input
-                  id="invoicesPerMonth"
+                  id="invoicesPerYear"
                   type="number"
-                  placeholder="e.g., 500"
-                  value={invoicesPerMonth}
-                  onChange={(e) => setInvoicesPerMonth(e.target.value)}
+                  placeholder="5000"
+                  value={invoicesPerYear}
+                  onChange={(e) => setInvoicesPerYear(e.target.value)}
                   min="0"
                 />
               </div>
 
               <div>
-                <Label htmlFor="currentAverageDSO">Current Average DSO (Days)</Label>
+                <Label htmlFor="averageDSO">Average Days Sales Outstanding (DSO)</Label>
                 <Input
-                  id="currentAverageDSO"
+                  id="averageDSO"
                   type="number"
-                  placeholder="e.g., 45"
-                  value={currentAverageDSO}
-                  onChange={(e) => setCurrentAverageDSO(e.target.value)}
+                  placeholder="45"
+                  value={averageDSO}
+                  onChange={(e) => setAverageDSO(e.target.value)}
                   min="0"
                 />
               </div>
 
               <div>
-                <Label htmlFor="collectorFTE">Number of Collector FTEs</Label>
+                <Label htmlFor="percentPastDue">Percent of Invoices Past Due (%)</Label>
                 <Input
-                  id="collectorFTE"
+                  id="percentPastDue"
                   type="number"
-                  placeholder="e.g., 3"
-                  value={collectorFTE}
-                  onChange={(e) => setCollectorFTE(e.target.value)}
+                  placeholder="15"
+                  value={percentPastDue}
+                  onChange={(e) => setPercentPastDue(e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="arStaffCount">Number of AR Staff (FTE)</Label>
+                <Input
+                  id="arStaffCount"
+                  type="number"
+                  placeholder="3"
+                  value={arStaffCount}
+                  onChange={(e) => setArStaffCount(e.target.value)}
                   min="0"
                   step="0.5"
                 />
               </div>
 
               <div>
-                <Label htmlFor="avgCollectorSalary">Average Collector Salary ($)</Label>
+                <Label htmlFor="avgStaffSalary">Average AR Staff Salary (Annual $)</Label>
                 <Input
-                  id="avgCollectorSalary"
+                  id="avgStaffSalary"
                   type="number"
-                  placeholder="e.g., 60000"
-                  value={avgCollectorSalary}
-                  onChange={(e) => setAvgCollectorSalary(e.target.value)}
+                  placeholder="60000"
+                  value={avgStaffSalary}
+                  onChange={(e) => setAvgStaffSalary(e.target.value)}
                   min="0"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="currentBadDebtPercent">Current Bad Debt Percentage (%)</Label>
-                <Input
-                  id="currentBadDebtPercent"
-                  type="number"
-                  placeholder="e.g., 2.5"
-                  value={currentBadDebtPercent}
-                  onChange={(e) => setCurrentBadDebtPercent(e.target.value)}
-                  min="0"
-                  step="0.1"
                 />
               </div>
             </div>
@@ -317,11 +318,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 disabled={
                   !annualRevenue ||
-                  !invoicesPerMonth ||
-                  !currentAverageDSO ||
-                  !collectorFTE ||
-                  !avgCollectorSalary ||
-                  !currentBadDebtPercent
+                  !invoicesPerYear ||
+                  !averageDSO ||
+                  !percentPastDue ||
+                  !arStaffCount ||
+                  !avgStaffSalary
                 }
               >
                 Continue
