@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2 } from "lucide-react"
 import { submitROICalculator } from "@/app/roi-calculator/actions"
 
@@ -26,13 +27,36 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
 
-  // Detailed calculator inputs
-  const [annualRevenue, setAnnualRevenue] = useState("")
-  const [averageOrderValue, setAverageOrderValue] = useState("")
-  const [invoicesPerYear, setInvoicesPerYear] = useState("")
-  const [averageDSO, setAverageDSO] = useState("")
-  const [collectionCost, setCollectionCost] = useState("")
-  const [badDebtRate, setBadDebtRate] = useState("")
+  // Detailed calculator inputs (matching the image exactly)
+  // Cost Structure
+  const [implementationCost, setImplementationCost] = useState("")
+  const [monthlyCost, setMonthlyCost] = useState("")
+  const [perAnnumDirectLabourCosts, setPerAnnumDirectLabourCosts] = useState("")
+
+  // Bank Interest
+  const [interestType, setInterestType] = useState("loan")
+  const [interestRate, setInterestRate] = useState("")
+
+  // Bad Debt
+  const [averageBadDebt, setAverageBadDebt] = useState("")
+  const [currentBadDebts, setCurrentBadDebts] = useState("")
+
+  // Expected Savings
+  const [labourSavings, setLabourSavings] = useState("")
+  const [dsoImprovement, setDsoImprovement] = useState("")
+
+  // Financial Metrics
+  const [daysSales, setDaysSales] = useState("")
+  const [currentDSODays, setCurrentDSODays] = useState("")
+  const [debtorsBalance, setDebtorsBalance] = useState("")
+
+  // Payment Terms
+  const [averagePaymentTerms, setAveragePaymentTerms] = useState("net30")
+
+  // Team Structure & Growth
+  const [numberOfDebtors, setNumberOfDebtors] = useState("")
+  const [numberOfCollectors, setNumberOfCollectors] = useState("")
+  const [projectedCustomerGrowth, setProjectedCustomerGrowth] = useState("")
 
   // Contact info
   const [email, setEmail] = useState("")
@@ -47,12 +71,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setCurrentDSO("")
     setAverageInvoiceValue("")
     setMonthlyInvoices("")
-    setAnnualRevenue("")
-    setAverageOrderValue("")
-    setInvoicesPerYear("")
-    setAverageDSO("")
-    setCollectionCost("")
-    setBadDebtRate("")
+    setImplementationCost("")
+    setMonthlyCost("")
+    setPerAnnumDirectLabourCosts("")
+    setInterestType("loan")
+    setInterestRate("")
+    setAverageBadDebt("")
+    setCurrentBadDebts("")
+    setLabourSavings("")
+    setDsoImprovement("")
+    setDaysSales("")
+    setCurrentDSODays("")
+    setDebtorsBalance("")
+    setAveragePaymentTerms("net30")
+    setNumberOfDebtors("")
+    setNumberOfCollectors("")
+    setProjectedCustomerGrowth("")
     setEmail("")
     setPhone("")
     setResults(null)
@@ -105,12 +139,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             calculatorType,
           }
         : {
-            annualRevenue: Number.parseFloat(annualRevenue),
-            averageOrderValue: Number.parseFloat(averageOrderValue),
-            invoicesPerYear: Number.parseFloat(invoicesPerYear),
-            averageDSO: Number.parseFloat(averageDSO),
-            collectionCost: Number.parseFloat(collectionCost),
-            badDebtRate: Number.parseFloat(badDebtRate),
+            implementationCost: Number.parseFloat(implementationCost),
+            monthlyCost: Number.parseFloat(monthlyCost),
+            perAnnumDirectLabourCosts: Number.parseFloat(perAnnumDirectLabourCosts),
+            interestType,
+            interestRate: Number.parseFloat(interestRate),
+            averageBadDebt: Number.parseFloat(averageBadDebt),
+            currentBadDebts: Number.parseFloat(currentBadDebts),
+            labourSavings: Number.parseFloat(labourSavings),
+            dsoImprovement: Number.parseFloat(dsoImprovement),
+            daysSales: Number.parseFloat(daysSales),
+            currentDSODays: Number.parseFloat(currentDSODays),
+            debtorsBalance: Number.parseFloat(debtorsBalance),
+            averagePaymentTerms,
+            numberOfDebtors: Number.parseFloat(numberOfDebtors),
+            numberOfCollectors: Number.parseFloat(numberOfCollectors),
+            projectedCustomerGrowth: Number.parseFloat(projectedCustomerGrowth),
             email,
             phone,
             calculatorType,
@@ -130,7 +174,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Calculator className="h-6 w-6 text-cyan-600" />
@@ -166,7 +210,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   </div>
                   <h3 className="font-semibold text-lg">Detailed Analysis</h3>
                 </div>
-                <p className="text-sm text-gray-600">Comprehensive ROI analysis with all metrics</p>
+                <p className="text-sm text-gray-600">Comprehensive invoice-to-cash ROI analysis</p>
               </button>
             </div>
           </div>
@@ -231,84 +275,263 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         {/* Step 2b: Detailed Calculator Inputs */}
         {step === "detailed-inputs" && (
           <div className="space-y-6 py-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="annualRevenue">Annual Revenue ($)</Label>
-                <Input
-                  id="annualRevenue"
-                  type="number"
-                  placeholder="10000000"
-                  value={annualRevenue}
-                  onChange={(e) => setAnnualRevenue(e.target.value)}
-                  min="0"
-                />
+            <div className="space-y-6">
+              {/* Cost Structure */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <DollarSign className="h-5 w-5" />
+                  Cost Structure
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="implementationCost">Implementation Cost ($)</Label>
+                    <Input
+                      id="implementationCost"
+                      type="number"
+                      placeholder="50000"
+                      value={implementationCost}
+                      onChange={(e) => setImplementationCost(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="monthlyCost">Monthly Cost ($)</Label>
+                    <Input
+                      id="monthlyCost"
+                      type="number"
+                      placeholder="8500"
+                      value={monthlyCost}
+                      onChange={(e) => setMonthlyCost(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="perAnnumDirectLabourCosts">Per Annum Direct Labour Costs ($)</Label>
+                  <Input
+                    id="perAnnumDirectLabourCosts"
+                    type="number"
+                    placeholder="500000"
+                    value={perAnnumDirectLabourCosts}
+                    onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
+                    min="0"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="averageOrderValue">Average Order/Invoice Value ($)</Label>
-                <Input
-                  id="averageOrderValue"
-                  type="number"
-                  placeholder="5000"
-                  value={averageOrderValue}
-                  onChange={(e) => setAverageOrderValue(e.target.value)}
-                  min="0"
-                />
+              {/* Bank Interest */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <TrendingUp className="h-5 w-5" />
+                  Bank Interest
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="interestType">Interest Type</Label>
+                    <Select value={interestType} onValueChange={setInterestType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
+                        <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                    <Input
+                      id="interestRate"
+                      type="number"
+                      placeholder="5"
+                      value={interestRate}
+                      onChange={(e) => setInterestRate(e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="invoicesPerYear">Number of Invoices per Year</Label>
-                <Input
-                  id="invoicesPerYear"
-                  type="number"
-                  placeholder="2000"
-                  value={invoicesPerYear}
-                  onChange={(e) => setInvoicesPerYear(e.target.value)}
-                  min="0"
-                />
+              {/* Bad Debt */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <Clock className="h-5 w-5" />
+                  Bad Debt
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="averageBadDebt">Average Bad Debt (%)</Label>
+                    <Input
+                      id="averageBadDebt"
+                      type="number"
+                      placeholder="0.0355"
+                      value={averageBadDebt}
+                      onChange={(e) => setAverageBadDebt(e.target.value)}
+                      min="0"
+                      step="0.0001"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="currentBadDebts">Current Bad Debts ($)</Label>
+                    <Input
+                      id="currentBadDebts"
+                      type="number"
+                      placeholder="20000"
+                      value={currentBadDebts}
+                      onChange={(e) => setCurrentBadDebts(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="averageDSO">Current Average DSO (Days)</Label>
-                <Input
-                  id="averageDSO"
-                  type="number"
-                  placeholder="45"
-                  value={averageDSO}
-                  onChange={(e) => setAverageDSO(e.target.value)}
-                  min="0"
-                />
+              {/* Expected Savings */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Expected Savings
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="labourSavings">Labour Savings (%)</Label>
+                    <Input
+                      id="labourSavings"
+                      type="number"
+                      placeholder="40"
+                      value={labourSavings}
+                      onChange={(e) => setLabourSavings(e.target.value)}
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dsoImprovement">DSO Improvement (%)</Label>
+                    <Input
+                      id="dsoImprovement"
+                      type="number"
+                      placeholder="30"
+                      value={dsoImprovement}
+                      onChange={(e) => setDsoImprovement(e.target.value)}
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="collectionCost">Annual Collection Cost ($)</Label>
-                <Input
-                  id="collectionCost"
-                  type="number"
-                  placeholder="150000"
-                  value={collectionCost}
-                  onChange={(e) => setCollectionCost(e.target.value)}
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Include staff salaries, tools, and overhead</p>
+              {/* Financial Metrics */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <TrendingUp className="h-5 w-5" />
+                  Financial Metrics
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="daysSales">Days Sales</Label>
+                    <Input
+                      id="daysSales"
+                      type="number"
+                      placeholder="365"
+                      value={daysSales}
+                      onChange={(e) => setDaysSales(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="currentDSODays">Current DSO (Days)</Label>
+                    <Input
+                      id="currentDSODays"
+                      type="number"
+                      placeholder="45"
+                      value={currentDSODays}
+                      onChange={(e) => setCurrentDSODays(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="debtorsBalance">Debtors Balance ($)</Label>
+                  <Input
+                    id="debtorsBalance"
+                    type="number"
+                    placeholder="1000000"
+                    value={debtorsBalance}
+                    onChange={(e) => setDebtorsBalance(e.target.value)}
+                    min="0"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="badDebtRate">Bad Debt Rate (%)</Label>
-                <Input
-                  id="badDebtRate"
-                  type="number"
-                  placeholder="2.5"
-                  value={badDebtRate}
-                  onChange={(e) => setBadDebtRate(e.target.value)}
-                  min="0"
-                  max="100"
-                  step="0.1"
-                />
+              {/* Payment Terms */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <Clock className="h-5 w-5" />
+                  Payment Terms
+                </h3>
+                <div>
+                  <Label htmlFor="averagePaymentTerms">Average Payment Terms (Days)</Label>
+                  <Select value={averagePaymentTerms} onValueChange={setAveragePaymentTerms}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="net7">Net 7</SelectItem>
+                      <SelectItem value="net15">Net 15</SelectItem>
+                      <SelectItem value="net30">Net 30</SelectItem>
+                      <SelectItem value="net45">Net 45</SelectItem>
+                      <SelectItem value="net60">Net 60</SelectItem>
+                      <SelectItem value="net90">Net 90</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Team Structure & Growth */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Team Structure & Growth
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="numberOfDebtors">Number of Debtors</Label>
+                    <Input
+                      id="numberOfDebtors"
+                      type="number"
+                      placeholder="500"
+                      value={numberOfDebtors}
+                      onChange={(e) => setNumberOfDebtors(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="numberOfCollectors">Number of Collectors</Label>
+                    <Input
+                      id="numberOfCollectors"
+                      type="number"
+                      placeholder="5"
+                      value={numberOfCollectors}
+                      onChange={(e) => setNumberOfCollectors(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="projectedCustomerGrowth">Projected Customer Growth (%)</Label>
+                  <Input
+                    id="projectedCustomerGrowth"
+                    type="number"
+                    placeholder="50"
+                    value={projectedCustomerGrowth}
+                    onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
+                    min="0"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
                 Back
               </Button>
@@ -316,12 +539,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 onClick={handleInputsNext}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 disabled={
-                  !annualRevenue ||
-                  !averageOrderValue ||
-                  !invoicesPerYear ||
-                  !averageDSO ||
-                  !collectionCost ||
-                  !badDebtRate
+                  !implementationCost ||
+                  !monthlyCost ||
+                  !perAnnumDirectLabourCosts ||
+                  !interestRate ||
+                  !averageBadDebt ||
+                  !currentBadDebts ||
+                  !labourSavings ||
+                  !dsoImprovement ||
+                  !daysSales ||
+                  !currentDSODays ||
+                  !debtorsBalance ||
+                  !numberOfDebtors ||
+                  !numberOfCollectors ||
+                  !projectedCustomerGrowth
                 }
               >
                 Continue
@@ -456,22 +687,21 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Cash Flow Improvement</p>
+                      <p className="font-semibold">Working Capital Released</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      ${results.cashFlowImprovement?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      ${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
 
                   <div className="bg-white p-4 rounded-lg border">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Cost Savings</p>
+                      <p className="font-semibold">Labour Cost Savings</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      ${results.costSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      ${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
-                    <p className="text-sm text-gray-600">Collection efficiency</p>
                   </div>
 
                   <div className="bg-white p-4 rounded-lg border">
