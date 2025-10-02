@@ -40,7 +40,7 @@ export default function HomePage() {
                 debt recovery, and improve cash flow.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Link href="/demo">
                   <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white">
                     Schedule a Demo →
@@ -55,8 +55,11 @@ export default function HomePage() {
                   <Calculator className="w-4 h-4 mr-2" />
                   Calculate Your ROI
                 </Button>
+              </div>
+
+              <div className="mb-8">
                 <Link href="https://youtu.be/iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="lg" className="border-gray-300 bg-white">
+                  <Button variant="outline" size="lg" className="border-gray-300 bg-white w-full sm:w-auto">
                     <Play className="w-4 h-4 mr-2" />
                     Watch Product Tour
                   </Button>
