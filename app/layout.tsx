@@ -4,17 +4,13 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { ThemeProvider } from "@/components/theme-provider"
-import { VisitorTracker } from "@/components/visitor-tracker"
-import NewVisitorBanner from "@/components/new-visitor-banner"
+import { NewVisitorBanner } from "@/components/new-visitor-banner"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Kuhlekt - Invoice to Cash Automation Platform",
-  description:
-    "Transform your accounts receivable process with Kuhlekt's AI-powered automation platform. Reduce DSO by 40% and streamline collections.",
-  keywords: "accounts receivable, AR automation, invoice to cash, collections, DSO reduction",
+  title: "Kuhlekt - AR Automation & Collections Platform",
+  description: "The #1 platform for B2B credit collections and AR automation",
     generator: 'v0.app'
 }
 
@@ -24,10 +20,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         {/* Google Analytics */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN"></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -40,13 +36,10 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <VisitorTracker />
-          <NewVisitorBanner />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </ThemeProvider>
+        <NewVisitorBanner />
+        <Header />
+        {children}
+        <Footer />
       </body>
     </html>
   )

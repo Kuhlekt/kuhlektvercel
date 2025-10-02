@@ -5,94 +5,68 @@ import { Button } from "@/components/ui/button"
 import { X, Calendar } from "lucide-react"
 import Link from "next/link"
 
-export default function NewVisitorBanner() {
+export function NewVisitorBanner() {
   const [isVisible, setIsVisible] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isDismissed, setIsDismissed] = useState(false)
 
   useEffect(() => {
-    const checkBannerVisibility = () => {
-      const now = new Date()
-      const currentMonth = now.getMonth() + 1 // getMonth() returns 0-11
-      const currentYear = now.getFullYear()
+    // Check if we're in September 2025
+    const now = new Date()
+    const isSeptember2025 = now.getMonth() === 8 && now.getFullYear() === 2025
 
-      // Only show during September 2025
-      if (currentMonth !== 9 || currentYear !== 2025) {
-        setIsLoading(false)
-        return
-      }
-
-      // Check if banner was dismissed today
-      const dismissedDate = localStorage.getItem("september-banner-dismissed")
-      const today = now.toDateString()
-
-      if (dismissedDate !== today) {
-        setIsVisible(true)
-      }
-
-      setIsLoading(false)
+    if (!isSeptember2025) {
+      return
     }
 
-    checkBannerVisibility()
+    // Check if dismissed today
+    const dismissedDate = localStorage.getItem("bannerDismissed")
+    const today = now.toDateString()
+
+    if (dismissedDate !== today) {
+      setIsVisible(true)
+    }
   }, [])
 
-  const handleClose = () => {
+  const handleDismiss = () => {
     const today = new Date().toDateString()
-    localStorage.setItem("september-banner-dismissed", today)
+    localStorage.setItem("bannerDismissed", today)
+    setIsDismissed(true)
     setIsVisible(false)
   }
 
-  if (isLoading || !isVisible) {
+  if (!isVisible || isDismissed) {
     return null
   }
 
   return (
     <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 px-4 relative">
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-4 flex-1">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span className="bg-white/20 px-2 py-1 rounded text-xs font-semibold">SEPTEMBER ONLY</span>
-          </div>
-
-          <div className="hidden sm:block">
-            <span className="text-lg font-semibold">🎉 Free Setup for September - Limited Time Offer!</span>
-          </div>
-
-          <div className="sm:hidden">
-            <span className="text-sm font-semibold">🎉 Free Setup for September!</span>
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-1">
+          <Calendar className="h-5 w-5 flex-shrink-0" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm sm:text-base">🎉 Free Setup for September!</span>
+            <span className="hidden sm:inline text-sm">Limited time offer - Schedule your demo now</span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Button
-            asChild
-            variant="secondary"
-            size="sm"
-            className="bg-white text-cyan-600 hover:bg-gray-100 font-semibold"
-          >
-            <Link href="/demo">Schedule a Demo Now</Link>
-          </Button>
-
+        <div className="flex items-center gap-3">
+          <Link href="/demo">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="bg-white text-cyan-600 hover:bg-gray-100 font-semibold whitespace-nowrap"
+            >
+              Schedule Demo
+            </Button>
+          </Link>
           <button
-            onClick={handleClose}
-            className="text-white hover:text-gray-200 transition-colors"
+            onClick={handleDismiss}
+            className="text-white hover:text-gray-200 transition-colors p-1"
             aria-label="Close banner"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-      </div>
-
-      {/* Mobile layout */}
-      <div className="sm:hidden mt-2 text-center">
-        <Button
-          asChild
-          variant="secondary"
-          size="sm"
-          className="bg-white text-cyan-600 hover:bg-gray-100 font-semibold w-full"
-        >
-          <Link href="/demo">Schedule a Demo Now</Link>
-        </Button>
       </div>
     </div>
   )
