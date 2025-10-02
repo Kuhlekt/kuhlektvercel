@@ -1,544 +1,609 @@
 "use client"
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { X, BookOpen, FileInput, CalculatorIcon } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Calculator, TrendingUp, DollarSign, Clock, Users, HelpCircle } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ROICalculatorHelpModalProps {
-  isOpen: boolean
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   calculatorType: "simple" | "detailed"
+  currentStep?: string
 }
 
-type HelpTab = "overview" | "inputs" | "calculations"
-
-export function ROICalculatorHelpModal({ isOpen, onClose, calculatorType }: ROICalculatorHelpModalProps) {
-  const [activeTab, setActiveTab] = useState<HelpTab>("overview")
-
+export function ROICalculatorHelpModal({
+  open,
+  onOpenChange,
+  calculatorType,
+  currentStep,
+}: ROICalculatorHelpModalProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <BookOpen className="h-6 w-6 text-cyan-600" />
-              ROI Calculator Help Guide
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          <p className="text-gray-600 text-sm mt-2">Comprehensive guide to understanding and using the calculator</p>
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <HelpCircle className="h-6 w-6 text-cyan-600" />
+            ROI Calculator Help
+          </DialogTitle>
+          <DialogDescription>
+            {calculatorType === "simple"
+              ? "Understanding the Simple ROI Calculator"
+              : "Understanding the Detailed ROI Calculator"}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-200 mb-6">
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === "overview"
-                ? "text-cyan-600 border-b-2 border-cyan-600"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab("inputs")}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === "inputs" ? "text-cyan-600 border-b-2 border-cyan-600" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Inputs
-          </button>
-          <button
-            onClick={() => setActiveTab("calculations")}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === "calculations"
-                ? "text-cyan-600 border-b-2 border-cyan-600"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Calculations
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="space-y-6">
-          {/* Overview Tab */}
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              <div className="bg-cyan-50 p-6 rounded-lg border border-cyan-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <CalculatorIcon className="h-6 w-6 text-cyan-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">What This Calculator Does</h3>
+        <ScrollArea className="h-[calc(90vh-120px)] pr-4">
+          <Accordion type="multiple" defaultValue={["overview", "inputs", "calculations"]} className="w-full">
+            {/* Overview */}
+            <AccordionItem value="overview">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-cyan-600" />
+                  <span>Overview</span>
                 </div>
-                <p className="text-gray-700 mb-4">
-                  The Kuhlekt ROI Calculator helps you understand the financial impact of automating your
-                  invoice-to-cash process. It calculates potential savings across multiple areas of your business.
-                </p>
-              </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-4">
+                {calculatorType === "simple" ? (
+                  <>
+                    <p className="text-gray-700">
+                      The Simple ROI Calculator provides a quick estimate of your potential savings by focusing on the
+                      primary benefit of accounts receivable automation: <strong>working capital improvement</strong>{" "}
+                      through reduced Days Sales Outstanding (DSO).
+                    </p>
+                    <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-cyan-900 mb-2">What this calculator shows:</h4>
+                      <ul className="space-y-2 text-sm text-cyan-800">
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">•</span>
+                          <span>How much cash is currently tied up in receivables</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">•</span>
+                          <span>How much cash can be released through faster collections</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">•</span>
+                          <span>Annual savings based on your cost of capital</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">•</span>
+                          <span>Your projected new DSO after implementing Kuhlekt</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-700">
+                      The Detailed ROI Calculator provides a comprehensive analysis of all the financial benefits from
+                      automating your invoice-to-cash process. It considers multiple factors to give you a complete
+                      picture of your potential ROI.
+                    </p>
+                    <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-cyan-900 mb-2">This calculator analyzes 6 key areas:</h4>
+                      <ul className="space-y-2 text-sm text-cyan-800">
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">1.</span>
+                          <span>
+                            <strong>Working Capital:</strong> Cash released from faster collections
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">2.</span>
+                          <span>
+                            <strong>Interest Savings:</strong> Reduced borrowing costs or increased investment income
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">3.</span>
+                          <span>
+                            <strong>Labour Costs:</strong> Savings from automation and efficiency gains
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">4.</span>
+                          <span>
+                            <strong>Bad Debt:</strong> Reduction through better credit management
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">5.</span>
+                          <span>
+                            <strong>ROI & Payback:</strong> Return on investment and time to recover costs
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-cyan-600 mt-1">6.</span>
+                          <span>
+                            <strong>Scalability:</strong> How the solution grows with your business
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </AccordionContent>
+            </AccordionItem>
 
-              <div className="space-y-4">
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">💰 Cash Flow Improvement</h4>
-                  <p className="text-gray-700 text-sm">
-                    Faster payment collection reduces Days Sales Outstanding (DSO), releasing working capital that can
-                    be used for growth, debt reduction, or earning interest.
+            {/* Input Fields */}
+            <AccordionItem value="inputs">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-cyan-600" />
+                  <span>Input Fields Explained</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-6 pt-4">
+                {calculatorType === "simple" ? (
+                  <>
+                    <div className="space-y-4">
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-1">Expected DSO Improvement (%)</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          The percentage reduction in Days Sales Outstanding you can expect with Kuhlekt.
+                        </p>
+                        <div className="bg-gray-50 rounded p-3 text-sm">
+                          <p className="text-gray-700">
+                            <strong>Typical Range:</strong> 15-30%
+                          </p>
+                          <p className="text-gray-700 mt-1">
+                            <strong>Example:</strong> If your current DSO is 45 days and you expect 20% improvement,
+                            your new DSO would be 36 days.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-1">Cost of Capital (%)</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Your annual interest rate or opportunity cost of capital.
+                        </p>
+                        <div className="bg-gray-50 rounded p-3 text-sm">
+                          <p className="text-gray-700">
+                            <strong>Use:</strong> Business loan rate, line of credit rate, or expected return on
+                            investments
+                          </p>
+                          <p className="text-gray-700 mt-1">
+                            <strong>Example:</strong> If you pay 8% on your line of credit, use 8%
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-1">Current DSO (Days)</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Your current Days Sales Outstanding - the average number of days it takes to collect payment.
+                        </p>
+                        <div className="bg-gray-50 rounded p-3 text-sm">
+                          <p className="text-gray-700">
+                            <strong>Calculation:</strong> (Accounts Receivable / Total Credit Sales) × Number of Days
+                          </p>
+                          <p className="text-gray-700 mt-1">
+                            <strong>Industry Average:</strong> 30-45 days for most B2B companies
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-1">Average Invoice Value ($)</h4>
+                        <p className="text-sm text-gray-600 mb-2">The typical dollar amount of your invoices.</p>
+                        <div className="bg-gray-50 rounded p-3 text-sm">
+                          <p className="text-gray-700">
+                            <strong>Calculation:</strong> Total invoice value / Number of invoices
+                          </p>
+                          <p className="text-gray-700 mt-1">
+                            <strong>Tip:</strong> Use an average over 3-6 months for accuracy
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-1">Monthly Invoices</h4>
+                        <p className="text-sm text-gray-600 mb-2">How many invoices you issue per month on average.</p>
+                        <div className="bg-gray-50 rounded p-3 text-sm">
+                          <p className="text-gray-700">
+                            <strong>Include:</strong> All credit invoices sent to customers
+                          </p>
+                          <p className="text-gray-700 mt-1">
+                            <strong>Exclude:</strong> Cash sales or immediate payments
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      {/* Cost Structure */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          Cost Structure
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Implementation Cost</p>
+                            <p className="text-xs text-gray-600">
+                              One-time setup fee for system configuration, data migration, and training. Typical range:
+                              $5,000-$50,000
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Monthly Subscription Cost</p>
+                            <p className="text-xs text-gray-600">
+                              Recurring platform fee based on transaction volume and features. Typical range:
+                              $500-$5,000
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Annual Direct Labour Costs</p>
+                            <p className="text-xs text-gray-600">
+                              Total cost of your collections team (salaries, benefits, overhead). Used to calculate
+                              automation savings.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bank Interest */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Bank Interest
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Interest Type</p>
+                            <p className="text-xs text-gray-600">
+                              <strong>Loan:</strong> If you borrow to fund operations (use loan interest rate)
+                              <br />
+                              <strong>Deposit:</strong> If you invest excess cash (use investment return rate)
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Interest Rate (%)</p>
+                            <p className="text-xs text-gray-600">
+                              Annual interest rate. Typical ranges: Loans 6-12%, Deposits 3-5%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bad Debt */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Bad Debt
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Current Bad Debts (Annual)</p>
+                            <p className="text-xs text-gray-600">
+                              Total amount written off as uncollectable per year. Check your P&L or aged debtors report.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Average Bad Debt (%)</p>
+                            <p className="text-xs text-gray-600">
+                              Bad debt as a percentage of total sales. Industry average: 1-5%. Calculate: (Bad Debt /
+                              Total Sales) × 100
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expected Savings */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Expected Savings
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">DSO Improvement (%)</p>
+                            <p className="text-xs text-gray-600">
+                              Expected reduction in collection time. Conservative: 15-20%, Typical: 25-35%, Aggressive:
+                              40%+
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Labour Savings (%)</p>
+                            <p className="text-xs text-gray-600">
+                              Efficiency gain from automation. Conservative: 20-30%, Typical: 35-45%, Aggressive: 50%+
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Financial Metrics */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Calculator className="h-4 w-4" />
+                          Financial Metrics
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Current DSO (Days)</p>
+                            <p className="text-xs text-gray-600">
+                              Average days to collect payment. Formula: (Accounts Receivable / Credit Sales) × 365
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Debtors Balance</p>
+                            <p className="text-xs text-gray-600">
+                              Total outstanding accounts receivable. Find this on your balance sheet.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Team Structure */}
+                      <div className="border-l-4 border-cyan-500 pl-4">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Team Structure & Growth
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Number of Debtors</p>
+                            <p className="text-xs text-gray-600">
+                              Total number of credit customers. Helps assess system load and pricing.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Number of Collectors</p>
+                            <p className="text-xs text-gray-600">
+                              Full-time equivalent staff managing collections. Used for labour savings calculation.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Projected Customer Growth (%)</p>
+                            <p className="text-xs text-gray-600">
+                              Expected annual growth in customer base. Shows scalability benefits of automation.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Calculations */}
+            <AccordionItem value="calculations">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-cyan-600" />
+                  <span>How We Calculate Your ROI</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-6 pt-4">
+                {calculatorType === "simple" ? (
+                  <>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">Step 1: Current Cash Tied Up</h4>
+                        <p className="text-sm text-gray-700 mb-2">
+                          Calculate how much working capital is currently locked in receivables:
+                        </p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Current Cash Tied Up = (Current DSO / 30) × Average Invoice Value × Monthly Invoices
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          <strong>Example:</strong> (45 days / 30) × $5,000 × 100 = $750,000
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">Step 2: New DSO After Improvement</h4>
+                        <p className="text-sm text-gray-700 mb-2">Calculate your projected DSO with Kuhlekt:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          New DSO = Current DSO × (1 - DSO Improvement %)
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          <strong>Example:</strong> 45 days × (1 - 0.20) = 36 days
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">Step 3: Cash Released</h4>
+                        <p className="text-sm text-gray-700 mb-2">Calculate working capital improvement:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Cash Released = Current Cash Tied Up - New Cash Tied Up
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          <strong>Example:</strong> $750,000 - $600,000 = $150,000
+                        </p>
+                      </div>
+
+                      <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
+                        <h4 className="font-semibold text-cyan-900 mb-3">Step 4: Annual Savings</h4>
+                        <p className="text-sm text-cyan-800 mb-2">Calculate your total annual benefit:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Annual Savings = Cash Released × 12 × Cost of Capital %
+                        </div>
+                        <p className="text-xs text-cyan-700 mt-2">
+                          <strong>Example:</strong> $150,000 × 12 × 8% = $144,000 per year
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">1. Working Capital Released</h4>
+                        <p className="text-sm text-gray-700 mb-2">Cash freed up from faster collections:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Annual Revenue = (Debtors Balance / Current DSO) × 365
+                          <br />
+                          Daily Revenue = Annual Revenue / 365
+                          <br />
+                          Days Reduced = Current DSO × DSO Improvement %<br />
+                          Working Capital Released = Daily Revenue × Days Reduced
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">2. Interest Savings</h4>
+                        <p className="text-sm text-gray-700 mb-2">Annual savings from released capital:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Interest Savings = Working Capital Released × Interest Rate %
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">3. Labour Cost Savings</h4>
+                        <p className="text-sm text-gray-700 mb-2">Savings from automation efficiency:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Labour Savings = Annual Labour Costs × Labour Savings %
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">4. Bad Debt Reduction</h4>
+                        <p className="text-sm text-gray-700 mb-2">
+                          Reduction through better credit management (40% improvement):
+                        </p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Bad Debt Reduction = Current Bad Debts × 0.40
+                        </div>
+                      </div>
+
+                      <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
+                        <h4 className="font-semibold text-cyan-900 mb-3">5. Total Annual Benefit</h4>
+                        <p className="text-sm text-cyan-800 mb-2">Sum of all benefits:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Total Benefit = Interest Savings + Labour Savings + Bad Debt Reduction
+                        </div>
+                      </div>
+
+                      <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
+                        <h4 className="font-semibold text-cyan-900 mb-3">6. ROI & Payback Period</h4>
+                        <p className="text-sm text-cyan-800 mb-2">Return on investment calculation:</p>
+                        <div className="bg-white rounded p-3 font-mono text-xs">
+                          Total Cost = Implementation Cost + (Monthly Cost × 12)
+                          <br />
+                          Net Annual Benefit = Total Annual Benefit - Annual Subscription
+                          <br />
+                          ROI % = (Net Annual Benefit / Total Cost) × 100
+                          <br />
+                          Payback Months = (Total Cost / Total Annual Benefit) × 12
+                        </div>
+                        <p className="text-xs text-cyan-700 mt-2">
+                          <strong>Example:</strong> If Total Cost is $62,000 and Total Annual Benefit is $248,000, ROI =
+                          300% and Payback = 3 months
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                  <h4 className="font-semibold text-blue-900 mb-2">💡 Important Notes</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• All calculations are estimates based on your inputs</li>
+                    <li>• Actual results may vary based on implementation and business factors</li>
+                    <li>• Conservative estimates are recommended for business planning</li>
+                    <li>• Contact our team for a detailed, customized analysis</li>
+                  </ul>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Getting Started */}
+            <AccordionItem value="getting-started">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-cyan-600" />
+                  <span>Tips for Accurate Results</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Use Recent Data</h4>
+                      <p className="text-sm text-gray-600">
+                        Use data from the last 3-6 months for the most accurate projections. Seasonal businesses should
+                        average across different periods.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      2
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Be Conservative</h4>
+                      <p className="text-sm text-gray-600">
+                        When estimating improvement percentages, use conservative figures. It's better to exceed
+                        expectations than fall short.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Include All Costs</h4>
+                      <p className="text-sm text-gray-600">
+                        For labour costs, include salaries, benefits, overhead, and any related expenses for your
+                        collections team.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      4
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Verify Your DSO</h4>
+                      <p className="text-sm text-gray-600">
+                        Double-check your DSO calculation using your accounting system or reports. This is the most
+                        critical input for accurate results.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-cyan-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      5
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Consider Seasonality</h4>
+                      <p className="text-sm text-gray-600">
+                        If your business has seasonal variations, use annual averages or adjust inputs to reflect
+                        typical conditions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mt-4">
+                  <h4 className="font-semibold text-cyan-900 mb-2">Need Help?</h4>
+                  <p className="text-sm text-cyan-800 mb-3">
+                    Our team is here to help you get accurate results and understand your potential ROI.
                   </p>
+                  <ul className="text-sm text-cyan-800 space-y-1">
+                    <li>📧 Email: enquiries@kuhlekt.com</li>
+                    <li>🌐 Website: kuhlekt.com</li>
+                    <li>📞 Schedule a personalized consultation</li>
+                  </ul>
                 </div>
-
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">⚙️ Labour Savings</h4>
-                  <p className="text-gray-700 text-sm">
-                    Automation reduces manual collection efforts, freeing up your team to focus on high-value activities
-                    like customer relationships and strategic planning.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">📈 Interest Impact</h4>
-                  <p className="text-gray-700 text-sm">
-                    Better cash flow reduces loan interest costs or increases deposit earnings, directly improving your
-                    bottom line.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">🛡️ Bad Debt Reduction</h4>
-                  <p className="text-gray-700 text-sm">
-                    Proactive collections and automated reminders catch issues early, reducing write-offs and improving
-                    your collection rate.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">📊 Scalability</h4>
-                  <p className="text-gray-700 text-sm">
-                    Handle more customers and invoices without proportional staff increases, supporting business growth
-                    efficiently.
-                  </p>
-                </div>
-
-                <div className="border-l-4 border-cyan-500 pl-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">📋 Payment Terms Analysis</h4>
-                  <p className="text-gray-700 text-sm">
-                    See how different customer payment terms affect your cash flow, helping you make informed decisions
-                    about credit policies.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Inputs Tab */}
-          {activeTab === "inputs" && (
-            <div className="space-y-6">
-              <div className="bg-cyan-50 p-6 rounded-lg border border-cyan-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileInput className="h-6 w-6 text-cyan-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Understanding Your Inputs</h3>
-                </div>
-                <p className="text-gray-700">
-                  Each input helps build an accurate picture of your potential ROI. Here's what each field means and how
-                  to find the right values.
-                </p>
-              </div>
-
-              {calculatorType === "simple" ? (
-                <div className="space-y-6">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Expected DSO Improvement (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      The percentage reduction in Days Sales Outstanding you expect with automation.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Typical range: 20-40%</li>
-                      <li>• Conservative: 20-25%</li>
-                      <li>• Aggressive: 35-40%</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Cost of Capital (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      Your annual interest rate on borrowing or what you could earn by investing freed cash.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Business loan rate: 5-12%</li>
-                      <li>• Line of credit: 4-8%</li>
-                      <li>• Investment return: 3-7%</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Current DSO (Days)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      Average number of days it takes to collect payment after invoicing.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Formula: (Accounts Receivable / Annual Revenue) × 365</li>
-                      <li>• Industry average: 30-60 days</li>
-                      <li>• Find this in your accounting reports</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Average Invoice Value ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Typical dollar amount of a single invoice.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Calculate: Total revenue / Number of invoices</li>
-                      <li>• Use annual or monthly data</li>
-                      <li>• Exclude outliers for accuracy</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Monthly Invoices</h4>
-                    <p className="text-sm text-gray-700 mb-2">Number of invoices you send each month on average.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Count unique invoices, not line items</li>
-                      <li>• Average over 3-6 months for accuracy</li>
-                      <li>• Available in accounting software reports</li>
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <h4 className="font-semibold text-lg text-cyan-600">Cost Structure</h4>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Implementation Cost ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      One-time setup and implementation costs for the Kuhlekt system.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Includes setup, training, and integration</li>
-                      <li>• Typical range: $25,000 - $100,000</li>
-                      <li>• Depends on company size and complexity</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Monthly Cost ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Recurring monthly subscription cost for the platform.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Includes software, support, and updates</li>
-                      <li>• Scales with usage and features</li>
-                      <li>• Contact sales for accurate pricing</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Per Annum Direct Labour Costs ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      Total annual cost of staff working on AR and collections.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Include salary, benefits, and overhead</li>
-                      <li>• Only count time spent on collections</li>
-                      <li>• Example: 2 FTEs × $70k = $140k</li>
-                    </ul>
-                  </div>
-
-                  <h4 className="font-semibold text-lg text-cyan-600 mt-6">Financial Metrics</h4>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Interest Rate (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Your borrowing rate or potential investment return.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Use weighted average if multiple loans</li>
-                      <li>• Consider opportunity cost</li>
-                      <li>• Typical range: 4-10%</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Current DSO (Days)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Current Days Sales Outstanding from your AR reports.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Calculate: (AR Balance / Annual Revenue) × 365</li>
-                      <li>• Use trailing 12-month average</li>
-                      <li>• Industry benchmark: 30-45 days</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Debtors Balance ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      Total accounts receivable balance (outstanding invoices).
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Found on your balance sheet</li>
-                      <li>• Use current month-end figure</li>
-                      <li>• Exclude credits and bad debt</li>
-                    </ul>
-                  </div>
-
-                  <h4 className="font-semibold text-lg text-cyan-600 mt-6">Bad Debt</h4>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Average Bad Debt (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Percentage of revenue written off as uncollectable.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Calculate: (Bad Debt / Revenue) × 100</li>
-                      <li>• Industry average: 1-3%</li>
-                      <li>• Use annual figures for accuracy</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Current Bad Debts ($)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Annual amount written off as bad debt.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• From your P&L statement</li>
-                      <li>• Include write-offs and allowances</li>
-                      <li>• Use trailing 12 months</li>
-                    </ul>
-                  </div>
-
-                  <h4 className="font-semibold text-lg text-cyan-600 mt-6">Expected Improvements</h4>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Labour Savings (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">
-                      Expected reduction in manual AR work through automation.
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Typical automation: 30-50%</li>
-                      <li>• Conservative estimate: 30%</li>
-                      <li>• Full automation: 50-60%</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">DSO Improvement (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Expected reduction in collection time.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Industry average: 20-35%</li>
-                      <li>• With full automation: 30-40%</li>
-                      <li>• Depends on current processes</li>
-                    </ul>
-                  </div>
-
-                  <h4 className="font-semibold text-lg text-cyan-600 mt-6">Team & Growth</h4>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Number of Debtors</h4>
-                    <p className="text-sm text-gray-700 mb-2">Total number of customers with credit accounts.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Count active credit customers</li>
-                      <li>• Include both current and past due</li>
-                      <li>• Available in AR aging reports</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Number of Collectors</h4>
-                    <p className="text-sm text-gray-700 mb-2">FTE count of staff doing AR collections work.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Count full-time equivalents</li>
-                      <li>• Include partial allocations</li>
-                      <li>• Example: 2 full-time + 1 part-time = 2.5</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 mb-2">Projected Customer Growth (%)</h4>
-                    <p className="text-sm text-gray-700 mb-2">Expected annual growth in customer base.</p>
-                    <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                      <li>• Based on business plan</li>
-                      <li>• Consider market conditions</li>
-                      <li>• Typical: 10-30% annually</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Calculations Tab */}
-          {activeTab === "calculations" && (
-            <div className="space-y-6">
-              <div className="bg-cyan-50 p-6 rounded-lg border border-cyan-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <CalculatorIcon className="h-6 w-6 text-cyan-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">How We Calculate Your ROI</h3>
-                </div>
-                <p className="text-gray-700">
-                  Understanding the formulas behind your results helps validate the potential value of automation.
-                </p>
-              </div>
-
-              {calculatorType === "simple" ? (
-                <div className="space-y-6">
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 1: Calculate Annual Revenue</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Annual Revenue = Average Invoice Value × Monthly Invoices × 12
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      This establishes your total yearly revenue from invoiced sales.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 2: Calculate DSO Improvement</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      DSO Reduction (days) = Current DSO × (DSO Improvement % / 100)
-                      <br />
-                      New DSO = Current DSO - DSO Reduction
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Example: If current DSO is 45 days and you improve by 30%, your new DSO would be 31.5 days (a 13.5
-                      day improvement).
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 3: Calculate Cash Released</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Daily Revenue = Annual Revenue / 365
-                      <br />
-                      Cash Released = Daily Revenue × DSO Reduction (days)
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      This shows how much working capital becomes available from faster collections.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 4: Calculate Annual Savings</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Monthly Interest Savings = Cash Released × (Cost of Capital % / 100) / 12
-                      <br />
-                      Annual Savings = Monthly Interest Savings × 12
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      The freed cash either reduces interest paid on loans or can be invested to earn returns.
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 rounded-lg border border-cyan-200 mt-6">
-                    <h4 className="font-semibold text-gray-900 mb-2">💡 Example Calculation</h4>
-                    <div className="text-sm text-gray-700 space-y-1">
-                      <p>• Average Invoice: $5,000</p>
-                      <p>• Monthly Invoices: 100</p>
-                      <p>• Current DSO: 45 days</p>
-                      <p>• DSO Improvement: 30%</p>
-                      <p>• Cost of Capital: 5%</p>
-                      <p className="pt-2 font-semibold">Result: ~$27,397 annual savings</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 1: DSO Improvement & Cash Flow</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Annual Revenue = (Debtors Balance / Current DSO) × Days Sales
-                      <br />
-                      DSO Reduction (days) = Current DSO × (DSO Improvement % / 100)
-                      <br />
-                      New DSO = Current DSO - DSO Reduction
-                      <br />
-                      Working Capital Released = (Annual Revenue / Days Sales) × DSO Reduction
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Faster collections free up cash tied in receivables, improving liquidity.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 2: Interest Savings</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Interest Savings = Working Capital Released × (Interest Rate % / 100)
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Freed capital reduces borrowing costs or generates investment returns, depending on your interest
-                      type selection.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 3: Labour Cost Savings</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Labour Savings = Per Annum Labour Costs × (Labour Savings % / 100)
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Automation handles routine tasks, allowing staff to focus on exceptions and high-value work.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 4: Bad Debt Reduction</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Bad Debt Reduction = Current Bad Debts × 0.40
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Proactive collections and automated follow-ups typically reduce bad debt by 40% through earlier
-                      intervention.
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 5: Total Annual Benefit</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Total Benefit = Interest Savings + Labour Savings + Bad Debt Reduction
-                    </div>
-                    <p className="text-sm text-gray-600">Sum of all benefits provides the total annual value.</p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border border-l-4 border-l-cyan-500">
-                    <h4 className="font-semibold text-gray-900 mb-3">Step 6: ROI & Payback</h4>
-                    <div className="bg-gray-50 p-3 rounded font-mono text-sm mb-2">
-                      Annual Cost = Monthly Cost × 12
-                      <br />
-                      Total Investment = Implementation Cost + Annual Cost
-                      <br />
-                      Net Annual Benefit = Total Benefit - Annual Cost
-                      <br />
-                      ROI % = (Net Annual Benefit / Total Investment) × 100
-                      <br />
-                      Payback Months = (Total Investment / Total Benefit) × 12
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      ROI shows return on investment, while payback period indicates how quickly you recover costs.
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 rounded-lg border border-cyan-200 mt-6">
-                    <h4 className="font-semibold text-gray-900 mb-2">📊 Industry Benchmarks</h4>
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <p>• Typical DSO Improvement: 25-35%</p>
-                      <p>• Labour Efficiency Gain: 30-50%</p>
-                      <p>• Bad Debt Reduction: 30-50%</p>
-                      <p>• Average ROI: 250-450%</p>
-                      <p>• Typical Payback: 6-18 months</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-6">
-                    <h4 className="font-semibold text-gray-900 mb-2">⚠️ Important Notes</h4>
-                    <div className="text-sm text-gray-700 space-y-1">
-                      <p>• Results are estimates based on industry averages and your inputs</p>
-                      <p>• Actual results vary by industry, company size, and current processes</p>
-                      <p>• Implementation timeline affects when benefits are realized</p>
-                      <p>• Conservative estimates recommended for financial planning</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end pt-6 border-t">
-          <Button onClick={onClose} className="bg-cyan-600 hover:bg-cyan-700">
-            Got It
-          </Button>
-        </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )

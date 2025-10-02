@@ -2,153 +2,148 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROICalculatorData {
-  // Simple calculator fields
-  simpleDSOImprovement?: number
-  simpleCostOfCapital?: number
-  currentDSO?: number
-  averageInvoiceValue?: number
-  monthlyInvoices?: number
+interface SimpleROIInputs {
+  currentDSO: string
+  averageInvoiceValue: string
+  monthlyInvoices: string
+  simpleDSOImprovement: string
+  simpleCostOfCapital: string
+}
 
-  // Detailed calculator fields (matching the image)
-  implementationCost?: number
-  monthlyCost?: number
-  perAnnumDirectLabourCosts?: number
-  interestType?: string
-  interestRate?: number
-  averageBadDebt?: number
-  currentBadDebts?: number
-  labourSavings?: number
-  dsoImprovement?: number
-  daysSales?: number
-  currentDSODays?: number
-  debtorsBalance?: number
-  averagePaymentTerms?: string
-  numberOfDebtors?: number
-  numberOfCollectors?: number
-  projectedCustomerGrowth?: number
+interface DetailedROIInputs {
+  implementationCost: string
+  monthlyCost: string
+  currentDSODays: string
+  debtorsBalance: string
+  interestType: "loan" | "deposit"
+  interestRate: string
+  perAnnumDirectLabourCosts: string
+  currentBadDebts: string
+  averageBadDebt: string
+  dsoImprovement: string
+  labourSavings: string
+  numberOfDebtors: string
+  numberOfCollectors: string
+  projectedCustomerGrowth: string
+  averagePaymentTerms: "net30" | "net60" | "net90"
+}
 
-  // Contact info
+interface SimpleROIResults {
+  currentCashTied: number
+  newDSO: number
+  cashReleased: number
+  annualSavings: number
+  dsoImprovementPercent: number
+}
+
+interface DetailedROIResults {
+  currentDSO: number
+  newDSO: number
+  dsoReductionDays: number
+  workingCapitalReleased: number
+  labourCostSavings: number
+  badDebtReduction: number
+  interestSavings: number
+  totalAnnualBenefit: number
+  totalImplementationAndAnnualCost: number
+  roi: number
+  paybackMonths: number
+}
+
+export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
+  const currentDSO = Number.parseFloat(inputs.currentDSO)
+  const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
+  const monthlyInvoices = Number.parseFloat(inputs.monthlyInvoices)
+  const dsoImprovementPercent = Number.parseFloat(inputs.simpleDSOImprovement) / 100
+  const costOfCapitalPercent = Number.parseFloat(inputs.simpleCostOfCapital) / 100
+
+  const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
+  const newDSO = currentDSO * (1 - dsoImprovementPercent)
+  const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
+  const cashReleased = currentCashTied - newCashTied
+  const annualSavings = cashReleased * 12 * costOfCapitalPercent
+
+  return {
+    currentCashTied,
+    newDSO,
+    cashReleased,
+    annualSavings,
+    dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
+  }
+}
+
+export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<DetailedROIResults> {
+  const implementationCost = Number.parseFloat(inputs.implementationCost)
+  const monthlyCost = Number.parseFloat(inputs.monthlyCost)
+  const annualCost = monthlyCost * 12
+  const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
+  const interestRate = Number.parseFloat(inputs.interestRate) / 100
+  const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
+  const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
+  const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
+  const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
+  const daysSales = 365
+  const currentDSO = Number.parseFloat(inputs.currentDSODays)
+  const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
+
+  // Calculate annual revenue from debtors balance and DSO
+  const annualRevenue = (debtorsBalance / currentDSO) * daysSales
+
+  // DSO Improvement
+  const dsoReductionDays = currentDSO * dsoImprovementPercent
+  const newDSO = currentDSO - dsoReductionDays
+
+  // Working Capital Released
+  const dailyRevenue = annualRevenue / daysSales
+  const workingCapitalReleased = dailyRevenue * dsoReductionDays
+
+  // Interest Savings (on working capital released)
+  const interestSavings = workingCapitalReleased * interestRate
+
+  // Labour Cost Savings
+  const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
+
+  // Bad Debt Reduction (40% improvement on current bad debt)
+  const badDebtReduction = currentBadDebts * 0.4
+
+  // Total Annual Benefit
+  const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
+
+  // Total Cost (Implementation + Annual)
+  const totalImplementationAndAnnualCost = implementationCost + annualCost
+
+  // ROI Calculation
+  const netBenefit = totalAnnualBenefit - annualCost
+  const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
+
+  // Payback Period
+  const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
+
+  return {
+    currentDSO,
+    newDSO,
+    dsoReductionDays,
+    workingCapitalReleased,
+    labourCostSavings,
+    badDebtReduction,
+    interestSavings,
+    totalAnnualBenefit,
+    totalImplementationAndAnnualCost,
+    roi,
+    paybackMonths,
+  }
+}
+
+export async function sendROIEmail(data: {
+  name: string
   email: string
-  phone: string
+  company: string
   calculatorType: "simple" | "detailed"
-}
-
-interface ROIResults {
-  // Simple results
-  currentCashTied?: number
-  newDSO?: number
-  cashReleased?: number
-  annualSavings?: number
-  dsoImprovementPercent?: number
-
-  // Detailed results
-  currentDSO?: number
-  dsoReductionDays?: number
-  workingCapitalReleased?: number
-  labourCostSavings?: number
-  badDebtReduction?: number
-  interestSavings?: number
-  totalAnnualBenefit?: number
-  totalImplementationAndAnnualCost?: number
-  roi?: number
-  paybackMonths?: number
-}
-
-export async function submitROICalculator(data: ROICalculatorData): Promise<{
-  success: boolean
-  results?: ROIResults
-  error?: string
-}> {
+  results: any
+  inputs: any
+}): Promise<{ success: boolean; error?: string }> {
   try {
-    let results: ROIResults = {}
-
-    if (data.calculatorType === "simple") {
-      // Simple ROI Calculations
-      const currentDSO = data.currentDSO || 0
-      const avgInvoiceValue = data.averageInvoiceValue || 0
-      const monthlyInvoices = data.monthlyInvoices || 0
-      const dsoImprovementPercent = (data.simpleDSOImprovement || 30) / 100
-      const costOfCapitalPercent = (data.simpleCostOfCapital || 5) / 100
-
-      const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
-      const newDSO = currentDSO * (1 - dsoImprovementPercent)
-      const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
-      const cashReleased = currentCashTied - newCashTied
-      const annualSavings = cashReleased * 12 * costOfCapitalPercent
-
-      results = {
-        currentCashTied,
-        newDSO,
-        cashReleased,
-        annualSavings,
-        dsoImprovementPercent: data.simpleDSOImprovement || 30,
-      }
-    } else {
-      // Detailed ROI Calculations (matching the comprehensive calculator)
-      const implementationCost = data.implementationCost || 0
-      const monthlyCost = data.monthlyCost || 0
-      const annualCost = monthlyCost * 12
-      const perAnnumDirectLabourCosts = data.perAnnumDirectLabourCosts || 0
-      const interestRate = (data.interestRate || 0) / 100
-      const averageBadDebtPercent = data.averageBadDebt || 0
-      const currentBadDebts = data.currentBadDebts || 0
-      const labourSavingsPercent = (data.labourSavings || 0) / 100
-      const dsoImprovementPercent = (data.dsoImprovement || 0) / 100
-      const daysSales = data.daysSales || 365
-      const currentDSO = data.currentDSODays || 0
-      const debtorsBalance = data.debtorsBalance || 0
-
-      // Calculate annual revenue from debtors balance and DSO
-      const annualRevenue = (debtorsBalance / currentDSO) * daysSales
-
-      // DSO Improvement
-      const dsoReductionDays = currentDSO * dsoImprovementPercent
-      const newDSO = currentDSO - dsoReductionDays
-
-      // Working Capital Released
-      const dailyRevenue = annualRevenue / daysSales
-      const workingCapitalReleased = dailyRevenue * dsoReductionDays
-
-      // Interest Savings (on working capital released)
-      const interestSavings = workingCapitalReleased * interestRate
-
-      // Labour Cost Savings
-      const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
-
-      // Bad Debt Reduction (40% improvement on current bad debt)
-      const badDebtReduction = currentBadDebts * 0.4
-
-      // Total Annual Benefit
-      const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
-
-      // Total Cost (Implementation + Annual)
-      const totalImplementationAndAnnualCost = implementationCost + annualCost
-
-      // ROI Calculation
-      const netBenefit = totalAnnualBenefit - annualCost
-      const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
-
-      // Payback Period
-      const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
-
-      results = {
-        currentDSO,
-        newDSO,
-        dsoReductionDays,
-        workingCapitalReleased,
-        labourCostSavings,
-        badDebtReduction,
-        interestSavings,
-        totalAnnualBenefit,
-        totalImplementationAndAnnualCost,
-        roi,
-        paybackMonths,
-      }
-    }
-
-    // Send email notification
-    const emailSubject = `New ROI Calculator Submission - ${data.calculatorType === "simple" ? "Simple" : "Detailed"}`
+    const emailSubject = `ROI Calculator Results - ${data.company}`
 
     let emailHtml = `
       <!DOCTYPE html>
@@ -165,192 +160,130 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
             .metric:last-child { border-bottom: none; }
             .label { font-weight: 600; color: #4b5563; }
             .value { color: #0891b2; font-weight: bold; }
-            .highlight { background: #ecfeff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .highlight { background: #ecfeff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
             .highlight-value { font-size: 32px; font-weight: bold; color: #0891b2; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎯 New ROI Calculator Lead</h1>
-              <p>Calculator Type: ${data.calculatorType === "simple" ? "Simple ROI" : "Detailed Analysis"}</p>
+              <h1>🎯 Your ROI Calculator Results</h1>
+              <p>${data.calculatorType === "simple" ? "Simple ROI Analysis" : "Detailed ROI Analysis"}</p>
             </div>
             <div class="content">
               <div class="section">
                 <div class="section-title">📧 Contact Information</div>
                 <div class="metric">
+                  <span class="label">Name:</span>
+                  <span class="value">${data.name}</span>
+                </div>
+                <div class="metric">
                   <span class="label">Email:</span>
                   <span class="value">${data.email}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Phone:</span>
-                  <span class="value">${data.phone}</span>
+                  <span class="label">Company:</span>
+                  <span class="value">${data.company}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Calculator Type:</span>
-                  <span class="value">${data.calculatorType === "simple" ? "Simple" : "Detailed"}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Submission Date:</span>
-                  <span class="value">${new Date().toLocaleString()}</span>
+                  <span class="label">Date:</span>
+                  <span class="value">${new Date().toLocaleDateString()}</span>
                 </div>
               </div>
     `
 
     if (data.calculatorType === "simple") {
       emailHtml += `
+              <div class="highlight">
+                <div style="color: #6b7280; margin-bottom: 10px;">Estimated Annual Savings</div>
+                <div class="highlight-value">$${data.results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+              </div>
+
               <div class="section">
-                <div class="section-title">📊 Input Data</div>
+                <div class="section-title">📊 Key Results</div>
                 <div class="metric">
-                  <span class="label">Expected DSO Improvement:</span>
-                  <span class="value">${data.simpleDSOImprovement}%</span>
+                  <span class="label">Current Cash Tied Up:</span>
+                  <span class="value">$${data.results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Cost of Capital:</span>
-                  <span class="value">${data.simpleCostOfCapital}%</span>
+                  <span class="label">Cash Released:</span>
+                  <span class="value">$${data.results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Current DSO:</span>
-                  <span class="value">${data.currentDSO} days</span>
+                  <span class="label">New DSO:</span>
+                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Average Invoice Value:</span>
-                  <span class="value">$${data.averageInvoiceValue?.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Monthly Invoices:</span>
-                  <span class="value">${data.monthlyInvoices?.toLocaleString()}</span>
+                  <span class="label">DSO Improvement:</span>
+                  <span class="value">${data.results.dsoImprovementPercent}%</span>
                 </div>
               </div>
 
               <div class="section">
-                <div class="section-title">💰 Calculated Results</div>
-                <div class="highlight">
-                  <div style="text-align: center;">
-                    <div style="color: #6b7280; margin-bottom: 10px;">Annual Savings</div>
-                    <div class="highlight-value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
+                <div class="section-title">📈 Your Inputs</div>
+                <div class="metric">
+                  <span class="label">Current DSO:</span>
+                  <span class="value">${data.inputs.currentDSO} days</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Current Cash Tied Up:</span>
-                  <span class="value">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="label">Average Invoice Value:</span>
+                  <span class="value">$${Number.parseFloat(data.inputs.averageInvoiceValue).toLocaleString()}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">New DSO (${data.simpleDSOImprovement}% reduction):</span>
-                  <span class="value">${results.newDSO?.toFixed(0)} days</span>
+                  <span class="label">Monthly Invoices:</span>
+                  <span class="value">${data.inputs.monthlyInvoices}</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Cash Released:</span>
-                  <span class="value">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="label">Expected DSO Improvement:</span>
+                  <span class="value">${data.inputs.simpleDSOImprovement}%</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cost of Capital:</span>
+                  <span class="value">${data.inputs.simpleCostOfCapital}%</span>
                 </div>
               </div>
       `
     } else {
       emailHtml += `
-              <div class="section">
-                <div class="section-title">💰 Cost Structure</div>
-                <div class="metric">
-                  <span class="label">Implementation Cost:</span>
-                  <span class="value">$${data.implementationCost?.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Monthly Cost:</span>
-                  <span class="value">$${data.monthlyCost?.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Per Annum Direct Labour Costs:</span>
-                  <span class="value">$${data.perAnnumDirectLabourCosts?.toLocaleString()}</span>
-                </div>
+              <div class="highlight">
+                <div style="color: #6b7280; margin-bottom: 10px;">Total Annual Benefit</div>
+                <div class="highlight-value">$${data.results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div style="color: #6b7280; margin-top: 10px; font-size: 14px;">ROI: ${data.results.roi?.toFixed(0)}% | Payback: ${data.results.paybackMonths?.toFixed(1)} months</div>
               </div>
 
               <div class="section">
-                <div class="section-title">📊 Financial Metrics</div>
-                <div class="metric">
-                  <span class="label">Interest Type:</span>
-                  <span class="value">${data.interestType === "loan" ? "Loan Interest (Cost)" : "Deposit Interest (Income)"}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Interest Rate:</span>
-                  <span class="value">${data.interestRate}%</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Average Bad Debt:</span>
-                  <span class="value">${data.averageBadDebt}%</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Current Bad Debts:</span>
-                  <span class="value">$${data.currentBadDebts?.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Labour Savings:</span>
-                  <span class="value">${data.labourSavings}%</span>
-                </div>
-                <div class="metric">
-                  <span class="label">DSO Improvement:</span>
-                  <span class="value">${data.dsoImprovement}%</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Days Sales:</span>
-                  <span class="value">${data.daysSales}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Current DSO:</span>
-                  <span class="value">${data.currentDSODays} days</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Debtors Balance:</span>
-                  <span class="value">$${data.debtorsBalance?.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Average Payment Terms:</span>
-                  <span class="value">${data.averagePaymentTerms?.toUpperCase()}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Number of Debtors:</span>
-                  <span class="value">${data.numberOfDebtors}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Number of Collectors:</span>
-                  <span class="value">${data.numberOfCollectors}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Projected Customer Growth:</span>
-                  <span class="value">${data.projectedCustomerGrowth}%</span>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">💰 Calculated Results</div>
-                <div class="highlight">
-                  <div style="text-align: center;">
-                    <div style="color: #6b7280; margin-bottom: 10px;">Total Annual Benefit</div>
-                    <div class="highlight-value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    <div style="color: #6b7280; margin-top: 10px; font-size: 14px;">ROI: ${results.roi?.toFixed(0)}% | Payback: ${results.paybackMonths?.toFixed(1)} months</div>
-                  </div>
-                </div>
-                <div class="metric">
-                  <span class="label">DSO Improvement:</span>
-                  <span class="value">${results.dsoReductionDays?.toFixed(0)} days (${results.currentDSO} → ${results.newDSO?.toFixed(0)})</span>
-                </div>
+                <div class="section-title">💰 Financial Benefits</div>
                 <div class="metric">
                   <span class="label">Working Capital Released:</span>
-                  <span class="value">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="value">$${data.results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
                   <span class="label">Interest Savings:</span>
-                  <span class="value">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="value">$${data.results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
                   <span class="label">Labour Cost Savings:</span>
-                  <span class="value">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="value">$${data.results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
                 <div class="metric">
                   <span class="label">Bad Debt Reduction:</span>
-                  <span class="value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="value">$${data.results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">📊 DSO Improvement</div>
+                <div class="metric">
+                  <span class="label">Current DSO:</span>
+                  <span class="value">${data.results.currentDSO} days</span>
                 </div>
                 <div class="metric">
-                  <span class="label">Total Implementation & Annual Cost:</span>
-                  <span class="value">$${results.totalImplementationAndAnnualCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span class="label">New DSO:</span>
+                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Days Reduced:</span>
+                  <span class="value">${data.results.dsoReductionDays?.toFixed(0)} days</span>
                 </div>
               </div>
       `
@@ -358,11 +291,19 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
 
     emailHtml += `
               <div class="section">
-                <div class="section-title">🎯 Recommended Next Steps</div>
-                <p style="margin: 10px 0;">1. Follow up within 24 hours via email or phone</p>
-                <p style="margin: 10px 0;">2. Schedule a personalized demo to show how Kuhlekt can achieve these results</p>
-                <p style="margin: 10px 0;">3. Prepare case studies from similar companies in their industry</p>
-                <p style="margin: 10px 0;">4. Discuss implementation timeline and pricing options</p>
+                <div class="section-title">🎯 Next Steps</div>
+                <p style="margin: 10px 0;">Thank you for using our ROI Calculator! Here's what you can do next:</p>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                  <li style="margin: 5px 0;">Schedule a personalized demo to see Kuhlekt in action</li>
+                  <li style="margin: 5px 0;">Review detailed case studies from similar companies</li>
+                  <li style="margin: 5px 0;">Discuss implementation timeline and pricing</li>
+                  <li style="margin: 5px 0;">Contact us at enquiries@kuhlekt.com for any questions</li>
+                </ol>
+              </div>
+
+              <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
+                <p><strong>Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
+                <p>Visit us at <a href="https://kuhlekt.com" style="color: #0891b2;">kuhlekt.com</a></p>
               </div>
             </div>
           </div>
@@ -370,19 +311,39 @@ export async function submitROICalculator(data: ROICalculatorData): Promise<{
       </html>
     `
 
+    // Send to customer
     await sendEmail({
-      to: "enquiries@kuhlekt.com",
+      to: data.email,
       subject: emailSubject,
       html: emailHtml,
-      text: `New ROI Calculator submission from ${data.email} (${data.phone})`,
+      text: `Your ROI Calculator Results from Kuhlekt`,
     })
 
-    return { success: true, results }
+    // Send notification to Kuhlekt
+    const notificationHtml = `
+      <h2>New ROI Calculator Lead</h2>
+      <p><strong>Name:</strong> ${data.name}</p>
+      <p><strong>Email:</strong> ${data.email}</p>
+      <p><strong>Company:</strong> ${data.company}</p>
+      <p><strong>Calculator Type:</strong> ${data.calculatorType}</p>
+      <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+      <hr>
+      ${emailHtml}
+    `
+
+    await sendEmail({
+      to: "enquiries@kuhlekt.com",
+      subject: `New ROI Calculator Lead - ${data.company}`,
+      html: notificationHtml,
+      text: `New ROI calculator submission from ${data.name} (${data.email})`,
+    })
+
+    return { success: true }
   } catch (error) {
-    console.error("Error processing ROI calculator:", error)
+    console.error("Error sending ROI email:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
+      error: error instanceof Error ? error.message : "Failed to send email",
     }
   }
 }
