@@ -209,8 +209,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 ROI Calculator
               </DialogTitle>
               {step !== "select" && (
-                <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)}>
-                  <HelpCircle className="h-5 w-5" />
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setShowHelp(true)}
+                  className="bg-cyan-50 hover:bg-cyan-100 border-2 border-cyan-300 hover:border-cyan-400 transition-all"
+                >
+                  <HelpCircle className="h-7 w-7 text-cyan-600 mr-2" />
+                  <span className="font-semibold text-cyan-700">Help</span>
                 </Button>
               )}
             </div>
