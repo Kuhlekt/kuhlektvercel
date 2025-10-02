@@ -101,7 +101,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const isSimpleFormValid = () => {
-    return (
+    const valid =
       currentDSO &&
       averageInvoiceValue &&
       monthlyInvoices &&
@@ -110,11 +110,21 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       Number.parseFloat(currentDSO) > 0 &&
       Number.parseFloat(averageInvoiceValue) > 0 &&
       Number.parseFloat(monthlyInvoices) > 0
-    )
+
+    console.log("Simple form validation:", {
+      currentDSO,
+      averageInvoiceValue,
+      monthlyInvoices,
+      simpleDSOImprovement,
+      simpleCostOfCapital,
+      valid,
+    })
+
+    return valid
   }
 
   const isDetailedFormValid = () => {
-    return (
+    const valid =
       implementationCost &&
       monthlyCost &&
       perAnnumDirectLabourCosts &&
@@ -127,11 +137,43 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       debtorsBalance &&
       numberOfDebtors &&
       numberOfCollectors &&
-      projectedCustomerGrowth
-    )
+      projectedCustomerGrowth &&
+      Number.parseFloat(implementationCost) >= 0 &&
+      Number.parseFloat(monthlyCost) > 0 &&
+      Number.parseFloat(perAnnumDirectLabourCosts) > 0 &&
+      Number.parseFloat(interestRate) > 0 &&
+      Number.parseFloat(averageBadDebt) >= 0 &&
+      Number.parseFloat(currentBadDebts) >= 0 &&
+      Number.parseFloat(labourSavings) >= 0 &&
+      Number.parseFloat(dsoImprovement) > 0 &&
+      Number.parseFloat(currentDSODays) > 0 &&
+      Number.parseFloat(debtorsBalance) > 0 &&
+      Number.parseFloat(numberOfDebtors) > 0 &&
+      Number.parseFloat(numberOfCollectors) > 0 &&
+      Number.parseFloat(projectedCustomerGrowth) >= 0
+
+    console.log("Detailed form validation:", {
+      implementationCost,
+      monthlyCost,
+      perAnnumDirectLabourCosts,
+      interestRate,
+      averageBadDebt,
+      currentBadDebts,
+      labourSavings,
+      dsoImprovement,
+      currentDSODays,
+      debtorsBalance,
+      numberOfDebtors,
+      numberOfCollectors,
+      projectedCustomerGrowth,
+      valid,
+    })
+
+    return valid
   }
 
   const handleSimpleCalculate = async () => {
+    console.log("Simple calculate clicked")
     setIsSubmitting(true)
     try {
       const simpleInputs = {
@@ -141,17 +183,21 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         simpleDSOImprovement,
         simpleCostOfCapital,
       }
+      console.log("Calculating with inputs:", simpleInputs)
       const calculatedResults = await calculateSimpleROI(simpleInputs)
+      console.log("Calculation results:", calculatedResults)
       setResults(calculatedResults)
       setStep("results")
     } catch (error) {
       console.error("Error calculating simple ROI:", error)
+      alert("Error calculating ROI. Please check your inputs and try again.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDetailedCalculate = async () => {
+    console.log("Detailed calculate clicked")
     setIsSubmitting(true)
     try {
       const detailedInputs = {
@@ -171,11 +217,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         projectedCustomerGrowth,
         averagePaymentTerms,
       }
+      console.log("Calculating with inputs:", detailedInputs)
       const calculatedResults = await calculateDetailedROI(detailedInputs)
+      console.log("Calculation results:", calculatedResults)
       setResults(calculatedResults)
       setStep("results")
     } catch (error) {
       console.error("Error calculating detailed ROI:", error)
+      alert("Error calculating ROI. Please check your inputs and try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -225,6 +274,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       setEmailSent(true)
     } catch (error) {
       console.error("Error sending email:", error)
+      alert("Error sending email. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -326,7 +376,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
 
                 <div>
-                  <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding)</Label>
+                  <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding) *</Label>
                   <Input
                     id="currentDSO"
                     type="number"
@@ -338,7 +388,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
 
                 <div>
-                  <Label htmlFor="averageInvoiceValue">Average Invoice Value ($)</Label>
+                  <Label htmlFor="averageInvoiceValue">Average Invoice Value ($) *</Label>
                   <Input
                     id="averageInvoiceValue"
                     type="number"
@@ -350,7 +400,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
 
                 <div>
-                  <Label htmlFor="monthlyInvoices">Monthly Invoices</Label>
+                  <Label htmlFor="monthlyInvoices">Monthly Invoices *</Label>
                   <Input
                     id="monthlyInvoices"
                     type="number"
@@ -371,6 +421,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   onClick={handleSimpleCalculate}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                   disabled={!isSimpleFormValid() || isSubmitting}
+                  type="button"
                 >
                   {isSubmitting ? (
                     "Calculating..."
@@ -394,11 +445,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 className="w-full"
               >
                 {/* Cost Structure */}
-                <AccordionItem value="cost" className="border rounded-lg px-4">
+                <AccordionItem value="cost" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Cost Structure</span>
+                      <span className="font-semibold">Cost Structure</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -443,11 +494,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </AccordionItem>
 
                 {/* Bank Interest */}
-                <AccordionItem value="bank" className="border rounded-lg px-4">
+                <AccordionItem value="bank" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Bank Interest</span>
+                      <span className="font-semibold">Bank Interest</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -484,11 +535,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </AccordionItem>
 
                 {/* Bad Debt */}
-                <AccordionItem value="debt" className="border rounded-lg px-4">
+                <AccordionItem value="debt" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <Clock className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Bad Debt</span>
+                      <span className="font-semibold">Bad Debt</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -521,11 +572,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </AccordionItem>
 
                 {/* Expected Savings */}
-                <AccordionItem value="savings" className="border rounded-lg px-4">
+                <AccordionItem value="savings" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Expected Savings</span>
+                      <span className="font-semibold">Expected Savings</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -559,11 +610,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </AccordionItem>
 
                 {/* Financial Metrics */}
-                <AccordionItem value="financial" className="border rounded-lg px-4">
+                <AccordionItem value="financial" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <Calculator className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Financial Metrics</span>
+                      <span className="font-semibold">Financial Metrics</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -613,11 +664,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </AccordionItem>
 
                 {/* Team Structure & Growth */}
-                <AccordionItem value="team" className="border rounded-lg px-4">
+                <AccordionItem value="team" className="border rounded-lg px-4 mb-2">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-cyan-600" />
-                      <span className="font-semibold text-lg text-cyan-600">Team Structure & Growth</span>
+                      <span className="font-semibold">Team Structure & Growth</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4 pb-2">
@@ -671,6 +722,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   onClick={handleDetailedCalculate}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                   disabled={!isDetailedFormValid() || isSubmitting}
+                  type="button"
                 >
                   {isSubmitting ? (
                     "Calculating..."
