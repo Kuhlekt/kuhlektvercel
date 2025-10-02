@@ -1,236 +1,314 @@
 "use server"
 
-import { sendEmail } from "@/lib/email-service"
+import { sendEmail } from "@/lib/aws-ses"
 
-interface ROICalculationData {
-  annualRevenue: string
-  currentDSO: string
-  invoicesPerMonth: string
-  hoursSpentPerWeek: string
+interface ROICalculatorData {
+  // Simple calculator fields
+  currentDSO?: number
+  averageInvoiceValue?: number
+  monthlyInvoices?: number
+
+  // Detailed calculator fields
+  annualRevenue?: number
+  invoicesPerMonth?: number
+  averagePaymentDays?: number
+  arTeamSize?: number
+  avgHourlyRate?: number
+  hoursPerWeekOnAR?: number
+  badDebtPercentage?: number
+
+  // Contact info
   email: string
   phone: string
-  results: {
-    dsoReduction: number
-    cashFlowImprovement: number
-    timesSaved: number
-    annualSavings: number
-    roiPercentage: number
-  }
+  calculatorType: "simple" | "detailed"
 }
 
-export async function submitROICalculation(data: ROICalculationData) {
+interface ROIResults {
+  // Simple results
+  currentCashTied?: number
+  newDSO?: number
+  cashReleased?: number
+  annualSavings?: number
+
+  // Detailed results
+  dsoReduction?: number
+  dsoReductionDays?: number
+  cashFlowImprovement?: number
+  timeSavingsHours?: number
+  timeSavingsDollars?: number
+  badDebtReduction?: number
+  totalAnnualBenefit?: number
+  roi?: number
+  paybackMonths?: number
+}
+
+export async function submitROICalculator(data: ROICalculatorData): Promise<{
+  success: boolean
+  results?: ROIResults
+  error?: string
+}> {
   try {
-    const formatCurrency = (value: number) => {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(value)
+    let results: ROIResults = {}
+
+    if (data.calculatorType === "simple") {
+      // Simple ROI Calculations
+      const currentDSO = data.currentDSO || 0
+      const avgInvoiceValue = data.averageInvoiceValue || 0
+      const monthlyInvoices = data.monthlyInvoices || 0
+
+      const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
+      const dsoReduction = 0.3 // 30% reduction
+      const newDSO = currentDSO * (1 - dsoReduction)
+      const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
+      const cashReleased = currentCashTied - newCashTied
+      const annualSavings = cashReleased * 12 * 0.05 // Assuming 5% cost of capital
+
+      results = {
+        currentCashTied,
+        newDSO,
+        cashReleased,
+        annualSavings,
+      }
+    } else {
+      // Detailed ROI Calculations
+      const annualRevenue = data.annualRevenue || 0
+      const invoicesPerMonth = data.invoicesPerMonth || 0
+      const avgPaymentDays = data.averagePaymentDays || 0
+      const arTeamSize = data.arTeamSize || 0
+      const avgHourlyRate = data.avgHourlyRate || 0
+      const hoursPerWeek = data.hoursPerWeekOnAR || 0
+      const badDebtPercentage = data.badDebtPercentage || 0
+
+      // DSO Reduction (30% improvement)
+      const dsoReduction = 0.3
+      const dsoReductionDays = avgPaymentDays * dsoReduction
+      const newDSO = avgPaymentDays - dsoReductionDays
+
+      // Cash Flow Improvement
+      const dailyRevenue = annualRevenue / 365
+      const cashFlowImprovement = dailyRevenue * dsoReductionDays
+
+      // Time Savings (80% reduction in manual work)
+      const timeSavingsPercent = 0.8
+      const annualHours = hoursPerWeek * 52 * arTeamSize
+      const timeSavingsHours = annualHours * timeSavingsPercent
+      const timeSavingsDollars = timeSavingsHours * avgHourlyRate
+
+      // Bad Debt Reduction (25% improvement)
+      const badDebtReduction = annualRevenue * (badDebtPercentage / 100) * 0.25
+
+      // Total Annual Benefit
+      const totalAnnualBenefit = cashFlowImprovement * 0.05 + timeSavingsDollars + badDebtReduction
+
+      // ROI Calculation (assuming $50k annual cost)
+      const estimatedAnnualCost = 50000
+      const roi = (totalAnnualBenefit / estimatedAnnualCost) * 100
+      const paybackMonths = (estimatedAnnualCost / totalAnnualBenefit) * 12
+
+      results = {
+        dsoReduction: dsoReduction * 100,
+        dsoReductionDays,
+        cashFlowImprovement,
+        timeSavingsHours,
+        timeSavingsDollars,
+        badDebtReduction,
+        totalAnnualBenefit,
+        roi,
+        paybackMonths,
+      }
     }
 
-    const formatNumber = (value: number) => {
-      return new Intl.NumberFormat("en-US").format(value)
-    }
+    // Send email notification
+    const emailSubject = `New ROI Calculator Submission - ${data.calculatorType === "simple" ? "Simple" : "Detailed"}`
 
-    const emailHtml = `
+    let emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>ROI Calculator Submission</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border-left: 4px solid #0891b2; }
+            .section-title { color: #0891b2; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+            .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+            .metric:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #4b5563; }
+            .value { color: #0891b2; font-weight: bold; }
+            .highlight { background: #ecfeff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .highlight-value { font-size: 32px; font-weight: bold; color: #0891b2; }
+          </style>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
-            <tr>
-              <td style="padding: 40px 20px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  
-                   Header 
-                  <tr>
-                    <td style="background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%); padding: 40px 30px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">New ROI Calculator Submission</h1>
-                      <p style="margin: 10px 0 0; color: #e0f2fe; font-size: 16px;">Invoice to Cash Calculator</p>
-                    </td>
-                  </tr>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎯 New ROI Calculator Lead</h1>
+              <p>Calculator Type: ${data.calculatorType === "simple" ? "Simple ROI" : "Detailed Analysis"}</p>
+            </div>
+            <div class="content">
+              <div class="section">
+                <div class="section-title">📧 Contact Information</div>
+                <div class="metric">
+                  <span class="label">Email:</span>
+                  <span class="value">${data.email}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Phone:</span>
+                  <span class="value">${data.phone}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Calculator Type:</span>
+                  <span class="value">${data.calculatorType === "simple" ? "Simple" : "Detailed"}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Submission Date:</span>
+                  <span class="value">${new Date().toLocaleString()}</span>
+                </div>
+              </div>
+    `
 
-                   Contact Information 
-                  <tr>
-                    <td style="padding: 30px 30px 20px;">
-                      <h2 style="margin: 0 0 20px; color: #111827; font-size: 20px; border-bottom: 2px solid #0891b2; padding-bottom: 10px;">📧 Contact Information</h2>
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 140px;">Email:</strong>
-                            <span style="color: #0891b2; font-weight: 600;">${data.email}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 140px;">Phone:</strong>
-                            <span style="color: #0891b2; font-weight: 600;">${data.phone}</span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
+    if (data.calculatorType === "simple") {
+      emailHtml += `
+              <div class="section">
+                <div class="section-title">📊 Input Data</div>
+                <div class="metric">
+                  <span class="label">Current DSO:</span>
+                  <span class="value">${data.currentDSO} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Average Invoice Value:</span>
+                  <span class="value">$${data.averageInvoiceValue?.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Monthly Invoices:</span>
+                  <span class="value">${data.monthlyInvoices?.toLocaleString()}</span>
+                </div>
+              </div>
 
-                   Business Metrics 
-                  <tr>
-                    <td style="padding: 20px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #111827; font-size: 20px; border-bottom: 2px solid #0891b2; padding-bottom: 10px;">📊 Business Metrics</h2>
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 200px;">Annual Revenue:</strong>
-                            <span style="color: #111827;">${formatCurrency(Number(data.annualRevenue))}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 200px;">Current DSO:</strong>
-                            <span style="color: #111827;">${data.currentDSO} days</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 200px;">Invoices Per Month:</strong>
-                            <span style="color: #111827;">${formatNumber(Number(data.invoicesPerMonth))}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <strong style="color: #374151; display: inline-block; width: 200px;">Hours Spent on AR:</strong>
-                            <span style="color: #111827;">${data.hoursSpentPerWeek} hours/week</span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
+              <div class="section">
+                <div class="section-title">💰 Calculated Results</div>
+                <div class="highlight">
+                  <div style="text-align: center;">
+                    <div style="color: #6b7280; margin-bottom: 10px;">Annual Savings</div>
+                    <div class="highlight-value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
+                </div>
+                <div class="metric">
+                  <span class="label">Current Cash Tied Up:</span>
+                  <span class="value">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">New DSO (30% reduction):</span>
+                  <span class="value">${results.newDSO?.toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cash Released:</span>
+                  <span class="value">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
+      `
+    } else {
+      emailHtml += `
+              <div class="section">
+                <div class="section-title">📊 Input Data</div>
+                <div class="metric">
+                  <span class="label">Annual Revenue:</span>
+                  <span class="value">$${data.annualRevenue?.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Invoices Per Month:</span>
+                  <span class="value">${data.invoicesPerMonth?.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Average Payment Days (DSO):</span>
+                  <span class="value">${data.averagePaymentDays} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">AR Team Size:</span>
+                  <span class="value">${data.arTeamSize} people</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Average Hourly Rate:</span>
+                  <span class="value">$${data.avgHourlyRate}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Hours/Week on AR:</span>
+                  <span class="value">${data.hoursPerWeekOnAR} hours</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Bad Debt %:</span>
+                  <span class="value">${data.badDebtPercentage}%</span>
+                </div>
+              </div>
 
-                   Calculated Results 
-                  <tr>
-                    <td style="padding: 20px 30px;">
-                      <h2 style="margin: 0 0 20px; color: #111827; font-size: 20px; border-bottom: 2px solid #10b981; padding-bottom: 10px;">💰 Calculated ROI Results</h2>
-                      
-                       ROI Percentage 
-                      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
-                        <div style="font-size: 14px; color: #065f46; font-weight: 600; margin-bottom: 5px;">ESTIMATED ROI</div>
-                        <div style="font-size: 36px; color: #059669; font-weight: bold;">${data.results.roiPercentage}%</div>
-                        <div style="font-size: 13px; color: #047857; margin-top: 5px;">First year return on investment</div>
-                      </div>
+              <div class="section">
+                <div class="section-title">💰 Calculated Results</div>
+                <div class="highlight">
+                  <div style="text-align: center;">
+                    <div style="color: #6b7280; margin-bottom: 10px;">Projected ROI</div>
+                    <div class="highlight-value">${results.roi?.toFixed(0)}%</div>
+                  </div>
+                </div>
+                <div class="metric">
+                  <span class="label">DSO Reduction:</span>
+                  <span class="value">${results.dsoReductionDays?.toFixed(0)} days (${results.dsoReduction?.toFixed(0)}%)</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cash Flow Improvement:</span>
+                  <span class="value">$${results.cashFlowImprovement?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Time Savings:</span>
+                  <span class="value">${results.timeSavingsHours?.toLocaleString(undefined, { maximumFractionDigits: 0 })} hours/year</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Labor Cost Savings:</span>
+                  <span class="value">$${results.timeSavingsDollars?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Bad Debt Reduction:</span>
+                  <span class="value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Total Annual Benefit:</span>
+                  <span class="value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Payback Period:</span>
+                  <span class="value">${results.paybackMonths?.toFixed(1)} months</span>
+                </div>
+              </div>
+      `
+    }
 
-                       Metrics Grid 
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 20px;">
-                        <tr>
-                          <td style="width: 50%; padding: 15px; background-color: #eff6ff; border-radius: 4px; vertical-align: top;" valign="top">
-                            <div style="font-size: 12px; color: #1e40af; font-weight: 600; margin-bottom: 5px;">DSO REDUCTION</div>
-                            <div style="font-size: 24px; color: #1e3a8a; font-weight: bold;">${data.results.dsoReduction} days</div>
-                            <div style="font-size: 11px; color: #3b82f6; margin-top: 3px;">Faster cash collection</div>
-                          </td>
-                          <td style="width: 10px;"></td>
-                          <td style="width: 50%; padding: 15px; background-color: #ecfdf5; border-radius: 4px; vertical-align: top;" valign="top">
-                            <div style="font-size: 12px; color: #065f46; font-weight: 600; margin-bottom: 5px;">CASH FLOW IMPACT</div>
-                            <div style="font-size: 24px; color: #047857; font-weight: bold;">${formatCurrency(data.results.cashFlowImprovement)}</div>
-                            <div style="font-size: 11px; color: #10b981; margin-top: 3px;">Additional working capital</div>
-                          </td>
-                        </tr>
-                        <tr><td colspan="3" style="height: 10px;"></td></tr>
-                        <tr>
-                          <td style="width: 50%; padding: 15px; background-color: #faf5ff; border-radius: 4px; vertical-align: top;" valign="top">
-                            <div style="font-size: 12px; color: #6b21a8; font-weight: 600; margin-bottom: 5px;">TIME SAVED</div>
-                            <div style="font-size: 24px; color: #581c87; font-weight: bold;">${formatNumber(data.results.timesSaved)} hrs</div>
-                            <div style="font-size: 11px; color: #8b5cf6; margin-top: 3px;">Per year on manual tasks</div>
-                          </td>
-                          <td style="width: 10px;"></td>
-                          <td style="width: 50%; padding: 15px; background-color: #fef3c7; border-radius: 4px; vertical-align: top;" valign="top">
-                            <div style="font-size: 12px; color: #92400e; font-weight: 600; margin-bottom: 5px;">ANNUAL SAVINGS</div>
-                            <div style="font-size: 24px; color: #78350f; font-weight: bold;">${formatCurrency(data.results.annualSavings)}</div>
-                            <div style="font-size: 11px; color: #d97706; margin-top: 3px;">Combined cost reduction</div>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-
-                   Next Steps 
-                  <tr>
-                    <td style="padding: 20px 30px 40px;">
-                      <div style="background-color: #f9fafb; border-radius: 4px; padding: 20px; border: 1px solid #e5e7eb;">
-                        <h3 style="margin: 0 0 15px; color: #111827; font-size: 16px;">🎯 Recommended Next Steps</h3>
-                        <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.6;">
-                          <li style="margin-bottom: 8px;">Schedule a personalized demo to see Kuhlekt in action</li>
-                          <li style="margin-bottom: 8px;">Discuss their specific AR challenges and requirements</li>
-                          <li style="margin-bottom: 8px;">Provide a detailed ROI analysis based on their business</li>
-                          <li>Share relevant case studies and success stories</li>
-                        </ul>
-                      </div>
-                    </td>
-                  </tr>
-
-                   Footer 
-                  <tr>
-                    <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                      <p style="margin: 0; color: #6b7280; font-size: 12px;">
-                        This is an automated notification from the Kuhlekt ROI Calculator
-                      </p>
-                      <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">
-                        Submitted on ${new Date().toLocaleString("en-US", {
-                          dateStyle: "full",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                    </td>
-                  </tr>
-
-                </table>
-              </td>
-            </tr>
-          </table>
+    emailHtml += `
+              <div class="section">
+                <div class="section-title">🎯 Recommended Next Steps</div>
+                <p style="margin: 10px 0;">1. Follow up within 24 hours via email or phone</p>
+                <p style="margin: 10px 0;">2. Schedule a personalized demo to show how Kuhlekt can achieve these results</p>
+                <p style="margin: 10px 0;">3. Prepare case studies from similar companies in their industry</p>
+                <p style="margin: 10px 0;">4. Discuss implementation timeline and pricing options</p>
+              </div>
+            </div>
+          </div>
         </body>
       </html>
     `
 
-    const emailText = `
-New ROI Calculator Submission - Invoice to Cash
-
-CONTACT INFORMATION
-Email: ${data.email}
-Phone: ${data.phone}
-
-BUSINESS METRICS
-Annual Revenue: ${formatCurrency(Number(data.annualRevenue))}
-Current DSO: ${data.currentDSO} days
-Invoices Per Month: ${formatNumber(Number(data.invoicesPerMonth))}
-Hours Spent on AR: ${data.hoursSpentPerWeek} hours/week
-
-CALCULATED ROI RESULTS
-Estimated ROI: ${data.results.roiPercentage}%
-DSO Reduction: ${data.results.dsoReduction} days
-Cash Flow Impact: ${formatCurrency(data.results.cashFlowImprovement)}
-Time Saved: ${formatNumber(data.results.timesSaved)} hours/year
-Annual Savings: ${formatCurrency(data.results.annualSavings)}
-
-NEXT STEPS
-- Schedule a personalized demo
-- Discuss their specific AR challenges
-- Provide detailed ROI analysis
-- Share relevant case studies
-
-Submitted: ${new Date().toLocaleString()}
-    `
-
     await sendEmail({
       to: "enquiries@kuhlekt.com",
-      subject: `New ROI Calculator Lead - ${data.email}`,
+      subject: emailSubject,
       html: emailHtml,
-      text: emailText,
+      text: `New ROI Calculator submission from ${data.email} (${data.phone})`,
     })
 
-    return { success: true }
+    return { success: true, results }
   } catch (error) {
-    console.error("Error submitting ROI calculation:", error)
-    return { success: false, error: "Failed to submit ROI calculation" }
+    console.error("Error processing ROI calculator:", error)
+    return {
+      success: false,
+      error: "Failed to process your request. Please try again.",
+    }
   }
 }
