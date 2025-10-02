@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
+import { Calculator, TrendingUp, DollarSign, Clock, CheckCircle2, Loader2, AlertCircle, HelpCircle } from "lucide-react"
 import { submitROICalculator } from "@/app/roi-calculator/actions"
+import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 
 interface ROICalculatorModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [calculatorType, setCalculatorType] = useState<CalculatorType>("simple")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [showHelp, setShowHelp] = useState(false)
 
   // Simple calculator inputs
   const [simpleDSOImprovement, setSimpleDSOImprovement] = useState("30")
@@ -30,33 +32,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
 
-  // Detailed calculator inputs (matching the image exactly)
-  // Cost Structure
+  // Detailed calculator inputs
   const [implementationCost, setImplementationCost] = useState("")
   const [monthlyCost, setMonthlyCost] = useState("")
   const [perAnnumDirectLabourCosts, setPerAnnumDirectLabourCosts] = useState("")
-
-  // Bank Interest
   const [interestType, setInterestType] = useState("loan")
   const [interestRate, setInterestRate] = useState("")
-
-  // Bad Debt
   const [averageBadDebt, setAverageBadDebt] = useState("")
   const [currentBadDebts, setCurrentBadDebts] = useState("")
-
-  // Expected Savings
   const [labourSavings, setLabourSavings] = useState("")
   const [dsoImprovement, setDsoImprovement] = useState("")
-
-  // Financial Metrics
   const [daysSales, setDaysSales] = useState("")
   const [currentDSODays, setCurrentDSODays] = useState("")
   const [debtorsBalance, setDebtorsBalance] = useState("")
-
-  // Payment Terms
   const [averagePaymentTerms, setAveragePaymentTerms] = useState("net30")
-
-  // Team Structure & Growth
   const [numberOfDebtors, setNumberOfDebtors] = useState("")
   const [numberOfCollectors, setNumberOfCollectors] = useState("")
   const [projectedCustomerGrowth, setProjectedCustomerGrowth] = useState("")
@@ -222,647 +211,665 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Calculator className="h-6 w-6 text-cyan-600" />
-            ROI Calculator
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Step 1: Calculator Type Selection */}
-        {step === "calculator-type" && (
-          <div className="space-y-6 py-4">
-            <p className="text-gray-600 text-center">Choose your calculator type:</p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={() => handleCalculatorTypeSelect("simple")}
-                className="p-6 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-all text-left"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-cyan-100 p-2 rounded-lg">
-                    <Calculator className="h-6 w-6 text-cyan-600" />
-                  </div>
-                  <h3 className="font-semibold text-lg">Simple ROI</h3>
-                </div>
-                <p className="text-sm text-gray-600">Quick calculation based on DSO and invoice data</p>
-              </button>
-
-              <button
-                onClick={() => handleCalculatorTypeSelect("detailed")}
-                className="p-6 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-all text-left"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-cyan-100 p-2 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-cyan-600" />
-                  </div>
-                  <h3 className="font-semibold text-lg">Detailed Analysis</h3>
-                </div>
-                <p className="text-sm text-gray-600">Comprehensive invoice-to-cash ROI analysis</p>
-              </button>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <Calculator className="h-6 w-6 text-cyan-600" />
+                ROI Calculator
+              </DialogTitle>
+              {step !== "calculator-type" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowHelp(true)}
+                  className="text-gray-600 hover:text-cyan-600"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  <span className="sr-only">Help</span>
+                </Button>
+              )}
             </div>
-          </div>
-        )}
+          </DialogHeader>
 
-        {/* Step 2a: Simple Calculator Inputs */}
-        {step === "simple-inputs" && (
-          <div className="space-y-6 py-4">
-            <div className="space-y-4">
+          {/* Step 1: Calculator Type Selection */}
+          {step === "calculator-type" && (
+            <div className="space-y-6 py-4">
+              <p className="text-gray-600 text-center">Choose your calculator type:</p>
               <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="simpleDSOImprovement">Expected DSO Improvement (%)</Label>
-                  <Input
-                    id="simpleDSOImprovement"
-                    type="number"
-                    placeholder="30"
-                    value={simpleDSOImprovement}
-                    onChange={(e) => setSimpleDSOImprovement(e.target.value)}
-                    min="0"
-                    max="100"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Typical improvement: 20-40%</p>
-                </div>
-                <div>
-                  <Label htmlFor="simpleCostOfCapital">Cost of Capital (%)</Label>
-                  <Input
-                    id="simpleCostOfCapital"
-                    type="number"
-                    placeholder="5"
-                    value={simpleCostOfCapital}
-                    onChange={(e) => setSimpleCostOfCapital(e.target.value)}
-                    min="0"
-                    step="0.1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Your annual interest rate</p>
-                </div>
-              </div>
+                <button
+                  onClick={() => handleCalculatorTypeSelect("simple")}
+                  className="p-6 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-cyan-100 p-2 rounded-lg">
+                      <Calculator className="h-6 w-6 text-cyan-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Simple ROI</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">Quick calculation based on DSO and invoice data</p>
+                </button>
 
-              <div>
-                <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding)</Label>
-                <Input
-                  id="currentDSO"
-                  type="number"
-                  placeholder="e.g., 45"
-                  value={currentDSO}
-                  onChange={(e) => setCurrentDSO(e.target.value)}
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="averageInvoiceValue">Average Invoice Value ($)</Label>
-                <Input
-                  id="averageInvoiceValue"
-                  type="number"
-                  placeholder="e.g., 5000"
-                  value={averageInvoiceValue}
-                  onChange={(e) => setAverageInvoiceValue(e.target.value)}
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="monthlyInvoices">Monthly Invoices</Label>
-                <Input
-                  id="monthlyInvoices"
-                  type="number"
-                  placeholder="e.g., 100"
-                  value={monthlyInvoices}
-                  onChange={(e) => setMonthlyInvoices(e.target.value)}
-                  min="0"
-                />
+                <button
+                  onClick={() => handleCalculatorTypeSelect("detailed")}
+                  className="p-6 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-cyan-100 p-2 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-cyan-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Detailed Analysis</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">Comprehensive invoice-to-cash ROI analysis</p>
+                </button>
               </div>
             </div>
+          )}
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
-                Back
-              </Button>
-              <Button
-                onClick={handleInputsNext}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                disabled={
-                  !simpleDSOImprovement ||
-                  !simpleCostOfCapital ||
-                  !currentDSO ||
-                  !averageInvoiceValue ||
-                  !monthlyInvoices
-                }
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2b: Detailed Calculator Inputs */}
-        {step === "detailed-inputs" && (
-          <div className="space-y-6 py-4">
-            {!isDetailedFormValid() && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-800">Please fill in all required fields:</p>
-                  <ul className="text-xs text-yellow-700 mt-2 space-y-1">
-                    {getMissingFields().map((field) => (
-                      <li key={field}>• {field}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              {/* Cost Structure */}
+          {/* Step 2a: Simple Calculator Inputs */}
+          {step === "simple-inputs" && (
+            <div className="space-y-6 py-4">
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <DollarSign className="h-5 w-5" />
-                  Cost Structure
-                </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="implementationCost" className={!implementationCost ? "text-red-600" : ""}>
-                      Implementation Cost ($) {!implementationCost && "*"}
-                    </Label>
+                    <Label htmlFor="simpleDSOImprovement">Expected DSO Improvement (%)</Label>
                     <Input
-                      id="implementationCost"
+                      id="simpleDSOImprovement"
                       type="number"
-                      placeholder="50000"
-                      value={implementationCost}
-                      onChange={(e) => setImplementationCost(e.target.value)}
+                      placeholder="30"
+                      value={simpleDSOImprovement}
+                      onChange={(e) => setSimpleDSOImprovement(e.target.value)}
                       min="0"
-                      className={!implementationCost ? "border-red-300" : ""}
+                      max="100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Typical improvement: 20-40%</p>
                   </div>
                   <div>
-                    <Label htmlFor="monthlyCost" className={!monthlyCost ? "text-red-600" : ""}>
-                      Monthly Cost ($) {!monthlyCost && "*"}
-                    </Label>
+                    <Label htmlFor="simpleCostOfCapital">Cost of Capital (%)</Label>
                     <Input
-                      id="monthlyCost"
+                      id="simpleCostOfCapital"
                       type="number"
-                      placeholder="8500"
-                      value={monthlyCost}
-                      onChange={(e) => setMonthlyCost(e.target.value)}
+                      placeholder="5"
+                      value={simpleCostOfCapital}
+                      onChange={(e) => setSimpleCostOfCapital(e.target.value)}
                       min="0"
-                      className={!monthlyCost ? "border-red-300" : ""}
+                      step="0.1"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Your annual interest rate</p>
                   </div>
                 </div>
+
                 <div>
-                  <Label
-                    htmlFor="perAnnumDirectLabourCosts"
-                    className={!perAnnumDirectLabourCosts ? "text-red-600" : ""}
-                  >
-                    Per Annum Direct Labour Costs ($) {!perAnnumDirectLabourCosts && "*"}
-                  </Label>
+                  <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding)</Label>
                   <Input
-                    id="perAnnumDirectLabourCosts"
+                    id="currentDSO"
                     type="number"
-                    placeholder="500000"
-                    value={perAnnumDirectLabourCosts}
-                    onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
+                    placeholder="e.g., 45"
+                    value={currentDSO}
+                    onChange={(e) => setCurrentDSO(e.target.value)}
                     min="0"
-                    className={!perAnnumDirectLabourCosts ? "border-red-300" : ""}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="averageInvoiceValue">Average Invoice Value ($)</Label>
+                  <Input
+                    id="averageInvoiceValue"
+                    type="number"
+                    placeholder="e.g., 5000"
+                    value={averageInvoiceValue}
+                    onChange={(e) => setAverageInvoiceValue(e.target.value)}
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="monthlyInvoices">Monthly Invoices</Label>
+                  <Input
+                    id="monthlyInvoices"
+                    type="number"
+                    placeholder="e.g., 100"
+                    value={monthlyInvoices}
+                    onChange={(e) => setMonthlyInvoices(e.target.value)}
+                    min="0"
                   />
                 </div>
               </div>
 
-              {/* Bank Interest */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <TrendingUp className="h-5 w-5" />
-                  Bank Interest
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
+                  Back
+                </Button>
+                <Button
+                  onClick={handleInputsNext}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                  disabled={
+                    !simpleDSOImprovement ||
+                    !simpleCostOfCapital ||
+                    !currentDSO ||
+                    !averageInvoiceValue ||
+                    !monthlyInvoices
+                  }
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2b: Detailed Calculator Inputs */}
+          {step === "detailed-inputs" && (
+            <div className="space-y-6 py-4">
+              {!isDetailedFormValid() && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <Label htmlFor="interestType">Interest Type</Label>
-                    <Select value={interestType} onValueChange={setInterestType}>
+                    <p className="text-sm font-medium text-yellow-800">Please fill in all required fields:</p>
+                    <ul className="text-xs text-yellow-700 mt-2 space-y-1">
+                      {getMissingFields().map((field) => (
+                        <li key={field}>• {field}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                {/* Cost Structure */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <DollarSign className="h-5 w-5" />
+                    Cost Structure
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="implementationCost" className={!implementationCost ? "text-red-600" : ""}>
+                        Implementation Cost ($) {!implementationCost && "*"}
+                      </Label>
+                      <Input
+                        id="implementationCost"
+                        type="number"
+                        placeholder="50000"
+                        value={implementationCost}
+                        onChange={(e) => setImplementationCost(e.target.value)}
+                        min="0"
+                        className={!implementationCost ? "border-red-300" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="monthlyCost" className={!monthlyCost ? "text-red-600" : ""}>
+                        Monthly Cost ($) {!monthlyCost && "*"}
+                      </Label>
+                      <Input
+                        id="monthlyCost"
+                        type="number"
+                        placeholder="8500"
+                        value={monthlyCost}
+                        onChange={(e) => setMonthlyCost(e.target.value)}
+                        min="0"
+                        className={!monthlyCost ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="perAnnumDirectLabourCosts"
+                      className={!perAnnumDirectLabourCosts ? "text-red-600" : ""}
+                    >
+                      Per Annum Direct Labour Costs ($) {!perAnnumDirectLabourCosts && "*"}
+                    </Label>
+                    <Input
+                      id="perAnnumDirectLabourCosts"
+                      type="number"
+                      placeholder="500000"
+                      value={perAnnumDirectLabourCosts}
+                      onChange={(e) => setPerAnnumDirectLabourCosts(e.target.value)}
+                      min="0"
+                      className={!perAnnumDirectLabourCosts ? "border-red-300" : ""}
+                    />
+                  </div>
+                </div>
+
+                {/* Bank Interest */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <TrendingUp className="h-5 w-5" />
+                    Bank Interest
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="interestType">Interest Type</Label>
+                      <Select value={interestType} onValueChange={setInterestType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
+                          <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="interestRate" className={!interestRate ? "text-red-600" : ""}>
+                        Interest Rate (%) {!interestRate && "*"}
+                      </Label>
+                      <Input
+                        id="interestRate"
+                        type="number"
+                        placeholder="5"
+                        value={interestRate}
+                        onChange={(e) => setInterestRate(e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className={!interestRate ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bad Debt */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <Clock className="h-5 w-5" />
+                    Bad Debt
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="averageBadDebt" className={!averageBadDebt ? "text-red-600" : ""}>
+                        Average Bad Debt (%) {!averageBadDebt && "*"}
+                      </Label>
+                      <Input
+                        id="averageBadDebt"
+                        type="number"
+                        placeholder="0.0355"
+                        value={averageBadDebt}
+                        onChange={(e) => setAverageBadDebt(e.target.value)}
+                        min="0"
+                        step="0.0001"
+                        className={!averageBadDebt ? "border-red-300" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="currentBadDebts" className={!currentBadDebts ? "text-red-600" : ""}>
+                        Current Bad Debts ($) {!currentBadDebts && "*"}
+                      </Label>
+                      <Input
+                        id="currentBadDebts"
+                        type="number"
+                        placeholder="20000"
+                        value={currentBadDebts}
+                        onChange={(e) => setCurrentBadDebts(e.target.value)}
+                        min="0"
+                        className={!currentBadDebts ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expected Savings */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Expected Savings
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="labourSavings" className={!labourSavings ? "text-red-600" : ""}>
+                        Labour Savings (%) {!labourSavings && "*"}
+                      </Label>
+                      <Input
+                        id="labourSavings"
+                        type="number"
+                        placeholder="40"
+                        value={labourSavings}
+                        onChange={(e) => setLabourSavings(e.target.value)}
+                        min="0"
+                        max="100"
+                        className={!labourSavings ? "border-red-300" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dsoImprovement" className={!dsoImprovement ? "text-red-600" : ""}>
+                        DSO Improvement (%) {!dsoImprovement && "*"}
+                      </Label>
+                      <Input
+                        id="dsoImprovement"
+                        type="number"
+                        placeholder="30"
+                        value={dsoImprovement}
+                        onChange={(e) => setDsoImprovement(e.target.value)}
+                        min="0"
+                        max="100"
+                        className={!dsoImprovement ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Metrics */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <TrendingUp className="h-5 w-5" />
+                    Financial Metrics
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="daysSales" className={!daysSales ? "text-red-600" : ""}>
+                        Days Sales {!daysSales && "*"}
+                      </Label>
+                      <Input
+                        id="daysSales"
+                        type="number"
+                        placeholder="365"
+                        value={daysSales}
+                        onChange={(e) => setDaysSales(e.target.value)}
+                        min="0"
+                        className={!daysSales ? "border-red-300" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="currentDSODays" className={!currentDSODays ? "text-red-600" : ""}>
+                        Current DSO (Days) {!currentDSODays && "*"}
+                      </Label>
+                      <Input
+                        id="currentDSODays"
+                        type="number"
+                        placeholder="45"
+                        value={currentDSODays}
+                        onChange={(e) => setCurrentDSODays(e.target.value)}
+                        min="0"
+                        className={!currentDSODays ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="debtorsBalance" className={!debtorsBalance ? "text-red-600" : ""}>
+                      Debtors Balance ($) {!debtorsBalance && "*"}
+                    </Label>
+                    <Input
+                      id="debtorsBalance"
+                      type="number"
+                      placeholder="1000000"
+                      value={debtorsBalance}
+                      onChange={(e) => setDebtorsBalance(e.target.value)}
+                      min="0"
+                      className={!debtorsBalance ? "border-red-300" : ""}
+                    />
+                  </div>
+                </div>
+
+                {/* Payment Terms */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <Clock className="h-5 w-5" />
+                    Payment Terms
+                  </h3>
+                  <div>
+                    <Label htmlFor="averagePaymentTerms">Average Payment Terms (Days)</Label>
+                    <Select value={averagePaymentTerms} onValueChange={setAveragePaymentTerms}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Select terms" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
-                        <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                        <SelectItem value="net7">Net 7</SelectItem>
+                        <SelectItem value="net15">Net 15</SelectItem>
+                        <SelectItem value="net30">Net 30</SelectItem>
+                        <SelectItem value="net45">Net 45</SelectItem>
+                        <SelectItem value="net60">Net 60</SelectItem>
+                        <SelectItem value="net90">Net 90</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                {/* Team Structure & Growth */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Team Structure & Growth
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="numberOfDebtors" className={!numberOfDebtors ? "text-red-600" : ""}>
+                        Number of Debtors {!numberOfDebtors && "*"}
+                      </Label>
+                      <Input
+                        id="numberOfDebtors"
+                        type="number"
+                        placeholder="500"
+                        value={numberOfDebtors}
+                        onChange={(e) => setNumberOfDebtors(e.target.value)}
+                        min="0"
+                        className={!numberOfDebtors ? "border-red-300" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="numberOfCollectors" className={!numberOfCollectors ? "text-red-600" : ""}>
+                        Number of Collectors {!numberOfCollectors && "*"}
+                      </Label>
+                      <Input
+                        id="numberOfCollectors"
+                        type="number"
+                        placeholder="5"
+                        value={numberOfCollectors}
+                        onChange={(e) => setNumberOfCollectors(e.target.value)}
+                        min="0"
+                        className={!numberOfCollectors ? "border-red-300" : ""}
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <Label htmlFor="interestRate" className={!interestRate ? "text-red-600" : ""}>
-                      Interest Rate (%) {!interestRate && "*"}
+                    <Label htmlFor="projectedCustomerGrowth" className={!projectedCustomerGrowth ? "text-red-600" : ""}>
+                      Projected Customer Growth (%) {!projectedCustomerGrowth && "*"}
                     </Label>
                     <Input
-                      id="interestRate"
+                      id="projectedCustomerGrowth"
                       type="number"
-                      placeholder="5"
-                      value={interestRate}
-                      onChange={(e) => setInterestRate(e.target.value)}
+                      placeholder="50"
+                      value={projectedCustomerGrowth}
+                      onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
                       min="0"
-                      step="0.01"
-                      className={!interestRate ? "border-red-300" : ""}
+                      className={!projectedCustomerGrowth ? "border-red-300" : ""}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Bad Debt */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <Clock className="h-5 w-5" />
-                  Bad Debt
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="averageBadDebt" className={!averageBadDebt ? "text-red-600" : ""}>
-                      Average Bad Debt (%) {!averageBadDebt && "*"}
-                    </Label>
-                    <Input
-                      id="averageBadDebt"
-                      type="number"
-                      placeholder="0.0355"
-                      value={averageBadDebt}
-                      onChange={(e) => setAverageBadDebt(e.target.value)}
-                      min="0"
-                      step="0.0001"
-                      className={!averageBadDebt ? "border-red-300" : ""}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="currentBadDebts" className={!currentBadDebts ? "text-red-600" : ""}>
-                      Current Bad Debts ($) {!currentBadDebts && "*"}
-                    </Label>
-                    <Input
-                      id="currentBadDebts"
-                      type="number"
-                      placeholder="20000"
-                      value={currentBadDebts}
-                      onChange={(e) => setCurrentBadDebts(e.target.value)}
-                      min="0"
-                      className={!currentBadDebts ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
+                  Back
+                </Button>
+                <Button
+                  onClick={handleInputsNext}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                  disabled={!isDetailedFormValid()}
+                >
+                  Continue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Contact Information */}
+          {step === "contact" && (
+            <div className="space-y-6 py-4">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-semibold mb-2">See Your Results</h3>
+                <p className="text-gray-600">Enter your contact information to view your personalized ROI analysis</p>
               </div>
 
-              {/* Expected Savings */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  Expected Savings
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="labourSavings" className={!labourSavings ? "text-red-600" : ""}>
-                      Labour Savings (%) {!labourSavings && "*"}
-                    </Label>
-                    <Input
-                      id="labourSavings"
-                      type="number"
-                      placeholder="40"
-                      value={labourSavings}
-                      onChange={(e) => setLabourSavings(e.target.value)}
-                      min="0"
-                      max="100"
-                      className={!labourSavings ? "border-red-300" : ""}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dsoImprovement" className={!dsoImprovement ? "text-red-600" : ""}>
-                      DSO Improvement (%) {!dsoImprovement && "*"}
-                    </Label>
-                    <Input
-                      id="dsoImprovement"
-                      type="number"
-                      placeholder="30"
-                      value={dsoImprovement}
-                      onChange={(e) => setDsoImprovement(e.target.value)}
-                      min="0"
-                      max="100"
-                      className={!dsoImprovement ? "border-red-300" : ""}
-                    />
-                  </div>
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                  <p className="text-sm text-red-800">{errorMessage}</p>
                 </div>
-              </div>
+              )}
 
-              {/* Financial Metrics */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <TrendingUp className="h-5 w-5" />
-                  Financial Metrics
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="daysSales" className={!daysSales ? "text-red-600" : ""}>
-                      Days Sales {!daysSales && "*"}
-                    </Label>
-                    <Input
-                      id="daysSales"
-                      type="number"
-                      placeholder="365"
-                      value={daysSales}
-                      onChange={(e) => setDaysSales(e.target.value)}
-                      min="0"
-                      className={!daysSales ? "border-red-300" : ""}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="currentDSODays" className={!currentDSODays ? "text-red-600" : ""}>
-                      Current DSO (Days) {!currentDSODays && "*"}
-                    </Label>
-                    <Input
-                      id="currentDSODays"
-                      type="number"
-                      placeholder="45"
-                      value={currentDSODays}
-                      onChange={(e) => setCurrentDSODays(e.target.value)}
-                      min="0"
-                      className={!currentDSODays ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
                 <div>
-                  <Label htmlFor="debtorsBalance" className={!debtorsBalance ? "text-red-600" : ""}>
-                    Debtors Balance ($) {!debtorsBalance && "*"}
-                  </Label>
+                  <Label htmlFor="email">Email Address *</Label>
                   <Input
-                    id="debtorsBalance"
-                    type="number"
-                    placeholder="1000000"
-                    value={debtorsBalance}
-                    onChange={(e) => setDebtorsBalance(e.target.value)}
-                    min="0"
-                    className={!debtorsBalance ? "border-red-300" : ""}
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Payment Terms */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <Clock className="h-5 w-5" />
-                  Payment Terms
-                </h3>
-                <div>
-                  <Label htmlFor="averagePaymentTerms">Average Payment Terms (Days)</Label>
-                  <Select value={averagePaymentTerms} onValueChange={setAveragePaymentTerms}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select terms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="net7">Net 7</SelectItem>
-                      <SelectItem value="net15">Net 15</SelectItem>
-                      <SelectItem value="net30">Net 30</SelectItem>
-                      <SelectItem value="net45">Net 45</SelectItem>
-                      <SelectItem value="net60">Net 60</SelectItem>
-                      <SelectItem value="net90">Net 90</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(calculatorType === "simple" ? "simple-inputs" : "detailed-inputs")}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleContactSubmit}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                  disabled={isSubmitting || !email || !phone}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    "View Results"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Results */}
+          {step === "results" && results && (
+            <div className="space-y-6 py-4">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </div>
+                <h3 className="text-2xl font-bold mb-2">Your Personalized ROI Analysis</h3>
+                <p className="text-gray-600">Here's what Kuhlekt can do for your business</p>
               </div>
 
-              {/* Team Structure & Growth */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg flex items-center gap-2 text-cyan-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  Team Structure & Growth
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="numberOfDebtors" className={!numberOfDebtors ? "text-red-600" : ""}>
-                      Number of Debtors {!numberOfDebtors && "*"}
-                    </Label>
-                    <Input
-                      id="numberOfDebtors"
-                      type="number"
-                      placeholder="500"
-                      value={numberOfDebtors}
-                      onChange={(e) => setNumberOfDebtors(e.target.value)}
-                      min="0"
-                      className={!numberOfDebtors ? "border-red-300" : ""}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="numberOfCollectors" className={!numberOfCollectors ? "text-red-600" : ""}>
-                      Number of Collectors {!numberOfCollectors && "*"}
-                    </Label>
-                    <Input
-                      id="numberOfCollectors"
-                      type="number"
-                      placeholder="5"
-                      value={numberOfCollectors}
-                      onChange={(e) => setNumberOfCollectors(e.target.value)}
-                      min="0"
-                      className={!numberOfCollectors ? "border-red-300" : ""}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="projectedCustomerGrowth" className={!projectedCustomerGrowth ? "text-red-600" : ""}>
-                    Projected Customer Growth (%) {!projectedCustomerGrowth && "*"}
-                  </Label>
-                  <Input
-                    id="projectedCustomerGrowth"
-                    type="number"
-                    placeholder="50"
-                    value={projectedCustomerGrowth}
-                    onChange={(e) => setProjectedCustomerGrowth(e.target.value)}
-                    min="0"
-                    className={!projectedCustomerGrowth ? "border-red-300" : ""}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
-                Back
-              </Button>
-              <Button
-                onClick={handleInputsNext}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                disabled={!isDetailedFormValid()}
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Contact Information */}
-        {step === "contact" && (
-          <div className="space-y-6 py-4">
-            <div className="text-center mb-6">
-              <h3 className="text-xl font-semibold mb-2">See Your Results</h3>
-              <p className="text-gray-600">Enter your contact information to view your personalized ROI analysis</p>
-            </div>
-
-            {errorMessage && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-800">{errorMessage}</p>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setStep(calculatorType === "simple" ? "simple-inputs" : "detailed-inputs")}
-                className="flex-1"
-              >
-                Back
-              </Button>
-              <Button
-                onClick={handleContactSubmit}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                disabled={isSubmitting || !email || !phone}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculating...
-                  </>
-                ) : (
-                  "View Results"
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Results */}
-        {step === "results" && results && (
-          <div className="space-y-6 py-4">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Your Personalized ROI Analysis</h3>
-              <p className="text-gray-600">Here's what Kuhlekt can do for your business</p>
-            </div>
-
-            {calculatorType === "simple" ? (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg text-center border-2 border-cyan-200">
-                  <p className="text-sm text-gray-600 mb-2">Estimated Annual Savings</p>
-                  <p className="text-4xl font-bold text-cyan-600">
-                    ${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Cash Released</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              {calculatorType === "simple" ? (
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg text-center border-2 border-cyan-200">
+                    <p className="text-sm text-gray-600 mb-2">Estimated Annual Savings</p>
+                    <p className="text-4xl font-bold text-cyan-600">
+                      ${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">New DSO</p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">Cash Released</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{results.newDSO?.toFixed(0)} days</p>
-                    <p className="text-sm text-green-600">{results.dsoImprovementPercent}% improvement</p>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">New DSO</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{results.newDSO?.toFixed(0)} days</p>
+                      <p className="text-sm text-green-600">{results.dsoImprovementPercent}% improvement</p>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg text-center border-2 border-cyan-200">
+                    <p className="text-sm text-gray-600 mb-2">Total Annual Benefit</p>
+                    <p className="text-5xl font-bold text-cyan-600">
+                      ${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      ROI: {results.roi?.toFixed(0)}% | Payback: {results.paybackMonths?.toFixed(1)} months
+                    </p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">DSO Improvement</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{results.dsoReductionDays?.toFixed(0)} days</p>
+                      <p className="text-sm text-gray-600">
+                        From {results.currentDSO} to {results.newDSO?.toFixed(0)} days
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">Working Capital Released</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">Labour Cost Savings</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle2 className="h-5 w-5 text-cyan-600" />
+                        <p className="font-semibold">Bad Debt Reduction</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={resetForm} className="flex-1 bg-transparent">
+                  Calculate Again
+                </Button>
+                <Button onClick={handleClose} className="flex-1 bg-cyan-600 hover:bg-cyan-700">
+                  Close
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-lg text-center border-2 border-cyan-200">
-                  <p className="text-sm text-gray-600 mb-2">Total Annual Benefit</p>
-                  <p className="text-5xl font-bold text-cyan-600">
-                    ${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    ROI: {results.roi?.toFixed(0)}% | Payback: {results.paybackMonths?.toFixed(1)} months
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">DSO Improvement</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">{results.dsoReductionDays?.toFixed(0)} days</p>
-                    <p className="text-sm text-gray-600">
-                      From {results.currentDSO} to {results.newDSO?.toFixed(0)} days
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Working Capital Released</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Labour Cost Savings</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="h-5 w-5 text-cyan-600" />
-                      <p className="font-semibold">Bad Debt Reduction</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">
-                      ${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={resetForm} className="flex-1 bg-transparent">
-                Calculate Again
-              </Button>
-              <Button onClick={handleClose} className="flex-1 bg-cyan-600 hover:bg-cyan-700">
-                Close
-              </Button>
             </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Help Modal */}
+      <ROICalculatorHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} calculatorType={calculatorType} />
+    </>
   )
 }
