@@ -26,14 +26,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [averageInvoiceValue, setAverageInvoiceValue] = useState("")
   const [monthlyInvoices, setMonthlyInvoices] = useState("")
 
-  // Detailed calculator inputs
+  // Detailed calculator inputs (from ROI Calculator - Invoice to Cash)
   const [annualRevenue, setAnnualRevenue] = useState("")
   const [invoicesPerMonth, setInvoicesPerMonth] = useState("")
-  const [averagePaymentDays, setAveragePaymentDays] = useState("")
-  const [arTeamSize, setArTeamSize] = useState("")
-  const [avgHourlyRate, setAvgHourlyRate] = useState("")
-  const [hoursPerWeekOnAR, setHoursPerWeekOnAR] = useState("")
-  const [badDebtPercentage, setBadDebtPercentage] = useState("")
+  const [currentAverageDSO, setCurrentAverageDSO] = useState("")
+  const [collectorFTE, setCollectorFTE] = useState("")
+  const [avgCollectorSalary, setAvgCollectorSalary] = useState("")
+  const [currentBadDebtPercent, setCurrentBadDebtPercent] = useState("")
 
   // Contact info
   const [email, setEmail] = useState("")
@@ -50,11 +49,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setMonthlyInvoices("")
     setAnnualRevenue("")
     setInvoicesPerMonth("")
-    setAveragePaymentDays("")
-    setArTeamSize("")
-    setAvgHourlyRate("")
-    setHoursPerWeekOnAR("")
-    setBadDebtPercentage("")
+    setCurrentAverageDSO("")
+    setCollectorFTE("")
+    setAvgCollectorSalary("")
+    setCurrentBadDebtPercent("")
     setEmail("")
     setPhone("")
     setResults(null)
@@ -80,7 +78,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const validatePhone = (phone: string) => {
-    return /^[\d\s\-+$$$$]+$/.test(phone) && phone.replace(/\D/g, "").length >= 10
+    return /^[\d\s\-+()]+$/.test(phone) && phone.replace(/\D/g, "").length >= 10
   }
 
   const handleContactSubmit = async () => {
@@ -109,11 +107,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         : {
             annualRevenue: Number.parseFloat(annualRevenue),
             invoicesPerMonth: Number.parseFloat(invoicesPerMonth),
-            averagePaymentDays: Number.parseFloat(averagePaymentDays),
-            arTeamSize: Number.parseFloat(arTeamSize),
-            avgHourlyRate: Number.parseFloat(avgHourlyRate),
-            hoursPerWeekOnAR: Number.parseFloat(hoursPerWeekOnAR),
-            badDebtPercentage: Number.parseFloat(badDebtPercentage),
+            averagePaymentDays: Number.parseFloat(currentAverageDSO),
+            arTeamSize: Number.parseFloat(collectorFTE),
+            avgHourlyRate: Number.parseFloat(avgCollectorSalary) / 2080, // Convert annual to hourly
+            hoursPerWeekOnAR: 40 * Number.parseFloat(collectorFTE), // Full time hours
+            badDebtPercentage: Number.parseFloat(currentBadDebtPercent),
             email,
             phone,
             calculatorType,
@@ -169,7 +167,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   </div>
                   <h3 className="font-semibold text-lg">Detailed Analysis</h3>
                 </div>
-                <p className="text-sm text-gray-600">Comprehensive analysis with team costs and efficiency metrics</p>
+                <p className="text-sm text-gray-600">Invoice to Cash comprehensive ROI analysis</p>
               </button>
             </div>
           </div>
@@ -231,7 +229,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         )}
 
-        {/* Step 2b: Detailed Calculator Inputs */}
+        {/* Step 2b: Detailed Calculator Inputs (Invoice to Cash) */}
         {step === "detailed-inputs" && (
           <div className="space-y-6 py-4">
             <div className="space-y-4">
@@ -248,7 +246,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
-                <Label htmlFor="invoicesPerMonth">Invoices Per Month</Label>
+                <Label htmlFor="invoicesPerMonth">Number of Invoices Per Month</Label>
                 <Input
                   id="invoicesPerMonth"
                   type="number"
@@ -260,61 +258,50 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div>
-                <Label htmlFor="averagePaymentDays">Average Payment Days (Current DSO)</Label>
+                <Label htmlFor="currentAverageDSO">Current Average DSO (Days)</Label>
                 <Input
-                  id="averagePaymentDays"
+                  id="currentAverageDSO"
                   type="number"
                   placeholder="e.g., 45"
-                  value={averagePaymentDays}
-                  onChange={(e) => setAveragePaymentDays(e.target.value)}
+                  value={currentAverageDSO}
+                  onChange={(e) => setCurrentAverageDSO(e.target.value)}
                   min="0"
                 />
               </div>
 
               <div>
-                <Label htmlFor="arTeamSize">AR Team Size</Label>
+                <Label htmlFor="collectorFTE">Number of Collector FTEs</Label>
                 <Input
-                  id="arTeamSize"
+                  id="collectorFTE"
                   type="number"
-                  placeholder="e.g., 5"
-                  value={arTeamSize}
-                  onChange={(e) => setArTeamSize(e.target.value)}
+                  placeholder="e.g., 3"
+                  value={collectorFTE}
+                  onChange={(e) => setCollectorFTE(e.target.value)}
+                  min="0"
+                  step="0.5"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="avgCollectorSalary">Average Collector Salary ($)</Label>
+                <Input
+                  id="avgCollectorSalary"
+                  type="number"
+                  placeholder="e.g., 60000"
+                  value={avgCollectorSalary}
+                  onChange={(e) => setAvgCollectorSalary(e.target.value)}
                   min="0"
                 />
               </div>
 
               <div>
-                <Label htmlFor="avgHourlyRate">Average Hourly Rate ($)</Label>
+                <Label htmlFor="currentBadDebtPercent">Current Bad Debt Percentage (%)</Label>
                 <Input
-                  id="avgHourlyRate"
+                  id="currentBadDebtPercent"
                   type="number"
-                  placeholder="e.g., 50"
-                  value={avgHourlyRate}
-                  onChange={(e) => setAvgHourlyRate(e.target.value)}
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="hoursPerWeekOnAR">Hours Per Week on AR Tasks</Label>
-                <Input
-                  id="hoursPerWeekOnAR"
-                  type="number"
-                  placeholder="e.g., 40"
-                  value={hoursPerWeekOnAR}
-                  onChange={(e) => setHoursPerWeekOnAR(e.target.value)}
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="badDebtPercentage">Bad Debt Percentage (%)</Label>
-                <Input
-                  id="badDebtPercentage"
-                  type="number"
-                  placeholder="e.g., 2"
-                  value={badDebtPercentage}
-                  onChange={(e) => setBadDebtPercentage(e.target.value)}
+                  placeholder="e.g., 2.5"
+                  value={currentBadDebtPercent}
+                  onChange={(e) => setCurrentBadDebtPercent(e.target.value)}
                   min="0"
                   step="0.1"
                 />
@@ -331,11 +318,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 disabled={
                   !annualRevenue ||
                   !invoicesPerMonth ||
-                  !averagePaymentDays ||
-                  !arTeamSize ||
-                  !avgHourlyRate ||
-                  !hoursPerWeekOnAR ||
-                  !badDebtPercentage
+                  !currentAverageDSO ||
+                  !collectorFTE ||
+                  !avgCollectorSalary ||
+                  !currentBadDebtPercent
                 }
               >
                 Continue
@@ -502,7 +488,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 Calculate Again
               </Button>
               <Button onClick={handleClose} className="flex-1 bg-cyan-600 hover:bg-cyan-700">
-                Schedule a Demo
+                Close
               </Button>
             </div>
           </div>
