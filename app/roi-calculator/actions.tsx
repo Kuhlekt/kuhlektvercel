@@ -73,64 +73,91 @@ export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<Simpl
 }
 
 export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<DetailedROIResults> {
-  const implementationCost = Number.parseFloat(inputs.implementationCost)
-  const monthlyCost = Number.parseFloat(inputs.monthlyCost)
-  const annualCost = monthlyCost * 12
-  const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
-  const interestRate = Number.parseFloat(inputs.interestRate) / 100
-  const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
-  const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
-  const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
-  const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
-  const daysSales = 365
-  const currentDSO = Number.parseFloat(inputs.currentDSODays)
-  const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
+  try {
+    console.log("[v0] Starting detailed ROI calculation with inputs:", inputs)
 
-  // Calculate annual revenue from debtors balance and DSO
-  const annualRevenue = (debtorsBalance / currentDSO) * daysSales
+    const implementationCost = Number.parseFloat(inputs.implementationCost)
+    const monthlyCost = Number.parseFloat(inputs.monthlyCost)
+    const annualCost = monthlyCost * 12
+    const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
+    const interestRate = Number.parseFloat(inputs.interestRate) / 100
+    const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
+    const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
+    const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
+    const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
+    const daysSales = 365
+    const currentDSO = Number.parseFloat(inputs.currentDSODays)
+    const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
 
-  // DSO Improvement
-  const dsoReductionDays = currentDSO * dsoImprovementPercent
-  const newDSO = currentDSO - dsoReductionDays
+    console.log("[v0] Parsed values:", {
+      implementationCost,
+      monthlyCost,
+      annualCost,
+      perAnnumDirectLabourCosts,
+      interestRate,
+      currentDSO,
+      debtorsBalance,
+      dsoImprovementPercent,
+      labourSavingsPercent,
+    })
 
-  // Working Capital Released
-  const dailyRevenue = annualRevenue / daysSales
-  const workingCapitalReleased = dailyRevenue * dsoReductionDays
+    if (isNaN(implementationCost) || isNaN(monthlyCost) || isNaN(currentDSO) || isNaN(debtorsBalance)) {
+      throw new Error("Invalid input values - please check all required fields are filled correctly")
+    }
 
-  // Interest Savings (on working capital released)
-  const interestSavings = workingCapitalReleased * interestRate
+    // Calculate annual revenue from debtors balance and DSO
+    const annualRevenue = (debtorsBalance / currentDSO) * daysSales
 
-  // Labour Cost Savings
-  const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
+    // DSO Improvement
+    const dsoReductionDays = currentDSO * dsoImprovementPercent
+    const newDSO = currentDSO - dsoReductionDays
 
-  // Bad Debt Reduction (40% improvement on current bad debt)
-  const badDebtReduction = currentBadDebts * 0.4
+    // Working Capital Released
+    const dailyRevenue = annualRevenue / daysSales
+    const workingCapitalReleased = dailyRevenue * dsoReductionDays
 
-  // Total Annual Benefit
-  const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
+    // Interest Savings (on working capital released)
+    const interestSavings = workingCapitalReleased * interestRate
 
-  // Total Cost (Implementation + Annual)
-  const totalImplementationAndAnnualCost = implementationCost + annualCost
+    // Labour Cost Savings
+    const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
 
-  // ROI Calculation
-  const netBenefit = totalAnnualBenefit - annualCost
-  const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
+    // Bad Debt Reduction (40% improvement on current bad debt)
+    const badDebtReduction = currentBadDebts * 0.4
 
-  // Payback Period
-  const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
+    // Total Annual Benefit
+    const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
 
-  return {
-    currentDSO,
-    newDSO,
-    dsoReductionDays,
-    workingCapitalReleased,
-    labourCostSavings,
-    badDebtReduction,
-    interestSavings,
-    totalAnnualBenefit,
-    totalImplementationAndAnnualCost,
-    roi,
-    paybackMonths,
+    // Total Cost (Implementation + Annual)
+    const totalImplementationAndAnnualCost = implementationCost + annualCost
+
+    // ROI Calculation
+    const netBenefit = totalAnnualBenefit - annualCost
+    const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
+
+    // Payback Period
+    const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
+
+    const results = {
+      currentDSO,
+      newDSO,
+      dsoReductionDays,
+      workingCapitalReleased,
+      labourCostSavings,
+      badDebtReduction,
+      interestSavings,
+      totalAnnualBenefit,
+      totalImplementationAndAnnualCost,
+      roi,
+      paybackMonths,
+    }
+
+    console.log("[v0] Calculation results:", results)
+
+    return results
+  } catch (error) {
+    console.error("[v0] Error in calculateDetailedROI:", error)
+    throw error
   }
 }
 

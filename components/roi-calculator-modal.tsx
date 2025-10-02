@@ -155,7 +155,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleContactSubmit = async () => {
-    if (!contactData.name || !contactData.email || !contactData.phone || !contactData.company) {
+    if (!contactData.name || !contactData.email || !contactData.phone) {
       alert("Please fill in all contact fields")
       return
     }
@@ -165,15 +165,19 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     try {
       let results
       if (calculatorType === "simple") {
-        console.log("Calculating simple ROI with data:", simpleData)
+        console.log("[v0] Calculating simple ROI with data:", simpleData)
         results = await calculateSimpleROI(simpleData)
-        console.log("Simple results:", results)
+        console.log("[v0] Simple results:", results)
         setSimpleResults(results)
         setStep("simple-results")
       } else {
-        console.log("Calculating detailed ROI with data:", detailedData)
+        console.log("[v0] Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
-        console.log("Detailed results:", results)
+        console.log("[v0] Detailed results:", results)
+        if (!results || typeof results.roi === "undefined" || typeof results.paybackMonths === "undefined") {
+          console.error("[v0] Invalid results received:", results)
+          throw new Error("Invalid calculation results")
+        }
         setDetailedResults(results)
         setStep("detailed-results")
       }
@@ -190,8 +194,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
       setEmailSent(true)
     } catch (error) {
-      console.error("Error:", error)
-      alert("Error calculating ROI or sending email. Please try again.")
+      console.error("[v0] Error:", error)
+      alert(`Error calculating ROI or sending email: ${error instanceof Error ? error.message : "Please try again."}`)
     } finally {
       setIsCalculating(false)
     }
@@ -629,13 +633,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
 
                 <div>
-                  <Label>Company Name *</Label>
+                  <Label>Company Name</Label>
                   <Input
                     type="text"
                     value={contactData.company}
                     onChange={(e) => setContactData({ ...contactData, company: e.target.value })}
                     placeholder="Acme Corporation"
-                    required
                   />
                 </div>
               </div>
@@ -727,14 +730,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-white border border-cyan-200 rounded-lg p-6 text-center">
                     <div className="text-sm text-gray-600 mb-2">ROI</div>
-                    <div className="text-4xl font-bold text-cyan-600 mb-2">{detailedResults.roi?.toFixed(1)}%</div>
+                    <div className="text-4xl font-bold text-cyan-600 mb-2">
+                      {detailedResults.roi != null ? detailedResults.roi.toFixed(1) : "0.0"}%
+                    </div>
                     <div className="text-xs text-gray-500">Return on Investment</div>
                   </div>
 
                   <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
                     <div className="text-sm text-gray-600 mb-2">Payback Period</div>
                     <div className="text-4xl font-bold text-red-500 mb-2">
-                      {detailedResults.paybackMonths?.toFixed(1)}
+                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"}
                     </div>
                     <div className="text-xs text-gray-500">Months</div>
                   </div>
@@ -752,8 +757,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     </p>
                     <p className="text-sm text-blue-800 mt-2">
                       <strong>Current DSO:</strong> Currently, your Annual Average cash flow is taking{" "}
-                      {detailedResults.currentDSO} days, and you will see that your improved average is{" "}
-                      {detailedResults.newDSO?.toFixed(0)} days.
+                      {detailedResults.currentDSO || 0} days, and you will see that your improved average is{" "}
+                      {detailedResults.newDSO != null ? detailedResults.newDSO.toFixed(0) : "0"} days.
                     </p>
                   </div>
                 </div>
@@ -783,10 +788,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                             Net 90
                           </span>
                         </td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO * 1.2)} days</td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO * 1.2)} days</td>
+                        <td className="py-3 px-4">{Math.round((detailedResults.currentDSO || 0) * 1.2)} days</td>
+                        <td className="py-3 px-4">{Math.round((detailedResults.newDSO || 0) * 1.2)} days</td>
                         <td className="py-3 px-4 text-cyan-600 font-semibold">
-                          {Math.round(detailedResults.currentDSO * 1.2 - detailedResults.newDSO * 1.2)} days
+                          {Math.round((detailedResults.currentDSO || 0) * 1.2 - (detailedResults.newDSO || 0) * 1.2)}
+                          days
                         </td>
                       </tr>
                       <tr className="border-b">
@@ -795,10 +801,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                             Net 60
                           </span>
                         </td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO)} days</td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO)} days</td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO || 0)} days</td>
+                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO || 0)} days</td>
                         <td className="py-3 px-4 text-cyan-600 font-semibold">
-                          {Math.round(detailedResults.dsoReductionDays)} days
+                          {Math.round(detailedResults.dsoReductionDays || 0)} days
                         </td>
                       </tr>
                       <tr>
@@ -807,10 +813,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                             Net 30
                           </span>
                         </td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.currentDSO * 0.8)} days</td>
-                        <td className="py-3 px-4">{Math.round(detailedResults.newDSO * 0.8)} days</td>
+                        <td className="py-3 px-4">{Math.round((detailedResults.currentDSO || 0) * 0.8)} days</td>
+                        <td className="py-3 px-4">{Math.round((detailedResults.newDSO || 0) * 0.8)} days</td>
                         <td className="py-3 px-4 text-cyan-600 font-semibold">
-                          {Math.round(detailedResults.dsoReductionDays * 0.8)} days
+                          {Math.round((detailedResults.dsoReductionDays || 0) * 0.8)} days
                         </td>
                       </tr>
                     </tbody>
@@ -846,8 +852,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="text-3xl font-bold text-cyan-600 mb-1">
                     +
                     {Math.round(
-                      Number.parseFloat(detailedData.numberOfDebtors) *
-                        (Number.parseFloat(detailedData.labourSavings) / 100),
+                      Number.parseFloat(detailedData.numberOfDebtors || "0") *
+                        (Number.parseFloat(detailedData.labourSavings || "0") / 100),
                     )}
                   </div>
                   <div className="text-xs text-gray-500">customers per month</div>
@@ -870,8 +876,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       <div className="text-xs text-gray-600 mb-1">Additional Customers</div>
                       <div className="text-2xl font-bold text-green-600">
                         {Math.round(
-                          Number.parseFloat(detailedData.numberOfDebtors) *
-                            (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100),
+                          Number.parseFloat(detailedData.numberOfDebtors || "0") *
+                            (Number.parseFloat(detailedData.projectedCustomerGrowth || "0") / 100),
                         )}
                       </div>
                     </div>
@@ -880,9 +886,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       <div className="text-2xl font-bold text-green-600">
                         $
                         {Math.round(
-                          ((Number.parseFloat(detailedData.debtorsBalance) / 365) *
+                          ((Number.parseFloat(detailedData.debtorsBalance || "0") / 365) *
                             365 *
-                            (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100)) /
+                            (Number.parseFloat(detailedData.projectedCustomerGrowth || "0") / 100)) /
                             1000,
                         )}
                         k
@@ -893,10 +899,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <p className="text-xs text-gray-600 mt-3">
                     Without automation, you'd need to hire{" "}
                     {Math.ceil(
-                      (Number.parseFloat(detailedData.numberOfDebtors) *
-                        (Number.parseFloat(detailedData.projectedCustomerGrowth) / 100)) /
-                        (Number.parseFloat(detailedData.numberOfDebtors) /
-                          Number.parseFloat(detailedData.numberOfCollectors)),
+                      (Number.parseFloat(detailedData.numberOfDebtors || "0") *
+                        (Number.parseFloat(detailedData.projectedCustomerGrowth || "0") / 100)) /
+                        (Number.parseFloat(detailedData.numberOfDebtors || "1") /
+                          Number.parseFloat(detailedData.numberOfCollectors || "1")),
                     )}{" "}
                     additional collector(s) to handle this growth. With Kuhlekt, your existing team can manage this
                     increased volume.
@@ -937,21 +943,27 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                     <span className="font-medium">Annual Recurring Savings</span>
                     <span className="text-xl font-bold text-green-600">
-                      ${detailedResults.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      $
+                      {(detailedResults.totalAnnualBenefit || 0).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-lg">
                     <span className="font-medium">One-Time Cash Flow Improvement</span>
                     <span className="text-xl font-bold text-cyan-600">
-                      ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      $
+                      {(detailedResults.workingCapitalReleased || 0).toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                     <span className="font-medium">Monthly Operational Savings</span>
                     <span className="text-xl font-bold text-blue-600">
-                      ${Math.round(detailedResults.totalAnnualBenefit / 12).toLocaleString()}
+                      ${Math.round((detailedResults.totalAnnualBenefit || 0) / 12).toLocaleString()}
                     </span>
                   </div>
 
@@ -959,7 +971,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     <span className="font-medium">Total First Year Investment</span>
                     <span className="text-xl font-bold text-red-600">
                       $
-                      {detailedResults.totalImplementationAndAnnualCost?.toLocaleString(undefined, {
+                      {(detailedResults.totalImplementationAndAnnualCost || 0).toLocaleString(undefined, {
                         maximumFractionDigits: 0,
                       })}
                     </span>
@@ -974,20 +986,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
                     <div className="text-sm text-gray-600 mb-2">Current DSO</div>
-                    <div className="text-3xl font-bold text-red-600 mb-1">{detailedResults.currentDSO}</div>
+                    <div className="text-3xl font-bold text-red-600 mb-1">{detailedResults.currentDSO || 0}</div>
                     <div className="text-xs text-gray-500">days</div>
                   </div>
 
                   <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 text-center">
                     <div className="text-sm text-gray-600 mb-2">Improved DSO</div>
-                    <div className="text-3xl font-bold text-cyan-600 mb-1">{Math.round(detailedResults.newDSO)}</div>
+                    <div className="text-3xl font-bold text-cyan-600 mb-1">
+                      {Math.round(detailedResults.newDSO || 0)}
+                    </div>
                     <div className="text-xs text-gray-500">days</div>
                   </div>
 
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <div className="text-sm text-gray-600 mb-2">Improvement</div>
                     <div className="text-3xl font-bold text-green-600 mb-1">
-                      {Math.round(detailedResults.dsoReductionDays)}
+                      {Math.round(detailedResults.dsoReductionDays || 0)}
                     </div>
                     <div className="text-xs text-gray-500">days</div>
                   </div>
@@ -1002,11 +1016,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <strong className="text-cyan-600">{detailedData.dsoImprovement}% improvement</strong> in your DSO,
                   freeing up{" "}
                   <strong className="text-cyan-600">
-                    ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    $
+                    {(detailedResults.workingCapitalReleased || 0).toLocaleString(undefined, {
+                      maximumFractionDigits: 0,
+                    })}
                   </strong>{" "}
-                  in working capital. Your DSO would improve from <strong>{detailedResults.currentDSO} days</strong> to
-                  approximately <strong>{Math.round(detailedResults.newDSO)} days</strong>, significantly improving your
-                  cash flow position.
+                  in working capital. Your DSO would improve from{" "}
+                  <strong>{detailedResults.currentDSO || 0} days</strong> to approximately{" "}
+                  <strong>{Math.round(detailedResults.newDSO || 0)} days</strong>, significantly improving your cash
+                  flow position.
                 </p>
                 <p className="text-sm text-gray-700 leading-relaxed mt-3">
                   Additionally, your team will benefit from{" "}
@@ -1015,7 +1033,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   will help reduce bad debt by <strong className="text-cyan-600">40%</strong> through earlier
                   intervention and better payment tracking, saving an estimated{" "}
                   <strong className="text-cyan-600">
-                    ${detailedResults.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    ${(detailedResults.badDebtReduction || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </strong>{" "}
                   annually.
                 </p>
