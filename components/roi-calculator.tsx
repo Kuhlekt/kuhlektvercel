@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calculator, TrendingUp, DollarSign, Clock } from "lucide-react"
+import { submitROICalculation } from "@/app/roi-calculator/actions"
 
 interface ROICalculatorProps {
   isOpen: boolean
@@ -15,6 +16,7 @@ interface ROICalculatorProps {
 export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
   const [step, setStep] = useState<"inputs" | "contact" | "results">("inputs")
   const [calculating, setCalculating] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Calculator inputs
   const [annualRevenue, setAnnualRevenue] = useState("")
@@ -42,7 +44,7 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
   }
 
   const validatePhone = (phone: string) => {
-    const re = /^\+?[\d\s-()]{10,}$/
+    const re = /^\+?[\d\s\-()]{10,}$/
     return re.test(phone)
   }
 
@@ -61,13 +63,13 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
     const annualSavings = laborSavings + cashFlowImprovement * 0.05 // 5% opportunity cost
     const roiPercentage = 350 // Average ROI percentage
 
-    setResults({
+    return {
       dsoReduction,
       cashFlowImprovement,
       timesSaved: timeSaved,
       annualSavings,
       roiPercentage,
-    })
+    }
   }
 
   const handleCalculate = () => {
@@ -92,10 +94,28 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
 
     setCalculating(true)
 
-    // Simulate API call to save contact info
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Calculate results
+    const calculatedResults = calculateROI()
+    setResults(calculatedResults)
 
-    calculateROI()
+    // Submit to server
+    setSubmitting(true)
+    try {
+      await submitROICalculation({
+        annualRevenue,
+        currentDSO,
+        invoicesPerMonth,
+        hoursSpentPerWeek,
+        email,
+        phone,
+        results: calculatedResults,
+      })
+    } catch (error) {
+      console.error("Error submitting ROI calculation:", error)
+    } finally {
+      setSubmitting(false)
+    }
+
     setCalculating(false)
     setStep("results")
   }
@@ -251,10 +271,10 @@ export function ROICalculator({ isOpen, onClose }: ROICalculatorProps) {
               </Button>
               <Button
                 onClick={handleSubmitContact}
-                disabled={calculating}
+                disabled={calculating || submitting}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
               >
-                {calculating ? "Calculating..." : "View Results"}
+                {calculating || submitting ? "Calculating..." : "View Results"}
               </Button>
             </div>
           </div>

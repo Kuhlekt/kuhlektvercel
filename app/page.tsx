@@ -1,348 +1,361 @@
-import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star } from "lucide-react"
-import { VisitorTracker } from "@/components/visitor-tracker"
+import {
+  ArrowRight,
+  CheckCircle2,
+  TrendingUp,
+  Clock,
+  DollarSign,
+  Shield,
+  Zap,
+  BarChart3,
+  Users,
+  Building2,
+  Award,
+  Target,
+} from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 import { ROICalculatorButton } from "@/components/roi-calculator"
-import { Suspense } from "react"
 
-export default function HomePage() {
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Suspense fallback={null}>
-        <VisitorTracker />
-      </Suspense>
-
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gradient-to-br from-cyan-50 via-blue-50 to-white py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+        <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <Badge className="bg-red-500 text-white px-4 py-2 rounded-full mb-6">
-                ★ Trusted by 500+ finance teams
+            <div className="space-y-8">
+              <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-200 border-none">
+                #1 AR Automation Platform
               </Badge>
-
-              <h1 className="text-4xl lg:text-6xl font-bold mb-6">
-                <span className="text-cyan-500">Automate AR.</span>{" "}
-                <span className="text-red-500">Get Paid Faster.</span>
+              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                Transform Your{" "}
+                <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                  Accounts Receivable
+                </span>
               </h1>
-
-              <p className="text-xl text-gray-600 mb-8 max-w-lg">
-                The #1 platform for B2B credit collections and AR automation. Eliminate manual processes, streamline
-                debt recovery, and improve cash flow.
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Automate invoice-to-cash processes, reduce DSO by 30%, and accelerate cash flow with AI-powered
+                collections management.
               </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Link href="/demo">
-                  <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white">
-                    Schedule a Demo →
-                  </Button>
-                </Link>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                  <Link href="/demo">
+                    Schedule a Demo
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
                 <ROICalculatorButton />
               </div>
-
-              <div className="flex items-center gap-6 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  No credit card required
+              <div className="flex items-center gap-8 pt-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900">30%</div>
+                  <div className="text-sm text-gray-600">DSO Reduction</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Free 14-day trial
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900">95%</div>
+                  <div className="text-sm text-gray-600">Time Saved</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900">350%</div>
+                  <div className="text-sm text-gray-600">ROI</div>
                 </div>
               </div>
             </div>
-
-            <div className="relative">
+            <div className="relative lg:h-[600px] h-[400px]">
               <Image
-                src="/images/businesswoman.png"
-                alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
-                width={500}
-                height={350}
-                className="rounded-lg w-full h-auto max-w-lg"
+                src="/images/ar-dashboard.png"
+                alt="Kuhlekt AR Dashboard"
+                fill
+                className="object-contain drop-shadow-2xl"
+                priority
               />
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Testimonial Card positioned exactly as in screenshot */}
-              <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-1 mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    ))}
+      {/* Problem Statement */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">The AR Challenge</h2>
+            <p className="text-xl text-gray-600">
+              Traditional accounts receivable processes drain resources and slow cash flow
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Clock,
+                title: "Manual & Time-Consuming",
+                description: "Teams spend 20+ hours weekly on manual invoice follow-ups and reconciliation",
+              },
+              {
+                icon: TrendingUp,
+                title: "Extended DSO",
+                description: "Average DSO of 45+ days locks up critical working capital",
+              },
+              {
+                icon: Users,
+                title: "Poor Customer Experience",
+                description: "Generic communications and delayed responses frustrate customers",
+              },
+            ].map((item, index) => (
+              <Card key={index} className="border-red-200 bg-red-50">
+                <CardContent className="p-6 space-y-4">
+                  <div className="bg-red-100 w-12 h-12 rounded-lg flex items-center justify-center">
+                    <item.icon className="h-6 w-6 text-red-600" />
                   </div>
-                  <blockquote className="text-sm text-gray-700 mb-4 italic leading-relaxed">
-                    "Kuhlekt transformed our accounts receivable process. We reduced DSO by 30% and our team now spends
-                    80% less time on manual collections. The ROI was immediate and substantial."
-                  </blockquote>
+                  <h3 className="text-xl font-semibold text-gray-900">{item.title}</h3>
+                  <p className="text-gray-600">{item.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Overview */}
+      <section className="py-20 px-4 bg-gradient-to-br from-cyan-50 to-blue-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">The Kuhlekt Solution</h2>
+            <p className="text-xl text-gray-600">End-to-end AR automation powered by AI and intelligent workflows</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: Zap,
+                title: "Automated Collections",
+                description: "AI-powered dunning sequences and smart reminders",
+              },
+              {
+                icon: BarChart3,
+                title: "Real-Time Analytics",
+                description: "Live dashboards and predictive insights",
+              },
+              {
+                icon: Shield,
+                title: "Dispute Management",
+                description: "Streamlined resolution workflows",
+              },
+              {
+                icon: DollarSign,
+                title: "Payment Processing",
+                description: "Integrated payment gateway and reconciliation",
+              },
+            ].map((item, index) => (
+              <Card key={index} className="border-cyan-200 bg-white hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 space-y-4">
+                  <div className="bg-cyan-100 w-12 h-12 rounded-lg flex items-center justify-center">
+                    <item.icon className="h-6 w-6 text-cyan-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                  <p className="text-gray-600 text-sm">{item.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Key Features */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Complete AR Automation</h2>
+            <p className="text-xl text-gray-600">Everything you need to optimize your invoice-to-cash cycle</p>
+          </div>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              {[
+                {
+                  title: "Intelligent Dunning Engine",
+                  description: "Multi-channel automated reminders with AI-optimized timing and messaging",
+                },
+                {
+                  title: "Customer Self-Service Portal",
+                  description: "Branded portal for invoice viewing, payments, and dispute submission",
+                },
+                {
+                  title: "Predictive Cash Flow",
+                  description: "ML-powered forecasting based on payment history and customer behavior",
+                },
+                {
+                  title: "ERP Integration",
+                  description: "Seamless sync with QuickBooks, Xero, NetSuite, and SAP",
+                },
+              ].map((item, index) => (
+                <div key={index} className="flex gap-4">
+                  <CheckCircle2 className="h-6 w-6 text-cyan-600 flex-shrink-0 mt-1" />
                   <div>
-                    <div className="font-semibold text-gray-900">Maria Rodriguez</div>
-                    <div className="text-xs text-gray-500">CFO at TechStream</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
+                    <p className="text-gray-600">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="relative lg:h-[500px] h-[400px]">
+              <Image
+                src="/images/kuhlekt-dashboard-interface.png"
+                alt="Kuhlekt Dashboard Interface"
+                fill
+                className="object-contain rounded-lg shadow-xl"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Measurable Impact</h2>
+            <p className="text-xl text-gray-600">Join 500+ companies improving their cash flow and efficiency</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                metric: "30%",
+                label: "DSO Reduction",
+                description: "Average decrease in Days Sales Outstanding",
+              },
+              {
+                metric: "95%",
+                label: "Time Savings",
+                description: "Reduction in manual AR tasks",
+              },
+              {
+                metric: "25%",
+                label: "Collection Rate",
+                description: "Improvement in on-time payments",
+              },
+            ].map((item, index) => (
+              <Card key={index} className="text-center">
+                <CardContent className="p-8 space-y-4">
+                  <div className="text-5xl font-bold text-cyan-600">{item.metric}</div>
+                  <h3 className="text-xl font-semibold text-gray-900">{item.label}</h3>
+                  <p className="text-gray-600">{item.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Built for Your Industry</h2>
+            <p className="text-xl text-gray-600">Specialized solutions for diverse business needs</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Building2,
+                title: "B2B Enterprises",
+                description: "Complex payment terms and multi-entity management",
+              },
+              {
+                icon: Users,
+                title: "Mid-Market Companies",
+                description: "Scalable automation without enterprise complexity",
+              },
+              {
+                icon: Target,
+                title: "Service Providers",
+                description: "Subscription billing and recurring revenue management",
+              },
+            ].map((item, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 space-y-4">
+                  <div className="bg-cyan-100 w-12 h-12 rounded-lg flex items-center justify-center">
+                    <item.icon className="h-6 w-6 text-cyan-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">{item.title}</h3>
+                  <p className="text-gray-600">{item.description}</p>
+                  <Button variant="link" className="text-cyan-600 p-0">
+                    Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-20 px-4 bg-gradient-to-br from-cyan-50 to-blue-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by Industry Leaders</h2>
+            <p className="text-xl text-gray-600">Companies of all sizes rely on Kuhlekt to optimize their AR</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                quote: "Kuhlekt reduced our DSO from 52 days to 35 days in just 3 months. The ROI was immediate.",
+                author: "Sarah Johnson",
+                role: "CFO, TechCorp Industries",
+                image: "/images/sarah-johnson-headshot.png",
+              },
+              {
+                quote: "The automation freed up our team to focus on strategic work instead of chasing invoices.",
+                author: "Michael Chen",
+                role: "Controller, Global Manufacturing Co.",
+                image: "/images/michael-chen-asian.png",
+              },
+              {
+                quote:
+                  "Customer satisfaction improved dramatically with the self-service portal and proactive communication.",
+                author: "Jessica Rodriguez",
+                role: "VP Finance, ServiceTech Solutions",
+                image: "/images/jessica-rodriguez-hispanic.png",
+              },
+            ].map((item, index) => (
+              <Card key={index}>
+                <CardContent className="p-6 space-y-4">
+                  <Award className="h-8 w-8 text-cyan-600" />
+                  <p className="text-gray-700 italic">"{item.quote}"</p>
+                  <div className="flex items-center gap-3 pt-4 border-t">
+                    <Image
+                      src={item.image || "/placeholder.svg"}
+                      alt={item.author}
+                      width={48}
+                      height={48}
+                      className="rounded-full"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-900">{item.author}</div>
+                      <div className="text-sm text-gray-600">{item.role}</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">80%</div>
-              <div className="text-gray-600">Manual Tasks Eliminated</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">30%</div>
-              <div className="text-gray-600">DSO Reduction</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">500+</div>
-              <div className="text-gray-600">Finance Teams</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">99%</div>
-              <div className="text-gray-600">Customer Satisfaction</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="bg-cyan-100 text-cyan-700 px-4 py-2 rounded-full mb-4">Benefits</Badge>
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">Kuhlekt helps you:</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Automate debt recovery</h3>
-                <p className="text-gray-600">Reduce Days Sales Outstanding (DSO) with intelligent automation</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Improve cash flow</h3>
-                <p className="text-gray-600">Get real-time insights into your receivables and cash position</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Streamline collections</h3>
-                <p className="text-gray-600">Coordinate collection processes across teams with ease</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Enhance credit control</h3>
-                <p className="text-gray-600">Use built-in risk assessment tools to make better credit decisions</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Empower customers</h3>
-                <p className="text-gray-600">Provide a branded self-service credit portal for your customers</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="p-8">
-                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Eliminate manual work</h3>
-                <p className="text-gray-600">Achieve end-to-end automation of your collections process</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Dashboard Preview - Two column layout with text on left, image on right */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left Column - Text Content */}
-            <div className="space-y-6">
-              <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full">Platform</Badge>
-              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">See Your AR Performance at a Glance</h2>
-              <p className="text-xl text-gray-600 leading-relaxed">
-                Get real-time insights into your receivables with our comprehensive dashboard and reporting tools.
-              </p>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Real-time AR performance metrics</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Workload management and prioritization</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
-                  <p className="text-lg text-gray-700">Comprehensive analytics and reporting</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Dashboard Image (Half Size) */}
-            <div className="relative">
-              <Image
-                src="/images/kuhlekt-dashboard-interface.png"
-                alt="Kuhlekt Dashboard Interface showing comprehensive AR management with accounts tracking, PTPs, disputes, workload management, and performance metrics"
-                width={600}
-                height={400}
-                className="rounded-lg shadow-2xl mx-auto w-full h-auto max-w-md"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Additional Stats */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">30%</div>
-              <div className="text-gray-600">Average DSO Reduction</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">80%</div>
-              <div className="text-gray-600">Manual Tasks Eliminated</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">40%</div>
-              <div className="text-gray-600">Cash Flow Improvement</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-cyan-500 mb-2">60%</div>
-              <div className="text-gray-600">Dispute Resolution Time</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Bottom Message */}
-      <section className="py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-xl text-gray-600">Everything you need to streamline your accounts receivable process</p>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">What Our Customers Say</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-gray-600 mb-6">
-                  "Kuhlekt has revolutionized our collections process. We've seen a 40% improvement in collection rates
-                  and our team is much more efficient."
-                </p>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="/images/michael-chen-asian.png"
-                    alt="Michael Chen"
-                    width={48}
-                    height={48}
-                    className="rounded-full"
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-900">Michael Chen</p>
-                    <p className="text-sm text-gray-500">Finance Director, GlobalTech</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-gray-600 mb-6">
-                  "The automation features have saved us countless hours. Our DSO has dropped significantly and cash
-                  flow has never been better."
-                </p>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="/images/jessica-rodriguez-hispanic.png"
-                    alt="Jessica Rodriguez"
-                    width={48}
-                    height={48}
-                    className="rounded-full"
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-900">Jessica Rodriguez</p>
-                    <p className="text-sm text-gray-500">CFO, InnovateCorp</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-gray-600 mb-6">
-                  "Implementation was smooth and the results were immediate. Kuhlekt has become an essential part of our
-                  financial operations."
-                </p>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="/images/sarah-johnson-headshot.png"
-                    alt="Sarah Johnson"
-                    width={48}
-                    height={48}
-                    className="rounded-full"
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-900">Sarah Johnson</p>
-                    <p className="text-sm text-gray-500">Controller, TechSolutions</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <h2 className="text-4xl lg:text-5xl font-bold">Ready to Transform Your AR Process?</h2>
+          <p className="text-xl text-cyan-100">Join hundreds of companies accelerating their cash flow with Kuhlekt</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" variant="secondary" className="bg-white text-cyan-600 hover:bg-gray-100">
+              <Link href="/demo">
+                Schedule a Demo
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <ROICalculatorButton />
           </div>
         </div>
       </section>
