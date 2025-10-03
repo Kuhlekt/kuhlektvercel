@@ -2,57 +2,36 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ContactFormData {
-  name: string
-  email: string
-  company?: string
-  message: string
-}
-
-export async function submitContactForm(data: ContactFormData) {
+export async function submitContactForm(formData: FormData) {
   try {
-    const emailSubject = `New Contact Form Submission from ${data.name}`
-    const emailText = `
-Name: ${data.name}
-Email: ${data.email}
-Company: ${data.company || "Not provided"}
-
-Message:
-${data.message}
-    `
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
 
     const emailHtml = `
       <h2>New Contact Form Submission</h2>
-      <p><strong>Name:</strong> ${data.name}</p>
-      <p><strong>Email:</strong> ${data.email}</p>
-      <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
-      <h3>Message:</h3>
-      <p>${data.message.replace(/\n/g, "<br>")}</p>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Message:</strong></p>
+      <p>${message}</p>
     `
 
     const result = await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "",
-      subject: emailSubject,
-      text: emailText,
+      subject: `Contact Form: ${name} from ${company}`,
+      text: `Name: ${name}\nEmail: ${email}\nCompany: ${company}\nMessage: ${message}`,
       html: emailHtml,
     })
 
-    if (!result.success) {
-      return {
-        success: false,
-        message: result.message || "Failed to send contact form",
-      }
-    }
-
-    return {
-      success: true,
-      message: "Contact form submitted successfully",
-    }
+    return result
   } catch (error) {
-    console.error("Error in submitContactForm:", error)
+    console.error("Error submitting contact form:", error)
     return {
       success: false,
-      message: "An error occurred while submitting the form",
+      message: "Failed to send message",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
@@ -62,8 +41,8 @@ export async function sendTestEmail(to: string) {
     const result = await sendEmail({
       to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from the Kuhlekt platform.",
-      html: "<p>This is a test email from the Kuhlekt platform.</p>",
+      text: "This is a test email to verify AWS SES configuration.",
+      html: "<p>This is a test email to verify AWS SES configuration.</p>",
     })
 
     return result
@@ -72,6 +51,7 @@ export async function sendTestEmail(to: string) {
     return {
       success: false,
       message: "Failed to send test email",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }

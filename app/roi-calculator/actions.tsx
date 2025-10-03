@@ -5,71 +5,31 @@ import { sendEmail } from "@/lib/aws-ses"
 
 interface ROIData {
   companyName: string
-  email: string
+  industry: string
   annualRevenue: number
-  currentDSO: number
-  targetDSO: number
-  industryType: string
+  averageInvoiceValue: number
+  numberOfInvoices: number
+  averageDSO: number
+  currentCollectionRate: number
+  email: string
 }
 
-export async function sendROIReport(data: ROIData) {
+export async function sendROIReport(data: ROIData, reportHtml: string) {
   try {
-    const supabase = await createClient()
-
-    const emailSubject = `ROI Analysis Report for ${data.companyName}`
-    const emailText = `Dear ${data.companyName},
-
-Thank you for your interest in Kuhlekt's AR automation platform.
-
-Here are your ROI results:
-- Annual Revenue: $${data.annualRevenue.toLocaleString()}
-- Current DSO: ${data.currentDSO} days
-- Target DSO: ${data.targetDSO} days
-- Industry: ${data.industryType}
-
-Our team will be in touch shortly to discuss how we can help optimize your accounts receivable process.
-
-Best regards,
-The Kuhlekt Team`
-
-    const emailHtml = `
-      <h2>ROI Analysis Report</h2>
-      <p>Dear ${data.companyName},</p>
-      <p>Thank you for your interest in Kuhlekt's AR automation platform.</p>
-      <h3>Your ROI Results:</h3>
-      <ul>
-        <li><strong>Annual Revenue:</strong> $${data.annualRevenue.toLocaleString()}</li>
-        <li><strong>Current DSO:</strong> ${data.currentDSO} days</li>
-        <li><strong>Target DSO:</strong> ${data.targetDSO} days</li>
-        <li><strong>Industry:</strong> ${data.industryType}</li>
-      </ul>
-      <p>Our team will be in touch shortly to discuss how we can help optimize your accounts receivable process.</p>
-      <p>Best regards,<br>The Kuhlekt Team</p>
-    `
-
     const result = await sendEmail({
       to: data.email,
-      subject: emailSubject,
-      text: emailText,
-      html: emailHtml,
+      subject: `ROI Report for ${data.companyName}`,
+      text: `Please find your ROI report attached.`,
+      html: reportHtml,
     })
 
-    if (!result.success) {
-      return {
-        success: false,
-        message: result.message || "Failed to send email",
-      }
-    }
-
-    return {
-      success: true,
-      message: "ROI report sent successfully",
-    }
+    return result
   } catch (error) {
-    console.error("Error in sendROIReport:", error)
+    console.error("Error sending ROI report:", error)
     return {
       success: false,
-      message: "An error occurred while sending the report",
+      message: "Failed to send email",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
@@ -78,19 +38,23 @@ export async function generateVerificationCode(email: string): Promise<{ success
   try {
     const supabase = await createClient()
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
+
+    if (deleteError) {
+      console.error("Error deleting old codes:", deleteError)
+    }
 
     const { error: insertError } = await supabase.from("verification_codes").insert({
       email,
       code,
-      expires_at: expiresAt,
+      expires_at: expiresAt.toISOString(),
       attempts: 0,
     })
 
     if (insertError) {
-      console.error("Error storing verification code:", insertError)
+      console.error("Error inserting verification code:", insertError)
       return {
         success: false,
         message: "Failed to generate verification code",
@@ -99,27 +63,24 @@ export async function generateVerificationCode(email: string): Promise<{ success
 
     const emailResult = await sendEmail({
       to: email,
-      subject: "Your Verification Code",
-      text: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
+      subject: "Your ROI Report Verification Code",
+      text: `Your verification code is: ${code}`,
       html: `<p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in 10 minutes.</p>`,
     })
 
     if (!emailResult.success) {
-      return {
-        success: false,
-        message: "Failed to send verification email",
-      }
+      return emailResult
     }
 
     return {
       success: true,
-      message: "Verification code sent successfully",
+      message: "Verification code sent to your email",
     }
   } catch (error) {
     console.error("Error generating verification code:", error)
     return {
       success: false,
-      message: "An error occurred",
+      message: "Failed to generate verification code",
     }
   }
 }
@@ -128,7 +89,12 @@ export async function verifyCode(email: string, code: string): Promise<{ success
   try {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .select("*")
+      .eq("email", email)
+      .eq("code", code)
+      .single()
 
     if (error || !data) {
       return {
@@ -138,6 +104,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     }
 
     if (new Date(data.expires_at) < new Date()) {
+      await supabase.from("verification_codes").delete().eq("email", email)
       return {
         success: false,
         message: "Verification code has expired",
@@ -145,21 +112,10 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     }
 
     if (data.attempts >= 3) {
+      await supabase.from("verification_codes").delete().eq("email", email)
       return {
         success: false,
-        message: "Too many failed attempts",
-      }
-    }
-
-    if (data.code !== code) {
-      await supabase
-        .from("verification_codes")
-        .update({ attempts: data.attempts + 1 })
-        .eq("email", email)
-
-      return {
-        success: false,
-        message: "Invalid verification code",
+        message: "Too many attempts. Please request a new code.",
       }
     }
 
@@ -167,13 +123,13 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
     return {
       success: true,
-      message: "Email verified successfully",
+      message: "Verification successful",
     }
   } catch (error) {
     console.error("Error verifying code:", error)
     return {
       success: false,
-      message: "An error occurred",
+      message: "Failed to verify code",
     }
   }
 }
