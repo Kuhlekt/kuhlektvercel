@@ -1,93 +1,57 @@
 "use server"
 
-import { sendEmail, testAWSSESConnection, validateSESConfiguration } from "@/lib/aws-ses"
+import { sendEmail, validateSESConfiguration } from "@/lib/aws-ses"
 
 export async function testEmail(email: string) {
   try {
-    console.log("[Email Test] Testing email to:", email)
-
     const result = await sendEmail({
       to: email,
       subject: "Test Email from Kuhlekt",
       html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                line-height: 1.6;
-                color: #333;
-              }
-              .container {
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .header {
-                background: #0891b2;
-                color: white;
-                padding: 20px;
-                text-align: center;
-                border-radius: 5px;
-              }
-              .content {
-                padding: 20px;
-                background: #f9fafb;
-                margin-top: 20px;
-                border-radius: 5px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Test Email</h1>
-              </div>
-              <div class="content">
-                <p>This is a test email from Kuhlekt.</p>
-                <p>If you received this, your email configuration is working correctly!</p>
-                <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-              </div>
-            </div>
-          </body>
-        </html>
+        <h1>Test Email</h1>
+        <p>This is a test email from the Kuhlekt website.</p>
+        <p>If you received this, your email configuration is working correctly!</p>
       `,
-      text: "This is a test email from Kuhlekt. If you received this, your email configuration is working correctly!",
+      text: "This is a test email from the Kuhlekt website. If you received this, your email configuration is working correctly!",
     })
-
-    console.log("[Email Test] Result:", result)
 
     return result
   } catch (error) {
-    console.error("[Email Test] Error:", error)
+    console.error("Error sending test email:", error)
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Unknown error",
+      message: error instanceof Error ? error.message : "Failed to send test email",
     }
   }
 }
 
-export async function testEmailSystem() {
-  try {
-    return await testAWSSESConnection()
-  } catch (error) {
-    console.error("[Email Test System] Error:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+export async function testEmailSystem(email: string) {
+  return await testEmail(email)
 }
 
 export async function getEmailConfigStatus() {
   try {
-    return await validateSESConfiguration()
-  } catch (error) {
-    console.error("[Email Config Status] Error:", error)
+    const validation = await validateSESConfiguration()
     return {
-      valid: false,
-      message: error instanceof Error ? error.message : "Unknown error",
+      success: validation.valid,
+      message: validation.message,
+      config: {
+        region: process.env.AWS_SES_REGION ? "Set" : "Missing",
+        accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID ? "Set" : "Missing",
+        secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY ? "Set" : "Missing",
+        fromEmail: process.env.AWS_SES_FROM_EMAIL ? "Set" : "Missing",
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to check email configuration",
+      config: {
+        region: "Error",
+        accessKeyId: "Error",
+        secretAccessKey: "Error",
+        fromEmail: "Error",
+      },
     }
   }
 }

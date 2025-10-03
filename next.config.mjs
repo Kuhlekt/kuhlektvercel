@@ -8,21 +8,33 @@ const nextConfig = {
     '@smithy/protocol-http',
     '@smithy/middleware-serde',
     '@smithy/types',
+    '@smithy/util-utf8',
+    '@smithy/util-buffer-from',
   ],
+  experimental: {
+    serverComponentsExternalPackages: ['bcryptjs'],
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push({
-        '@aws-sdk/client-ses': 'commonjs @aws-sdk/client-ses',
-        '@smithy/hash-node': 'commonjs @smithy/hash-node',
-      })
+      // Mark AWS SDK and Smithy packages as external
+      config.externals = [
+        ...config.externals,
+        '@aws-sdk/client-ses',
+        '@smithy/hash-node',
+        '@smithy/node-http-handler',
+        '@smithy/protocol-http',
+        '@smithy/middleware-serde',
+        '@smithy/types',
+      ]
     }
 
+    // Provide fallbacks for Node.js built-in modules
     config.resolve.fallback = {
       ...config.resolve.fallback,
+      crypto: false,
       fs: false,
       net: false,
       tls: false,
-      crypto: false,
       stream: false,
       url: false,
       zlib: false,
@@ -31,6 +43,7 @@ const nextConfig = {
       assert: false,
       os: false,
       path: false,
+      buffer: false,
     }
 
     return config
