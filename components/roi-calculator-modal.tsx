@@ -486,6 +486,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-center mb-6">
+            <img
+              src="/images/design-mode/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20175%20Pxls%20-%20Copy.png"
+              alt="Kuhlekt Logo"
+              className="h-15"
+            />
+          </div>
+
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2">

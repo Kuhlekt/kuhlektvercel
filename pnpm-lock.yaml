@@ -12,7 +12,7 @@ importers:
         specifier: 3.901.0
         version: 3.901.0
       '@radix-ui/react-accordion':
-        specifier: ^1.1.2
+        specifier: latest
         version: 1.2.12(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.0.5
@@ -90,7 +90,7 @@ importers:
         specifier: ^19
         version: 19.0.0(react@19.0.0)
       recharts:
-        specifier: 3.2.1
+        specifier: latest
         version: 3.2.1(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react-is@16.13.1)(react@19.0.0)(redux@5.0.1)
       tailwind-merge:
         specifier: ^2.5.5

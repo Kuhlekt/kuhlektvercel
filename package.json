@@ -1,6 +1,17 @@
 {
+  "name": "kuhlekt-clone",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "clean": "rm -rf .next node_modules/.cache",
+    "dev": "next dev",
+    "lint": "next lint",
+    "start": "next start"
+  },
   "dependencies": {
-    "@radix-ui/react-accordion": "^1.1.2",
+    "@aws-sdk/client-ses": "3.901.0",
+    "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
     "@radix-ui/react-checkbox": "^1.0.4",
@@ -26,11 +37,10 @@
     "qrcode": "latest",
     "react": "^19",
     "react-dom": "^19",
+    "recharts": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.22.4",
-    "recharts": "3.2.1",
-    "@aws-sdk/client-ses": "3.901.0"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -44,16 +54,6 @@
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
-  },
-  "name": "kuhlekt-clone",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "build": "next build",
-    "clean": "rm -rf .next node_modules/.cache",
-    "dev": "next dev",
-    "lint": "next lint",
-    "start": "next start"
   },
   "engines": {
     "node": ">=18.0.0",
