@@ -5,47 +5,28 @@ import { sendEmail } from "@/lib/aws-ses"
 export async function submitContactForm(formData: FormData) {
   const name = formData.get("name") as string
   const email = formData.get("email") as string
-  const company = formData.get("company") as string
   const message = formData.get("message") as string
 
-  const htmlContent = `
-    <html>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2>New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Company:</strong> ${company}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-      </body>
-    </html>
-  `
-
-  const textContent = `
-New Contact Form Submission
-
-Name: ${name}
-Email: ${email}
-Company: ${company}
-Message: ${message}
-  `
+  if (!name || !email || !message) {
+    return { success: false, message: "Missing required fields" }
+  }
 
   const result = await sendEmail({
-    to: process.env.AWS_SES_FROM_EMAIL || "contact@kuhlekt.com",
-    subject: `New Contact Form Submission from ${name}`,
-    text: textContent,
-    html: htmlContent,
+    to: process.env.AWS_SES_FROM_EMAIL || "",
+    subject: `Contact Form Submission from ${name}`,
+    text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+    html: `<h2>Contact Form Submission</h2><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong></p><p>${message}</p>`,
   })
 
   return result
 }
 
-export async function sendTestEmail(to: string) {
+export async function sendTestEmail(email: string) {
   const result = await sendEmail({
-    to,
-    subject: "Test Email from Kuhlekt",
-    text: "This is a test email to verify the email service is working correctly.",
-    html: "<p>This is a test email to verify the email service is working correctly.</p>",
+    to: email,
+    subject: "Test Email",
+    text: "This is a test email from the contact form.",
+    html: "<h1>Test Email</h1><p>This is a test email from the contact form.</p>",
   })
 
   return result
