@@ -2,40 +2,27 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendTestEmail(to: string) {
-  try {
-    const result = await sendEmail({
-      to,
-      subject: "Test Email from Kuhlekt",
-      text: "This is a test email to verify AWS SES configuration.",
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              .container { max-width: 600px; margin: 0 auto; }
-              h1 { color: #4F46E5; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Test Email</h1>
-              <p>This is a test email to verify AWS SES configuration.</p>
-              <p>If you received this, the email service is working correctly!</p>
-            </div>
-          </body>
-        </html>
-      `,
-    })
+export async function sendTestEmail(formData: FormData) {
+  const to = formData.get("to") as string
 
-    return result
-  } catch (error) {
-    console.error("Error in sendTestEmail:", error)
-    return {
-      success: false,
-      message: "Failed to send test email",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (!to) {
+    return { success: false, message: "Email address is required" }
   }
+
+  const result = await sendEmail({
+    to,
+    subject: "Test Email from Kuhlekt",
+    text: "This is a test email to verify AWS SES integration is working correctly.",
+    html: `
+      <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333;">Test Email</h1>
+          <p>This is a test email to verify AWS SES integration is working correctly.</p>
+          <p style="color: #666; font-size: 12px;">Sent from Kuhlekt</p>
+        </body>
+      </html>
+    `,
+  })
+
+  return result
 }
