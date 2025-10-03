@@ -256,7 +256,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
       const result = await response.json()
 
-      if (result.success && result.data) {
+      if (result.success) {
         // Email verified successfully, now calculate ROI and send results
         setIsCalculating(true)
 
