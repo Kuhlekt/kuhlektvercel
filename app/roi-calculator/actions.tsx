@@ -3,71 +3,206 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendROIReport(formData: FormData) {
-  const email = formData.get("email") as string
-  const currentAR = formData.get("currentAR") as string
-  const projectedSavings = formData.get("projectedSavings") as string
-  const timeSaved = formData.get("timeSaved") as string
+export async function sendROIReport(email: string, reportData: any) {
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4f46e5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9fafb; }
+            .metric { margin: 15px 0; padding: 15px; background: white; border-left: 4px solid #4f46e5; }
+            .metric-label { font-weight: bold; color: #6b7280; }
+            .metric-value { font-size: 24px; color: #4f46e5; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Kuhlekt ROI Report</h1>
+            </div>
+            <div class="content">
+              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your results:</p>
+              
+              <div class="metric">
+                <div class="metric-label">Current Annual Revenue</div>
+                <div class="metric-value">$${reportData.currentRevenue?.toLocaleString()}</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Current DSO</div>
+                <div class="metric-value">${reportData.currentDSO} days</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Potential DSO Reduction</div>
+                <div class="metric-value">${reportData.dsoReduction} days</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Annual Cash Flow Improvement</div>
+                <div class="metric-value">$${reportData.cashFlowImprovement?.toLocaleString()}</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">ROI Timeline</div>
+                <div class="metric-value">${reportData.roiTimeline} months</div>
+              </div>
+              
+              <p style="margin-top: 30px;">Ready to unlock these savings? Contact us to learn more about Kuhlekt.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
 
-  const subject = "Your Kuhlekt ROI Report"
-  const text = `Thank you for your interest in Kuhlekt. Here is your personalized ROI report:\n\nCurrent AR: ${currentAR}\nProjected Savings: ${projectedSavings}\nTime Saved: ${timeSaved}`
-  const html = `<h1>Your Kuhlekt ROI Report</h1><p>Thank you for your interest in Kuhlekt.</p><p><strong>Current AR:</strong> ${currentAR}</p><p><strong>Projected Savings:</strong> ${projectedSavings}</p><p><strong>Time Saved:</strong> ${timeSaved}</p>`
+    const text = `
+Your Kuhlekt ROI Report
 
-  const result = await sendEmail({ to: email, subject, text, html })
-  return result
+Current Annual Revenue: $${reportData.currentRevenue?.toLocaleString()}
+Current DSO: ${reportData.currentDSO} days
+Potential DSO Reduction: ${reportData.dsoReduction} days
+Annual Cash Flow Improvement: $${reportData.cashFlowImprovement?.toLocaleString()}
+ROI Timeline: ${reportData.roiTimeline} months
+
+Ready to unlock these savings? Contact us to learn more about Kuhlekt.
+    `
+
+    const result = await sendEmail({
+      to: email,
+      subject: "Your Kuhlekt ROI Report",
+      text,
+      html,
+    })
+
+    return result
+  } catch (error) {
+    console.error("Error sending ROI report:", error)
+    return {
+      success: false,
+      message: "Failed to send report",
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
 }
 
 export async function generateVerificationCode(email: string) {
-  const code = Math.floor(100000 + Math.random() * 900000).toString()
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+  try {
+    const supabase = await createClient()
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-  const supabase = await createClient()
+    const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
 
-  const { error } = await supabase.from("verification_codes").insert({
-    email,
-    code,
-    expires_at: expiresAt.toISOString(),
-    attempts: 0,
-  })
+    if (deleteError) {
+      console.error("Error deleting old codes:", deleteError)
+    }
 
-  if (error) {
-    console.error("Error storing verification code:", error)
-    return { success: false, message: "Failed to generate verification code" }
+    const { error: insertError } = await supabase.from("verification_codes").insert({
+      email,
+      code,
+      expires_at: expiresAt.toISOString(),
+      attempts: 0,
+    })
+
+    if (insertError) {
+      throw insertError
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4f46e5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9fafb; }
+            .code { font-size: 32px; font-weight: bold; color: #4f46e5; text-align: center; padding: 20px; background: white; margin: 20px 0; letter-spacing: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Email Verification</h1>
+            </div>
+            <div class="content">
+              <p>Your verification code is:</p>
+              <div class="code">${code}</div>
+              <p>This code will expire in 10 minutes.</p>
+              <p>If you didn't request this code, please ignore this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const text = `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`
+
+    const emailResult = await sendEmail({
+      to: email,
+      subject: "Your Kuhlekt Verification Code",
+      text,
+      html,
+    })
+
+    if (!emailResult.success) {
+      return { success: false, message: "Failed to send verification email" }
+    }
+
+    return { success: true, message: "Verification code sent" }
+  } catch (error) {
+    console.error("Error generating verification code:", error)
+    return {
+      success: false,
+      message: "Failed to generate verification code",
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
-
-  const subject = "Your Kuhlekt Verification Code"
-  const text = `Your verification code is: ${code}. This code will expire in 10 minutes.`
-  const html = `<h1>Your Verification Code</h1><p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in 10 minutes.</p>`
-
-  const result = await sendEmail({ to: email, subject, text, html })
-  return result
 }
 
 export async function verifyCode(email: string, code: string) {
-  const supabase = await createClient()
+  try {
+    const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from("verification_codes")
-    .select("*")
-    .eq("email", email)
-    .eq("code", code)
-    .gt("expires_at", new Date().toISOString())
-    .single()
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .select("*")
+      .eq("email", email)
+      .eq("code", code)
+      .single()
 
-  if (error || !data) {
-    return { success: false, message: "Invalid or expired verification code" }
+    if (error || !data) {
+      const { error: updateError } = await supabase
+        .from("verification_codes")
+        .update({ attempts: supabase.rpc("increment_attempts", { email_param: email }) })
+        .eq("email", email)
+
+      return { success: false, message: "Invalid verification code" }
+    }
+
+    if (new Date(data.expires_at) < new Date()) {
+      await supabase.from("verification_codes").delete().eq("email", email)
+      return { success: false, message: "Verification code has expired" }
+    }
+
+    if (data.attempts >= 3) {
+      await supabase.from("verification_codes").delete().eq("email", email)
+      return { success: false, message: "Too many attempts. Please request a new code." }
+    }
+
+    await supabase.from("verification_codes").delete().eq("email", email)
+
+    return { success: true, message: "Email verified successfully" }
+  } catch (error) {
+    console.error("Error verifying code:", error)
+    return {
+      success: false,
+      message: "Failed to verify code",
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
-
-  if (data.attempts >= 3) {
-    return { success: false, message: "Too many attempts. Please request a new code." }
-  }
-
-  await supabase
-    .from("verification_codes")
-    .update({ attempts: data.attempts + 1 })
-    .eq("id", data.id)
-
-  await supabase.from("verification_codes").delete().eq("id", data.id)
-
-  return { success: true, message: "Verification successful" }
 }
