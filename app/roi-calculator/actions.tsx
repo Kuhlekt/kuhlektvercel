@@ -3,203 +3,147 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROIData {
-  companyName: string
-  email: string
-  annualRevenue: number
-  currentDSO: number
-  targetDSO: number
-  badDebtRate: number
-}
+export async function sendROIReport(formData: FormData) {
+  const email = formData.get("email") as string
+  const companyName = formData.get("companyName") as string
+  const currentAR = formData.get("currentAR") as string
+  const avgDSO = formData.get("avgDSO") as string
+  const staffCost = formData.get("staffCost") as string
 
-export async function sendROIReport(data: ROIData) {
-  try {
-    const savingsPercentage = ((data.currentDSO - data.targetDSO) / data.currentDSO) * 100
-    const cashFlowImprovement = (data.annualRevenue / 365) * (data.currentDSO - data.targetDSO)
-    const badDebtReduction = data.annualRevenue * (data.badDebtRate / 100) * 0.5
+  const savings = Math.round(Number.parseFloat(currentAR) * 0.15)
+  const dsoReduction = Math.round(Number.parseFloat(avgDSO) * 0.3)
+  const efficiencyGain = "40%"
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f9f9f9; }
-            .metric { margin: 15px 0; padding: 15px; background-color: white; border-left: 4px solid #4F46E5; }
-            .metric-label { font-weight: bold; color: #4F46E5; }
-            .metric-value { font-size: 24px; color: #1a1a1a; margin-top: 5px; }
-            .footer { text-align: center; padding: 20px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Your ROI Analysis</h1>
-              <p>${data.companyName}</p>
-            </div>
-            <div class="content">
-              <h2>Potential Savings Analysis</h2>
-              <div class="metric">
-                <div class="metric-label">DSO Reduction</div>
-                <div class="metric-value">${savingsPercentage.toFixed(1)}%</div>
-                <p>From ${data.currentDSO} to ${data.targetDSO} days</p>
-              </div>
-              <div class="metric">
-                <div class="metric-label">Cash Flow Improvement</div>
-                <div class="metric-value">$${cashFlowImprovement.toLocaleString("en-US", { maximumFractionDigits: 0 })}</div>
-                <p>Annual improvement in working capital</p>
-              </div>
-              <div class="metric">
-                <div class="metric-label">Bad Debt Reduction</div>
-                <div class="metric-value">$${badDebtReduction.toLocaleString("en-US", { maximumFractionDigits: 0 })}</div>
-                <p>Estimated 50% reduction in bad debt</p>
-              </div>
-            </div>
-            <div class="footer">
-              <p>Ready to achieve these results?</p>
-              <p>Contact us to schedule a personalized demo.</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
+  const htmlContent = `
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Your Kuhlekt ROI Analysis</h2>
+        <p>Dear ${companyName},</p>
+        <p>Thank you for using our ROI calculator. Here are your personalized results:</p>
+        <ul>
+          <li><strong>Estimated Annual Savings:</strong> $${savings.toLocaleString()}</li>
+          <li><strong>DSO Reduction:</strong> ${dsoReduction} days</li>
+          <li><strong>Efficiency Gain:</strong> ${efficiencyGain}</li>
+        </ul>
+        <p>Based on your current AR of $${Number.parseFloat(currentAR).toLocaleString()} and average DSO of ${avgDSO} days, Kuhlekt can help you significantly improve your accounts receivable management.</p>
+        <p>Ready to get started? <a href="https://kuhlekt.com/demo">Schedule a demo</a> to see how we can help your business.</p>
+        <p>Best regards,<br>The Kuhlekt Team</p>
+      </body>
+    </html>
+  `
 
-    const textContent = `
-Your ROI Analysis - ${data.companyName}
+  const textContent = `
+Your Kuhlekt ROI Analysis
 
-Potential Savings Analysis:
+Dear ${companyName},
 
-DSO Reduction: ${savingsPercentage.toFixed(1)}%
-From ${data.currentDSO} to ${data.targetDSO} days
+Thank you for using our ROI calculator. Here are your personalized results:
 
-Cash Flow Improvement: $${cashFlowImprovement.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-Annual improvement in working capital
+- Estimated Annual Savings: $${savings.toLocaleString()}
+- DSO Reduction: ${dsoReduction} days
+- Efficiency Gain: ${efficiencyGain}
 
-Bad Debt Reduction: $${badDebtReduction.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-Estimated 50% reduction in bad debt
+Based on your current AR of $${Number.parseFloat(currentAR).toLocaleString()} and average DSO of ${avgDSO} days, Kuhlekt can help you significantly improve your accounts receivable management.
 
-Ready to achieve these results?
-Contact us to schedule a personalized demo.
-    `
+Ready to get started? Visit https://kuhlekt.com/demo to schedule a demo.
 
-    const result = await sendEmail({
-      to: data.email,
-      subject: `Your ROI Analysis - ${data.companyName}`,
-      text: textContent,
-      html: htmlContent,
-    })
+Best regards,
+The Kuhlekt Team
+  `
 
-    if (!result.success) {
-      throw new Error(result.error || "Failed to send email")
-    }
+  const result = await sendEmail({
+    to: email,
+    subject: "Your Kuhlekt ROI Analysis Results",
+    text: textContent,
+    html: htmlContent,
+  })
 
-    return { success: true }
-  } catch (error) {
-    console.error("Error sending ROI report:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to send report",
-    }
-  }
+  return result
 }
 
 export async function generateVerificationCode(email: string) {
-  try {
-    const supabase = await createClient()
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+  const code = Math.floor(100000 + Math.random() * 900000).toString()
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-    const { error: insertError } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      attempts: 0,
-    })
+  const supabase = await createClient()
 
-    if (insertError) {
-      console.error("Error inserting verification code:", insertError)
-      throw insertError
-    }
+  const { error } = await supabase.from("verification_codes").insert({
+    email,
+    code,
+    expires_at: expiresAt.toISOString(),
+    attempts: 0,
+  })
 
-    const result = await sendEmail({
-      to: email,
-      subject: "Your Verification Code",
-      text: `Your verification code is: ${code}
-
-This code will expire in 10 minutes.`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .code { font-size: 32px; font-weight: bold; color: #4F46E5; text-align: center; padding: 20px; background-color: #f3f4f6; border-radius: 8px; margin: 20px 0; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h2>Your Verification Code</h2>
-              <div class="code">${code}</div>
-              <p>This code will expire in 10 minutes.</p>
-            </div>
-          </body>
-        </html>
-      `,
-    })
-
-    if (!result.success) {
-      throw new Error(result.error || "Failed to send verification email")
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error generating verification code:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to generate code",
-    }
+  if (error) {
+    console.error("Error storing verification code:", error)
+    return { success: false, message: "Failed to generate verification code" }
   }
+
+  const htmlContent = `
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>Your Kuhlekt Verification Code</h2>
+        <p>Your verification code is: <strong style="font-size: 24px; color: #0066cc;">${code}</strong></p>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this code, please ignore this email.</p>
+        <p>Best regards,<br>The Kuhlekt Team</p>
+      </body>
+    </html>
+  `
+
+  const textContent = `
+Your Kuhlekt Verification Code
+
+Your verification code is: ${code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+Best regards,
+The Kuhlekt Team
+  `
+
+  const emailResult = await sendEmail({
+    to: email,
+    subject: "Your Kuhlekt Verification Code",
+    text: textContent,
+    html: htmlContent,
+  })
+
+  if (!emailResult.success) {
+    return { success: false, message: "Failed to send verification code" }
+  }
+
+  return { success: true, message: "Verification code sent" }
 }
 
 export async function verifyCode(email: string, code: string) {
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .gt("expires_at", new Date().toISOString())
-      .single()
+  const { data, error } = await supabase
+    .from("verification_codes")
+    .select("*")
+    .eq("email", email)
+    .eq("code", code)
+    .single()
 
-    if (error || !data) {
-      return { success: false, error: "Invalid or expired code" }
-    }
-
-    if (data.attempts >= 3) {
-      return { success: false, error: "Too many attempts" }
-    }
-
-    await supabase
-      .from("verification_codes")
-      .update({ attempts: data.attempts + 1 })
-      .eq("id", data.id)
-
-    if (data.code === code) {
-      await supabase.from("verification_codes").delete().eq("id", data.id)
-      return { success: true }
-    }
-
-    return { success: false, error: "Invalid code" }
-  } catch (error) {
-    console.error("Error verifying code:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Verification failed",
-    }
+  if (error || !data) {
+    return { success: false, message: "Invalid verification code" }
   }
+
+  if (new Date(data.expires_at) < new Date()) {
+    return { success: false, message: "Verification code has expired" }
+  }
+
+  if (data.attempts >= 3) {
+    return { success: false, message: "Too many attempts. Please request a new code." }
+  }
+
+  await supabase
+    .from("verification_codes")
+    .update({ attempts: data.attempts + 1 })
+    .eq("id", data.id)
+
+  return { success: true, message: "Code verified successfully" }
 }
