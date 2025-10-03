@@ -36,10 +36,7 @@ export async function sendTestEmail(testEmailAddress: string) {
       }
     }
 
-    const result = await sendEmailWithSES({
-      to: testEmailAddress,
-      subject: "Kuhlekt Email System Test",
-      text: `Hello!
+    const emailContent = `Hello!
 
 This is a test email from the Kuhlekt website email system.
 
@@ -56,7 +53,32 @@ Test Details:
 You can safely delete this email.
 
 Best regards,
-Kuhlekt Team`,
+Kuhlekt Team`
+
+    const result = await sendEmailWithSES({
+      to: testEmailAddress,
+      subject: "Kuhlekt Email System Test",
+      text: emailContent,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello!</h2>
+          <p>This is a test email from the Kuhlekt website email system.</p>
+          <p>If you receive this email, it means:</p>
+          <ul>
+            <li>✓ AWS SES is properly configured</li>
+            <li>✓ Email sending is working correctly</li>
+            <li>✓ The contact forms on the website will work properly</li>
+          </ul>
+          <p><strong>Test Details:</strong></p>
+          <ul>
+            <li>Sent at: ${new Date().toISOString()}</li>
+            <li>From: Kuhlekt Email System</li>
+            <li>To: ${testEmailAddress}</li>
+          </ul>
+          <p>You can safely delete this email.</p>
+          <p>Best regards,<br>Kuhlekt Team</p>
+        </div>
+      `,
     })
 
     if (result.success) {
