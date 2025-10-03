@@ -1,15 +1,33 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['bcryptjs', '@aws-sdk/client-ses'],
-  },
+  serverExternalPackages: [
+    'bcryptjs',
+    '@aws-sdk/client-ses',
+    '@aws-sdk/smithy-client',
+    '@smithy/hash-node',
+    '@smithy/node-http-handler',
+    '@smithy/util-stream-node',
+    '@smithy/credential-provider-node',
+  ],
   webpack: (config, { isServer }) => {
     if (isServer) {
+      // Don't bundle AWS SDK and related packages on server
       config.externals.push({
         '@aws-sdk/client-ses': 'commonjs @aws-sdk/client-ses',
         '@smithy/hash-node': 'commonjs @smithy/hash-node',
         '@smithy/node-http-handler': 'commonjs @smithy/node-http-handler',
+        '@smithy/util-stream-node': 'commonjs @smithy/util-stream-node',
+        '@smithy/credential-provider-node': 'commonjs @smithy/credential-provider-node',
       })
+    }
+
+    // Ensure Node.js built-ins are available
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      crypto: false,
+      stream: false,
+      buffer: false,
+      util: false,
     }
     
     return config
