@@ -2,10 +2,10 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendTestEmail(to: string) {
+export async function sendTestEmail(email: string) {
   try {
     const result = await sendEmail({
-      to,
+      to: email,
       subject: "Test Email from Kuhlekt",
       text: "This is a test email from Kuhlekt.",
       html: "<p>This is a test email from Kuhlekt.</p>",
@@ -13,11 +13,7 @@ export async function sendTestEmail(to: string) {
 
     return result
   } catch (error) {
-    console.error("Error in sendTestEmail:", error)
-    return {
-      success: false,
-      message: "Failed to send test email",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    console.error("Error sending test email:", error)
+    return { success: false, message: "Failed to send test email" }
   }
 }
