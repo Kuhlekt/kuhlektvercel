@@ -3,35 +3,18 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendROIReport(formData: FormData) {
-  const email = formData.get("email") as string
-  const verificationCode = formData.get("verificationCode") as string
-
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("verification_codes")
-    .select("*")
-    .eq("email", email)
-    .eq("code", verificationCode)
-    .eq("verified", false)
-    .single()
-
-  if (error || !data) {
-    return { success: false, message: "Invalid verification code" }
+export async function sendROIReport(email: string, reportData: any) {
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: "Your ROI Report",
+      text: "Your ROI report is attached",
+      html: "<h1>ROI Report</h1><p>Report data here</p>",
+    })
+    return result
+  } catch (error) {
+    return { success: false, message: "Failed to send report" }
   }
-
-  const result = await sendEmail({
-    to: email,
-    subject: "Your ROI Report",
-    text: "Here is your ROI report",
-    html: "<p>Here is your ROI report</p>",
-  })
-
-  if (result.success) {
-    await supabase.from("verification_codes").update({ verified: true }).eq("id", data.id)
-  }
-
-  return result
 }
 
 export async function generateVerificationCode(email: string) {
@@ -41,29 +24,16 @@ export async function generateVerificationCode(email: string) {
   await supabase.from("verification_codes").insert({
     email,
     code,
-    verified: false,
-    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   })
 
-  await sendEmail({
-    to: email,
-    subject: "Verification Code",
-    text: `Your verification code is: ${code}`,
-    html: `<p>Your verification code is: <strong>${code}</strong></p>`,
-  })
-
-  return { success: true }
+  return code
 }
 
 export async function verifyCode(email: string, code: string) {
   const supabase = createClient()
-  const { data, error } = await supabase
-    .from("verification_codes")
-    .select("*")
-    .eq("email", email)
-    .eq("code", code)
-    .eq("verified", false)
-    .single()
 
-  return { success: !error && !!data }
+  const { data } = await supabase.from("verification_codes").select("*").eq("email", email).eq("code", code).single()
+
+  return !!data
 }
