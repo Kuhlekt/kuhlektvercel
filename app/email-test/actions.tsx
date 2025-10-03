@@ -7,12 +7,12 @@ export async function sendTestEmail(to: string) {
     const result = await sendEmail({
       to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from Kuhlekt.",
+      text: "This is a test email from Kuhlekt to verify AWS SES configuration.",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Test Email</h2>
-          <p>This is a test email from Kuhlekt.</p>
-          <p>If you received this, the email service is working correctly!</p>
+          <h1 style="color: #333;">Test Email</h1>
+          <p>This is a test email from Kuhlekt to verify AWS SES configuration.</p>
+          <p>If you received this email, your AWS SES is configured correctly!</p>
         </div>
       `,
     })
