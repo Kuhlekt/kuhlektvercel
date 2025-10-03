@@ -3,119 +3,71 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROIData {
-  companyName: string
-  email: string
-  industry: string
-  annualRevenue: number
-  invoicesPerMonth: number
-  averageDso: number
-  badDebtPercentage: number
-}
+export async function sendROIReport(formData: FormData) {
+  const email = formData.get("email") as string
+  const currentAR = formData.get("currentAR") as string
+  const projectedSavings = formData.get("projectedSavings") as string
+  const timeSaved = formData.get("timeSaved") as string
 
-export async function sendROIReport(data: ROIData) {
-  try {
-    const subject = `ROI Report for ${data.companyName}`
-    const text = `Thank you for your interest in Kuhlekt. Your ROI report has been generated.`
-    const html = `
-      <h1>ROI Report for ${data.companyName}</h1>
-      <p>Thank you for your interest in Kuhlekt.</p>
-      <p>Industry: ${data.industry}</p>
-      <p>Annual Revenue: $${data.annualRevenue.toLocaleString()}</p>
-    `
+  const subject = "Your Kuhlekt ROI Report"
+  const text = `Thank you for your interest in Kuhlekt. Here is your personalized ROI report:\n\nCurrent AR: ${currentAR}\nProjected Savings: ${projectedSavings}\nTime Saved: ${timeSaved}`
+  const html = `<h1>Your Kuhlekt ROI Report</h1><p>Thank you for your interest in Kuhlekt.</p><p><strong>Current AR:</strong> ${currentAR}</p><p><strong>Projected Savings:</strong> ${projectedSavings}</p><p><strong>Time Saved:</strong> ${timeSaved}</p>`
 
-    const result = await sendEmail({
-      to: data.email,
-      subject,
-      text,
-      html,
-    })
-
-    return result
-  } catch (error) {
-    console.error("Error sending ROI report:", error)
-    return {
-      success: false,
-      message: "Failed to send ROI report",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const result = await sendEmail({ to: email, subject, text, html })
+  return result
 }
 
 export async function generateVerificationCode(email: string) {
-  try {
-    const supabase = await createClient()
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+  const code = Math.floor(100000 + Math.random() * 900000).toString()
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-    const { error } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      attempts: 0,
-    })
+  const supabase = await createClient()
 
-    if (error) {
-      console.error("Error storing verification code:", error)
-      return { success: false, message: "Failed to generate verification code" }
-    }
+  const { error } = await supabase.from("verification_codes").insert({
+    email,
+    code,
+    expires_at: expiresAt.toISOString(),
+    attempts: 0,
+  })
 
-    const result = await sendEmail({
-      to: email,
-      subject: "Your Kuhlekt ROI Report Verification Code",
-      text: `Your verification code is: ${code}`,
-      html: `
-        <h2>Your Verification Code</h2>
-        <p>Your verification code is: <strong>${code}</strong></p>
-        <p>This code will expire in 10 minutes.</p>
-      `,
-    })
-
-    return result
-  } catch (error) {
-    console.error("Error generating verification code:", error)
-    return {
-      success: false,
-      message: "Failed to generate verification code",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (error) {
+    console.error("Error storing verification code:", error)
+    return { success: false, message: "Failed to generate verification code" }
   }
+
+  const subject = "Your Kuhlekt Verification Code"
+  const text = `Your verification code is: ${code}. This code will expire in 10 minutes.`
+  const html = `<h1>Your Verification Code</h1><p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in 10 minutes.</p>`
+
+  const result = await sendEmail({ to: email, subject, text, html })
+  return result
 }
 
 export async function verifyCode(email: string, code: string) {
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
+  const { data, error } = await supabase
+    .from("verification_codes")
+    .select("*")
+    .eq("email", email)
+    .eq("code", code)
+    .gt("expires_at", new Date().toISOString())
+    .single()
 
-    if (error || !data) {
-      return { success: false, message: "Invalid or expired verification code" }
-    }
-
-    if (data.attempts >= 3) {
-      return { success: false, message: "Too many attempts. Please request a new code." }
-    }
-
-    await supabase
-      .from("verification_codes")
-      .update({ attempts: data.attempts + 1 })
-      .eq("id", data.id)
-
-    return { success: true, message: "Code verified successfully" }
-  } catch (error) {
-    console.error("Error verifying code:", error)
-    return {
-      success: false,
-      message: "Failed to verify code",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (error || !data) {
+    return { success: false, message: "Invalid or expired verification code" }
   }
+
+  if (data.attempts >= 3) {
+    return { success: false, message: "Too many attempts. Please request a new code." }
+  }
+
+  await supabase
+    .from("verification_codes")
+    .update({ attempts: data.attempts + 1 })
+    .eq("id", data.id)
+
+  await supabase.from("verification_codes").delete().eq("id", data.id)
+
+  return { success: true, message: "Verification successful" }
 }
