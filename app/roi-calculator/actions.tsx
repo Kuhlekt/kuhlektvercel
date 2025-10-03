@@ -5,88 +5,36 @@ import { sendEmail } from "@/lib/aws-ses"
 
 export async function sendROIReport(email: string, reportData: any) {
   try {
-    const html = `
-      <html>
-        <body>
-          <h1>Your ROI Report</h1>
-          <p>Annual Revenue: $${reportData.annualRevenue.toLocaleString()}</p>
-          <p>DSO: ${reportData.dso} days</p>
-          <p>Potential Savings: $${reportData.savings.toLocaleString()}</p>
-        </body>
-      </html>
-    `
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
 
-    const result = await sendEmail({
-      to: email,
-      subject: "Your Kuhlekt ROI Report",
-      text: `Your ROI Report - Potential Savings: $${reportData.savings.toLocaleString()}`,
-      html,
-    })
-
-    return result
-  } catch (error) {
-    console.error("Error sending ROI report:", error)
-    return {
-      success: false,
-      message: "Failed to send report",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-export async function generateVerificationCode(email: string) {
-  try {
     const supabase = await createClient()
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
-
-    const { error: insertError } = await supabase.from("verification_codes").insert({
+    const { error: dbError } = await supabase.from("verification_codes").insert({
       email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      attempts: 0,
+      code: verificationCode,
+      report_data: reportData,
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     })
 
-    if (insertError) {
-      console.error("Error inserting verification code:", insertError)
-      return {
-        success: false,
-        message: "Failed to generate verification code",
-      }
+    if (dbError) {
+      console.error("Database error:", dbError)
+      return { success: false, message: "Failed to store verification code" }
     }
-
-    const html = `
-      <html>
-        <body>
-          <h1>Your Verification Code</h1>
-          <p>Your verification code is: <strong>${code}</strong></p>
-          <p>This code will expire in 15 minutes.</p>
-        </body>
-      </html>
-    `
 
     const emailResult = await sendEmail({
       to: email,
-      subject: "Your Kuhlekt Verification Code",
-      text: `Your verification code is: ${code}`,
-      html,
+      subject: "Your ROI Calculator Verification Code",
+      text: `Your verification code is: ${verificationCode}`,
+      html: `<p>Your verification code is: <strong>${verificationCode}</strong></p>`,
     })
 
     if (!emailResult.success) {
-      return emailResult
+      return { success: false, message: emailResult.message }
     }
 
-    return {
-      success: true,
-      message: "Verification code sent successfully",
-    }
+    return { success: true, message: "Verification code sent to your email" }
   } catch (error) {
-    console.error("Error generating verification code:", error)
-    return {
-      success: false,
-      message: "Failed to generate verification code",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    console.error("Error in sendROIReport:", error)
+    return { success: false, message: "An error occurred" }
   }
 }
 
@@ -99,42 +47,39 @@ export async function verifyCode(email: string, code: string) {
       .select("*")
       .eq("email", email)
       .eq("code", code)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single()
 
     if (error || !data) {
-      return {
-        success: false,
-        message: "Invalid verification code",
-      }
+      return { success: false, message: "Invalid or expired verification code" }
     }
 
-    if (new Date(data.expires_at) < new Date()) {
-      await supabase.from("verification_codes").delete().eq("id", data.id)
-      return {
-        success: false,
-        message: "Verification code has expired",
-      }
+    const { error: updateError } = await supabase
+      .from("verification_codes")
+      .update({ verified: true })
+      .eq("id", data.id)
+
+    if (updateError) {
+      return { success: false, message: "Failed to verify code" }
     }
 
-    if (data.attempts >= 3) {
-      return {
-        success: false,
-        message: "Too many verification attempts",
-      }
+    const reportData = data.report_data
+    const emailResult = await sendEmail({
+      to: email,
+      subject: "Your ROI Calculator Report",
+      text: "Please find your ROI report attached.",
+      html: `<h1>Your ROI Report</h1><pre>${JSON.stringify(reportData, null, 2)}</pre>`,
+    })
+
+    if (!emailResult.success) {
+      return { success: false, message: "Verification successful but failed to send report" }
     }
 
-    await supabase.from("verification_codes").delete().eq("id", data.id)
-
-    return {
-      success: true,
-      message: "Verification successful",
-    }
+    return { success: true, message: "Report sent successfully", data: reportData }
   } catch (error) {
-    console.error("Error verifying code:", error)
-    return {
-      success: false,
-      message: "Failed to verify code",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    console.error("Error in verifyCode:", error)
+    return { success: false, message: "An error occurred during verification" }
   }
 }

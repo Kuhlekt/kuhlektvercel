@@ -3,43 +3,42 @@
 import { sendEmail } from "@/lib/aws-ses"
 
 export async function submitContactForm(formData: FormData) {
-  const name = formData.get("name") as string
-  const email = formData.get("email") as string
-  const company = formData.get("company") as string
-  const phone = formData.get("phone") as string
-  const message = formData.get("message") as string
+  try {
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
 
-  const html = `
-    <html>
-      <body>
-        <h2>New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Company:</strong> ${company}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-      </body>
-    </html>
-  `
+    const emailResult = await sendEmail({
+      to: process.env.AWS_SES_FROM_EMAIL || "",
+      subject: `Contact Form Submission from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\nCompany: ${company}\nMessage: ${message}`,
+      html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${company}</p><p><strong>Message:</strong> ${message}</p>`,
+    })
 
-  const result = await sendEmail({
-    to: process.env.AWS_SES_FROM_EMAIL || "",
-    subject: `New Contact Form Submission from ${name}`,
-    text: `Name: ${name}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}\nMessage: ${message}`,
-    html,
-  })
+    if (!emailResult.success) {
+      return { success: false, message: emailResult.message }
+    }
 
-  return result
+    return { success: true, message: "Message sent successfully" }
+  } catch (error) {
+    console.error("Error in submitContactForm:", error)
+    return { success: false, message: "An error occurred" }
+  }
 }
 
-export async function sendTestEmail() {
-  const result = await sendEmail({
-    to: process.env.AWS_SES_FROM_EMAIL || "",
-    subject: "Test Email from Kuhlekt",
-    text: "This is a test email from the Kuhlekt contact form.",
-    html: "<html><body><h1>Test Email</h1><p>This is a test email from the Kuhlekt contact form.</p></body></html>",
-  })
+export async function sendTestEmail(to: string) {
+  try {
+    const emailResult = await sendEmail({
+      to,
+      subject: "Test Email",
+      text: "This is a test email",
+      html: "<p>This is a test email</p>",
+    })
 
-  return result
+    return emailResult
+  } catch (error) {
+    console.error("Error in sendTestEmail:", error)
+    return { success: false, message: "An error occurred" }
+  }
 }
