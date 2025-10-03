@@ -2,7 +2,6 @@
 
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
-// Initialize SES client
 const sesClient = new SESClient({
   region: process.env.AWS_SES_REGION || "us-east-1",
   credentials: {
@@ -25,9 +24,7 @@ export async function sendEmail({
   html,
 }: EmailParams): Promise<{ success: boolean; message: string; error?: string }> {
   try {
-    // Validate environment variables
     if (!process.env.AWS_SES_ACCESS_KEY_ID || !process.env.AWS_SES_SECRET_ACCESS_KEY) {
-      console.error("AWS SES credentials not configured")
       return {
         success: false,
         message: "Email service not configured",
@@ -36,7 +33,6 @@ export async function sendEmail({
     }
 
     if (!process.env.AWS_SES_FROM_EMAIL) {
-      console.error("AWS SES from email not configured")
       return {
         success: false,
         message: "Email service not configured",
@@ -83,7 +79,6 @@ export async function sendEmail({
   }
 }
 
-// Export alias for compatibility
 export const sendEmailWithSES = sendEmail
 
 export async function testAWSSESConnection(): Promise<{ success: boolean; message: string }> {
