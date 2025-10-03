@@ -2,16 +2,13 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ContactFormData {
-  name: string
-  email: string
-  company?: string
-  phone?: string
-  message: string
-}
-
-export async function submitContactForm(data: ContactFormData) {
+export async function submitContactForm(formData: FormData) {
   try {
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -19,11 +16,10 @@ export async function submitContactForm(data: ContactFormData) {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2563eb; color: white; padding: 20px; }
-            .content { padding: 20px; background-color: #f9fafb; }
+            .header { background: #2563eb; color: white; padding: 20px; }
+            .content { padding: 20px; background: #f9fafb; }
             .field { margin: 15px 0; }
-            .label { font-weight: bold; color: #4b5563; }
-            .value { margin-top: 5px; }
+            .label { font-weight: bold; color: #6b7280; }
           </style>
         </head>
         <body>
@@ -34,35 +30,19 @@ export async function submitContactForm(data: ContactFormData) {
             <div class="content">
               <div class="field">
                 <div class="label">Name:</div>
-                <div class="value">${data.name}</div>
+                <div>${name}</div>
               </div>
               <div class="field">
                 <div class="label">Email:</div>
-                <div class="value">${data.email}</div>
+                <div>${email}</div>
               </div>
-              ${
-                data.company
-                  ? `
               <div class="field">
                 <div class="label">Company:</div>
-                <div class="value">${data.company}</div>
+                <div>${company}</div>
               </div>
-              `
-                  : ""
-              }
-              ${
-                data.phone
-                  ? `
-              <div class="field">
-                <div class="label">Phone:</div>
-                <div class="value">${data.phone}</div>
-              </div>
-              `
-                  : ""
-              }
               <div class="field">
                 <div class="label">Message:</div>
-                <div class="value">${data.message}</div>
+                <div>${message}</div>
               </div>
             </div>
           </div>
@@ -73,18 +53,15 @@ export async function submitContactForm(data: ContactFormData) {
     const textContent = `
 New Contact Form Submission
 
-Name: ${data.name}
-Email: ${data.email}
-${data.company ? `Company: ${data.company}` : ""}
-${data.phone ? `Phone: ${data.phone}` : ""}
-
-Message:
-${data.message}
+Name: ${name}
+Email: ${email}
+Company: ${company}
+Message: ${message}
     `
 
     const result = await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "",
-      subject: `New Contact Form Submission from ${data.name}`,
+      subject: `Contact Form: ${name} from ${company}`,
       text: textContent,
       html: htmlContent,
     })
@@ -100,13 +77,36 @@ ${data.message}
   }
 }
 
-export async function sendTestEmail(to: string) {
+export async function sendTestEmail(email: string) {
   try {
     const result = await sendEmail({
-      to,
+      to: email,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from Kuhlekt contact form.",
-      html: "<p>This is a <strong>test email</strong> from Kuhlekt contact form.</p>",
+      text: "This is a test email to verify your email configuration.",
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+              .content { padding: 20px; background: #f9fafb; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Test Email</h1>
+              </div>
+              <div class="content">
+                <p>This is a test email to verify your email configuration.</p>
+                <p>If you received this email, your email service is working correctly!</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
     })
 
     return result
