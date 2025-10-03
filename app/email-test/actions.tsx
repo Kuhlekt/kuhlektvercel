@@ -2,38 +2,36 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendTestEmail(email: string) {
+export async function sendTestEmail(to: string) {
   try {
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background: #f9fafb; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Test Email</h1>
-            </div>
-            <div class="content">
-              <p>This is a test email from Kuhlekt.</p>
-              <p>If you're seeing this, the email system is working correctly!</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
-
     const result = await sendEmail({
-      to: email,
+      to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from Kuhlekt. If you're seeing this, the email system is working correctly!",
-      html: htmlContent,
+      text: "This is a test email to verify AWS SES configuration.",
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+              .content { padding: 20px; background-color: #f9fafb; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Test Email</h1>
+              </div>
+              <div class="content">
+                <p>This is a <strong>test email</strong> to verify AWS SES configuration.</p>
+                <p>If you received this email, AWS SES is configured correctly!</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
     })
 
     return result

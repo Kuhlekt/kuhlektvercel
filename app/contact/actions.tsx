@@ -2,13 +2,16 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function submitContactForm(formData: FormData) {
-  try {
-    const name = formData.get("name") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const message = formData.get("message") as string
+interface ContactFormData {
+  name: string
+  email: string
+  company?: string
+  phone?: string
+  message: string
+}
 
+export async function submitContactForm(data: ContactFormData) {
+  try {
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -16,10 +19,11 @@ export async function submitContactForm(formData: FormData) {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #2563eb; color: white; padding: 20px; }
-            .content { padding: 20px; background: #f9fafb; }
+            .header { background-color: #2563eb; color: white; padding: 20px; }
+            .content { padding: 20px; background-color: #f9fafb; }
             .field { margin: 15px 0; }
-            .label { font-weight: bold; color: #6b7280; }
+            .label { font-weight: bold; color: #4b5563; }
+            .value { margin-top: 5px; }
           </style>
         </head>
         <body>
@@ -30,19 +34,35 @@ export async function submitContactForm(formData: FormData) {
             <div class="content">
               <div class="field">
                 <div class="label">Name:</div>
-                <div>${name}</div>
+                <div class="value">${data.name}</div>
               </div>
               <div class="field">
                 <div class="label">Email:</div>
-                <div>${email}</div>
+                <div class="value">${data.email}</div>
               </div>
+              ${
+                data.company
+                  ? `
               <div class="field">
                 <div class="label">Company:</div>
-                <div>${company}</div>
+                <div class="value">${data.company}</div>
               </div>
+              `
+                  : ""
+              }
+              ${
+                data.phone
+                  ? `
+              <div class="field">
+                <div class="label">Phone:</div>
+                <div class="value">${data.phone}</div>
+              </div>
+              `
+                  : ""
+              }
               <div class="field">
                 <div class="label">Message:</div>
-                <div>${message}</div>
+                <div class="value">${data.message}</div>
               </div>
             </div>
           </div>
@@ -53,15 +73,18 @@ export async function submitContactForm(formData: FormData) {
     const textContent = `
 New Contact Form Submission
 
-Name: ${name}
-Email: ${email}
-Company: ${company}
-Message: ${message}
+Name: ${data.name}
+Email: ${data.email}
+${data.company ? `Company: ${data.company}` : ""}
+${data.phone ? `Phone: ${data.phone}` : ""}
+
+Message:
+${data.message}
     `
 
     const result = await sendEmail({
       to: process.env.AWS_SES_FROM_EMAIL || "",
-      subject: `New Contact Form Submission from ${name}`,
+      subject: `New Contact Form Submission from ${data.name}`,
       text: textContent,
       html: htmlContent,
     })
@@ -77,13 +100,13 @@ Message: ${message}
   }
 }
 
-export async function sendTestEmail(email: string) {
+export async function sendTestEmail(to: string) {
   try {
     const result = await sendEmail({
-      to: email,
+      to,
       subject: "Test Email from Kuhlekt",
       text: "This is a test email from Kuhlekt contact form.",
-      html: "<p>This is a test email from Kuhlekt contact form.</p>",
+      html: "<p>This is a <strong>test email</strong> from Kuhlekt contact form.</p>",
     })
 
     return result
