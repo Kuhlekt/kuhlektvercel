@@ -5,6 +5,9 @@ const nextConfig = {
     '@aws-sdk/smithy-client',
     '@smithy/node-http-handler',
     '@smithy/hash-node',
+    '@smithy/protocol-http',
+    '@smithy/middleware-serde',
+    '@smithy/smithy-client',
   ],
   eslint: {
     ignoreDuringBuilds: true,
