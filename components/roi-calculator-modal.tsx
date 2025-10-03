@@ -230,7 +230,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
+      console.log("Sending verification code to:", contactData.email)
       const result = await generateVerificationCode(contactData.email)
+      console.log("Verification code result:", result)
 
       if (result.success) {
         setStep("verify")
@@ -239,6 +241,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         setErrors({ submit: result.error || "Failed to send verification code" })
       }
     } catch (error) {
+      console.error("Error sending verification code:", error)
       setErrors({ submit: "Failed to send verification code. Please try again." })
     } finally {
       setIsSendingCode(false)
@@ -277,7 +280,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
+      console.log("Verifying code for:", contactData.email)
       const result = await verifyCode(contactData.email, verificationCode)
+      console.log("Verification result:", result)
 
       if (result.success) {
         // Code verified, now calculate and show results
@@ -286,6 +291,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         setErrors({ verify: result.error || "Invalid verification code" })
       }
     } catch (error) {
+      console.error("Error verifying code:", error)
       setErrors({ verify: "Failed to verify code. Please try again." })
     } finally {
       setIsVerifying(false)
@@ -298,15 +304,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     try {
       let results
       if (calculatorType === "simple") {
+        console.log("Calculating simple ROI with data:", simpleData)
         results = await calculateSimpleROI(simpleData)
+        console.log("Simple ROI results:", results)
         setSimpleResults(results)
         setStep("simple-results")
       } else {
+        console.log("Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
+        console.log("Detailed ROI results:", results)
         setDetailedResults(results)
         setStep("detailed-results")
       }
 
+      console.log("Sending ROI email...")
       await sendROIEmail({
         name: contactData.name,
         email: contactData.email,
@@ -318,8 +329,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
       setEmailSent(true)
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error calculating ROI:", error)
       setErrors({ submit: "Error calculating ROI. Please try again." })
+      setStep("contact")
     } finally {
       setIsCalculating(false)
     }
