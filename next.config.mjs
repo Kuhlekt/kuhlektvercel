@@ -1,43 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: [
-    'bcryptjs',
     '@aws-sdk/client-ses',
+    '@aws-sdk/smithy-client',
+    '@smithy/node-http-handler',
     '@smithy/hash-node',
+    '@smithy/util-buffer-from',
+    '@smithy/signature-v4',
   ],
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-    unoptimized: true,
-  },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-        ],
-      },
-    ]
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  images: {
+    domains: ['placeholder.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+    unoptimized: true,
   },
 }
 

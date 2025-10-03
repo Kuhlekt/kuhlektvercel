@@ -1,69 +1,39 @@
 "use server"
 
-import { sendEmail, testAWSSESConnection, validateSESConfiguration } from "@/lib/aws-ses"
+import { sendEmail, validateSESConfiguration } from "@/lib/aws-ses"
 
-export async function testEmail(email: string): Promise<{ success: boolean; message: string }> {
+export async function sendTestEmail(email: string): Promise<{ success: boolean; message: string }> {
   try {
+    const validation = await validateSESConfiguration()
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: `Configuration issues: ${validation.issues.join(", ")}`,
+      }
+    }
+
     const result = await sendEmail({
       to: email,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from the Kuhlekt email system.",
+      text: "This is a test email to verify AWS SES integration.",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1f2937;">Test Email</h2>
-          <p>This is a test email from the Kuhlekt email system.</p>
-          <p style="color: #6b7280; font-size: 14px;">Sent at: ${new Date().toISOString()}</p>
+          <h2 style="color: #333;">Test Email</h2>
+          <p>This is a test email to verify AWS SES integration is working correctly.</p>
+          <p style="margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-left: 4px solid #0ea5e9;">
+            ✅ If you're reading this, the email configuration is working!
+          </p>
         </div>
       `,
     })
 
     return result
   } catch (error) {
-    console.error("Error in testEmail:", error)
+    console.error("Error in sendTestEmail action:", error)
     return {
       success: false,
       message: error instanceof Error ? error.message : "Failed to send test email",
-    }
-  }
-}
-
-export async function testEmailSystem(): Promise<{ success: boolean; message: string; details?: any }> {
-  try {
-    const connectionTest = await testAWSSESConnection()
-    const configValidation = await validateSESConfiguration()
-
-    return {
-      success: connectionTest.success && configValidation.valid,
-      message:
-        connectionTest.success && configValidation.valid
-          ? "Email system is properly configured"
-          : "Email system has configuration issues",
-      details: {
-        connection: connectionTest,
-        validation: configValidation,
-      },
-    }
-  } catch (error) {
-    console.error("Error in testEmailSystem:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to test email system",
-    }
-  }
-}
-
-export async function getEmailConfigStatus(): Promise<{ configured: boolean; issues: string[] }> {
-  try {
-    const validation = await validateSESConfiguration()
-    return {
-      configured: validation.valid,
-      issues: validation.issues,
-    }
-  } catch (error) {
-    console.error("Error in getEmailConfigStatus:", error)
-    return {
-      configured: false,
-      issues: ["Failed to check email configuration"],
     }
   }
 }

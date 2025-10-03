@@ -129,3 +129,73 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     }
   }
 }
+
+export async function calculateSimpleROI(data: any) {
+  const annualRevenue = Number.parseFloat(data.annualRevenue) || 0
+  const averageInvoiceValue = Number.parseFloat(data.averageInvoiceValue) || 0
+  const currentDSO = Number.parseFloat(data.currentDSO) || 0
+
+  const targetDSO = Math.max(currentDSO * 0.7, 30)
+  const dsoReduction = currentDSO - targetDSO
+  const daysImprovement = dsoReduction
+  const cashFlowImprovement = (annualRevenue / 365) * daysImprovement
+  const yearlyValue = cashFlowImprovement
+
+  return {
+    currentDSO,
+    targetDSO,
+    dsoReduction,
+    cashFlowImprovement,
+    yearlyValue,
+    annualRevenue,
+  }
+}
+
+export async function calculateDetailedROI(data: any) {
+  const simpleROI = await calculateSimpleROI(data)
+
+  const monthlyInvoices = Number.parseFloat(data.monthlyInvoices) || 0
+  const hoursPerInvoice = Number.parseFloat(data.hoursPerInvoice) || 0
+  const hourlyRate = Number.parseFloat(data.hourlyRate) || 0
+
+  const currentMonthlyCost = monthlyInvoices * hoursPerInvoice * hourlyRate
+  const automatedMonthlyCost = currentMonthlyCost * 0.3
+  const monthlySavings = currentMonthlyCost - automatedMonthlyCost
+  const yearlySavings = monthlySavings * 12
+
+  const totalYearlyBenefit = simpleROI.yearlyValue + yearlySavings
+
+  return {
+    ...simpleROI,
+    currentMonthlyCost,
+    automatedMonthlyCost,
+    monthlySavings,
+    yearlySavings,
+    totalYearlyBenefit,
+  }
+}
+
+export async function sendROIEmail(email: string, results: any): Promise<{ success: boolean; message: string }> {
+  try {
+    const emailResult = await sendEmail({
+      to: email,
+      subject: "Your Kuhlekt ROI Analysis Results",
+      text: `Your ROI Analysis Results\n\nCash Flow Improvement: $${results.cashFlowImprovement.toFixed(2)}\nYearly Value: $${results.yearlyValue.toFixed(2)}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Your ROI Analysis Results</h2>
+          <p><strong>Cash Flow Improvement:</strong> $${results.cashFlowImprovement.toFixed(2)}</p>
+          <p><strong>Yearly Value:</strong> $${results.yearlyValue.toFixed(2)}</p>
+        </div>
+      `,
+    })
+
+    return emailResult
+  } catch (error) {
+    console.error("Error in sendROIEmail:", error)
+    return {
+      success: false,
+      message: "Failed to send ROI report.",
+    }
+  }
+}
