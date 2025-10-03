@@ -27,105 +27,139 @@ export async function sendVerificationCode(email: string): Promise<void> {
   const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
 
   verificationCodes.set(email, { code, expiresAt })
+
   console.log("[v0] Code generated and stored:", { email, code, expiresAt })
 
   // Send email via AWS SES
-  const params = {
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verification Code</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td align="center" style="padding: 40px 0;">
+              <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #1a1a1a;">Kuhlekt</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 40px 20px 40px;">
+                    <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1a1a1a;">Your Verification Code</h2>
+                    <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 24px; color: #666666;">
+                      Use the code below to complete your ROI calculator submission:
+                    </p>
+                    <div style="background-color: #f8f8f8; border-radius: 8px; padding: 24px; text-align: center; margin: 0 0 24px 0;">
+                      <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1a1a1a; font-family: 'Courier New', monospace;">
+                        ${code}
+                      </div>
+                    </div>
+                    <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 20px; color: #999999;">
+                      This code will expire in 10 minutes.
+                    </p>
+                    <p style="margin: 0; font-size: 14px; line-height: 20px; color: #999999;">
+                      If you didn't request this code, you can safely ignore this email.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #eeeeee;">
+                    <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999; text-align: center;">
+                      © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `
+
+  const textBody = `
+Your Kuhlekt Verification Code
+
+Use the code below to complete your ROI calculator submission:
+
+${code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, you can safely ignore this email.
+
+© ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+  `
+
+  const command = new SendEmailCommand({
     Source: process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com",
     Destination: {
       ToAddresses: [email],
     },
     Message: {
       Subject: {
-        Data: "Your Kuhlekt ROI Calculator Verification Code",
+        Data: "Your Kuhlekt Verification Code",
         Charset: "UTF-8",
       },
       Body: {
         Html: {
-          Data: `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              </head>
-              <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-                <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td align="center" style="padding: 40px 0;">
-                      <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <tr>
-                          <td style="padding: 40px 40px 20px 40px; text-align: center;">
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #000000;">Kuhlekt</h1>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 0 40px 20px 40px;">
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #333333;">
-                              Your verification code for the ROI Calculator is:
-                            </p>
-                            <div style="background-color: #f5f5f5; border-radius: 8px; padding: 24px; text-align: center; margin: 20px 0;">
-                              <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #000000;">${code}</span>
-                            </div>
-                            <p style="margin: 20px 0 0 0; font-size: 14px; line-height: 20px; color: #666666;">
-                              This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-                            </p>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 20px 40px 40px 40px; border-top: 1px solid #e5e5e5;">
-                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999; text-align: center;">
-                              © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </body>
-            </html>
-          `,
+          Data: htmlBody,
+          Charset: "UTF-8",
+        },
+        Text: {
+          Data: textBody,
           Charset: "UTF-8",
         },
       },
     },
-  }
+  })
 
   try {
-    console.log("[v0] Sending email via AWS SES to:", email)
-    const command = new SendEmailCommand(params)
     const response = await sesClient.send(command)
     console.log("[v0] Email sent successfully:", response.MessageId)
   } catch (error) {
-    console.error("[v0] Error sending email:", error)
+    console.error("[v0] Failed to send email:", error)
     throw new Error("Failed to send verification email")
   }
 }
 
 // Verify the code
-export function verifyCode(email: string, code: string): boolean {
+export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   console.log("[v0] Verifying code for:", email, "Code:", code)
 
   const stored = verificationCodes.get(email)
 
   if (!stored) {
     console.log("[v0] No code found for email:", email)
-    return false
+    return { success: false, error: "Invalid or expired code" }
   }
 
+  console.log("[v0] Stored code:", stored.code, "Provided code:", code)
+  console.log("[v0] Expires at:", new Date(stored.expiresAt).toISOString())
+  console.log("[v0] Current time:", new Date().toISOString())
+
+  // Check if code has expired
   if (Date.now() > stored.expiresAt) {
-    console.log("[v0] Code expired for email:", email)
+    console.log("[v0] Code has expired")
     verificationCodes.delete(email)
-    return false
+    return { success: false, error: "Code has expired" }
   }
 
+  // Check if code matches
   if (stored.code !== code) {
-    console.log("[v0] Code mismatch for email:", email)
-    return false
+    console.log("[v0] Code mismatch")
+    return { success: false, error: "Invalid code" }
   }
 
-  console.log("[v0] Code verified successfully for email:", email)
+  // Code is valid, remove it
+  console.log("[v0] Code verified successfully")
   verificationCodes.delete(email)
-  return true
+
+  return { success: true }
 }
