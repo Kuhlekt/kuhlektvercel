@@ -1073,7 +1073,104 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
               </div>
 
-              {/* ... existing detailed results sections ... */}
+              {/* Financial Benefits Breakdown */}
+              <div className="border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-cyan-600" />
+                  Financial Benefits Breakdown
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Working Capital Released</span>
+                    <span className="font-semibold text-cyan-600">
+                      ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Interest Savings</span>
+                    <span className="font-semibold text-cyan-600">
+                      ${detailedResults.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Labour Cost Savings</span>
+                    <span className="font-semibold text-cyan-600">
+                      ${detailedResults.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Bad Debt Reduction</span>
+                    <span className="font-semibold text-cyan-600">
+                      ${detailedResults.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 bg-green-50 -mx-6 px-6 py-3 rounded-b-lg">
+                    <span className="font-bold text-gray-900">Total Annual Benefit</span>
+                    <span className="font-bold text-green-600 text-xl">
+                      ${detailedResults.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DSO Improvement */}
+              <div className="border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-cyan-600" />
+                  DSO Improvement
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="border rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-2">Current DSO</div>
+                    <div className="text-2xl font-bold">{detailedResults.currentDSO} days</div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-2">New DSO</div>
+                    <div className="text-2xl font-bold text-cyan-600">{detailedResults.newDSO?.toFixed(0)} days</div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-2">Days Reduced</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {detailedResults.dsoReductionDays?.toFixed(0)} days
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-2">DSO Improvement</div>
+                    <div className="text-2xl font-bold text-cyan-600">{detailedData.dsoImprovement}%</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cost Analysis */}
+              <div className="border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-cyan-600" />
+                  Cost Analysis
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Implementation Cost</span>
+                    <span className="font-semibold">
+                      ${Number.parseFloat(detailedData.implementationCost).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-gray-700">Annual Cost</span>
+                    <span className="font-semibold">
+                      ${(Number.parseFloat(detailedData.monthlyCost) * 12).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 bg-gray-50 -mx-6 px-6 py-3 rounded-b-lg">
+                    <span className="font-bold text-gray-900">Total Cost (Year 1)</span>
+                    <span className="font-bold text-gray-900 text-xl">
+                      $
+                      {detailedResults.totalImplementationAndAnnualCost?.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               <ROIReportPDF
                 calculatorType="detailed"
