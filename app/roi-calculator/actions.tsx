@@ -2,28 +2,56 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROICalculatorData {
-  companyName: string
-  email: string
-  currentDSO: number
-  annualRevenue: number
-  averageInvoiceValue: number
-  numberOfCustomers: number
+interface SimpleROIInputs {
+  currentDSO: string
+  averageInvoiceValue: string
+  monthlyInvoices: string
+  simpleDSOImprovement: string
+  simpleCostOfCapital: string
 }
 
-interface ROIResults {
-  currentDSO: number
-  projectedDSO: number
-  dsoReduction: number
+interface DetailedROIInputs {
+  implementationCost: string
+  monthlyCost: string
+  currentDSODays: string
+  debtorsBalance: string
+  interestType: "loan" | "deposit"
+  interestRate: string
+  perAnnumDirectLabourCosts: string
+  currentBadDebts: string
+  averageBadDebt: string
+  dsoImprovement: string
+  labourSavings: string
+  numberOfDebtors: string
+  numberOfCollectors: string
+  projectedCustomerGrowth: string
+  averagePaymentTerms: "net30" | "net60" | "net90"
+}
+
+interface SimpleROIResults {
+  currentCashTied: number
+  newDSO: number
+  cashReleased: number
   annualSavings: number
-  timesSaved: number
-  additionalCashFlow: number
-  roi: number
-  paybackPeriod: number
+  dsoImprovementPercent: number
 }
 
-// Store verification codes temporarily (in production, use Redis or database)
-const verificationCodes = new Map<string, { code: string; timestamp: number; data: ROICalculatorData }>()
+interface DetailedROIResults {
+  currentDSO: number
+  newDSO: number
+  dsoReductionDays: number
+  workingCapitalReleased: number
+  labourCostSavings: number
+  badDebtReduction: number
+  interestSavings: number
+  totalAnnualBenefit: number
+  totalImplementationAndAnnualCost: number
+  roi: number
+  paybackMonths: number
+}
+
+// In-memory storage for verification codes
+const verificationCodes = new Map<string, { code: string; timestamp: number; attempts: number }>()
 
 // Clean up old codes (older than 15 minutes)
 function cleanupOldCodes() {
@@ -35,346 +63,697 @@ function cleanupOldCodes() {
   }
 }
 
-function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
-function calculateROI(data: ROICalculatorData): ROIResults {
-  const { currentDSO, annualRevenue, averageInvoiceValue, numberOfCustomers } = data
-
-  // Calculate projected improvements
-  const dsoReduction = Math.round(currentDSO * 0.3) // 30% reduction
-  const projectedDSO = currentDSO - dsoReduction
-
-  // Calculate financial impact
-  const dailyRevenue = annualRevenue / 365
-  const additionalCashFlow = dailyRevenue * dsoReduction
-
-  // Calculate time savings (assuming 2 hours per week per customer reduced to 0.4 hours)
-  const currentHoursPerYear = numberOfCustomers * 2 * 52
-  const projectedHoursPerYear = numberOfCustomers * 0.4 * 52
-  const hoursSaved = currentHoursPerYear - projectedHoursPerYear
-  const timesSaved = Math.round((hoursSaved / currentHoursPerYear) * 100)
-
-  // Calculate annual savings (labor cost + improved cash flow)
-  const laborCostPerHour = 50 // Average cost per hour
-  const laborSavings = hoursSaved * laborCostPerHour
-  const annualSavings = laborSavings + additionalCashFlow * 0.05 // 5% opportunity cost
-
-  // Calculate ROI (assuming annual cost of $50k)
-  const annualCost = 50000
-  const roi = Math.round(((annualSavings - annualCost) / annualCost) * 100)
-  const paybackPeriod = annualCost / (annualSavings / 12) // in months
-
-  return {
-    currentDSO,
-    projectedDSO,
-    dsoReduction,
-    annualSavings: Math.round(annualSavings),
-    timesSaved,
-    additionalCashFlow: Math.round(additionalCashFlow),
-    roi,
-    paybackPeriod: Math.round(paybackPeriod * 10) / 10,
-  }
-}
-
-export async function sendVerificationCode(data: ROICalculatorData): Promise<{ success: boolean; error?: string }> {
+export async function generateVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
   try {
     cleanupOldCodes()
 
-    const code = generateVerificationCode()
-    const email = data.email.toLowerCase().trim()
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // Store the code and data
-    verificationCodes.set(email, {
+    // Store the code with timestamp
+    verificationCodes.set(email.toLowerCase(), {
       code,
       timestamp: Date.now(),
-      data,
+      attempts: 0,
     })
 
-    // Send verification email
-    const htmlBody = `
+    console.log(`Generated verification code for ${email}: ${code}`)
+
+    // Send the code via email
+    const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6; 
+              color: #1f2937;
+              margin: 0;
+              padding: 0;
+              background-color: #f3f4f6;
             }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-              border-radius: 0 0 10px 10px;
-            }
-            .code-box {
+            .container { 
+              max-width: 600px; 
+              margin: 40px auto; 
               background: white;
-              border: 2px solid #0891b2;
-              border-radius: 8px;
-              padding: 20px;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header { 
+              background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); 
+              color: white; 
+              padding: 40px 30px; 
               text-align: center;
-              margin: 20px 0;
             }
-            .code {
-              font-size: 32px;
-              font-weight: bold;
-              color: #0891b2;
-              letter-spacing: 5px;
+            .header h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 600;
             }
-            .button {
-              display: inline-block;
-              background: #0891b2;
-              color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
+            .header p {
+              margin: 10px 0 0 0;
+              opacity: 0.9;
+              font-size: 16px;
+            }
+            .content { 
+              padding: 40px 30px;
+            }
+            .code-box { 
+              background: #f0f9ff;
+              border: 3px dashed #0891b2; 
+              padding: 30px; 
+              text-align: center; 
+              margin: 30px 0; 
+              border-radius: 12px;
+            }
+            .code { 
+              font-size: 42px; 
+              font-weight: bold; 
+              color: #0891b2; 
+              letter-spacing: 8px;
+              font-family: 'Courier New', monospace;
+            }
+            .code-label {
+              color: #64748b;
+              font-size: 14px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              margin-bottom: 15px;
+            }
+            .warning { 
+              background: #fef3c7; 
+              border-left: 4px solid #f59e0b; 
+              padding: 20px; 
+              margin: 25px 0; 
+              border-radius: 6px;
+            }
+            .warning strong {
+              color: #92400e;
+              display: block;
+              margin-bottom: 10px;
+            }
+            .warning ul {
+              margin: 10px 0 0 0;
+              padding-left: 20px;
+              color: #78350f;
+            }
+            .warning li {
+              margin: 8px 0;
             }
             .footer {
+              background: #f9fafb;
+              padding: 25px 30px;
               text-align: center;
               color: #6b7280;
               font-size: 14px;
-              margin-top: 20px;
+              border-top: 1px solid #e5e7eb;
+            }
+            .footer a {
+              color: #0891b2;
+              text-decoration: none;
+            }
+            .instructions {
+              background: #f9fafb;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+            }
+            .instructions h3 {
+              color: #0891b2;
+              margin-top: 0;
+              font-size: 16px;
+            }
+            .instructions ol {
+              margin: 10px 0;
+              padding-left: 20px;
+              color: #4b5563;
+            }
+            .instructions li {
+              margin: 8px 0;
             }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Your ROI Calculator Verification Code</h1>
+              <h1>🔐 Verification Code</h1>
+              <p>Kuhlekt ROI Calculator</p>
             </div>
             <div class="content">
-              <p>Hello,</p>
-              <p>Thank you for your interest in Kuhlekt! To view your personalized ROI analysis, please use the verification code below:</p>
+              <p style="font-size: 16px; color: #4b5563; margin-bottom: 20px;">
+                Thank you for using the Kuhlekt ROI Calculator! To view your personalized results, please use the verification code below:
+              </p>
               
               <div class="code-box">
+                <div class="code-label">Your Verification Code</div>
                 <div class="code">${code}</div>
               </div>
-              
-              <p><strong>This code will expire in 15 minutes.</strong></p>
-              
-              <p>Simply enter this code in the ROI Calculator to see your customized results showing how Kuhlekt can:</p>
-              <ul>
-                <li>Reduce your Days Sales Outstanding (DSO) by up to 40%</li>
-                <li>Automate 85% of manual collection tasks</li>
-                <li>Improve cash flow predictability</li>
-                <li>Save your team valuable time</li>
-              </ul>
-              
-              <p>If you didn't request this code, you can safely ignore this email.</p>
-              
-              <div class="footer">
-                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-                <p>Need help? Contact us at support@kuhlekt.com</p>
+
+              <div class="instructions">
+                <h3>How to use this code:</h3>
+                <ol>
+                  <li>Return to the ROI Calculator window</li>
+                  <li>Enter this 6-digit code in the verification field</li>
+                  <li>Click "Verify" to view your results</li>
+                </ol>
               </div>
+
+              <div class="warning">
+                <strong>⚠️ Security Information</strong>
+                <ul>
+                  <li>This code expires in 15 minutes</li>
+                  <li>You have 5 attempts to enter the correct code</li>
+                  <li>Never share this code with anyone</li>
+                  <li>If you didn't request this code, please ignore this email</li>
+                </ul>
+              </div>
+
+              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                If you're having trouble accessing your results, please contact us at 
+                <a href="mailto:enquiries@kuhlekt.com" style="color: #0891b2; text-decoration: none;">enquiries@kuhlekt.com</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p style="margin: 0 0 10px 0;"><strong>Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
+              <p style="margin: 0;">Visit us at <a href="https://kuhlekt.com">kuhlekt.com</a></p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    await sendEmail({
+    const emailText = `
+Kuhlekt ROI Calculator - Verification Code
+
+Your verification code is: ${code}
+
+This code will expire in 15 minutes.
+
+How to use:
+1. Return to the ROI Calculator window
+2. Enter this 6-digit code in the verification field
+3. Click "Verify" to view your results
+
+Security Information:
+- This code expires in 15 minutes
+- You have 5 attempts to enter the correct code
+- Never share this code with anyone
+- If you didn't request this code, please ignore this email
+
+Need help? Contact us at enquiries@kuhlekt.com
+
+Kuhlekt - Transforming Invoice-to-Cash
+Visit us at kuhlekt.com
+    `.trim()
+
+    const result = await sendEmail({
       to: email,
       subject: "Your Kuhlekt ROI Calculator Verification Code",
-      htmlBody,
+      html: emailHtml,
+      text: emailText,
     })
 
-    console.log(`Verification code sent to ${email}`)
+    console.log("Verification email send result:", result)
+
+    if (!result.success) {
+      console.error("Failed to send verification email:", result.message)
+      return {
+        success: false,
+        error: "Failed to send verification code. Please try again or contact support.",
+      }
+    }
+
     return { success: true }
   } catch (error) {
-    console.error("Error sending verification code:", error)
+    console.error("Error in generateVerificationCode:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to send verification code",
+      error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
     }
   }
 }
 
-export async function verifyCodeAndCalculateROI(
-  email: string,
-  code: string,
-): Promise<{ success: boolean; results?: ROIResults; error?: string }> {
+export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   try {
     cleanupOldCodes()
 
     const normalizedEmail = email.toLowerCase().trim()
     const normalizedCode = code.trim()
 
-    const stored = verificationCodes.get(normalizedEmail)
+    const storedData = verificationCodes.get(normalizedEmail)
 
-    if (!stored) {
+    if (!storedData) {
       return {
         success: false,
         error: "Verification code not found or expired. Please request a new code.",
       }
     }
 
-    if (stored.code !== normalizedCode) {
+    // Check if code has expired (15 minutes)
+    const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
+    if (storedData.timestamp < fifteenMinutesAgo) {
+      verificationCodes.delete(normalizedEmail)
       return {
         success: false,
-        error: "Invalid verification code. Please check and try again.",
+        error: "Verification code has expired. Please request a new code.",
       }
     }
 
-    // Calculate ROI
-    const results = calculateROI(stored.data)
+    // Check attempts (max 5 attempts)
+    if (storedData.attempts >= 5) {
+      verificationCodes.delete(normalizedEmail)
+      return {
+        success: false,
+        error: "Too many failed attempts. Please request a new code.",
+      }
+    }
 
-    // Send results email
-    const htmlBody = `
+    // Verify the code
+    if (storedData.code !== normalizedCode) {
+      storedData.attempts++
+      const remainingAttempts = 5 - storedData.attempts
+      return {
+        success: false,
+        error: `Invalid verification code. ${remainingAttempts} ${remainingAttempts === 1 ? "attempt" : "attempts"} remaining.`,
+      }
+    }
+
+    // Code is valid - remove it so it can't be reused
+    verificationCodes.delete(normalizedEmail)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error in verifyCode:", error)
+    return {
+      success: false,
+      error: "Failed to verify code. Please try again.",
+    }
+  }
+}
+
+export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
+  const currentDSO = Number.parseFloat(inputs.currentDSO)
+  const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
+  const monthlyInvoices = Number.parseFloat(inputs.monthlyInvoices)
+  const dsoImprovementPercent = Number.parseFloat(inputs.simpleDSOImprovement) / 100
+  const costOfCapitalPercent = Number.parseFloat(inputs.simpleCostOfCapital) / 100
+
+  const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
+  const newDSO = currentDSO * (1 - dsoImprovementPercent)
+  const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
+  const cashReleased = currentCashTied - newCashTied
+  const annualSavings = cashReleased * costOfCapitalPercent
+
+  return {
+    currentCashTied,
+    newDSO,
+    cashReleased,
+    annualSavings,
+    dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
+  }
+}
+
+export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<DetailedROIResults> {
+  const implementationCost = Number.parseFloat(inputs.implementationCost)
+  const monthlyCost = Number.parseFloat(inputs.monthlyCost)
+  const annualCost = monthlyCost * 12
+  const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
+  const interestRate = Number.parseFloat(inputs.interestRate) / 100
+  const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
+  const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
+  const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
+  const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
+  const daysSales = 365
+  const currentDSO = Number.parseFloat(inputs.currentDSODays)
+  const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
+
+  const annualRevenue = (debtorsBalance / currentDSO) * daysSales
+  const dsoReductionDays = currentDSO * dsoImprovementPercent
+  const newDSO = currentDSO - dsoReductionDays
+  const dailyRevenue = annualRevenue / daysSales
+  const workingCapitalReleased = dailyRevenue * dsoReductionDays
+  const interestSavings = workingCapitalReleased * interestRate
+  const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
+  const badDebtReduction = currentBadDebts * 0.4
+  const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
+  const totalImplementationAndAnnualCost = implementationCost + annualCost
+  const netBenefit = totalAnnualBenefit - annualCost
+  const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
+  const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
+
+  return {
+    currentDSO,
+    newDSO,
+    dsoReductionDays,
+    workingCapitalReleased,
+    labourCostSavings,
+    badDebtReduction,
+    interestSavings,
+    totalAnnualBenefit,
+    totalImplementationAndAnnualCost,
+    roi,
+    paybackMonths,
+  }
+}
+
+export async function sendROIEmail(data: {
+  name: string
+  email: string
+  company: string
+  calculatorType: "simple" | "detailed"
+  results: any
+  inputs: any
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const emailSubject = `Your ROI Analysis Results - ${data.company}`
+
+    let emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6; 
+              color: #1f2937;
+              margin: 0;
+              padding: 0;
+              background-color: #f3f4f6;
             }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-            }
-            .metric {
+            .container { 
+              max-width: 700px; 
+              margin: 40px auto; 
               background: white;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header { 
+              background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); 
+              color: white; 
+              padding: 40px 30px; 
+              text-align: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 32px;
+              font-weight: 600;
+            }
+            .header p {
+              margin: 10px 0 0 0;
+              opacity: 0.95;
+              font-size: 18px;
+            }
+            .content { 
+              padding: 40px 30px;
+            }
+            .section { 
+              background: #f9fafb; 
+              padding: 25px; 
+              margin-bottom: 20px; 
+              border-radius: 8px; 
               border-left: 4px solid #0891b2;
-              padding: 15px;
-              margin: 15px 0;
-              border-radius: 5px;
             }
-            .metric-value {
-              font-size: 28px;
-              font-weight: bold;
+            .section-title { 
+              color: #0891b2; 
+              font-size: 20px; 
+              font-weight: 600; 
+              margin-bottom: 20px;
+            }
+            .metric { 
+              display: flex; 
+              justify-content: space-between; 
+              padding: 12px 0; 
+              border-bottom: 1px solid #e5e7eb;
+            }
+            .metric:last-child { 
+              border-bottom: none; 
+            }
+            .label { 
+              font-weight: 500; 
+              color: #4b5563;
+            }
+            .value { 
+              color: #0891b2; 
+              font-weight: 600;
+              text-align: right;
+            }
+            .highlight { 
+              background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); 
+              padding: 30px; 
+              border-radius: 12px; 
+              margin: 30px 0; 
+              text-align: center;
+              border: 2px solid #0891b2;
+            }
+            .highlight-label {
+              color: #0e7490;
+              font-size: 16px;
+              font-weight: 500;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .highlight-value { 
+              font-size: 48px; 
+              font-weight: bold; 
               color: #0891b2;
+              margin: 10px 0;
             }
-            .metric-label {
-              color: #6b7280;
-              font-size: 14px;
+            .highlight-subtext {
+              color: #0e7490;
+              font-size: 16px;
+              margin-top: 10px;
             }
-            .highlight {
-              background: #dcfce7;
-              border-left: 4px solid #16a34a;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 5px;
+            .cta-section {
+              background: #f0f9ff;
+              padding: 30px;
+              border-radius: 8px;
+              margin: 30px 0;
+              text-align: center;
             }
-            .button {
+            .cta-button {
               display: inline-block;
               background: #0891b2;
               color: white;
-              padding: 12px 30px;
+              padding: 15px 40px;
+              border-radius: 8px;
               text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
+              font-weight: 600;
+              margin: 10px;
+              transition: background 0.3s;
+            }
+            .cta-button:hover {
+              background: #0e7490;
             }
             .footer {
+              background: #f9fafb;
+              padding: 25px 30px;
               text-align: center;
               color: #6b7280;
               font-size: 14px;
-              margin-top: 30px;
-              padding-top: 20px;
               border-top: 1px solid #e5e7eb;
+            }
+            .footer a {
+              color: #0891b2;
+              text-decoration: none;
             }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Your Kuhlekt ROI Analysis</h1>
-              <p>${stored.data.companyName}</p>
+              <h1>🎯 Your ROI Analysis</h1>
+              <p>${data.calculatorType === "simple" ? "Simple ROI Calculator" : "Detailed ROI Calculator"}</p>
             </div>
             <div class="content">
-              <p>Hello,</p>
-              <p>Thank you for using our ROI Calculator. Based on the information you provided, here's what Kuhlekt can do for your business:</p>
-              
+              <div class="section">
+                <div class="section-title">📋 Analysis Details</div>
+                <div class="metric">
+                  <span class="label">Name</span>
+                  <span class="value">${data.name}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Company</span>
+                  <span class="value">${data.company}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Email</span>
+                  <span class="value">${data.email}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Date</span>
+                  <span class="value">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
+                </div>
+              </div>
+    `
+
+    if (data.calculatorType === "simple") {
+      emailHtml += `
               <div class="highlight">
-                <h3 style="margin-top: 0;">💰 Estimated Annual Savings: $${results.annualSavings.toLocaleString()}</h3>
-                <p style="margin-bottom: 0;">Return on Investment: ${results.roi}% | Payback Period: ${results.paybackPeriod} months</p>
+                <div class="highlight-label">💰 Annual Savings Potential</div>
+                <div class="highlight-value">$${data.results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div class="highlight-subtext">Estimated first-year benefit</div>
               </div>
 
-              <h3>Key Improvements:</h3>
-              
-              <div class="metric">
-                <div class="metric-value">${results.dsoReduction} days</div>
-                <div class="metric-label">DSO Reduction (from ${results.currentDSO} to ${results.projectedDSO} days)</div>
+              <div class="section">
+                <div class="section-title">📊 Key Results</div>
+                <div class="metric">
+                  <span class="label">Current Cash Tied Up</span>
+                  <span class="value">$${data.results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cash Released</span>
+                  <span class="value">$${data.results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Current DSO</span>
+                  <span class="value">${Number.parseFloat(data.inputs.currentDSO).toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Improved DSO</span>
+                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">DSO Improvement</span>
+                  <span class="value">${data.results.dsoImprovementPercent}%</span>
+                </div>
+              </div>
+      `
+    } else {
+      emailHtml += `
+              <div class="highlight">
+                <div class="highlight-label">💰 Total Annual Benefit</div>
+                <div class="highlight-value">$${data.results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div class="highlight-subtext">
+                  ROI: <strong>${data.results.roi?.toFixed(0)}%</strong> | 
+                  Payback: <strong>${data.results.paybackMonths?.toFixed(1)} months</strong>
+                </div>
               </div>
 
-              <div class="metric">
-                <div class="metric-value">$${results.additionalCashFlow.toLocaleString()}</div>
-                <div class="metric-label">Additional Cash Flow Released</div>
+              <div class="section">
+                <div class="section-title">💵 Financial Benefits Breakdown</div>
+                <div class="metric">
+                  <span class="label">Working Capital Released</span>
+                  <span class="value">$${data.results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Interest Savings</span>
+                  <span class="value">$${data.results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Labour Cost Savings</span>
+                  <span class="value">$${data.results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Bad Debt Reduction</span>
+                  <span class="value">$${data.results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
               </div>
 
-              <div class="metric">
-                <div class="metric-value">${results.timesSaved}%</div>
-                <div class="metric-label">Time Saved on Manual Collection Tasks</div>
+              <div class="section">
+                <div class="section-title">📈 DSO Improvement</div>
+                <div class="metric">
+                  <span class="label">Current DSO</span>
+                  <span class="value">${data.results.currentDSO} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Projected DSO</span>
+                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Days Reduced</span>
+                  <span class="value">${data.results.dsoReductionDays?.toFixed(0)} days</span>
+                </div>
+              </div>
+      `
+    }
+
+    emailHtml += `
+              <div class="cta-section">
+                <h3 style="color: #0891b2; margin-top: 0;">Ready to Transform Your AR Process?</h3>
+                <p style="color: #4b5563; margin: 15px 0;">See how Kuhlekt can help you achieve these results</p>
+                <a href="https://kuhlekt.com/demo" class="cta-button">Schedule a Demo</a>
+                <a href="mailto:enquiries@kuhlekt.com" class="cta-button" style="background: #0e7490;">Contact Us</a>
               </div>
 
-              <h3>What's Next?</h3>
-              <p>See how Kuhlekt can transform your accounts receivable process:</p>
-              <ul>
-                <li>Schedule a personalized demo with our team</li>
-                <li>Explore our platform features in detail</li>
-                <li>Get a customized implementation plan</li>
-                <li>Start your 14-day free trial</li>
-              </ul>
-
-              <center>
-                <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" class="button">Schedule Your Demo</a>
-              </center>
-
-              <p>Have questions? Our team is here to help you understand exactly how Kuhlekt can benefit your business.</p>
-              
-              <div class="footer">
-                <p><strong>Kuhlekt</strong> - AI-Powered Accounts Receivable Automation</p>
-                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-                <p>Questions? Email us at sales@kuhlekt.com or call (555) 123-4567</p>
+              <div class="section">
+                <div class="section-title">🎯 Next Steps</div>
+                <ol style="margin: 10px 0; padding-left: 20px; color: #4b5563;">
+                  <li style="margin: 10px 0;">Review your personalized ROI analysis above</li>
+                  <li style="margin: 10px 0;">Schedule a personalized demo to see Kuhlekt in action</li>
+                  <li style="margin: 10px 0;">Discuss implementation timeline and pricing options</li>
+                  <li style="margin: 10px 0;">Review case studies from companies in your industry</li>
+                </ol>
               </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 0 0 10px 0;"><strong style="color: #0891b2;">Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
+              <p style="margin: 5px 0;">Email: <a href="mailto:enquiries@kuhlekt.com">enquiries@kuhlekt.com</a></p>
+              <p style="margin: 5px 0;">Website: <a href="https://kuhlekt.com">kuhlekt.com</a></p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    await sendEmail({
-      to: normalizedEmail,
-      subject: `Your Kuhlekt ROI Analysis - ${stored.data.companyName}`,
-      htmlBody,
+    // Send to user
+    const userResult = await sendEmail({
+      to: data.email,
+      subject: emailSubject,
+      html: emailHtml,
+      text: `Your ROI Calculator Results from Kuhlekt - ${data.company}`,
     })
 
-    // Clean up the used code
-    verificationCodes.delete(normalizedEmail)
+    if (!userResult.success) {
+      console.error("Failed to send ROI email to user:", userResult.message)
+      return {
+        success: false,
+        error: userResult.message || "Failed to send email",
+      }
+    }
 
-    console.log(`ROI results sent to ${normalizedEmail}`)
-    return { success: true, results }
+    // Send notification to Kuhlekt team
+    const notificationSubject = `🎯 New ROI Calculator Lead: ${data.company}`
+    const notificationHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="alert">
+            <h2 style="margin-top: 0;">🎯 New ROI Calculator Submission</h2>
+            <p><strong>Contact:</strong> ${data.name}</p>
+            <p><strong>Email:</strong> ${data.email}</p>
+            <p><strong>Company:</strong> ${data.company}</p>
+            <p><strong>Calculator Type:</strong> ${data.calculatorType}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          <hr>
+          ${emailHtml}
+        </body>
+      </html>
+    `
+
+    await sendEmail({
+      to: "enquiries@kuhlekt.com",
+      subject: notificationSubject,
+      html: notificationHtml,
+      text: `New ROI Calculator submission from ${data.name} at ${data.company}`,
+    })
+
+    return { success: true }
   } catch (error) {
-    console.error("Error verifying code and calculating ROI:", error)
+    console.error("Error in sendROIEmail:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to process your request",
+      error: error instanceof Error ? error.message : "Failed to send email",
     }
   }
 }
