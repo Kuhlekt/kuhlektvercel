@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,8 @@ import {
   ArrowRight,
   Mail,
   Shield,
+  X,
+  RotateCcw,
 } from "lucide-react"
 import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
@@ -85,6 +87,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   })
   const [emailSent, setEmailSent] = useState(false)
 
+  const dsoImprovementInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (step === "simple" && dsoImprovementInputRef.current) {
+      // Small delay to ensure the dialog animation completes
+      setTimeout(() => {
+        dsoImprovementInputRef.current?.focus()
+      }, 100)
+    }
+  }, [step])
+
   const resetAll = () => {
     setStep("select")
     setSimpleData({
@@ -118,6 +131,36 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setCalculatorType("simple")
     setVerificationCode("")
     setVerificationError("")
+  }
+
+  const clearSimpleCalculator = () => {
+    setSimpleData({
+      currentDSO: "",
+      averageInvoiceValue: "",
+      monthlyInvoices: "",
+      simpleDSOImprovement: "20",
+      simpleCostOfCapital: "8",
+    })
+  }
+
+  const clearDetailedCalculator = () => {
+    setDetailedData({
+      implementationCost: "",
+      monthlyCost: "",
+      perAnnumDirectLabourCosts: "",
+      interestType: "loan",
+      interestRate: "",
+      averageBadDebt: "",
+      currentBadDebts: "",
+      labourSavings: "",
+      dsoImprovement: "",
+      currentDSODays: "",
+      debtorsBalance: "",
+      averagePaymentTerms: "net30",
+      numberOfDebtors: "",
+      numberOfCollectors: "",
+      projectedCustomerGrowth: "",
+    })
   }
 
   const handleSimpleSubmit = (e?: React.MouseEvent) => {
@@ -352,17 +395,28 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <Calculator className="h-6 w-6 text-cyan-600" />
                 ROI Calculator
               </DialogTitle>
-              {step !== "select" && (
+              <div className="flex items-center gap-2">
+                {step !== "select" && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setShowHelp(true)}
+                    className="bg-cyan-50 hover:bg-cyan-100 border-2 border-cyan-300 hover:border-cyan-400 transition-all"
+                  >
+                    <HelpCircle className="h-7 w-7 text-cyan-600 mr-2" />
+                    <span className="font-semibold text-cyan-700">Help</span>
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setShowHelp(true)}
-                  className="bg-cyan-50 hover:bg-cyan-100 border-2 border-cyan-300 hover:border-cyan-400 transition-all"
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="hover:bg-red-50 hover:text-red-600"
+                  title="Close calculator"
                 >
-                  <HelpCircle className="h-7 w-7 text-cyan-600 mr-2" />
-                  <span className="font-semibold text-cyan-700">Help</span>
+                  <X className="h-5 w-5" />
                 </Button>
-              )}
+              </div>
             </div>
             <DialogDescription>
               {step === "select" && "Choose the calculator that best fits your needs"}
@@ -413,6 +467,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <div>
                     <Label>Expected DSO Improvement (%)</Label>
                     <Input
+                      ref={dsoImprovementInputRef}
                       type="number"
                       value={simpleData.simpleDSOImprovement}
                       onChange={(e) => setSimpleData({ ...simpleData, simpleDSOImprovement: e.target.value })}
@@ -468,6 +523,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={clearSimpleCalculator}
+                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-300 bg-transparent"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Clear
                 </Button>
                 <Button
                   onClick={handleSimpleSubmit}
@@ -722,6 +785,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={clearDetailedCalculator}
+                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-300 bg-transparent"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Clear
                 </Button>
                 <Button
                   onClick={handleDetailedSubmit}
