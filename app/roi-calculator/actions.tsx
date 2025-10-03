@@ -59,6 +59,7 @@ function cleanupOldCodes() {
   for (const [email, data] of verificationCodes.entries()) {
     if (data.timestamp < fifteenMinutesAgo) {
       verificationCodes.delete(email)
+      console.log(`[Verification] Cleaned up expired code for ${email}`)
     }
   }
 }
@@ -69,15 +70,17 @@ export async function generateVerificationCode(email: string): Promise<{ success
 
     // Generate a 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const normalizedEmail = email.toLowerCase().trim()
 
     // Store the code with timestamp
-    verificationCodes.set(email.toLowerCase(), {
+    verificationCodes.set(normalizedEmail, {
       code,
       timestamp: Date.now(),
       attempts: 0,
     })
 
-    console.log(`Generated verification code for ${email}: ${code}`)
+    console.log(`[Verification] Generated code for ${normalizedEmail}: ${code}`)
+    console.log(`[Verification] Current codes in memory:`, Array.from(verificationCodes.keys()))
 
     // Send the code via email
     const emailHtml = `
@@ -275,10 +278,10 @@ Visit us at kuhlekt.com
       text: emailText,
     })
 
-    console.log("Verification email send result:", result)
+    console.log("[Verification] Email send result:", result)
 
     if (!result.success) {
-      console.error("Failed to send verification email:", result.message)
+      console.error("[Verification] Failed to send email:", result.message)
       return {
         success: false,
         error: "Failed to send verification code. Please try again or contact support.",
@@ -287,7 +290,7 @@ Visit us at kuhlekt.com
 
     return { success: true }
   } catch (error) {
-    console.error("Error in generateVerificationCode:", error)
+    console.error("[Verification] Error in generateVerificationCode:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
@@ -302,19 +305,29 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     const normalizedEmail = email.toLowerCase().trim()
     const normalizedCode = code.trim()
 
+    console.log(`[Verification] Verifying code for ${normalizedEmail}`)
+    console.log(`[Verification] Provided code: ${normalizedCode}`)
+    console.log(`[Verification] Codes in memory:`, Array.from(verificationCodes.keys()))
+
     const storedData = verificationCodes.get(normalizedEmail)
 
     if (!storedData) {
+      console.error(`[Verification] No code found for ${normalizedEmail}`)
       return {
         success: false,
         error: "Verification code not found or expired. Please request a new code.",
       }
     }
 
+    console.log(`[Verification] Stored code: ${storedData.code}`)
+    console.log(`[Verification] Stored timestamp: ${new Date(storedData.timestamp).toISOString()}`)
+    console.log(`[Verification] Attempts: ${storedData.attempts}`)
+
     // Check if code has expired (15 minutes)
     const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
     if (storedData.timestamp < fifteenMinutesAgo) {
       verificationCodes.delete(normalizedEmail)
+      console.error(`[Verification] Code expired for ${normalizedEmail}`)
       return {
         success: false,
         error: "Verification code has expired. Please request a new code.",
@@ -324,6 +337,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     // Check attempts (max 5 attempts)
     if (storedData.attempts >= 5) {
       verificationCodes.delete(normalizedEmail)
+      console.error(`[Verification] Too many attempts for ${normalizedEmail}`)
       return {
         success: false,
         error: "Too many failed attempts. Please request a new code.",
@@ -334,6 +348,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     if (storedData.code !== normalizedCode) {
       storedData.attempts++
       const remainingAttempts = 5 - storedData.attempts
+      console.error(`[Verification] Invalid code for ${normalizedEmail}. Attempts: ${storedData.attempts}`)
       return {
         success: false,
         error: `Invalid verification code. ${remainingAttempts} ${remainingAttempts === 1 ? "attempt" : "attempts"} remaining.`,
@@ -342,10 +357,11 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
     // Code is valid - remove it so it can't be reused
     verificationCodes.delete(normalizedEmail)
+    console.log(`[Verification] Code verified successfully for ${normalizedEmail}`)
 
     return { success: true }
   } catch (error) {
-    console.error("Error in verifyCode:", error)
+    console.error("[Verification] Error in verifyCode:", error)
     return {
       success: false,
       error: "Failed to verify code. Please try again.",
@@ -354,6 +370,8 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 }
 
 export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
+  console.log("[ROI] Calculating simple ROI with inputs:", inputs)
+
   const currentDSO = Number.parseFloat(inputs.currentDSO)
   const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
   const monthlyInvoices = Number.parseFloat(inputs.monthlyInvoices)
@@ -366,16 +384,21 @@ export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<Simpl
   const cashReleased = currentCashTied - newCashTied
   const annualSavings = cashReleased * costOfCapitalPercent
 
-  return {
+  const results = {
     currentCashTied,
     newDSO,
     cashReleased,
     annualSavings,
     dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
   }
+
+  console.log("[ROI] Simple ROI results:", results)
+  return results
 }
 
 export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<DetailedROIResults> {
+  console.log("[ROI] Calculating detailed ROI with inputs:", inputs)
+
   const implementationCost = Number.parseFloat(inputs.implementationCost)
   const monthlyCost = Number.parseFloat(inputs.monthlyCost)
   const annualCost = monthlyCost * 12
@@ -403,7 +426,7 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
   const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
   const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
 
-  return {
+  const results = {
     currentDSO,
     newDSO,
     dsoReductionDays,
@@ -416,6 +439,9 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
     roi,
     paybackMonths,
   }
+
+  console.log("[ROI] Detailed ROI results:", results)
+  return results
 }
 
 export async function sendROIEmail(data: {
@@ -427,6 +453,8 @@ export async function sendROIEmail(data: {
   inputs: any
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log("[ROI] Sending ROI email to:", data.email)
+
     const emailSubject = `Your ROI Analysis Results - ${data.company}`
 
     let emailHtml = `
@@ -708,7 +736,7 @@ export async function sendROIEmail(data: {
     })
 
     if (!userResult.success) {
-      console.error("Failed to send ROI email to user:", userResult.message)
+      console.error("[ROI] Failed to send ROI email to user:", userResult.message)
       return {
         success: false,
         error: userResult.message || "Failed to send email",
@@ -748,9 +776,10 @@ export async function sendROIEmail(data: {
       text: `New ROI Calculator submission from ${data.name} at ${data.company}`,
     })
 
+    console.log("[ROI] ROI email sent successfully")
     return { success: true }
   } catch (error) {
-    console.error("Error in sendROIEmail:", error)
+    console.error("[ROI] Error in sendROIEmail:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to send email",

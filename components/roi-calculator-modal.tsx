@@ -230,18 +230,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
-      console.log("Sending verification code to:", contactData.email)
+      console.log("[ROI Calculator] Sending verification code to:", contactData.email)
       const result = await generateVerificationCode(contactData.email)
-      console.log("Verification code result:", result)
+      console.log("[ROI Calculator] Verification code result:", result)
 
       if (result.success) {
+        console.log("[ROI Calculator] Moving to verify step")
         setStep("verify")
         startResendTimer()
       } else {
+        console.error("[ROI Calculator] Failed to send code:", result.error)
         setErrors({ submit: result.error || "Failed to send verification code" })
       }
     } catch (error) {
-      console.error("Error sending verification code:", error)
+      console.error("[ROI Calculator] Error sending verification code:", error)
       setErrors({ submit: "Failed to send verification code. Please try again." })
     } finally {
       setIsSendingCode(false)
@@ -255,15 +257,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
+      console.log("[ROI Calculator] Resending verification code to:", contactData.email)
       const result = await generateVerificationCode(contactData.email)
 
       if (result.success) {
         startResendTimer()
         setVerificationCode("")
+        console.log("[ROI Calculator] Code resent successfully")
       } else {
         setErrors({ verify: result.error || "Failed to send verification code" })
       }
     } catch (error) {
+      console.error("[ROI Calculator] Error resending code:", error)
       setErrors({ verify: "Failed to send verification code. Please try again." })
     } finally {
       setIsSendingCode(false)
@@ -271,7 +276,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleVerifyCode = async () => {
+    console.log("[ROI Calculator] Starting verification process")
+    console.log("[ROI Calculator] Email:", contactData.email)
+    console.log("[ROI Calculator] Code:", verificationCode)
+
     if (!verificationCode.trim() || verificationCode.length !== 6) {
+      console.log("[ROI Calculator] Invalid code format")
       setErrors({ verify: "Please enter a valid 6-digit code" })
       return
     }
@@ -280,18 +290,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
-      console.log("Verifying code for:", contactData.email)
+      console.log("[ROI Calculator] Calling verifyCode action")
       const result = await verifyCode(contactData.email, verificationCode)
-      console.log("Verification result:", result)
+      console.log("[ROI Calculator] Verification result:", result)
 
       if (result.success) {
+        console.log("[ROI Calculator] Code verified successfully, calculating results")
         // Code verified, now calculate and show results
         await calculateAndShowResults()
       } else {
+        console.error("[ROI Calculator] Verification failed:", result.error)
         setErrors({ verify: result.error || "Invalid verification code" })
       }
     } catch (error) {
-      console.error("Error verifying code:", error)
+      console.error("[ROI Calculator] Error during verification:", error)
       setErrors({ verify: "Failed to verify code. Please try again." })
     } finally {
       setIsVerifying(false)
@@ -299,25 +311,26 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const calculateAndShowResults = async () => {
+    console.log("[ROI Calculator] Starting calculation")
     setIsCalculating(true)
 
     try {
       let results
       if (calculatorType === "simple") {
-        console.log("Calculating simple ROI with data:", simpleData)
+        console.log("[ROI Calculator] Calculating simple ROI with data:", simpleData)
         results = await calculateSimpleROI(simpleData)
-        console.log("Simple ROI results:", results)
+        console.log("[ROI Calculator] Simple ROI results:", results)
         setSimpleResults(results)
         setStep("simple-results")
       } else {
-        console.log("Calculating detailed ROI with data:", detailedData)
+        console.log("[ROI Calculator] Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
-        console.log("Detailed ROI results:", results)
+        console.log("[ROI Calculator] Detailed ROI results:", results)
         setDetailedResults(results)
         setStep("detailed-results")
       }
 
-      console.log("Sending ROI email...")
+      console.log("[ROI Calculator] Sending ROI email to:", contactData.email)
       await sendROIEmail({
         name: contactData.name,
         email: contactData.email,
@@ -328,8 +341,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       })
 
       setEmailSent(true)
+      console.log("[ROI Calculator] Process completed successfully")
     } catch (error) {
-      console.error("Error calculating ROI:", error)
+      console.error("[ROI Calculator] Error during calculation:", error)
       setErrors({ submit: "Error calculating ROI. Please try again." })
       setStep("contact")
     } finally {
@@ -960,7 +974,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep("contact")} className="flex-1">
+                <Button variant="outline" onClick={() => setStep("contact")} className="flex-1" disabled={isVerifying}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
@@ -969,8 +983,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   disabled={isVerifying || verificationCode.length !== 6}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >
-                  {isVerifying ? "Verifying..." : "Verify & View Results"}
-                  {!isVerifying && <ArrowRight className="ml-2 h-4 w-4" />}
+                  {isVerifying ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      Verify & View Results
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
