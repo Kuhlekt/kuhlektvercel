@@ -7,18 +7,15 @@ export async function submitContactForm(formData: FormData) {
   const email = formData.get("email") as string
   const message = formData.get("message") as string
 
-  const htmlContent = `
-    <h2>New Contact Form Submission</h2>
-    <p><strong>Name:</strong> ${name}</p>
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>Message:</strong> ${message}</p>
-  `
+  const subject = `Contact Form Submission from ${name}`
+  const text = `Name: ${name}\nEmail: ${email}\nMessage: ${message}`
+  const html = `<h2>Contact Form Submission</h2><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong> ${message}</p>`
 
   const result = await sendEmail({
     to: process.env.AWS_SES_FROM_EMAIL || "",
-    subject: `Contact Form: ${name}`,
-    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
-    html: htmlContent,
+    subject,
+    text,
+    html,
   })
 
   return result
