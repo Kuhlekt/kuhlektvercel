@@ -98,6 +98,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     }
   }, [step])
 
+  useEffect(() => {
+    setVerificationError("")
+  }, [step])
+
+  useEffect(() => {
+    if (isOpen) {
+      setVerificationError("")
+    }
+  }, [isOpen])
+
   const resetAll = () => {
     setStep("select")
     setSimpleData({
@@ -275,8 +285,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
     setIsVerifying(true)
     setVerificationError("")
+    console.log("[v0] Starting verification process...")
 
     try {
+      console.log("[v0] Calling verify-code API...")
       const response = await fetch("/api/verify-code", {
         method: "POST",
         headers: {
@@ -294,53 +306,67 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         const text = await response.text()
         console.error("[v0] Response text:", text)
         setVerificationError("Server error occurred. Please try again.")
+        setIsVerifying(false)
         return
       }
 
       const result = await response.json()
+      console.log("[v0] Verification API result:", result)
 
       if (result.success) {
+        console.log("[v0] Verification successful, starting ROI calculation...")
         // Email verified successfully, now calculate ROI and send results
         setIsCalculating(true)
 
         let results
-        if (calculatorType === "simple") {
-          console.log("[v0] Calculating simple ROI with data:", simpleData)
-          results = await calculateSimpleROI(simpleData)
-          console.log("[v0] Simple results:", results)
-          setSimpleResults(results)
-          setStep("simple-results")
-        } else {
-          console.log("[v0] Calculating detailed ROI with data:", detailedData)
-          results = await calculateDetailedROI(detailedData)
-          console.log("[v0] Detailed results:", results)
-          setDetailedResults(results)
-          setStep("detailed-results")
-        }
+        try {
+          if (calculatorType === "simple") {
+            console.log("[v0] Calculating simple ROI with data:", simpleData)
+            results = await calculateSimpleROI(simpleData)
+            console.log("[v0] Simple results:", results)
+            setSimpleResults(results)
+          } else {
+            console.log("[v0] Calculating detailed ROI with data:", detailedData)
+            results = await calculateDetailedROI(detailedData)
+            console.log("[v0] Detailed results:", results)
+            setDetailedResults(results)
+          }
 
-        console.log("[v0] Sending ROI email to admin...")
-        const emailResult = await sendROIEmail({
-          name: contactData.name,
-          email: contactData.email,
-          company: contactData.company || "",
-          calculatorType,
-          results,
-          inputs: calculatorType === "simple" ? simpleData : detailedData,
-        })
+          console.log("[v0] ROI calculation complete, sending email to admin...")
+          const emailResult = await sendROIEmail({
+            name: contactData.name,
+            email: contactData.email,
+            company: contactData.company || "",
+            calculatorType,
+            results,
+            inputs: calculatorType === "simple" ? simpleData : detailedData,
+          })
 
-        console.log("[v0] Email result:", emailResult)
+          console.log("[v0] Email result:", emailResult)
 
-        if (emailResult.success) {
-          setEmailSent(true)
-          console.log("[v0] Email sent successfully")
-        } else {
-          console.error("[v0] Failed to send email:", emailResult.error)
-          // Don't block the user from seeing results if email fails
-          setEmailSent(false)
+          if (emailResult.success) {
+            setEmailSent(true)
+            console.log("[v0] Email sent successfully to admin")
+          } else {
+            console.error("[v0] Failed to send email:", emailResult.error)
+            // Don't block the user from seeing results if email fails
+            setEmailSent(false)
+          }
+
+          console.log("[v0] Setting step to results...")
+          setStep(calculatorType === "simple" ? "simple-results" : "detailed-results")
+          console.log("[v0] Verification process complete!")
+        } catch (calcError) {
+          console.error("[v0] Error during calculation or email:", calcError)
+          setVerificationError("Failed to calculate results. Please try again.")
+          setIsCalculating(false)
+          setIsVerifying(false)
+          return
         }
 
         setIsCalculating(false)
       } else {
+        console.log("[v0] Verification failed:", result.error)
         setVerificationError(result.error || "Invalid verification code")
       }
     } catch (error) {
