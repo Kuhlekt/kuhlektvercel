@@ -1,40 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: [
-    "@aws-sdk/client-ses",
-    "@aws-sdk/credential-providers",
-    "@smithy/hash-node",
-    "@smithy/signature-v4",
-    "@aws-sdk/smithy-client",
-    "@aws-sdk/middleware-stack",
-    "@smithy/smithy-client",
-    "@smithy/util-buffer-from",
-    "@smithy/util-utf8",
+    '@aws-sdk/client-ses',
+    '@aws-sdk/smithy-client',
+    '@smithy/hash-node',
+    '@smithy/node-http-handler',
+    '@smithy/protocol-http',
+    '@smithy/middleware-serde',
+    '@smithy/types',
   ],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  experimental: {
-    serverComponentsExternalPackages: ['bcryptjs'],
-  },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Externalize AWS SDK and its dependencies
-      config.externals = [
-        ...(config.externals || []),
-        'bcryptjs',
-        '@aws-sdk/client-ses',
-        '@smithy/hash-node',
-        '@smithy/signature-v4',
-        '@smithy/util-buffer-from',
-        '@smithy/util-utf8',
-      ];
+      config.externals.push({
+        '@aws-sdk/client-ses': 'commonjs @aws-sdk/client-ses',
+        '@smithy/hash-node': 'commonjs @smithy/hash-node',
+      })
     }
-    
-    // Add fallbacks for Node.js modules
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -42,44 +24,31 @@ const nextConfig = {
       tls: false,
       crypto: false,
       stream: false,
+      url: false,
+      zlib: false,
       http: false,
       https: false,
-      zlib: false,
-      path: false,
+      assert: false,
       os: false,
-      util: false,
-      buffer: false,
-      process: false,
-      url: false,
-    };
-    
-    return config;
+      path: false,
+    }
+
+    return config
   },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: '**.blob.vercel-storage.com',
       },
     ],
     unoptimized: true,
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-        ],
-      },
-    ]
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
 }
 
