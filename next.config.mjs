@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: [
-    '@aws-sdk/client-ses',
-  ],
+  serverExternalPackages: ['@aws-sdk/client-ses'],
   experimental: {
     serverComponentsExternalPackages: ['bcryptjs', '@aws-sdk/client-ses'],
   },
@@ -12,22 +10,7 @@ const nextConfig = {
         '@aws-sdk/client-ses': 'commonjs @aws-sdk/client-ses',
         '@smithy/hash-node': 'commonjs @smithy/hash-node',
         '@smithy/node-http-handler': 'commonjs @smithy/node-http-handler',
-        '@smithy/util-stream-node': 'commonjs @smithy/util-stream-node',
       })
-    }
-    
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-      crypto: false,
-      stream: false,
-      http: false,
-      https: false,
-      zlib: false,
-      path: false,
-      os: false,
     }
     
     return config
