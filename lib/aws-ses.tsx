@@ -1,68 +1,35 @@
-interface SendEmailParams {
-  to: string | string[]
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+
+const sesClient = new SESClient({
+  region: process.env.AWS_SES_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
+  },
+})
+
+export interface SendEmailParams {
+  to: string
   subject: string
   html: string
   text: string
 }
 
-interface SendEmailResult {
+export interface SendEmailResult {
   success: boolean
-  message?: string
   messageId?: string
-}
-
-async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
-  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data))
-  return new Uint8Array(signature)
-}
-
-async function sha256(data: string): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data))
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-}
-
-async function getSignatureKey(
-  key: string,
-  dateStamp: string,
-  regionName: string,
-  serviceName: string,
-): Promise<Uint8Array> {
-  const kDate = await hmacSha256(new TextEncoder().encode(`AWS4${key}`), dateStamp)
-  const kRegion = await hmacSha256(kDate, regionName)
-  const kService = await hmacSha256(kRegion, serviceName)
-  const kSigning = await hmacSha256(kService, "aws4_request")
-  return kSigning
+  message?: string
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
   try {
-    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-    const region = process.env.AWS_SES_REGION || "us-east-1"
-    const fromEmail = process.env.AWS_SES_FROM_EMAIL
+    console.log("[AWS SES] Sending email to:", params.to)
+    console.log("[AWS SES] Subject:", params.subject)
 
-    if (!accessKeyId || !secretAccessKey || !fromEmail) {
-      console.error("AWS SES configuration missing:", {
-        hasAccessKey: !!accessKeyId,
-        hasSecretKey: !!secretAccessKey,
-        hasFromEmail: !!fromEmail,
-        region,
-      })
-      return {
-        success: false,
-        message: "AWS SES is not configured. Please check environment variables.",
-      }
-    }
-
-    const toAddresses = Array.isArray(params.to) ? params.to : [params.to]
-
-    const emailParams = {
-      Source: fromEmail,
+    const command = new SendEmailCommand({
+      Source: process.env.AWS_SES_FROM_EMAIL || "",
       Destination: {
-        ToAddresses: toAddresses,
+        ToAddresses: [params.to],
       },
       Message: {
         Subject: {
@@ -80,181 +47,76 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
           },
         },
       },
-    }
-
-    const host = `email.${region}.amazonaws.com`
-    const endpoint = `https://${host}/`
-    const service = "ses"
-    const method = "POST"
-
-    const now = new Date()
-    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "")
-    const dateStamp = amzDate.substring(0, 8)
-
-    const canonicalUri = "/"
-    const canonicalQuerystring = ""
-    const canonicalHeaders = `content-type:application/x-www-form-urlencoded
-host:${host}
-x-amz-date:${amzDate}
-`
-    const signedHeaders = "content-type;host;x-amz-date"
-
-    const requestParameters = new URLSearchParams({
-      Action: "SendEmail",
-      ...flattenObject(emailParams),
-    }).toString()
-
-    const payloadHash = await sha256(requestParameters)
-    const canonicalRequest = `${method}
-${canonicalUri}
-${canonicalQuerystring}
-${canonicalHeaders}
-${signedHeaders}
-${payloadHash}`
-
-    const algorithm = "AWS4-HMAC-SHA256"
-    const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
-    const stringToSign = `${algorithm}
-${amzDate}
-${credentialScope}
-${await sha256(canonicalRequest)}`
-
-    const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, service)
-    const signature = Array.from(await hmacSha256(signingKey, stringToSign))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-
-    const authorizationHeader = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-Amz-Date": amzDate,
-        Authorization: authorizationHeader,
-      },
-      body: requestParameters,
     })
 
-    const responseText = await response.text()
-
-    if (!response.ok) {
-      console.error("AWS SES error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText,
-      })
-      return {
-        success: false,
-        message: `Failed to send email: ${response.statusText}`,
-      }
-    }
-
-    const messageIdMatch = responseText.match(/<MessageId>(.*?)<\/MessageId>/)
-    const messageId = messageIdMatch ? messageIdMatch[1] : undefined
+    const response = await sesClient.send(command)
+    console.log("[AWS SES] Email sent successfully. MessageId:", response.MessageId)
 
     return {
       success: true,
+      messageId: response.MessageId,
       message: "Email sent successfully",
-      messageId,
     }
   } catch (error) {
-    console.error("Error sending email:", error)
+    console.error("[AWS SES] Error sending email:", error)
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Unknown error occurred",
+      message: error instanceof Error ? error.message : "Failed to send email",
     }
   }
 }
 
-function flattenObject(obj: any, prefix = ""): Record<string, string> {
-  const flattened: Record<string, string> = {}
+// Export alias for backward compatibility
+export const sendEmailWithSES = sendEmail
 
-  for (const key in obj) {
-    const value = obj[key]
-    const newKey = prefix ? `${prefix}.${key}` : key
-
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      Object.assign(flattened, flattenObject(value, newKey))
-    } else if (Array.isArray(value)) {
-      value.forEach((item, index) => {
-        if (typeof item === "object") {
-          Object.assign(flattened, flattenObject(item, `${newKey}.member.${index + 1}`))
-        } else {
-          flattened[`${newKey}.member.${index + 1}`] = String(item)
-        }
-      })
-    } else {
-      flattened[newKey] = String(value)
-    }
-  }
-
-  return flattened
-}
-
-// Validate SES configuration
-export function validateSESConfiguration(): {
-  isValid: boolean
-  missing: string[]
-} {
-  const missing: string[] = []
+// Validation function
+export function validateSESConfiguration(): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
 
   if (!process.env.AWS_SES_ACCESS_KEY_ID) {
-    missing.push("AWS_SES_ACCESS_KEY_ID")
+    errors.push("AWS_SES_ACCESS_KEY_ID is not set")
   }
   if (!process.env.AWS_SES_SECRET_ACCESS_KEY) {
-    missing.push("AWS_SES_SECRET_ACCESS_KEY")
+    errors.push("AWS_SES_SECRET_ACCESS_KEY is not set")
+  }
+  if (!process.env.AWS_SES_REGION) {
+    errors.push("AWS_SES_REGION is not set")
   }
   if (!process.env.AWS_SES_FROM_EMAIL) {
-    missing.push("AWS_SES_FROM_EMAIL")
+    errors.push("AWS_SES_FROM_EMAIL is not set")
   }
 
   return {
-    isValid: missing.length === 0,
-    missing,
+    valid: errors.length === 0,
+    errors,
   }
 }
 
-// Test AWS SES connection
+// Test connection function
 export async function testAWSSESConnection(): Promise<SendEmailResult> {
   const validation = validateSESConfiguration()
 
-  if (!validation.isValid) {
+  if (!validation.valid) {
     return {
       success: false,
-      message: `AWS SES configuration incomplete. Missing: ${validation.missing.join(", ")}`,
+      message: `Configuration errors: ${validation.errors.join(", ")}`,
     }
   }
 
-  // Send a test email to the from address
-  const testEmail = process.env.AWS_SES_FROM_EMAIL!
+  try {
+    // Send a test email to the from address
+    const result = await sendEmail({
+      to: process.env.AWS_SES_FROM_EMAIL || "",
+      subject: "AWS SES Connection Test",
+      html: "<h1>Test Email</h1><p>This is a test email to verify AWS SES configuration.</p>",
+      text: "Test Email\n\nThis is a test email to verify AWS SES configuration.",
+    })
 
-  return await sendEmail({
-    to: testEmail,
-    subject: "AWS SES Test Email",
-    html: `
-      <h2>AWS SES Connection Test</h2>
-      <p>This is a test email to verify your AWS SES configuration.</p>
-      <p><strong>Configuration:</strong></p>
-      <ul>
-        <li>Region: ${process.env.AWS_SES_REGION || "us-east-1"}</li>
-        <li>From Email: ${testEmail}</li>
-      </ul>
-      <p>If you received this email, your AWS SES is configured correctly!</p>
-    `,
-    text: `
-AWS SES Connection Test
-
-This is a test email to verify your AWS SES configuration.
-
-Configuration:
-- Region: ${process.env.AWS_SES_REGION || "us-east-1"}
-- From Email: ${testEmail}
-
-If you received this email, your AWS SES is configured correctly!
-    `,
-  })
+    return result
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to test connection",
+    }
+  }
 }
-
-// Export with the expected name
-export { sendEmail as sendEmailWithSES }

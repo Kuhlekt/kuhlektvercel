@@ -8,10 +8,8 @@ const getSupabaseClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  console.log("[Supabase] URL exists:", !!supabaseUrl)
-  console.log("[Supabase] Service key exists:", !!supabaseServiceKey)
-
   if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("[Supabase] Missing environment variables")
     throw new Error("Missing Supabase environment variables")
   }
 
@@ -79,8 +77,6 @@ async function cleanupExpiredCodes() {
 
     if (error) {
       console.error("[Verification] Error cleaning up expired codes:", error)
-    } else {
-      console.log("[Verification] Cleanup completed")
     }
   } catch (error) {
     console.error("[Verification] Exception cleaning up codes:", error)
@@ -100,14 +96,9 @@ export async function generateVerificationCode(email: string): Promise<{ success
 
     if (testError) {
       console.error("[Verification] Database connection test failed:", testError)
-      console.error("[Verification] Error code:", testError.code)
-      console.error("[Verification] Error message:", testError.message)
-      console.error("[Verification] Error details:", testError.details)
-      console.error("[Verification] Error hint:", testError.hint)
-
       return {
         success: false,
-        error: `Database error: ${testError.message}. Please ensure the verification_codes table exists.`,
+        error: `Database connection failed. Please contact support.`,
       }
     }
 
@@ -124,8 +115,6 @@ export async function generateVerificationCode(email: string): Promise<{ success
 
     if (deleteError) {
       console.error("[Verification] Error deleting old codes:", deleteError)
-    } else {
-      console.log("[Verification] Old codes deleted")
     }
 
     // Generate a 6-digit code
@@ -138,31 +127,27 @@ export async function generateVerificationCode(email: string): Promise<{ success
 
     // Store in database
     console.log("[Verification] Inserting code into database...")
-    const insertData = {
-      email: normalizedEmail,
-      code: code,
-      attempts: 0,
-      created_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-    }
-    console.log("[Verification] Insert data:", insertData)
-
-    const { data, error } = await supabase.from("verification_codes").insert(insertData).select().single()
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .insert({
+        email: normalizedEmail,
+        code: code,
+        attempts: 0,
+        created_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single()
 
     if (error) {
       console.error("[Verification] Database insert error:", error)
-      console.error("[Verification] Error code:", error.code)
-      console.error("[Verification] Error message:", error.message)
-      console.error("[Verification] Error details:", error.details)
-      console.error("[Verification] Error hint:", error.hint)
-
       return {
         success: false,
-        error: `Failed to store verification code: ${error.message}`,
+        error: `Failed to generate verification code. Please try again.`,
       }
     }
 
-    console.log(`[Verification] Code stored successfully:`, data)
+    console.log(`[Verification] Code stored successfully`)
 
     // Send the code via email
     console.log("[Verification] Sending email...")
@@ -365,7 +350,7 @@ Visit us at kuhlekt.com
       console.error("[Verification] Failed to send email:", result.message)
       return {
         success: false,
-        error: "Failed to send verification code email. Please try again.",
+        error: "Failed to send verification email. Please check your email address and try again.",
       }
     }
 
@@ -374,10 +359,9 @@ Visit us at kuhlekt.com
     return { success: true }
   } catch (error) {
     console.error("[Verification] EXCEPTION in generateVerificationCode:", error)
-    console.error("[Verification] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+      error: "An unexpected error occurred. Please try again or contact support.",
     }
   }
 }
@@ -420,13 +404,11 @@ export async function verifyCode(email: string, code: string): Promise<{ success
       }
     }
 
-    console.log(`[Verification] Found code in database:`, storedData)
+    console.log(`[Verification] Found code in database`)
 
     // Check if expired
     const expiresAt = new Date(storedData.expires_at)
     const now = new Date()
-    console.log(`[Verification] Current time: ${now.toISOString()}`)
-    console.log(`[Verification] Expires at: ${expiresAt.toISOString()}`)
 
     if (expiresAt < now) {
       await supabase.from("verification_codes").delete().eq("email", normalizedEmail)
@@ -448,10 +430,6 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     }
 
     // Verify the code
-    console.log(`[Verification] Comparing codes:`)
-    console.log(`[Verification]   Stored: "${storedData.code}"`)
-    console.log(`[Verification]   Input:  "${normalizedCode}"`)
-
     if (storedData.code !== normalizedCode) {
       // Increment attempts
       const newAttempts = storedData.attempts + 1
@@ -473,7 +451,6 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     return { success: true }
   } catch (error) {
     console.error("[Verification] EXCEPTION in verifyCode:", error)
-    console.error("[Verification] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return {
       success: false,
       error: "Failed to verify code. Please try again.",
