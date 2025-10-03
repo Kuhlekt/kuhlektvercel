@@ -2,19 +2,13 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendTestEmail(to: string) {
+export async function sendTestEmail(to: string, subject: string, message: string) {
   try {
     const result = await sendEmail({
       to,
-      subject: "Test Email from Kuhlekt",
-      text: "This is a test email from Kuhlekt to verify AWS SES configuration.",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333;">Test Email</h1>
-          <p>This is a test email from Kuhlekt to verify AWS SES configuration.</p>
-          <p>If you received this email, your AWS SES is configured correctly!</p>
-        </div>
-      `,
+      subject,
+      text: message,
+      html: `<p>${message.replace(/\n/g, "<br>")}</p>`,
     })
 
     return result

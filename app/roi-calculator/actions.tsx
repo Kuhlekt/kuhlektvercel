@@ -7,124 +7,173 @@ interface ROIData {
   companyName: string
   email: string
   annualRevenue: number
-  averageInvoiceValue: number
-  numberOfInvoices: number
-  daysToCollect: number
-  percentageLatePayments: number
+  currentDSO: number
+  targetDSO: number
+  industryType: string
 }
 
 export async function sendROIReport(data: ROIData) {
   try {
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-
     const supabase = await createClient()
-    const { error: dbError } = await supabase.from("verification_codes").insert({
-      email: data.email,
-      code: verificationCode,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      attempts: 0,
-    })
 
-    if (dbError) {
-      console.error("Database error:", dbError)
-      return {
-        success: false,
-        message: "Failed to store verification code",
-      }
-    }
+    const emailSubject = `ROI Analysis Report for ${data.companyName}`
+    const emailText = `Dear ${data.companyName},
+
+Thank you for your interest in Kuhlekt's AR automation platform.
+
+Here are your ROI results:
+- Annual Revenue: $${data.annualRevenue.toLocaleString()}
+- Current DSO: ${data.currentDSO} days
+- Target DSO: ${data.targetDSO} days
+- Industry: ${data.industryType}
+
+Our team will be in touch shortly to discuss how we can help optimize your accounts receivable process.
+
+Best regards,
+The Kuhlekt Team`
+
+    const emailHtml = `
+      <h2>ROI Analysis Report</h2>
+      <p>Dear ${data.companyName},</p>
+      <p>Thank you for your interest in Kuhlekt's AR automation platform.</p>
+      <h3>Your ROI Results:</h3>
+      <ul>
+        <li><strong>Annual Revenue:</strong> $${data.annualRevenue.toLocaleString()}</li>
+        <li><strong>Current DSO:</strong> ${data.currentDSO} days</li>
+        <li><strong>Target DSO:</strong> ${data.targetDSO} days</li>
+        <li><strong>Industry:</strong> ${data.industryType}</li>
+      </ul>
+      <p>Our team will be in touch shortly to discuss how we can help optimize your accounts receivable process.</p>
+      <p>Best regards,<br>The Kuhlekt Team</p>
+    `
 
     const result = await sendEmail({
       to: data.email,
-      subject: "Your ROI Calculator Verification Code",
-      text: `Your verification code is: ${verificationCode}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Your ROI Calculator Verification Code</h2>
-          <p>Thank you for using our ROI Calculator. Your verification code is:</p>
-          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-            ${verificationCode}
-          </div>
-          <p>This code will expire in 10 minutes.</p>
-          <p>If you didn't request this code, please ignore this email.</p>
-        </div>
-      `,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
     })
 
-    return result
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to send email",
+      }
+    }
+
+    return {
+      success: true,
+      message: "ROI report sent successfully",
+    }
   } catch (error) {
-    console.error("Error sending verification code:", error)
+    console.error("Error in sendROIReport:", error)
     return {
       success: false,
-      message: "Failed to send verification code",
-      error: error instanceof Error ? error.message : "Unknown error",
+      message: "An error occurred while sending the report",
     }
   }
 }
 
-export async function verifyCode(email: string, code: string) {
+export async function generateVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const supabase = await createClient()
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
+
+    const { error: insertError } = await supabase.from("verification_codes").insert({
+      email,
+      code,
+      expires_at: expiresAt,
+      attempts: 0,
+    })
+
+    if (insertError) {
+      console.error("Error storing verification code:", insertError)
+      return {
+        success: false,
+        message: "Failed to generate verification code",
+      }
+    }
+
+    const emailResult = await sendEmail({
+      to: email,
+      subject: "Your Verification Code",
+      text: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
+      html: `<p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in 10 minutes.</p>`,
+    })
+
+    if (!emailResult.success) {
+      return {
+        success: false,
+        message: "Failed to send verification email",
+      }
+    }
+
+    return {
+      success: true,
+      message: "Verification code sent successfully",
+    }
+  } catch (error) {
+    console.error("Error generating verification code:", error)
+    return {
+      success: false,
+      message: "An error occurred",
+    }
+  }
+}
+
+export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
   try {
     const supabase = await createClient()
 
-    const { data: verificationData, error: fetchError } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .single()
+    const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
 
-    if (fetchError || !verificationData) {
+    if (error || !data) {
       return {
         success: false,
         message: "Invalid verification code",
       }
     }
 
-    if (new Date(verificationData.expires_at) < new Date()) {
+    if (new Date(data.expires_at) < new Date()) {
       return {
         success: false,
         message: "Verification code has expired",
       }
     }
 
-    if (verificationData.attempts >= 3) {
+    if (data.attempts >= 3) {
       return {
         success: false,
-        message: "Too many attempts. Please request a new code.",
+        message: "Too many failed attempts",
       }
     }
 
-    const { error: deleteError } = await supabase
-      .from("verification_codes")
-      .delete()
-      .eq("email", email)
-      .eq("code", code)
+    if (data.code !== code) {
+      await supabase
+        .from("verification_codes")
+        .update({ attempts: data.attempts + 1 })
+        .eq("email", email)
 
-    if (deleteError) {
-      console.error("Error deleting verification code:", deleteError)
+      return {
+        success: false,
+        message: "Invalid verification code",
+      }
     }
+
+    await supabase.from("verification_codes").delete().eq("email", email)
 
     return {
       success: true,
-      message: "Verification successful",
+      message: "Email verified successfully",
     }
   } catch (error) {
     console.error("Error verifying code:", error)
     return {
       success: false,
-      message: "Verification failed",
-      error: error instanceof Error ? error.message : "Unknown error",
+      message: "An error occurred",
     }
   }
-}
-
-export async function generateVerificationCode(email: string) {
-  return sendROIReport({
-    companyName: "",
-    email,
-    annualRevenue: 0,
-    averageInvoiceValue: 0,
-    numberOfInvoices: 0,
-    daysToCollect: 0,
-    percentageLatePayments: 0,
-  })
 }
