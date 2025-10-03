@@ -51,24 +51,48 @@ interface DetailedROIResults {
 }
 
 export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
-  const currentDSO = Number.parseFloat(inputs.currentDSO)
-  const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
-  const monthlyInvoices = Number.parseFloat(inputs.monthlyInvoices)
-  const dsoImprovementPercent = Number.parseFloat(inputs.simpleDSOImprovement) / 100
-  const costOfCapitalPercent = Number.parseFloat(inputs.simpleCostOfCapital) / 100
+  try {
+    console.log("[v0] Starting simple ROI calculation with inputs:", inputs)
 
-  const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
-  const newDSO = currentDSO * (1 - dsoImprovementPercent)
-  const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
-  const cashReleased = currentCashTied - newCashTied
-  const annualSavings = cashReleased * 12 * costOfCapitalPercent
+    const currentDSO = Number.parseFloat(inputs.currentDSO)
+    const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
+    const monthlyInvoices = Number.parseFloat(inputs.monthlyInvoices)
+    const dsoImprovementPercent = Number.parseFloat(inputs.simpleDSOImprovement) / 100
+    const costOfCapitalPercent = Number.parseFloat(inputs.simpleCostOfCapital) / 100
 
-  return {
-    currentCashTied,
-    newDSO,
-    cashReleased,
-    annualSavings,
-    dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
+    console.log("[v0] Parsed simple ROI values:", {
+      currentDSO,
+      avgInvoiceValue,
+      monthlyInvoices,
+      dsoImprovementPercent,
+      costOfCapitalPercent,
+    })
+
+    const currentCashTied = (currentDSO / 30) * avgInvoiceValue * monthlyInvoices
+    const newDSO = currentDSO * (1 - dsoImprovementPercent)
+    const newCashTied = (newDSO / 30) * avgInvoiceValue * monthlyInvoices
+    const cashReleased = currentCashTied - newCashTied
+    const annualSavings = cashReleased * 12 * costOfCapitalPercent
+
+    const results = {
+      currentCashTied,
+      newDSO,
+      cashReleased,
+      annualSavings,
+      dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
+    }
+
+    console.log("[v0] Simple ROI calculation results:", results)
+
+    return results
+  } catch (error) {
+    console.error("[v0] Error in calculateSimpleROI:", error)
+    console.error("[v0] Error details:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : "No stack trace",
+    })
+    throw error
   }
 }
 
@@ -170,6 +194,14 @@ export async function sendROIEmail(data: {
   inputs: any
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log("[v0] Starting to send ROI email to:", data.email)
+    console.log("[v0] Email data:", {
+      name: data.name,
+      email: data.email,
+      company: data.company,
+      calculatorType: data.calculatorType,
+    })
+
     const companyName = data.company || "Not Provided"
 
     let adminEmailHtml = `
@@ -409,6 +441,8 @@ export async function sendROIEmail(data: {
       </html>
     `
 
+    console.log("[v0] Email HTML generated, calling sendEmail function")
+
     await sendEmail({
       to: "enquiries@kuhlekt.com",
       subject: data.company ? `New ROI Calculator Lead - ${data.company}` : `New ROI Calculator Lead - ${data.name}`,
@@ -416,9 +450,16 @@ export async function sendROIEmail(data: {
       text: `New ROI calculator submission from ${data.name} (${data.email})`,
     })
 
+    console.log("[v0] Email sent successfully")
+
     return { success: true }
   } catch (error) {
-    console.error("Error sending ROI email:", error)
+    console.error("[v0] Error sending ROI email:", error)
+    console.error("[v0] Email error details:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : "No stack trace",
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to send email",
