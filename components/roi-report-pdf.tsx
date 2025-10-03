@@ -8,9 +8,10 @@ interface ROIReportPDFProps {
   calculatorType: "simple" | "detailed"
   results: any
   inputs: any
+  onDownloadComplete?: () => void
 }
 
-export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFProps) {
+export function ROIReportPDF({ calculatorType, results, inputs, onDownloadComplete }: ROIReportPDFProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const getImageAsBase64 = async (imagePath: string): Promise<string> => {
@@ -375,6 +376,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
       setTimeout(() => {
         printWindow.print()
         setIsGenerating(false)
+
+        if (onDownloadComplete) {
+          // Give a small delay to ensure print dialog has appeared
+          setTimeout(() => {
+            onDownloadComplete()
+          }, 1000)
+        }
       }, 500)
     } catch (error) {
       console.error("Error generating PDF:", error)
