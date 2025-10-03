@@ -1,92 +1,88 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
 import { createClient } from "@/lib/supabase/server"
+import { sendEmail } from "@/lib/aws-ses"
 
-export async function submitContactForm(formData: FormData) {
+interface ContactFormData {
+  name: string
+  email: string
+  company?: string
+  message: string
+  recaptchaToken: string
+}
+
+export async function submitContactForm(formData: ContactFormData) {
   try {
-    const name = formData.get("name") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const message = formData.get("message") as string
-
-    if (!name || !email || !message) {
-      return {
-        success: false,
-        message: "Please fill in all required fields",
-      }
-    }
-
     const supabase = await createClient()
 
-    const { error: dbError } = await supabase.from("contact_submissions").insert([
+    const { error } = await supabase.from("contact_submissions").insert([
       {
-        name,
-        email,
-        company,
-        message,
-        submitted_at: new Date().toISOString(),
+        name: formData.name,
+        email: formData.email,
+        company: formData.company,
+        message: formData.message,
+        created_at: new Date().toISOString(),
       },
     ])
 
-    if (dbError) {
-      console.error("Database error:", dbError)
+    if (error) {
+      console.error("Error inserting contact submission:", error)
       return {
         success: false,
-        message: "Failed to save your message. Please try again.",
+        message: "Failed to submit contact form. Please try again.",
       }
     }
 
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: `New Contact Form Submission from ${name}`,
+      subject: `New Contact Form Submission from ${formData.name}`,
       text: `
-Name: ${name}
-Email: ${email}
-Company: ${company || "N/A"}
+Name: ${formData.name}
+Email: ${formData.email}
+Company: ${formData.company || "N/A"}
 
 Message:
-${message}
+${formData.message}
       `,
       html: `
 <h2>New Contact Form Submission</h2>
-<p><strong>Name:</strong> ${name}</p>
-<p><strong>Email:</strong> ${email}</p>
-<p><strong>Company:</strong> ${company || "N/A"}</p>
+<p><strong>Name:</strong> ${formData.name}</p>
+<p><strong>Email:</strong> ${formData.email}</p>
+<p><strong>Company:</strong> ${formData.company || "N/A"}</p>
 <h3>Message:</h3>
-<p>${message}</p>
+<p>${formData.message.replace(/\n/g, "<br>")}</p>
       `,
     })
 
     if (!emailResult.success) {
-      console.error("Email error:", emailResult.error)
+      console.error("Failed to send notification email:", emailResult.error)
     }
 
     return {
       success: true,
-      message: "Thank you for your message! We'll get back to you soon.",
+      message: "Thank you for contacting us. We will get back to you soon.",
     }
   } catch (error) {
-    console.error("Contact form error:", error)
+    console.error("Error in submitContactForm:", error)
     return {
       success: false,
-      message: "An error occurred. Please try again.",
+      message: "An unexpected error occurred. Please try again.",
     }
   }
 }
 
-export async function sendTestEmail(email: string) {
+export async function sendTestEmail(to: string) {
   try {
     const result = await sendEmail({
-      to: email,
+      to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email to verify your email configuration.",
-      html: "<h1>Test Email</h1><p>This is a test email to verify your email configuration.</p>",
+      text: "This is a test email to verify the email service is working correctly.",
+      html: "<h1>Test Email</h1><p>This is a test email to verify the email service is working correctly.</p>",
     })
 
     return result
   } catch (error) {
-    console.error("Test email error:", error)
+    console.error("Error in sendTestEmail:", error)
     return {
       success: false,
       message: "Failed to send test email",
