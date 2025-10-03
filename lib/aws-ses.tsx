@@ -192,5 +192,69 @@ function flattenObject(obj: any, prefix = ""): Record<string, string> {
   return flattened
 }
 
+// Validate SES configuration
+export function validateSESConfiguration(): {
+  isValid: boolean
+  missing: string[]
+} {
+  const missing: string[] = []
+
+  if (!process.env.AWS_SES_ACCESS_KEY_ID) {
+    missing.push("AWS_SES_ACCESS_KEY_ID")
+  }
+  if (!process.env.AWS_SES_SECRET_ACCESS_KEY) {
+    missing.push("AWS_SES_SECRET_ACCESS_KEY")
+  }
+  if (!process.env.AWS_SES_FROM_EMAIL) {
+    missing.push("AWS_SES_FROM_EMAIL")
+  }
+
+  return {
+    isValid: missing.length === 0,
+    missing,
+  }
+}
+
+// Test AWS SES connection
+export async function testAWSSESConnection(): Promise<SendEmailResult> {
+  const validation = validateSESConfiguration()
+
+  if (!validation.isValid) {
+    return {
+      success: false,
+      message: `AWS SES configuration incomplete. Missing: ${validation.missing.join(", ")}`,
+    }
+  }
+
+  // Send a test email to the from address
+  const testEmail = process.env.AWS_SES_FROM_EMAIL!
+
+  return await sendEmail({
+    to: testEmail,
+    subject: "AWS SES Test Email",
+    html: `
+      <h2>AWS SES Connection Test</h2>
+      <p>This is a test email to verify your AWS SES configuration.</p>
+      <p><strong>Configuration:</strong></p>
+      <ul>
+        <li>Region: ${process.env.AWS_SES_REGION || "us-east-1"}</li>
+        <li>From Email: ${testEmail}</li>
+      </ul>
+      <p>If you received this email, your AWS SES is configured correctly!</p>
+    `,
+    text: `
+AWS SES Connection Test
+
+This is a test email to verify your AWS SES configuration.
+
+Configuration:
+- Region: ${process.env.AWS_SES_REGION || "us-east-1"}
+- From Email: ${testEmail}
+
+If you received this email, your AWS SES is configured correctly!
+    `,
+  })
+}
+
 // Export with the expected name
 export { sendEmail as sendEmailWithSES }
