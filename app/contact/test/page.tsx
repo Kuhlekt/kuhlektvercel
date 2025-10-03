@@ -30,7 +30,10 @@ export default function TestAWSPage() {
       console.log("Starting AWS SES test...")
       const result = await testAWSSES()
       console.log("Test result:", result)
-      setTestResult(result)
+      setTestResult({
+        ...result,
+        message: result.message || "Unknown error occurred",
+      })
     } catch (error) {
       console.error("Test error:", error)
       setTestResult({
