@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@aws-sdk/client-ses':
-        specifier: latest
+        specifier: 3.901.0
         version: 3.901.0
       '@radix-ui/react-accordion':
         specifier: latest

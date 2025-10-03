@@ -10,7 +10,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@aws-sdk/client-ses": "latest",
+    "@aws-sdk/client-ses": "3.901.0",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
