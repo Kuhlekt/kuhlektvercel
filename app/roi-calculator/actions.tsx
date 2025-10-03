@@ -78,6 +78,8 @@ export async function generateVerificationCode(email: string): Promise<{ success
       attempts: 0,
     })
 
+    console.log(`Generated verification code for ${email}: ${code}`)
+
     // Send the code via email
     const emailHtml = `
       <!DOCTYPE html>
@@ -124,19 +126,29 @@ export async function generateVerificationCode(email: string): Promise<{ success
       </html>
     `
 
-    await sendEmail({
+    const result = await sendEmail({
       to: email,
       subject: "Your Kuhlekt ROI Calculator Verification Code",
       html: emailHtml,
       text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.\n\nKuhlekt - Transforming Invoice-to-Cash`,
     })
 
+    console.log("Send email result:", result)
+
+    if (!result.success) {
+      console.error("Failed to send verification email:", result.message)
+      return {
+        success: false,
+        error: result.message || "Failed to send verification code. Please try again.",
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("Error generating verification code:", error)
     return {
       success: false,
-      error: "Failed to send verification code. Please try again.",
+      error: error instanceof Error ? error.message : "Failed to send verification code. Please try again.",
     }
   }
 }
@@ -437,13 +449,18 @@ export async function sendROIEmail(data: {
       </html>
     `
 
-    await sendEmail({
+    const result = await sendEmail({
       to: data.email,
       subject: emailSubject,
       html: emailHtml,
       text: `Your ROI Calculator Results from Kuhlekt`,
     })
 
+    if (!result.success) {
+      console.error("Failed to send ROI email:", result.message)
+    }
+
+    // Send notification to Kuhlekt
     const notificationHtml = `
       <h2>New ROI Calculator Lead</h2>
       <p><strong>Name:</strong> ${data.name}</p>
