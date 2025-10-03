@@ -4,13 +4,21 @@ const nextConfig = {
     '@aws-sdk/client-ses',
     '@smithy/hash-node',
     '@smithy/node-http-handler',
+    '@smithy/util-stream-node',
   ],
   experimental: {
-    serverComponentsExternalPackages: ['bcryptjs'],
+    serverComponentsExternalPackages: ['bcryptjs', '@aws-sdk/client-ses'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push('bcryptjs', '@aws-sdk/client-ses');
+      config.externals = [
+        ...config.externals,
+        'bcryptjs',
+        '@aws-sdk/client-ses',
+        '@smithy/hash-node',
+        '@smithy/node-http-handler',
+        '@smithy/util-stream-node',
+      ]
     }
     
     config.resolve.fallback = {
@@ -19,9 +27,9 @@ const nextConfig = {
       net: false,
       tls: false,
       crypto: false,
-    };
+    }
     
-    return config;
+    return config
   },
   images: {
     remotePatterns: [
