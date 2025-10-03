@@ -5,6 +5,11 @@ const nextConfig = {
     "@aws-sdk/credential-providers",
     "@smithy/hash-node",
     "@smithy/signature-v4",
+    "@aws-sdk/smithy-client",
+    "@aws-sdk/middleware-stack",
+    "@smithy/smithy-client",
+    "@smithy/util-buffer-from",
+    "@smithy/util-utf8",
   ],
   eslint: {
     ignoreDuringBuilds: true,
@@ -42,6 +47,10 @@ const nextConfig = {
       zlib: false,
       path: false,
       os: false,
+      util: false,
+      buffer: false,
+      process: false,
+      url: false,
     };
     
     return config;
@@ -50,9 +59,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
-        port: '',
-        pathname: '/**',
+        hostname: '**',
       },
     ],
     unoptimized: true,

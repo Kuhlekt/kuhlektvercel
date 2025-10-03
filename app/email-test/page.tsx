@@ -1,35 +1,33 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { testEmail } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { testEmailSend } from "./actions"
 
 export default function EmailTestPage() {
-  const [to, setTo] = useState("")
-  const [subject, setSubject] = useState("Test Email from Kuhlekt")
-  const [message, setMessage] = useState("This is a test email sent from the Kuhlekt website.")
+  const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; message?: string } | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleTest = async () => {
+    if (!email) {
+      setResult({ success: false, message: "Please enter an email address" })
+      return
+    }
+
     setLoading(true)
     setResult(null)
 
     try {
-      const response = await testEmailSend({ to, subject, message })
-      setResult(response)
+      const res = await testEmail(email)
+      setResult(res)
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error occurred",
+        message: error instanceof Error ? error.message : "Unknown error",
       })
     } finally {
       setLoading(false)
@@ -37,63 +35,50 @@ export default function EmailTestPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="max-w-2xl mx-auto">
+    <div className="container mx-auto py-8">
+      <Card className="max-w-md mx-auto">
         <CardHeader>
-          <CardTitle>Email Test</CardTitle>
-          <CardDescription>Test the AWS SES email configuration</CardDescription>
+          <CardTitle>Email Configuration Test</CardTitle>
+          <CardDescription>Test your AWS SES email configuration</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="to">To Email</Label>
-              <Input
-                id="to"
-                type="email"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="recipient@example.com"
-                required
-              />
-            </div>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email Address
+            </label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Email subject"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Email message"
-                rows={5}
-                required
-              />
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Sending..." : "Send Test Email"}
-            </Button>
-          </form>
+          <Button onClick={handleTest} disabled={loading} className="w-full">
+            {loading ? "Sending..." : "Send Test Email"}
+          </Button>
 
           {result && (
-            <Alert className={`mt-4 ${result.success ? "border-green-500" : "border-red-500"}`}>
+            <Alert variant={result.success ? "default" : "destructive"}>
               <AlertDescription>
-                {result.success ? "✅ " : "❌ "}
-                {result.message}
+                {result.success ? "✅ Email sent successfully!" : `❌ ${result.message || "Failed to send email"}`}
               </AlertDescription>
             </Alert>
           )}
+
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>
+              <strong>Note:</strong> Make sure you have the following environment variables set:
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>AWS_SES_REGION</li>
+              <li>AWS_SES_ACCESS_KEY_ID</li>
+              <li>AWS_SES_SECRET_ACCESS_KEY</li>
+              <li>AWS_SES_FROM_EMAIL</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>
