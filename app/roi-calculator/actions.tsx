@@ -1,7 +1,7 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
 import { createClient } from "@/lib/supabase/server"
+import { sendEmail } from "@/lib/aws-ses"
 
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -10,34 +10,26 @@ function generateVerificationCode(): string {
 async function storeVerificationCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
+
     const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15)
 
-    const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
-
-    if (deleteError) {
-      console.error("Error deleting old codes:", deleteError)
-    }
-
-    const { error: insertError } = await supabase.from("verification_codes").insert({
+    const { error } = await supabase.from("verification_codes").insert({
       email,
       code,
       expires_at: expiresAt.toISOString(),
       attempts: 0,
     })
 
-    if (insertError) {
-      console.error("Error storing verification code:", insertError)
-      return { success: false, error: insertError.message }
+    if (error) {
+      console.error("Error storing verification code:", error)
+      return { success: false, error: error.message }
     }
 
     return { success: true }
   } catch (error) {
     console.error("Error in storeVerificationCode:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    return { success: false, error: "Failed to store verification code" }
   }
 }
 
@@ -49,28 +41,21 @@ export async function sendVerificationCode(email: string): Promise<{ success: bo
     if (!storeResult.success) {
       return {
         success: false,
-        message: "Failed to store verification code",
+        message: storeResult.error || "Failed to store verification code",
       }
     }
 
     const emailResult = await sendEmail({
       to: email,
       subject: "Your ROI Calculator Verification Code",
-      text: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
+      text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Your Verification Code</h2>
-          <p style="font-size: 16px; color: #666;">
-            Please use the following code to verify your email:
-          </p>
-          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-            <span style="font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px;">
-              ${code}
-            </span>
-          </div>
-          <p style="font-size: 14px; color: #999;">
-            This code will expire in 10 minutes.
-          </p>
+          <h2>Your Verification Code</h2>
+          <p>Your verification code is:</p>
+          <h1 style="background-color: #f0f0f0; padding: 20px; text-align: center; letter-spacing: 5px;">${code}</h1>
+          <p>This code will expire in 15 minutes.</p>
+          <p>If you didn't request this code, please ignore this email.</p>
         </div>
       `,
     })
@@ -78,7 +63,7 @@ export async function sendVerificationCode(email: string): Promise<{ success: bo
     if (!emailResult.success) {
       return {
         success: false,
-        message: "Failed to send verification email",
+        message: emailResult.error || "Failed to send email",
       }
     }
 
@@ -87,10 +72,10 @@ export async function sendVerificationCode(email: string): Promise<{ success: bo
       message: "Verification code sent successfully",
     }
   } catch (error) {
-    console.error("Error sending verification code:", error)
+    console.error("Error in sendVerificationCode:", error)
     return {
       success: false,
-      message: "Failed to send verification code. Please try again.",
+      message: "Failed to send verification code",
     }
   }
 }
@@ -99,12 +84,27 @@ export async function verifyCode(email: string, code: string): Promise<{ success
   try {
     const supabase = await createClient()
 
-    const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .select("*")
+      .eq("email", email)
+      .eq("code", code)
+      .single()
 
     if (error || !data) {
       return {
         success: false,
-        message: "Invalid or expired verification code",
+        message: "Invalid verification code",
+      }
+    }
+
+    const now = new Date()
+    const expiresAt = new Date(data.expires_at)
+
+    if (now > expiresAt) {
+      return {
+        success: false,
+        message: "Verification code has expired",
       }
     }
 
@@ -115,26 +115,6 @@ export async function verifyCode(email: string, code: string): Promise<{ success
       }
     }
 
-    const expiresAt = new Date(data.expires_at)
-    if (expiresAt < new Date()) {
-      return {
-        success: false,
-        message: "Verification code has expired",
-      }
-    }
-
-    if (data.code !== code) {
-      await supabase
-        .from("verification_codes")
-        .update({ attempts: data.attempts + 1 })
-        .eq("email", email)
-
-      return {
-        success: false,
-        message: "Invalid verification code",
-      }
-    }
-
     await supabase.from("verification_codes").delete().eq("email", email)
 
     return {
@@ -142,53 +122,96 @@ export async function verifyCode(email: string, code: string): Promise<{ success
       message: "Email verified successfully",
     }
   } catch (error) {
-    console.error("Error verifying code:", error)
+    console.error("Error in verifyCode:", error)
     return {
       success: false,
-      message: "Verification failed. Please try again.",
+      message: "Failed to verify code",
+    }
+  }
+}
+
+export async function calculateSimpleROI(data: {
+  annualRevenue: number
+  currentDSO: number
+  targetDSO: number
+  averageInvoiceValue: number
+  monthlyInvoices: number
+}) {
+  const dsoReduction = data.currentDSO - data.targetDSO
+  const dailyRevenue = data.annualRevenue / 365
+  const cashFlowImprovement = dailyRevenue * dsoReduction
+  const annualSavings = cashFlowImprovement * 12
+
+  return {
+    dsoReduction,
+    cashFlowImprovement,
+    annualSavings,
+    roi: (annualSavings / data.annualRevenue) * 100,
+  }
+}
+
+export async function calculateDetailedROI(data: {
+  annualRevenue: number
+  currentDSO: number
+  targetDSO: number
+  averageInvoiceValue: number
+  monthlyInvoices: number
+  currentStaffCost: number
+  automationSavings: number
+}) {
+  const simpleROI = await calculateSimpleROI(data)
+
+  const staffSavings = data.currentStaffCost * (data.automationSavings / 100)
+  const totalAnnualSavings = simpleROI.annualSavings + staffSavings * 12
+
+  return {
+    ...simpleROI,
+    staffSavings,
+    totalAnnualSavings,
+    totalROI: (totalAnnualSavings / data.annualRevenue) * 100,
+  }
+}
+
+export async function sendROIEmail(email: string, reportData: any): Promise<{ success: boolean; message: string }> {
+  try {
+    const emailResult = await sendEmail({
+      to: email,
+      subject: "Your ROI Calculator Report",
+      text: `Your ROI report has been generated. Please find the details below.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Your ROI Calculator Report</h2>
+          <p>Thank you for using our ROI calculator. Here are your results:</p>
+          <div style="background-color: #f0f0f0; padding: 20px; margin: 20px 0;">
+            <h3>Results Summary</h3>
+            <p><strong>DSO Reduction:</strong> ${reportData.dsoReduction} days</p>
+            <p><strong>Cash Flow Improvement:</strong> $${reportData.cashFlowImprovement.toLocaleString()}</p>
+            <p><strong>Annual Savings:</strong> $${reportData.annualSavings.toLocaleString()}</p>
+            <p><strong>ROI:</strong> ${reportData.roi.toFixed(2)}%</p>
+          </div>
+          <p>For more information about how Kuhlekt can help optimize your accounts receivable, please contact us.</p>
+        </div>
+      `,
+    })
+
+    if (!emailResult.success) {
+      return {
+        success: false,
+        message: emailResult.error || "Failed to send email",
+      }
+    }
+
+    return {
+      success: true,
+      message: "ROI report sent successfully",
+    }
+  } catch (error) {
+    console.error("Error in sendROIEmail:", error)
+    return {
+      success: false,
+      message: "Failed to send ROI report",
     }
   }
 }
 
 export { generateVerificationCode }
-
-export async function calculateSimpleROI(data: any) {
-  const annualRevenue = Number.parseFloat(data.annualRevenue) || 0
-  const avgInvoiceValue = Number.parseFloat(data.avgInvoiceValue) || 0
-  const currentDSO = Number.parseFloat(data.currentDSO) || 0
-
-  const projectedDSO = currentDSO * 0.6
-  const dsoReduction = currentDSO - projectedDSO
-  const annualSavings = (annualRevenue / 365) * dsoReduction
-  const monthlySubscription = 500
-  const annualCost = monthlySubscription * 12
-  const netBenefit = annualSavings - annualCost
-  const roi = ((netBenefit / annualCost) * 100).toFixed(2)
-
-  return {
-    success: true,
-    data: {
-      currentDSO,
-      projectedDSO: projectedDSO.toFixed(1),
-      dsoReduction: dsoReduction.toFixed(1),
-      annualSavings: annualSavings.toFixed(2),
-      annualCost: annualCost.toFixed(2),
-      netBenefit: netBenefit.toFixed(2),
-      roi,
-      paybackPeriod: (annualCost / (annualSavings / 12)).toFixed(1),
-    },
-  }
-}
-
-export async function calculateDetailedROI(data: any) {
-  return calculateSimpleROI(data)
-}
-
-export async function sendROIEmail(email: string, reportData: any) {
-  return await sendEmail({
-    to: email,
-    subject: "Your ROI Calculator Results",
-    text: "Your ROI calculation results are attached.",
-    html: "<h1>ROI Results</h1><p>Your detailed ROI analysis.</p>",
-  })
-}
