@@ -2,9 +2,10 @@
 const nextConfig = {
   serverExternalPackages: [
     '@aws-sdk/client-ses',
-    '@aws-sdk/smithy-client',
-    '@smithy/node-http-handler',
+    '@aws-sdk/client-s3',
     '@smithy/hash-node',
+    '@smithy/protocol-http',
+    '@smithy/signature-v4',
   ],
   eslint: {
     ignoreDuringBuilds: true,
