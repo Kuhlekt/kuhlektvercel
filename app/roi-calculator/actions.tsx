@@ -50,39 +50,68 @@ interface DetailedROIResults {
   paybackMonths: number
 }
 
-// In-memory storage for verification codes
+// Global in-memory storage for verification codes
 const verificationCodes = new Map<string, { code: string; timestamp: number; attempts: number }>()
 
-// Clean up old codes (older than 15 minutes)
+// Debug function to check codes
+export async function debugGetCodes(): Promise<any> {
+  return {
+    totalCodes: verificationCodes.size,
+    codes: Array.from(verificationCodes.entries()).map(([email, data]) => ({
+      email,
+      code: data.code,
+      timestamp: new Date(data.timestamp).toISOString(),
+      attempts: data.attempts,
+      age: Date.now() - data.timestamp,
+    })),
+  }
+}
+
 function cleanupOldCodes() {
   const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
+  let cleaned = 0
   for (const [email, data] of verificationCodes.entries()) {
     if (data.timestamp < fifteenMinutesAgo) {
       verificationCodes.delete(email)
+      cleaned++
       console.log(`[Verification] Cleaned up expired code for ${email}`)
     }
+  }
+  if (cleaned > 0) {
+    console.log(`[Verification] Cleaned ${cleaned} expired codes`)
   }
 }
 
 export async function generateVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[Verification] === GENERATE CODE START ===`)
+    console.log(`[Verification] Email received: "${email}"`)
+
     cleanupOldCodes()
 
-    // Generate a 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Store the code with timestamp
+    console.log(`[Verification] Generated code: ${code}`)
+    console.log(`[Verification] Normalized email: "${normalizedEmail}"`)
+
     verificationCodes.set(normalizedEmail, {
       code,
       timestamp: Date.now(),
       attempts: 0,
     })
 
-    console.log(`[Verification] Generated code for ${normalizedEmail}: ${code}`)
-    console.log(`[Verification] Current codes in memory:`, Array.from(verificationCodes.keys()))
+    console.log(`[Verification] Code stored in Map`)
+    console.log(`[Verification] Map size: ${verificationCodes.size}`)
+    console.log(`[Verification] Map keys:`, Array.from(verificationCodes.keys()))
 
-    // Send the code via email
+    // Verify it was stored
+    const storedData = verificationCodes.get(normalizedEmail)
+    console.log(`[Verification] Verification of storage:`, storedData ? "SUCCESS" : "FAILED")
+    if (storedData) {
+      console.log(`[Verification] Stored code matches: ${storedData.code === code}`)
+    }
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -115,11 +144,6 @@ export async function generateVerificationCode(email: string): Promise<{ success
               font-size: 28px;
               font-weight: 600;
             }
-            .header p {
-              margin: 10px 0 0 0;
-              opacity: 0.9;
-              font-size: 16px;
-            }
             .content { 
               padding: 40px 30px;
             }
@@ -138,33 +162,6 @@ export async function generateVerificationCode(email: string): Promise<{ success
               letter-spacing: 8px;
               font-family: 'Courier New', monospace;
             }
-            .code-label {
-              color: #64748b;
-              font-size: 14px;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              margin-bottom: 15px;
-            }
-            .warning { 
-              background: #fef3c7; 
-              border-left: 4px solid #f59e0b; 
-              padding: 20px; 
-              margin: 25px 0; 
-              border-radius: 6px;
-            }
-            .warning strong {
-              color: #92400e;
-              display: block;
-              margin-bottom: 10px;
-            }
-            .warning ul {
-              margin: 10px 0 0 0;
-              padding-left: 20px;
-              color: #78350f;
-            }
-            .warning li {
-              margin: 8px 0;
-            }
             .footer {
               background: #f9fafb;
               padding: 25px 30px;
@@ -173,171 +170,104 @@ export async function generateVerificationCode(email: string): Promise<{ success
               font-size: 14px;
               border-top: 1px solid #e5e7eb;
             }
-            .footer a {
-              color: #0891b2;
-              text-decoration: none;
-            }
-            .instructions {
-              background: #f9fafb;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-            }
-            .instructions h3 {
-              color: #0891b2;
-              margin-top: 0;
-              font-size: 16px;
-            }
-            .instructions ol {
-              margin: 10px 0;
-              padding-left: 20px;
-              color: #4b5563;
-            }
-            .instructions li {
-              margin: 8px 0;
-            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <h1>🔐 Verification Code</h1>
-              <p>Kuhlekt ROI Calculator</p>
             </div>
             <div class="content">
-              <p style="font-size: 16px; color: #4b5563; margin-bottom: 20px;">
-                Thank you for using the Kuhlekt ROI Calculator! To view your personalized results, please use the verification code below:
-              </p>
-              
               <div class="code-box">
-                <div class="code-label">Your Verification Code</div>
                 <div class="code">${code}</div>
               </div>
-
-              <div class="instructions">
-                <h3>How to use this code:</h3>
-                <ol>
-                  <li>Return to the ROI Calculator window</li>
-                  <li>Enter this 6-digit code in the verification field</li>
-                  <li>Click "Verify" to view your results</li>
-                </ol>
-              </div>
-
-              <div class="warning">
-                <strong>⚠️ Security Information</strong>
-                <ul>
-                  <li>This code expires in 15 minutes</li>
-                  <li>You have 5 attempts to enter the correct code</li>
-                  <li>Never share this code with anyone</li>
-                  <li>If you didn't request this code, please ignore this email</li>
-                </ul>
-              </div>
-
-              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                If you're having trouble accessing your results, please contact us at 
-                <a href="mailto:enquiries@kuhlekt.com" style="color: #0891b2; text-decoration: none;">enquiries@kuhlekt.com</a>
-              </p>
+              <p style="text-align: center; color: #6b7280;">This code expires in 15 minutes</p>
             </div>
             <div class="footer">
-              <p style="margin: 0 0 10px 0;"><strong>Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
-              <p style="margin: 0;">Visit us at <a href="https://kuhlekt.com">kuhlekt.com</a></p>
+              <p><strong>Kuhlekt</strong> - ROI Calculator</p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    const emailText = `
-Kuhlekt ROI Calculator - Verification Code
-
-Your verification code is: ${code}
-
-This code will expire in 15 minutes.
-
-How to use:
-1. Return to the ROI Calculator window
-2. Enter this 6-digit code in the verification field
-3. Click "Verify" to view your results
-
-Security Information:
-- This code expires in 15 minutes
-- You have 5 attempts to enter the correct code
-- Never share this code with anyone
-- If you didn't request this code, please ignore this email
-
-Need help? Contact us at enquiries@kuhlekt.com
-
-Kuhlekt - Transforming Invoice-to-Cash
-Visit us at kuhlekt.com
-    `.trim()
-
+    console.log(`[Verification] Sending email to: ${email}`)
     const result = await sendEmail({
       to: email,
       subject: "Your Kuhlekt ROI Calculator Verification Code",
       html: emailHtml,
-      text: emailText,
+      text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.`,
     })
 
-    console.log("[Verification] Email send result:", result)
+    console.log(`[Verification] Email send result:`, result)
+    console.log(`[Verification] === GENERATE CODE END ===`)
 
     if (!result.success) {
       console.error("[Verification] Failed to send email:", result.message)
       return {
         success: false,
-        error: "Failed to send verification code. Please try again or contact support.",
+        error: "Failed to send verification code. Please try again.",
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[Verification] Error in generateVerificationCode:", error)
+    console.error("[Verification] EXCEPTION in generateVerificationCode:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+      error: error instanceof Error ? error.message : "An unexpected error occurred.",
     }
   }
 }
 
 export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[Verification] === VERIFY CODE START ===`)
+    console.log(`[Verification] Email received: "${email}"`)
+    console.log(`[Verification] Code received: "${code}"`)
+
     cleanupOldCodes()
 
     const normalizedEmail = email.toLowerCase().trim()
     const normalizedCode = code.trim()
 
-    console.log(`[Verification] Verifying code for ${normalizedEmail}`)
-    console.log(`[Verification] Provided code: ${normalizedCode}`)
-    console.log(`[Verification] Codes in memory:`, Array.from(verificationCodes.keys()))
+    console.log(`[Verification] Normalized email: "${normalizedEmail}"`)
+    console.log(`[Verification] Normalized code: "${normalizedCode}"`)
+    console.log(`[Verification] Map size: ${verificationCodes.size}`)
+    console.log(`[Verification] Map keys:`, Array.from(verificationCodes.keys()))
 
     const storedData = verificationCodes.get(normalizedEmail)
 
+    console.log(`[Verification] Stored data found: ${!!storedData}`)
+
     if (!storedData) {
-      console.error(`[Verification] No code found for ${normalizedEmail}`)
+      console.error(`[Verification] NO DATA FOUND for email: "${normalizedEmail}"`)
+      console.log(`[Verification] Available emails:`, Array.from(verificationCodes.keys()))
       return {
         success: false,
         error: "Verification code not found or expired. Please request a new code.",
       }
     }
 
-    console.log(`[Verification] Stored code: ${storedData.code}`)
-    console.log(`[Verification] Stored timestamp: ${new Date(storedData.timestamp).toISOString()}`)
+    console.log(`[Verification] Stored code: "${storedData.code}"`)
+    console.log(`[Verification] Code age (ms): ${Date.now() - storedData.timestamp}`)
     console.log(`[Verification] Attempts: ${storedData.attempts}`)
 
-    // Check if code has expired (15 minutes)
+    // Check expiration
     const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
     if (storedData.timestamp < fifteenMinutesAgo) {
       verificationCodes.delete(normalizedEmail)
-      console.error(`[Verification] Code expired for ${normalizedEmail}`)
+      console.error(`[Verification] CODE EXPIRED`)
       return {
         success: false,
         error: "Verification code has expired. Please request a new code.",
       }
     }
 
-    // Check attempts (max 5 attempts)
+    // Check attempts
     if (storedData.attempts >= 5) {
       verificationCodes.delete(normalizedEmail)
-      console.error(`[Verification] Too many attempts for ${normalizedEmail}`)
+      console.error(`[Verification] TOO MANY ATTEMPTS`)
       return {
         success: false,
         error: "Too many failed attempts. Please request a new code.",
@@ -345,23 +275,30 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     }
 
     // Verify the code
+    console.log(`[Verification] Comparing codes:`)
+    console.log(`[Verification]   Stored: "${storedData.code}" (type: ${typeof storedData.code})`)
+    console.log(`[Verification]   Input:  "${normalizedCode}" (type: ${typeof normalizedCode})`)
+    console.log(`[Verification]   Match: ${storedData.code === normalizedCode}`)
+
     if (storedData.code !== normalizedCode) {
       storedData.attempts++
       const remainingAttempts = 5 - storedData.attempts
-      console.error(`[Verification] Invalid code for ${normalizedEmail}. Attempts: ${storedData.attempts}`)
+      console.error(`[Verification] CODE MISMATCH - Attempts now: ${storedData.attempts}`)
       return {
         success: false,
         error: `Invalid verification code. ${remainingAttempts} ${remainingAttempts === 1 ? "attempt" : "attempts"} remaining.`,
       }
     }
 
-    // Code is valid - remove it so it can't be reused
+    // Success - remove the code
     verificationCodes.delete(normalizedEmail)
-    console.log(`[Verification] Code verified successfully for ${normalizedEmail}`)
+    console.log(`[Verification] CODE VERIFIED SUCCESSFULLY`)
+    console.log(`[Verification] Code removed from Map`)
+    console.log(`[Verification] === VERIFY CODE END ===`)
 
     return { success: true }
   } catch (error) {
-    console.error("[Verification] Error in verifyCode:", error)
+    console.error("[Verification] EXCEPTION in verifyCode:", error)
     return {
       success: false,
       error: "Failed to verify code. Please try again.",
@@ -370,7 +307,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 }
 
 export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
-  console.log("[ROI] Calculating simple ROI with inputs:", inputs)
+  console.log("[ROI] Calculating simple ROI")
 
   const currentDSO = Number.parseFloat(inputs.currentDSO)
   const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
@@ -384,27 +321,23 @@ export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<Simpl
   const cashReleased = currentCashTied - newCashTied
   const annualSavings = cashReleased * costOfCapitalPercent
 
-  const results = {
+  return {
     currentCashTied,
     newDSO,
     cashReleased,
     annualSavings,
     dsoImprovementPercent: Number.parseFloat(inputs.simpleDSOImprovement),
   }
-
-  console.log("[ROI] Simple ROI results:", results)
-  return results
 }
 
 export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<DetailedROIResults> {
-  console.log("[ROI] Calculating detailed ROI with inputs:", inputs)
+  console.log("[ROI] Calculating detailed ROI")
 
   const implementationCost = Number.parseFloat(inputs.implementationCost)
   const monthlyCost = Number.parseFloat(inputs.monthlyCost)
   const annualCost = monthlyCost * 12
   const perAnnumDirectLabourCosts = Number.parseFloat(inputs.perAnnumDirectLabourCosts)
   const interestRate = Number.parseFloat(inputs.interestRate) / 100
-  const averageBadDebtPercent = Number.parseFloat(inputs.averageBadDebt) / 100
   const currentBadDebts = Number.parseFloat(inputs.currentBadDebts)
   const labourSavingsPercent = Number.parseFloat(inputs.labourSavings) / 100
   const dsoImprovementPercent = Number.parseFloat(inputs.dsoImprovement) / 100
@@ -426,7 +359,7 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
   const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
   const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
 
-  const results = {
+  return {
     currentDSO,
     newDSO,
     dsoReductionDays,
@@ -439,9 +372,6 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
     roi,
     paybackMonths,
   }
-
-  console.log("[ROI] Detailed ROI results:", results)
-  return results
 }
 
 export async function sendROIEmail(data: {
@@ -453,7 +383,7 @@ export async function sendROIEmail(data: {
   inputs: any
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log("[ROI] Sending ROI email to:", data.email)
+    console.log("[ROI] Sending ROI email")
 
     const emailSubject = `Your ROI Analysis Results - ${data.company}`
 
@@ -463,12 +393,9 @@ export async function sendROIEmail(data: {
         <head>
           <style>
             body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              font-family: Arial, sans-serif;
               line-height: 1.6; 
               color: #1f2937;
-              margin: 0;
-              padding: 0;
-              background-color: #f3f4f6;
             }
             .container { 
               max-width: 700px; 
@@ -476,258 +403,62 @@ export async function sendROIEmail(data: {
               background: white;
               border-radius: 12px;
               overflow: hidden;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             .header { 
-              background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); 
+              background: #0891b2; 
               color: white; 
               padding: 40px 30px; 
               text-align: center;
             }
-            .header h1 {
-              margin: 0;
-              font-size: 32px;
-              font-weight: 600;
-            }
-            .header p {
-              margin: 10px 0 0 0;
-              opacity: 0.95;
-              font-size: 18px;
-            }
             .content { 
               padding: 40px 30px;
             }
-            .section { 
-              background: #f9fafb; 
-              padding: 25px; 
-              margin-bottom: 20px; 
-              border-radius: 8px; 
-              border-left: 4px solid #0891b2;
-            }
-            .section-title { 
-              color: #0891b2; 
-              font-size: 20px; 
-              font-weight: 600; 
-              margin-bottom: 20px;
-            }
-            .metric { 
-              display: flex; 
-              justify-content: space-between; 
-              padding: 12px 0; 
-              border-bottom: 1px solid #e5e7eb;
-            }
-            .metric:last-child { 
-              border-bottom: none; 
-            }
-            .label { 
-              font-weight: 500; 
-              color: #4b5563;
-            }
-            .value { 
-              color: #0891b2; 
-              font-weight: 600;
-              text-align: right;
-            }
             .highlight { 
-              background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); 
+              background: #ecfeff; 
               padding: 30px; 
               border-radius: 12px; 
               margin: 30px 0; 
               text-align: center;
               border: 2px solid #0891b2;
             }
-            .highlight-label {
-              color: #0e7490;
-              font-size: 16px;
-              font-weight: 500;
-              margin-bottom: 10px;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
             .highlight-value { 
               font-size: 48px; 
               font-weight: bold; 
               color: #0891b2;
-              margin: 10px 0;
-            }
-            .highlight-subtext {
-              color: #0e7490;
-              font-size: 16px;
-              margin-top: 10px;
-            }
-            .cta-section {
-              background: #f0f9ff;
-              padding: 30px;
-              border-radius: 8px;
-              margin: 30px 0;
-              text-align: center;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #0891b2;
-              color: white;
-              padding: 15px 40px;
-              border-radius: 8px;
-              text-decoration: none;
-              font-weight: 600;
-              margin: 10px;
-              transition: background 0.3s;
-            }
-            .cta-button:hover {
-              background: #0e7490;
-            }
-            .footer {
-              background: #f9fafb;
-              padding: 25px 30px;
-              text-align: center;
-              color: #6b7280;
-              font-size: 14px;
-              border-top: 1px solid #e5e7eb;
-            }
-            .footer a {
-              color: #0891b2;
-              text-decoration: none;
             }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎯 Your ROI Analysis</h1>
-              <p>${data.calculatorType === "simple" ? "Simple ROI Calculator" : "Detailed ROI Calculator"}</p>
+              <h1>Your ROI Analysis</h1>
             </div>
             <div class="content">
-              <div class="section">
-                <div class="section-title">📋 Analysis Details</div>
-                <div class="metric">
-                  <span class="label">Name</span>
-                  <span class="value">${data.name}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Company</span>
-                  <span class="value">${data.company}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Email</span>
-                  <span class="value">${data.email}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Date</span>
-                  <span class="value">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
-                </div>
-              </div>
     `
 
     if (data.calculatorType === "simple") {
       emailHtml += `
               <div class="highlight">
-                <div class="highlight-label">💰 Annual Savings Potential</div>
+                <div>Annual Savings Potential</div>
                 <div class="highlight-value">$${data.results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div class="highlight-subtext">Estimated first-year benefit</div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">📊 Key Results</div>
-                <div class="metric">
-                  <span class="label">Current Cash Tied Up</span>
-                  <span class="value">$${data.results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Cash Released</span>
-                  <span class="value">$${data.results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Current DSO</span>
-                  <span class="value">${Number.parseFloat(data.inputs.currentDSO).toFixed(0)} days</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Improved DSO</span>
-                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
-                </div>
-                <div class="metric">
-                  <span class="label">DSO Improvement</span>
-                  <span class="value">${data.results.dsoImprovementPercent}%</span>
-                </div>
               </div>
       `
     } else {
       emailHtml += `
               <div class="highlight">
-                <div class="highlight-label">💰 Total Annual Benefit</div>
+                <div>Total Annual Benefit</div>
                 <div class="highlight-value">$${data.results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div class="highlight-subtext">
-                  ROI: <strong>${data.results.roi?.toFixed(0)}%</strong> | 
-                  Payback: <strong>${data.results.paybackMonths?.toFixed(1)} months</strong>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">💵 Financial Benefits Breakdown</div>
-                <div class="metric">
-                  <span class="label">Working Capital Released</span>
-                  <span class="value">$${data.results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Interest Savings</span>
-                  <span class="value">$${data.results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Labour Cost Savings</span>
-                  <span class="value">$${data.results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Bad Debt Reduction</span>
-                  <span class="value">$${data.results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">📈 DSO Improvement</div>
-                <div class="metric">
-                  <span class="label">Current DSO</span>
-                  <span class="value">${data.results.currentDSO} days</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Projected DSO</span>
-                  <span class="value">${data.results.newDSO?.toFixed(0)} days</span>
-                </div>
-                <div class="metric">
-                  <span class="label">Days Reduced</span>
-                  <span class="value">${data.results.dsoReductionDays?.toFixed(0)} days</span>
-                </div>
               </div>
       `
     }
 
     emailHtml += `
-              <div class="cta-section">
-                <h3 style="color: #0891b2; margin-top: 0;">Ready to Transform Your AR Process?</h3>
-                <p style="color: #4b5563; margin: 15px 0;">See how Kuhlekt can help you achieve these results</p>
-                <a href="https://kuhlekt.com/demo" class="cta-button">Schedule a Demo</a>
-                <a href="mailto:enquiries@kuhlekt.com" class="cta-button" style="background: #0e7490;">Contact Us</a>
-              </div>
-
-              <div class="section">
-                <div class="section-title">🎯 Next Steps</div>
-                <ol style="margin: 10px 0; padding-left: 20px; color: #4b5563;">
-                  <li style="margin: 10px 0;">Review your personalized ROI analysis above</li>
-                  <li style="margin: 10px 0;">Schedule a personalized demo to see Kuhlekt in action</li>
-                  <li style="margin: 10px 0;">Discuss implementation timeline and pricing options</li>
-                  <li style="margin: 10px 0;">Review case studies from companies in your industry</li>
-                </ol>
-              </div>
-            </div>
-            <div class="footer">
-              <p style="margin: 0 0 10px 0;"><strong style="color: #0891b2;">Kuhlekt</strong> - Transforming Invoice-to-Cash</p>
-              <p style="margin: 5px 0;">Email: <a href="mailto:enquiries@kuhlekt.com">enquiries@kuhlekt.com</a></p>
-              <p style="margin: 5px 0;">Website: <a href="https://kuhlekt.com">kuhlekt.com</a></p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    // Send to user
     const userResult = await sendEmail({
       to: data.email,
       subject: emailSubject,
@@ -736,47 +467,21 @@ export async function sendROIEmail(data: {
     })
 
     if (!userResult.success) {
-      console.error("[ROI] Failed to send ROI email to user:", userResult.message)
+      console.error("[ROI] Failed to send email:", userResult.message)
       return {
         success: false,
         error: userResult.message || "Failed to send email",
       }
     }
 
-    // Send notification to Kuhlekt team
-    const notificationSubject = `🎯 New ROI Calculator Lead: ${data.company}`
-    const notificationHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="alert">
-            <h2 style="margin-top: 0;">🎯 New ROI Calculator Submission</h2>
-            <p><strong>Contact:</strong> ${data.name}</p>
-            <p><strong>Email:</strong> ${data.email}</p>
-            <p><strong>Company:</strong> ${data.company}</p>
-            <p><strong>Calculator Type:</strong> ${data.calculatorType}</p>
-            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-          <hr>
-          ${emailHtml}
-        </body>
-      </html>
-    `
-
+    // Send notification
     await sendEmail({
       to: "enquiries@kuhlekt.com",
-      subject: notificationSubject,
-      html: notificationHtml,
+      subject: `New ROI Calculator Lead: ${data.company}`,
+      html: `<p>New submission from ${data.name} at ${data.company}</p>${emailHtml}`,
       text: `New ROI Calculator submission from ${data.name} at ${data.company}`,
     })
 
-    console.log("[ROI] ROI email sent successfully")
     return { success: true }
   } catch (error) {
     console.error("[ROI] Error in sendROIEmail:", error)
