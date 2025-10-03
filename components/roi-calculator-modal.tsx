@@ -222,10 +222,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleContactSubmit = async () => {
-    console.log("[Modal] handleContactSubmit called")
-
     if (!validateContactForm()) {
-      console.log("[Modal] Contact form validation failed")
       return
     }
 
@@ -233,20 +230,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setErrors({})
 
     try {
-      console.log("[Modal] Sending verification code to:", contactData.email)
+      console.log("[ROI Calculator] Sending verification code to:", contactData.email)
       const result = await generateVerificationCode(contactData.email)
-      console.log("[Modal] Verification code result:", result)
+      console.log("[ROI Calculator] Verification code result:", result)
 
       if (result.success) {
-        console.log("[Modal] Moving to verify step")
+        console.log("[ROI Calculator] Moving to verify step")
         setStep("verify")
         startResendTimer()
       } else {
-        console.error("[Modal] Failed to send code:", result.error)
+        console.error("[ROI Calculator] Failed to send code:", result.error)
         setErrors({ submit: result.error || "Failed to send verification code" })
       }
     } catch (error) {
-      console.error("[Modal] Exception in handleContactSubmit:", error)
+      console.error("[ROI Calculator] Error sending verification code:", error)
       setErrors({ submit: "Failed to send verification code. Please try again." })
     } finally {
       setIsSendingCode(false)
@@ -254,30 +251,24 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleResendCode = async () => {
-    console.log("[Modal] handleResendCode called")
-
-    if (!canResend) {
-      console.log("[Modal] Cannot resend yet, timer active")
-      return
-    }
+    if (!canResend) return
 
     setIsSendingCode(true)
     setErrors({})
 
     try {
-      console.log("[Modal] Resending verification code to:", contactData.email)
+      console.log("[ROI Calculator] Resending verification code to:", contactData.email)
       const result = await generateVerificationCode(contactData.email)
 
       if (result.success) {
         startResendTimer()
         setVerificationCode("")
-        console.log("[Modal] Code resent successfully")
+        console.log("[ROI Calculator] Code resent successfully")
       } else {
-        console.error("[Modal] Failed to resend code:", result.error)
         setErrors({ verify: result.error || "Failed to send verification code" })
       }
     } catch (error) {
-      console.error("[Modal] Exception in handleResendCode:", error)
+      console.error("[ROI Calculator] Error resending code:", error)
       setErrors({ verify: "Failed to send verification code. Please try again." })
     } finally {
       setIsSendingCode(false)
@@ -285,66 +276,61 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleVerifyCode = async () => {
-    console.log("[Modal] === VERIFY CODE BUTTON CLICKED ===")
-    console.log("[Modal] Email:", contactData.email)
-    console.log("[Modal] Code:", verificationCode)
-    console.log("[Modal] Code length:", verificationCode.length)
-    console.log("[Modal] isVerifying:", isVerifying)
+    console.log("[ROI Calculator] Starting verification process")
+    console.log("[ROI Calculator] Email:", contactData.email)
+    console.log("[ROI Calculator] Code:", verificationCode)
 
     if (!verificationCode.trim() || verificationCode.length !== 6) {
-      console.log("[Modal] Invalid code format - length:", verificationCode.length)
+      console.log("[ROI Calculator] Invalid code format")
       setErrors({ verify: "Please enter a valid 6-digit code" })
       return
     }
 
-    console.log("[Modal] Starting verification process...")
     setIsVerifying(true)
     setErrors({})
 
     try {
-      console.log("[Modal] Calling verifyCode action...")
+      console.log("[ROI Calculator] Calling verifyCode action")
       const result = await verifyCode(contactData.email, verificationCode)
-      console.log("[Modal] Verification result received:", result)
+      console.log("[ROI Calculator] Verification result:", result)
 
       if (result.success) {
-        console.log("[Modal] Code verified successfully, calculating results...")
+        console.log("[ROI Calculator] Code verified successfully, calculating results")
+        // Code verified, now calculate and show results
         await calculateAndShowResults()
       } else {
-        console.error("[Modal] Verification failed:", result.error)
+        console.error("[ROI Calculator] Verification failed:", result.error)
         setErrors({ verify: result.error || "Invalid verification code" })
       }
     } catch (error) {
-      console.error("[Modal] Exception during verification:", error)
-      console.error("[Modal] Error details:", error instanceof Error ? error.message : String(error))
-      console.error("[Modal] Error stack:", error instanceof Error ? error.stack : "No stack")
+      console.error("[ROI Calculator] Error during verification:", error)
       setErrors({ verify: "Failed to verify code. Please try again." })
     } finally {
-      console.log("[Modal] Setting isVerifying to false")
       setIsVerifying(false)
     }
   }
 
   const calculateAndShowResults = async () => {
-    console.log("[Modal] Starting calculation...")
+    console.log("[ROI Calculator] Starting calculation")
     setIsCalculating(true)
 
     try {
       let results
       if (calculatorType === "simple") {
-        console.log("[Modal] Calculating simple ROI with data:", simpleData)
+        console.log("[ROI Calculator] Calculating simple ROI with data:", simpleData)
         results = await calculateSimpleROI(simpleData)
-        console.log("[Modal] Simple ROI results:", results)
+        console.log("[ROI Calculator] Simple ROI results:", results)
         setSimpleResults(results)
         setStep("simple-results")
       } else {
-        console.log("[Modal] Calculating detailed ROI with data:", detailedData)
+        console.log("[ROI Calculator] Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
-        console.log("[Modal] Detailed ROI results:", results)
+        console.log("[ROI Calculator] Detailed ROI results:", results)
         setDetailedResults(results)
         setStep("detailed-results")
       }
 
-      console.log("[Modal] Sending ROI email to:", contactData.email)
+      console.log("[ROI Calculator] Sending ROI email to:", contactData.email)
       await sendROIEmail({
         name: contactData.name,
         email: contactData.email,
@@ -355,9 +341,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       })
 
       setEmailSent(true)
-      console.log("[Modal] Process completed successfully")
+      console.log("[ROI Calculator] Process completed successfully")
     } catch (error) {
-      console.error("[Modal] Error during calculation:", error)
+      console.error("[ROI Calculator] Error during calculation:", error)
       setErrors({ submit: "Error calculating ROI. Please try again." })
       setStep("contact")
     } finally {
@@ -960,7 +946,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     value={verificationCode}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, "").slice(0, 6)
-                      console.log("[Modal] Code input changed:", value)
                       setVerificationCode(value)
                       setErrors({ ...errors, verify: "" })
                     }}
@@ -994,10 +979,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   Back
                 </Button>
                 <Button
-                  onClick={() => {
-                    console.log("[Modal] Verify button clicked - triggering handleVerifyCode")
-                    handleVerifyCode()
-                  }}
+                  onClick={handleVerifyCode}
                   disabled={isVerifying || verificationCode.length !== 6}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >

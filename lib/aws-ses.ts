@@ -191,3 +191,6 @@ function flattenObject(obj: any, prefix = ""): Record<string, string> {
 
   return flattened
 }
+
+// Export with the expected name
+export { sendEmail as sendEmailWithSES }
