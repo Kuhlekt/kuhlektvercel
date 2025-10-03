@@ -5,14 +5,23 @@ import { sendEmail } from "@/lib/aws-ses"
 
 export async function sendROIReport(formData: FormData) {
   const email = formData.get("email") as string
-  const invoiceVolume = formData.get("invoiceVolume") as string
-  const avgDays = formData.get("avgDays") as string
+  const companyName = formData.get("companyName") as string
+  const annualRevenue = formData.get("annualRevenue") as string
+  const currentDSO = formData.get("currentDSO") as string
+  const targetDSO = formData.get("targetDSO") as string
+
+  const emailHtml = `
+    <h1>ROI Report for ${companyName}</h1>
+    <p>Annual Revenue: $${annualRevenue}</p>
+    <p>Current DSO: ${currentDSO} days</p>
+    <p>Target DSO: ${targetDSO} days</p>
+  `
 
   const result = await sendEmail({
     to: email,
     subject: "Your ROI Report",
-    text: `Invoice Volume: ${invoiceVolume}, Average Days: ${avgDays}`,
-    html: `<h1>ROI Report</h1><p>Invoice Volume: ${invoiceVolume}</p><p>Average Days: ${avgDays}</p>`,
+    text: `ROI Report for ${companyName}`,
+    html: emailHtml,
   })
 
   return result
@@ -22,17 +31,21 @@ export async function generateVerificationCode(email: string) {
   const code = Math.floor(100000 + Math.random() * 900000).toString()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("verification_codes").insert({
+  await supabase.from("verification_codes").insert({
     email,
     code,
-    expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    attempts: 0,
   })
 
-  if (error) {
-    return { success: false, error: error.message }
-  }
+  await sendEmail({
+    to: email,
+    subject: "Your Verification Code",
+    text: `Your verification code is: ${code}`,
+    html: `<p>Your verification code is: <strong>${code}</strong></p>`,
+  })
 
-  return { success: true, code }
+  return { success: true }
 }
 
 export async function verifyCode(email: string, code: string) {
@@ -43,11 +56,14 @@ export async function verifyCode(email: string, code: string) {
     .select("*")
     .eq("email", email)
     .eq("code", code)
-    .gt("expires_at", new Date().toISOString())
     .single()
 
   if (error || !data) {
-    return { success: false, error: "Invalid or expired code" }
+    return { success: false, message: "Invalid code" }
+  }
+
+  if (new Date(data.expires_at) < new Date()) {
+    return { success: false, message: "Code expired" }
   }
 
   return { success: true }

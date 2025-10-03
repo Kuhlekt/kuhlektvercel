@@ -8,10 +8,10 @@ export async function submitContactForm(formData: FormData) {
   const message = formData.get("message") as string
 
   const result = await sendEmail({
-    to: process.env.AWS_SES_FROM_EMAIL || "",
+    to: "contact@example.com",
     subject: `Contact Form: ${name}`,
-    text: `From: ${name} (${email})\n\n${message}`,
-    html: `<h2>Contact Form Submission</h2><p><strong>From:</strong> ${name} (${email})</p><p><strong>Message:</strong></p><p>${message}</p>`,
+    text: message,
+    html: `<p><strong>From:</strong> ${name} (${email})</p><p>${message}</p>`,
   })
 
   return result
@@ -22,7 +22,7 @@ export async function sendTestEmail() {
     to: "test@example.com",
     subject: "Test Email",
     text: "This is a test email",
-    html: "<h1>Test Email</h1><p>This is a test email</p>",
+    html: "<p>This is a test email</p>",
   })
 
   return result
