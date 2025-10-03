@@ -325,34 +325,74 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         try {
           if (calculatorType === "simple") {
             console.log("[v0] Calculating simple ROI with data:", simpleData)
-            results = await calculateSimpleROI(simpleData)
-            console.log("[v0] Simple results:", results)
+            try {
+              results = await calculateSimpleROI(simpleData)
+              console.log("[v0] Simple results:", results)
+            } catch (simpleError) {
+              console.error("[v0] Error in calculateSimpleROI:", simpleError)
+              console.error("[v0] Error name:", simpleError instanceof Error ? simpleError.name : typeof simpleError)
+              console.error(
+                "[v0] Error message:",
+                simpleError instanceof Error ? simpleError.message : String(simpleError),
+              )
+              console.error("[v0] Error stack:", simpleError instanceof Error ? simpleError.stack : "No stack trace")
+              throw simpleError
+            }
             setSimpleResults(results)
           } else {
             console.log("[v0] Calculating detailed ROI with data:", detailedData)
-            results = await calculateDetailedROI(detailedData)
-            console.log("[v0] Detailed results:", results)
+            try {
+              results = await calculateDetailedROI(detailedData)
+              console.log("[v0] Detailed results:", results)
+            } catch (detailedError) {
+              console.error("[v0] Error in calculateDetailedROI:", detailedError)
+              console.error(
+                "[v0] Error name:",
+                detailedError instanceof Error ? detailedError.name : typeof detailedError,
+              )
+              console.error(
+                "[v0] Error message:",
+                detailedError instanceof Error ? detailedError.message : String(detailedError),
+              )
+              console.error(
+                "[v0] Error stack:",
+                detailedError instanceof Error ? detailedError.stack : "No stack trace",
+              )
+              throw detailedError
+            }
             setDetailedResults(results)
           }
 
           console.log("[v0] ROI calculation complete, sending email to admin...")
-          const emailResult = await sendROIEmail({
-            name: contactData.name,
-            email: contactData.email,
-            company: contactData.company || "",
-            calculatorType,
-            results,
-            inputs: calculatorType === "simple" ? simpleData : detailedData,
-          })
+          try {
+            const emailResult = await sendROIEmail({
+              name: contactData.name,
+              email: contactData.email,
+              company: contactData.company || "",
+              calculatorType,
+              results,
+              inputs: calculatorType === "simple" ? simpleData : detailedData,
+            })
 
-          console.log("[v0] Email result:", emailResult)
+            console.log("[v0] Email result:", emailResult)
 
-          if (emailResult.success) {
-            setEmailSent(true)
-            console.log("[v0] Email sent successfully to admin")
-          } else {
-            console.error("[v0] Failed to send email:", emailResult.error)
-            // Don't block the user from seeing results if email fails
+            if (emailResult.success) {
+              setEmailSent(true)
+              console.log("[v0] Email sent successfully to admin")
+            } else {
+              console.error("[v0] Failed to send email:", emailResult.error)
+              // Don't block the user from seeing results if email fails
+              setEmailSent(false)
+            }
+          } catch (emailError) {
+            console.error("[v0] Error in sendROIEmail:", emailError)
+            console.error("[v0] Email error name:", emailError instanceof Error ? emailError.name : typeof emailError)
+            console.error(
+              "[v0] Email error message:",
+              emailError instanceof Error ? emailError.message : String(emailError),
+            )
+            console.error("[v0] Email error stack:", emailError instanceof Error ? emailError.stack : "No stack trace")
+            // Don't throw - allow user to see results even if email fails
             setEmailSent(false)
           }
 
@@ -361,6 +401,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           console.log("[v0] Verification process complete!")
         } catch (calcError) {
           console.error("[v0] Error during calculation or email:", calcError)
+          console.error("[v0] Error type:", typeof calcError)
+          console.error("[v0] Error instanceof Error:", calcError instanceof Error)
+          if (calcError instanceof Error) {
+            console.error("[v0] Error name:", calcError.name)
+            console.error("[v0] Error message:", calcError.message)
+            console.error("[v0] Error stack:", calcError.stack)
+          } else {
+            console.error("[v0] Error value:", String(calcError))
+          }
+          console.error("[v0] Calculator type:", calculatorType)
+          console.error("[v0] Input data:", calculatorType === "simple" ? simpleData : detailedData)
           setVerificationError("Failed to calculate results. Please try again.")
           setIsCalculating(false)
           setIsVerifying(false)
@@ -374,6 +425,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       }
     } catch (error) {
       console.error("[v0] Error verifying code:", error)
+      console.error("[v0] Verification error type:", typeof error)
+      if (error instanceof Error) {
+        console.error("[v0] Verification error name:", error.name)
+        console.error("[v0] Verification error message:", error.message)
+        console.error("[v0] Verification error stack:", error.stack)
+      }
       setVerificationError("An error occurred. Please try again.")
     } finally {
       setIsVerifying(false)
