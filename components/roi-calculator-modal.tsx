@@ -232,31 +232,49 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleContactSubmit = async () => {
+    console.log("[v0] handleContactSubmit called")
+    console.log("[v0] Contact data:", contactData)
+
     if (!contactData.name || !contactData.email || !contactData.phone) {
+      console.log("[v0] Missing required contact fields")
       alert("Please fill in all contact fields")
       return
     }
 
+    console.log("[v0] Setting isSendingCode to true")
     setIsSendingCode(true)
     setVerificationError("")
 
     try {
+      console.log("[v0] Preparing to call send-verification API")
+      console.log("[v0] Calculator type:", calculatorType)
+      console.log("[v0] Input data:", calculatorType === "simple" ? simpleData : detailedData)
+
+      const requestBody = {
+        name: contactData.name,
+        email: contactData.email,
+        company: contactData.company,
+        phone: contactData.phone,
+        calculatorType,
+        inputs: calculatorType === "simple" ? simpleData : detailedData,
+      }
+
+      console.log("[v0] Request body:", JSON.stringify(requestBody, null, 2))
+
       const response = await fetch("/api/send-verification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: contactData.name,
-          email: contactData.email,
-          company: contactData.company,
-          phone: contactData.phone,
-          calculatorType,
-          inputs: calculatorType === "simple" ? simpleData : detailedData,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response status text:", response.statusText)
+
       const contentType = response.headers.get("content-type")
+      console.log("[v0] Response content-type:", contentType)
+
       if (!contentType || !contentType.includes("application/json")) {
         console.error("[v0] Non-JSON response received:", response.status, response.statusText)
         const text = await response.text()
@@ -266,16 +284,26 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       }
 
       const result = await response.json()
+      console.log("[v0] API result:", result)
 
       if (result.success) {
+        console.log("[v0] Verification code sent successfully, moving to verify-email step")
         setStep("verify-email")
       } else {
+        console.error("[v0] API returned error:", result.error)
         alert(result.error || "Failed to send verification code. Please try again.")
       }
     } catch (error) {
-      console.error("Error sending verification code:", error)
+      console.error("[v0] Error in handleContactSubmit:", error)
+      console.error("[v0] Error type:", typeof error)
+      if (error instanceof Error) {
+        console.error("[v0] Error name:", error.name)
+        console.error("[v0] Error message:", error.message)
+        console.error("[v0] Error stack:", error.stack)
+      }
       alert("An error occurred. Please try again.")
     } finally {
+      console.log("[v0] Setting isSendingCode to false")
       setIsSendingCode(false)
     }
   }
