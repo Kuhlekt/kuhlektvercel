@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@aws-sdk/client-ses'],
   experimental: {
     serverComponentsExternalPackages: ['bcryptjs', '@aws-sdk/client-ses'],
   },
