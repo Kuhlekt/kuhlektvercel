@@ -2,63 +2,86 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ContactFormData {
-  name: string
-  email: string
-  company?: string
-  phone?: string
-  message: string
-}
-
-export async function submitContactForm(data: ContactFormData) {
+export async function submitContactForm(formData: FormData) {
   try {
-    const emailResult = await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "",
-      subject: `New Contact Form Submission from ${data.name}`,
-      text: `
-Name: ${data.name}
-Email: ${data.email}
-Company: ${data.company || "N/A"}
-Phone: ${data.phone || "N/A"}
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const phone = formData.get("phone") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
+
+    if (!name || !email || !message) {
+      return {
+        success: false,
+        message: "Please fill in all required fields",
+      }
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0066cc; color: white; padding: 20px; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .field { margin: 15px 0; }
+            .label { font-weight: bold; color: #666; }
+            .value { margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Contact Form Submission</h1>
+            </div>
+            <div class="content">
+              <div class="field">
+                <div class="label">Name:</div>
+                <div class="value">${name}</div>
+              </div>
+              <div class="field">
+                <div class="label">Email:</div>
+                <div class="value">${email}</div>
+              </div>
+              ${phone ? `<div class="field"><div class="label">Phone:</div><div class="value">${phone}</div></div>` : ""}
+              ${company ? `<div class="field"><div class="label">Company:</div><div class="value">${company}</div></div>` : ""}
+              <div class="field">
+                <div class="label">Message:</div>
+                <div class="value">${message}</div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const textContent = `
+New Contact Form Submission
+
+Name: ${name}
+Email: ${email}
+${phone ? `Phone: ${phone}` : ""}
+${company ? `Company: ${company}` : ""}
 
 Message:
-${data.message}
-      `,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>New Contact Form Submission</h2>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Name:</strong></td>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;">${data.name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Email:</strong></td>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;">${data.email}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Company:</strong></td>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;">${data.company || "N/A"}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;"><strong>Phone:</strong></td>
-              <td style="padding: 10px; border-bottom: 1px solid #ddd;">${data.phone || "N/A"}</td>
-            </tr>
-          </table>
-          <div style="margin-top: 20px;">
-            <h3>Message:</h3>
-            <p style="white-space: pre-wrap;">${data.message}</p>
-          </div>
-        </div>
-      `,
+${message}
+    `
+
+    const result = await sendEmail({
+      to: process.env.AWS_SES_FROM_EMAIL || "",
+      subject: `Contact Form: ${name} - ${company || "No Company"}`,
+      text: textContent,
+      html: htmlContent,
     })
 
-    return emailResult
+    return result
   } catch (error) {
-    console.error("Error submitting contact form:", error)
+    console.error("Error in submitContactForm:", error)
     return {
       success: false,
-      message: "Failed to send message",
+      message: "Failed to submit contact form",
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
@@ -69,19 +92,13 @@ export async function sendTestEmail(to: string) {
     const result = await sendEmail({
       to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email from your Kuhlekt application.",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Test Email</h2>
-          <p>This is a test email from your Kuhlekt application.</p>
-          <p>If you received this, your email configuration is working correctly!</p>
-        </div>
-      `,
+      text: "This is a test email from the Kuhlekt contact form.",
+      html: "<p>This is a test email from the Kuhlekt contact form.</p>",
     })
 
     return result
   } catch (error) {
-    console.error("Error sending test email:", error)
+    console.error("Error in sendTestEmail:", error)
     return {
       success: false,
       message: "Failed to send test email",
