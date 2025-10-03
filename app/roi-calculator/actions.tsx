@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-// Generate a random 6-digit verification code
+// Generate a 6-digit verification code
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
@@ -16,22 +16,22 @@ async function storeVerificationCode(email: string, code: string): Promise<boole
     // Delete any existing codes for this email
     await supabase.from("verification_codes").delete().eq("email", email)
 
-    // Insert new code
+    // Insert new code with 10-minute expiration
     const { error } = await supabase.from("verification_codes").insert({
       email,
       code,
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       attempts: 0,
     })
 
     if (error) {
-      console.error("[Store Code] Database error:", error)
+      console.error("[ROI] Error storing verification code:", error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error("[Store Code] Unexpected error:", error)
+    console.error("[ROI] Error in storeVerificationCode:", error)
     return false
   }
 }
@@ -39,131 +39,88 @@ async function storeVerificationCode(email: string, code: string): Promise<boole
 // Send verification code via email
 export async function sendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
   try {
-    console.log("[Send Code] Starting for email:", email)
+    console.log("[ROI] Starting verification process for:", email)
 
-    // Generate verification code
+    // Generate code
     const code = generateVerificationCode()
-    console.log("[Send Code] Generated code")
+    console.log("[ROI] Generated code")
 
     // Store in database
     const stored = await storeVerificationCode(email, code)
     if (!stored) {
-      console.error("[Send Code] Failed to store code in database")
       return {
         success: false,
         message: "Unable to process your request. Please try again.",
       }
     }
-    console.log("[Send Code] Stored in database")
+    console.log("[ROI] Code stored in database")
 
     // Send email
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .code-box { background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
-            .code { font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Your Verification Code</h1>
-            </div>
-            <div class="content">
-              <p>Hello,</p>
-              <p>You requested access to your ROI Calculator results. Please use the verification code below:</p>
-              <div class="code-box">
-                <div class="code">${code}</div>
-              </div>
-              <p><strong>This code will expire in 15 minutes.</strong></p>
-              <p>If you didn't request this code, please ignore this email.</p>
-              <div class="footer">
-                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `
-
-    const emailText = `
-      Your Verification Code
-      
-      You requested access to your ROI Calculator results. Please use the verification code below:
-      
-      ${code}
-      
-      This code will expire in 15 minutes.
-      
-      If you didn't request this code, please ignore this email.
-      
-      © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-    `
-
     const emailResult = await sendEmail({
       to: email,
       subject: "Your ROI Calculator Verification Code",
-      html: emailHtml,
-      text: emailText,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Your Verification Code</h2>
+          <p>Your verification code is:</p>
+          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;">
+            ${code}
+          </div>
+          <p>This code will expire in 10 minutes.</p>
+          <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+        </div>
+      `,
+      text: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
     })
 
     if (!emailResult.success) {
-      console.error("[Send Code] Email send failed:", emailResult.message)
+      console.error("[ROI] Email send failed:", emailResult.message)
       return {
         success: false,
         message: "Unable to send verification code. Please try again.",
       }
     }
 
-    console.log("[Send Code] Email sent successfully")
-
+    console.log("[ROI] Verification email sent successfully")
     return {
       success: true,
-      message: "Verification code sent successfully!",
+      message: "Verification code sent to your email",
     }
   } catch (error) {
-    console.error("[Send Code] Unexpected error:", error)
+    console.error("[ROI] Error in sendVerificationCode:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again.",
+      message: "An error occurred. Please try again.",
     }
   }
 }
 
-// Verify the code
+// Verify the code entered by user
 export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
   try {
     const supabase = await createClient()
 
-    // Get the verification code
+    // Get the stored code
     const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
 
     if (error || !data) {
       return {
         success: false,
-        message: "Verification code not found or expired.",
+        message: "Invalid or expired verification code",
       }
     }
 
-    // Check if code is expired
+    // Check if code has expired
     if (new Date(data.expires_at) < new Date()) {
       await supabase.from("verification_codes").delete().eq("email", email)
 
       return {
         success: false,
-        message: "Verification code has expired. Please request a new one.",
+        message: "Verification code has expired",
       }
     }
 
-    // Check attempts
+    // Check if too many attempts
     if (data.attempts >= 3) {
       await supabase.from("verification_codes").delete().eq("email", email)
 
@@ -173,7 +130,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
       }
     }
 
-    // Verify code
+    // Verify the code
     if (data.code !== code) {
       // Increment attempts
       await supabase
@@ -183,7 +140,7 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
       return {
         success: false,
-        message: `Invalid code. ${2 - data.attempts} attempts remaining.`,
+        message: "Invalid verification code",
       }
     }
 
@@ -192,13 +149,13 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
     return {
       success: true,
-      message: "Code verified successfully!",
+      message: "Email verified successfully",
     }
   } catch (error) {
-    console.error("[Verify Code] Error:", error)
+    console.error("[ROI] Error in verifyCode:", error)
     return {
       success: false,
-      message: "An error occurred while verifying the code.",
+      message: "An error occurred. Please try again.",
     }
   }
 }
