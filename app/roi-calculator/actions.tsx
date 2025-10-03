@@ -1,79 +1,62 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
 import { createClient } from "@/lib/supabase/server"
+import { sendEmail } from "@/lib/aws-ses"
 
 // Generate a random 6-digit verification code
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-// Store verification code in Supabase
-async function storeVerificationCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = await createClient()
+// Store verification code in database
+async function storeVerificationCode(email: string, code: string) {
+  const supabase = await createClient()
 
-    // Delete any existing codes for this email
-    await supabase.from("verification_codes").delete().eq("email", email)
+  // Set expiration to 15 minutes from now
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
-    // Insert new code with 15-minute expiration
-    const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 15)
+  const { error } = await supabase.from("verification_codes").insert({
+    email,
+    code,
+    expires_at: expiresAt,
+    attempts: 0,
+  })
 
-    const { error } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      attempts: 0,
-    })
-
-    if (error) {
-      console.error("Error storing verification code:", error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error in storeVerificationCode:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+  if (error) {
+    console.error("Error storing verification code:", error)
+    throw new Error("Failed to store verification code")
   }
 }
 
 // Send verification code via email
 export async function sendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Generate and store the code
+    // Generate code
     const code = generateVerificationCode()
-    const storeResult = await storeVerificationCode(email, code)
 
-    if (!storeResult.success) {
-      console.error("Failed to store verification code:", storeResult.error)
-      return {
-        success: false,
-        message: "Failed to generate verification code. Please try again.",
-      }
-    }
+    // Store in database
+    await storeVerificationCode(email, code)
 
-    // Send the email
-    const emailResult = await sendEmail({
+    // Send email
+    const result = await sendEmail({
       to: email,
-      subject: "Your Kuhlekt ROI Calculator Verification Code",
-      text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+      subject: "Your ROI Calculator Verification Code",
+      text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1f2937;">Your Verification Code</h2>
+          <h2 style="color: #333;">ROI Calculator Verification</h2>
           <p>Your verification code is:</p>
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;">
+          <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
             ${code}
           </div>
-          <p style="color: #6b7280; font-size: 14px;">This code will expire in 15 minutes.</p>
-          <p style="color: #6b7280; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+          <p style="color: #666;">This code will expire in 15 minutes.</p>
+          <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
         </div>
       `,
     })
 
-    if (!emailResult.success) {
-      console.error("Failed to send verification email:", emailResult.message)
+    if (!result.success) {
+      console.error("Failed to send email:", result.error)
       return {
         success: false,
         message: "Failed to send verification code. Please try again.",
@@ -82,203 +65,232 @@ export async function sendVerificationCode(email: string): Promise<{ success: bo
 
     return {
       success: true,
-      message: "Verification code sent successfully!",
+      message: "Verification code sent successfully",
     }
   } catch (error) {
     console.error("Error in sendVerificationCode:", error)
     return {
       success: false,
-      message: "An error occurred. Please try again.",
+      message: "Failed to send verification code. Please try again.",
     }
   }
 }
 
-// Verify the code entered by the user
+// Verify the code entered by user
 export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
   try {
     const supabase = await createClient()
 
-    // Get the verification code
-    const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
+    // Get the verification code from database
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .select("*")
+      .eq("email", email)
+      .eq("code", code)
+      .gte("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
 
     if (error || !data) {
-      return {
-        success: false,
-        message: "Invalid or expired verification code.",
-      }
-    }
-
-    // Check if code has expired
-    const now = new Date()
-    const expiresAt = new Date(data.expires_at)
-    if (now > expiresAt) {
-      // Delete expired code
-      await supabase.from("verification_codes").delete().eq("email", email)
-      return {
-        success: false,
-        message: "Verification code has expired. Please request a new one.",
-      }
-    }
-
-    // Check if too many attempts
-    if (data.attempts >= 3) {
-      await supabase.from("verification_codes").delete().eq("email", email)
-      return {
-        success: false,
-        message: "Too many attempts. Please request a new verification code.",
-      }
-    }
-
-    // Check if code matches
-    if (data.code !== code) {
-      // Increment attempts
+      // Increment attempts if record exists
       await supabase
         .from("verification_codes")
-        .update({ attempts: data.attempts + 1 })
+        .update({ attempts: supabase.rpc("increment", { x: 1 }) })
         .eq("email", email)
+        .eq("code", code)
 
       return {
         success: false,
-        message: `Invalid code. ${2 - data.attempts} attempts remaining.`,
+        message: "Invalid or expired verification code",
       }
     }
 
-    // Code is valid - delete it
-    await supabase.from("verification_codes").delete().eq("email", email)
+    // Check if max attempts exceeded
+    if (data.attempts >= 3) {
+      return {
+        success: false,
+        message: "Maximum verification attempts exceeded. Please request a new code.",
+      }
+    }
+
+    // Delete the used code
+    await supabase.from("verification_codes").delete().eq("id", data.id)
 
     return {
       success: true,
-      message: "Verification successful!",
+      message: "Verification successful",
     }
   } catch (error) {
     console.error("Error in verifyCode:", error)
     return {
       success: false,
-      message: "An error occurred during verification.",
+      message: "Verification failed. Please try again.",
     }
   }
 }
 
 // Calculate simple ROI
 export async function calculateSimpleROI(data: {
-  monthlyRevenue: number
-  dso: number
-}): Promise<{ success: boolean; results?: any; message?: string }> {
-  try {
-    const targetDSO = Math.max(30, data.dso * 0.7) // 30% reduction, minimum 30 days
-    const dsoReduction = data.dso - targetDSO
-    const annualRevenue = data.monthlyRevenue * 12
-    const currentAR = (annualRevenue / 365) * data.dso
-    const improvedAR = (annualRevenue / 365) * targetDSO
-    const cashReleased = currentAR - improvedAR
+  annualRevenue: number
+  averageInvoiceValue: number
+  averageDSO: number
+}): Promise<{
+  currentCashFlow: number
+  potentialCashFlow: number
+  cashFlowImprovement: number
+  roi: number
+}> {
+  const { annualRevenue, averageInvoiceValue, averageDSO } = data
 
-    return {
-      success: true,
-      results: {
-        currentDSO: data.dso,
-        targetDSO: Math.round(targetDSO),
-        dsoReduction: Math.round(dsoReduction),
-        cashReleased: Math.round(cashReleased),
-        annualRevenue: Math.round(annualRevenue),
-        currentAR: Math.round(currentAR),
-        improvedAR: Math.round(improvedAR),
-      },
-    }
-  } catch (error) {
-    console.error("Error calculating simple ROI:", error)
-    return {
-      success: false,
-      message: "Failed to calculate ROI",
-    }
+  // Current cash flow calculation
+  const currentCashFlow = annualRevenue / averageDSO
+
+  // With Kuhlekt, assume 30% reduction in DSO
+  const improvedDSO = averageDSO * 0.7
+  const potentialCashFlow = annualRevenue / improvedDSO
+
+  const cashFlowImprovement = potentialCashFlow - currentCashFlow
+  const roi = (cashFlowImprovement / annualRevenue) * 100
+
+  return {
+    currentCashFlow,
+    potentialCashFlow,
+    cashFlowImprovement,
+    roi,
   }
 }
 
 // Calculate detailed ROI
 export async function calculateDetailedROI(data: {
   annualRevenue: number
-  currentDSO: number
-  collectionStaff: number
+  averageInvoiceValue: number
+  averageDSO: number
+  numberOfInvoices: number
+  arStaffCount: number
   avgStaffCost: number
-  badDebtRate: number
-}): Promise<{ success: boolean; results?: any; message?: string }> {
-  try {
-    const targetDSO = Math.max(30, data.currentDSO * 0.7)
-    const dsoReduction = data.currentDSO - targetDSO
-    const currentAR = (data.annualRevenue / 365) * data.currentDSO
-    const improvedAR = (data.annualRevenue / 365) * targetDSO
-    const cashReleased = currentAR - improvedAR
+}): Promise<{
+  currentMetrics: {
+    dso: number
+    cashFlow: number
+    arCost: number
+    collectionEfficiency: number
+  }
+  projectedMetrics: {
+    dso: number
+    cashFlow: number
+    arCost: number
+    collectionEfficiency: number
+  }
+  improvements: {
+    dsoReduction: number
+    cashFlowIncrease: number
+    costSavings: number
+    efficiencyGain: number
+    annualSavings: number
+  }
+  roi: {
+    monthly: number
+    annual: number
+    paybackPeriod: number
+  }
+}> {
+  const { annualRevenue, averageInvoiceValue, averageDSO, numberOfInvoices, arStaffCount, avgStaffCost } = data
 
-    const efficiencyGain = 0.4 // 40% efficiency improvement
-    const staffReduction = Math.floor(data.collectionStaff * efficiencyGain)
-    const laborSavings = staffReduction * data.avgStaffCost
+  // Current metrics
+  const currentDSO = averageDSO
+  const currentCashFlow = annualRevenue / currentDSO
+  const currentARCost = arStaffCount * avgStaffCost * 12
+  const currentEfficiency = (annualRevenue / currentARCost) * 100
 
-    const currentBadDebt = data.annualRevenue * (data.badDebtRate / 100)
-    const improvedBadDebtRate = data.badDebtRate * 0.6 // 40% reduction
-    const improvedBadDebt = data.annualRevenue * (improvedBadDebtRate / 100)
-    const badDebtReduction = currentBadDebt - improvedBadDebt
+  // Projected metrics (with Kuhlekt)
+  const projectedDSO = currentDSO * 0.7 // 30% reduction
+  const projectedCashFlow = annualRevenue / projectedDSO
+  const projectedStaffReduction = arStaffCount * 0.4 // 40% staff reduction
+  const projectedARCost = (arStaffCount - projectedStaffReduction) * avgStaffCost * 12
+  const projectedEfficiency = (annualRevenue / projectedARCost) * 100
 
-    const totalAnnualBenefit = cashReleased * 0.05 + laborSavings + badDebtReduction // 5% cost of capital
-    const estimatedCost = 50000 // Estimated annual software cost
-    const roi = ((totalAnnualBenefit - estimatedCost) / estimatedCost) * 100
-    const paybackMonths = estimatedCost / (totalAnnualBenefit / 12)
+  // Improvements
+  const dsoReduction = currentDSO - projectedDSO
+  const cashFlowIncrease = projectedCashFlow - currentCashFlow
+  const costSavings = currentARCost - projectedARCost
+  const efficiencyGain = projectedEfficiency - currentEfficiency
+  const annualSavings = cashFlowIncrease + costSavings
 
-    return {
-      success: true,
-      results: {
-        currentDSO: data.currentDSO,
-        targetDSO: Math.round(targetDSO),
-        dsoReduction: Math.round(dsoReduction),
-        cashReleased: Math.round(cashReleased),
-        currentAR: Math.round(currentAR),
-        improvedAR: Math.round(improvedAR),
-        staffReduction,
-        laborSavings: Math.round(laborSavings),
-        currentBadDebt: Math.round(currentBadDebt),
-        improvedBadDebt: Math.round(improvedBadDebt),
-        badDebtReduction: Math.round(badDebtReduction),
-        totalAnnualBenefit: Math.round(totalAnnualBenefit),
-        estimatedCost,
-        roi: Math.round(roi),
-        paybackMonths: Math.round(paybackMonths * 10) / 10,
-      },
-    }
-  } catch (error) {
-    console.error("Error calculating detailed ROI:", error)
-    return {
-      success: false,
-      message: "Failed to calculate ROI",
-    }
+  // ROI calculation
+  const estimatedImplementationCost = annualRevenue * 0.02 // 2% of annual revenue
+  const monthlyROI = (annualSavings / 12 / estimatedImplementationCost) * 100
+  const annualROI = (annualSavings / estimatedImplementationCost) * 100
+  const paybackPeriod = estimatedImplementationCost / (annualSavings / 12)
+
+  return {
+    currentMetrics: {
+      dso: currentDSO,
+      cashFlow: currentCashFlow,
+      arCost: currentARCost,
+      collectionEfficiency: currentEfficiency,
+    },
+    projectedMetrics: {
+      dso: projectedDSO,
+      cashFlow: projectedCashFlow,
+      arCost: projectedARCost,
+      collectionEfficiency: projectedEfficiency,
+    },
+    improvements: {
+      dsoReduction,
+      cashFlowIncrease,
+      costSavings,
+      efficiencyGain,
+      annualSavings,
+    },
+    roi: {
+      monthly: monthlyROI,
+      annual: annualROI,
+      paybackPeriod,
+    },
   }
 }
 
 // Send ROI report via email
 export async function sendROIEmail(email: string, results: any): Promise<{ success: boolean; message: string }> {
   try {
-    const emailResult = await sendEmail({
+    const result = await sendEmail({
       to: email,
-      subject: "Your Kuhlekt ROI Calculator Results",
-      text: `Your ROI Calculator Results\n\nDSO Reduction: ${results.dsoReduction} days\nCash Released: $${results.cashReleased.toLocaleString()}\nROI: ${results.roi}%\n\nView the full report for more details.`,
+      subject: "Your ROI Calculator Results",
+      text: `Your ROI calculation results are ready.\n\nThank you for using Kuhlekt's ROI Calculator.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1f2937;">Your ROI Calculator Results</h2>
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>Key Metrics</h3>
-            <p><strong>DSO Reduction:</strong> ${results.dsoReduction} days</p>
-            <p><strong>Cash Released:</strong> $${results.cashReleased.toLocaleString()}</p>
-            <p><strong>ROI:</strong> ${results.roi}%</p>
-            <p><strong>Payback Period:</strong> ${results.paybackMonths} months</p>
+          <h2 style="color: #333;">Your ROI Calculator Results</h2>
+          <p>Thank you for using Kuhlekt's ROI Calculator. Your detailed results are attached.</p>
+          <div style="background-color: #f4f4f4; padding: 20px; margin: 20px 0;">
+            <h3>Key Findings:</h3>
+            <ul>
+              <li>Potential Cash Flow Improvement: ${results.cashFlowImprovement ? `$${results.cashFlowImprovement.toLocaleString()}` : "N/A"}</li>
+              <li>ROI: ${results.roi ? `${results.roi.toFixed(2)}%` : "N/A"}</li>
+            </ul>
           </div>
-          <p>Contact us to learn more about how Kuhlekt can help optimize your accounts receivable process.</p>
+          <p style="color: #666;">To learn more about how Kuhlekt can help your business, schedule a demo today.</p>
         </div>
       `,
     })
 
-    return emailResult
+    if (!result.success) {
+      console.error("Failed to send email:", result.error)
+      return {
+        success: false,
+        message: "Failed to send email. Please try again.",
+      }
+    }
+
+    return {
+      success: true,
+      message: "Email sent successfully",
+    }
   } catch (error) {
-    console.error("Error sending ROI email:", error)
+    console.error("Error in sendROIEmail:", error)
     return {
       success: false,
-      message: "Failed to send email",
+      message: "Failed to send email. Please try again.",
     }
   }
 }
