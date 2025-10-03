@@ -1,5 +1,4 @@
-"use server"
-
+import "server-only"
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
 const sesClient = new SESClient({
