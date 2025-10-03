@@ -5,14 +5,25 @@ import { sendEmail } from "@/lib/aws-ses"
 
 export async function sendROIReport(formData: FormData) {
   const email = formData.get("email") as string
-  const name = formData.get("name") as string
-  const company = formData.get("company") as string
+  const companyName = formData.get("companyName") as string
+  const annualRevenue = formData.get("annualRevenue") as string
+  const currentDSO = formData.get("currentDSO") as string
+  const targetDSO = formData.get("targetDSO") as string
+
+  const htmlContent = `
+    <h2>ROI Calculator Report for ${companyName}</h2>
+    <p>Annual Revenue: ${annualRevenue}</p>
+    <p>Current DSO: ${currentDSO}</p>
+    <p>Target DSO: ${targetDSO}</p>
+  `
+
+  const textContent = `ROI Calculator Report for ${companyName}\nAnnual Revenue: ${annualRevenue}\nCurrent DSO: ${currentDSO}\nTarget DSO: ${targetDSO}`
 
   const result = await sendEmail({
     to: email,
-    subject: `ROI Report for ${company}`,
-    text: `Hello ${name}, here is your ROI report.`,
-    html: `<h1>Hello ${name}</h1><p>Here is your ROI report for ${company}.</p>`,
+    subject: "Your Kuhlekt ROI Report",
+    text: textContent,
+    html: htmlContent,
   })
 
   return result
@@ -29,10 +40,17 @@ export async function generateVerificationCode(email: string) {
   })
 
   if (error) {
-    return { success: false, error: error.message }
+    return { success: false, message: "Failed to generate code" }
   }
 
-  return { success: true, code }
+  const result = await sendEmail({
+    to: email,
+    subject: "Your Kuhlekt Verification Code",
+    text: `Your verification code is: ${code}`,
+    html: `<p>Your verification code is: <strong>${code}</strong></p>`,
+  })
+
+  return result
 }
 
 export async function verifyCode(email: string, code: string) {
@@ -43,12 +61,15 @@ export async function verifyCode(email: string, code: string) {
     .select("*")
     .eq("email", email)
     .eq("code", code)
-    .gt("expires_at", new Date().toISOString())
     .single()
 
   if (error || !data) {
-    return { success: false, error: "Invalid or expired code" }
+    return { success: false, message: "Invalid code" }
   }
 
-  return { success: true }
+  if (new Date(data.expires_at) < new Date()) {
+    return { success: false, message: "Code expired" }
+  }
+
+  return { success: true, message: "Code verified" }
 }
