@@ -318,7 +318,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           setStep("detailed-results")
         }
 
-        await sendROIEmail({
+        console.log("[v0] Sending ROI email to admin...")
+        const emailResult = await sendROIEmail({
           name: contactData.name,
           email: contactData.email,
           company: contactData.company || "",
@@ -327,13 +328,23 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           inputs: calculatorType === "simple" ? simpleData : detailedData,
         })
 
-        setEmailSent(true)
+        console.log("[v0] Email result:", emailResult)
+
+        if (emailResult.success) {
+          setEmailSent(true)
+          console.log("[v0] Email sent successfully")
+        } else {
+          console.error("[v0] Failed to send email:", emailResult.error)
+          // Don't block the user from seeing results if email fails
+          setEmailSent(false)
+        }
+
         setIsCalculating(false)
       } else {
         setVerificationError(result.error || "Invalid verification code")
       }
     } catch (error) {
-      console.error("Error verifying code:", error)
+      console.error("[v0] Error verifying code:", error)
       setVerificationError("An error occurred. Please try again.")
     } finally {
       setIsVerifying(false)
