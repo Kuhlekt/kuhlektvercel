@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star, Play } from "lucide-react"
+import { CheckCircle, Star, Play, Calculator } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
 import { Suspense, useState } from "react"
 import { ROICalculatorModal } from "@/components/roi-calculator-modal"
@@ -46,6 +46,14 @@ export default function HomePage() {
                     Schedule a Demo →
                   </Button>
                 </Link>
+                <Button
+                  size="lg"
+                  onClick={() => setIsROIModalOpen(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto"
+                >
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Calculate Your ROI
+                </Button>
               </div>
 
               <div className="mb-8">
@@ -81,7 +89,6 @@ export default function HomePage() {
                 className="rounded-lg w-full h-auto max-w-lg"
               />
 
-              {/* Testimonial Card positioned exactly as in screenshot */}
               <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-1 mb-3">
@@ -200,11 +207,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Dashboard Preview - Two column layout with text on left, image on right */}
+      {/* Dashboard Preview */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left Column - Text Content */}
             <div className="space-y-6">
               <Badge className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full">Platform</Badge>
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">See Your AR Performance at a Glance</h2>
@@ -227,11 +233,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column - Dashboard Image (Half Size) */}
             <div className="relative">
               <Image
                 src="/images/kuhlekt-dashboard-interface.png"
-                alt="Kuhlekt Dashboard Interface showing comprehensive AR management with accounts tracking, PTPs, disputes, workload management, and performance metrics"
+                alt="Kuhlekt Dashboard Interface"
                 width={600}
                 height={400}
                 className="rounded-lg shadow-2xl mx-auto w-full h-auto max-w-md"

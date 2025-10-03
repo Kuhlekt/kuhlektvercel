@@ -1,7 +1,4 @@
 "use client"
-
-import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -9,7 +6,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Calculator, TrendingUp, DollarSign, Clock, Users, HelpCircle, ArrowLeft, ArrowRight } from "lucide-react"
+import {
+  Calculator,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  Users,
+  HelpCircle,
+  ArrowLeft,
+  ArrowRight,
+  AlertCircle,
+} from "lucide-react"
 import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
@@ -26,6 +33,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const [isCalculating, setIsCalculating] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [calculatorType, setCalculatorType] = useState<"simple" | "detailed">("simple")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Simple calculator state
   const [simpleData, setSimpleData] = useState({
@@ -97,37 +105,30 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setContactData({ name: "", email: "", phone: "", company: "" })
     setEmailSent(false)
     setCalculatorType("simple")
+    setErrors({})
   }
 
-  const handleSimpleSubmit = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
+  const validateSimpleForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!simpleData.currentDSO || Number.parseFloat(simpleData.currentDSO) <= 0) {
+      newErrors.currentDSO = "Please enter a valid DSO"
+    }
+    if (!simpleData.averageInvoiceValue || Number.parseFloat(simpleData.averageInvoiceValue) <= 0) {
+      newErrors.averageInvoiceValue = "Please enter a valid invoice value"
+    }
+    if (!simpleData.monthlyInvoices || Number.parseFloat(simpleData.monthlyInvoices) <= 0) {
+      newErrors.monthlyInvoices = "Please enter valid monthly invoices"
     }
 
-    console.log("Simple form submitted!")
-    console.log("Simple data:", simpleData)
-
-    if (!simpleData.currentDSO || !simpleData.averageInvoiceValue || !simpleData.monthlyInvoices) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setCalculatorType("simple")
-    setStep("contact")
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const handleDetailedSubmit = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
+  const validateDetailedForm = () => {
+    const newErrors: Record<string, string> = {}
 
-    console.log("Detailed form submitted!")
-    console.log("Detailed data:", detailedData)
-
-    // Check all required fields
-    const requiredFields = [
+    const requiredFields: (keyof typeof detailedData)[] = [
       "implementationCost",
       "monthlyCost",
       "perAnnumDirectLabourCosts",
@@ -143,20 +144,55 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       "projectedCustomerGrowth",
     ]
 
-    const missingFields = requiredFields.filter((field) => !detailedData[field as keyof typeof detailedData])
+    requiredFields.forEach((field) => {
+      const value = detailedData[field]
+      if (!value || (typeof value === "string" && Number.parseFloat(value) < 0)) {
+        newErrors[field] = "Required"
+      }
+    })
 
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields. Missing: ${missingFields.join(", ")}`)
-      return
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const validateContactForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!contactData.name.trim()) {
+      newErrors.name = "Name is required"
+    }
+    if (!contactData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactData.email)) {
+      newErrors.email = "Valid email is required"
+    }
+    if (!contactData.phone.trim()) {
+      newErrors.phone = "Phone is required"
+    }
+    if (!contactData.company.trim()) {
+      newErrors.company = "Company is required"
     }
 
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSimpleSubmit = () => {
+    if (!validateSimpleForm()) {
+      return
+    }
+    setCalculatorType("simple")
+    setStep("contact")
+  }
+
+  const handleDetailedSubmit = () => {
+    if (!validateDetailedForm()) {
+      return
+    }
     setCalculatorType("detailed")
     setStep("contact")
   }
 
   const handleContactSubmit = async () => {
-    if (!contactData.name || !contactData.email || !contactData.phone || !contactData.company) {
-      alert("Please fill in all contact fields")
+    if (!validateContactForm()) {
       return
     }
 
@@ -165,15 +201,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     try {
       let results
       if (calculatorType === "simple") {
-        console.log("Calculating simple ROI with data:", simpleData)
         results = await calculateSimpleROI(simpleData)
-        console.log("Simple results:", results)
         setSimpleResults(results)
         setStep("simple-results")
       } else {
-        console.log("Calculating detailed ROI with data:", detailedData)
         results = await calculateDetailedROI(detailedData)
-        console.log("Detailed results:", results)
         setDetailedResults(results)
         setStep("detailed-results")
       }
@@ -191,15 +223,20 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       setEmailSent(true)
     } catch (error) {
       console.error("Error:", error)
-      alert("Error calculating ROI or sending email. Please try again.")
+      setErrors({ submit: "Error calculating ROI. Please try again." })
     } finally {
       setIsCalculating(false)
     }
   }
 
+  const handleClose = () => {
+    resetAll()
+    onClose()
+  }
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
@@ -221,6 +258,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               {(step === "simple-results" || step === "detailed-results") && "Your ROI analysis results"}
             </DialogDescription>
           </DialogHeader>
+
+          {errors.submit && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <p className="text-sm text-red-600">{errors.submit}</p>
+            </div>
+          )}
 
           {/* Calculator Selection */}
           {step === "select" && (
@@ -263,7 +307,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     <Input
                       type="number"
                       value={simpleData.simpleDSOImprovement}
-                      onChange={(e) => setSimpleData({ ...simpleData, simpleDSOImprovement: e.target.value })}
+                      onChange={(e) => {
+                        setSimpleData({ ...simpleData, simpleDSOImprovement: e.target.value })
+                        setErrors({ ...errors, simpleDSOImprovement: "" })
+                      }}
                       placeholder="20"
                     />
                   </div>
@@ -272,7 +319,10 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     <Input
                       type="number"
                       value={simpleData.simpleCostOfCapital}
-                      onChange={(e) => setSimpleData({ ...simpleData, simpleCostOfCapital: e.target.value })}
+                      onChange={(e) => {
+                        setSimpleData({ ...simpleData, simpleCostOfCapital: e.target.value })
+                        setErrors({ ...errors, simpleCostOfCapital: "" })
+                      }}
                       placeholder="8"
                     />
                   </div>
@@ -283,10 +333,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="number"
                     value={simpleData.currentDSO}
-                    onChange={(e) => setSimpleData({ ...simpleData, currentDSO: e.target.value })}
+                    onChange={(e) => {
+                      setSimpleData({ ...simpleData, currentDSO: e.target.value })
+                      setErrors({ ...errors, currentDSO: "" })
+                    }}
                     placeholder="45"
-                    required
+                    className={errors.currentDSO ? "border-red-500" : ""}
                   />
+                  {errors.currentDSO && <p className="text-sm text-red-600 mt-1">{errors.currentDSO}</p>}
                 </div>
 
                 <div>
@@ -294,10 +348,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="number"
                     value={simpleData.averageInvoiceValue}
-                    onChange={(e) => setSimpleData({ ...simpleData, averageInvoiceValue: e.target.value })}
+                    onChange={(e) => {
+                      setSimpleData({ ...simpleData, averageInvoiceValue: e.target.value })
+                      setErrors({ ...errors, averageInvoiceValue: "" })
+                    }}
                     placeholder="5000"
-                    required
+                    className={errors.averageInvoiceValue ? "border-red-500" : ""}
                   />
+                  {errors.averageInvoiceValue && (
+                    <p className="text-sm text-red-600 mt-1">{errors.averageInvoiceValue}</p>
+                  )}
                 </div>
 
                 <div>
@@ -305,10 +365,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="number"
                     value={simpleData.monthlyInvoices}
-                    onChange={(e) => setSimpleData({ ...simpleData, monthlyInvoices: e.target.value })}
+                    onChange={(e) => {
+                      setSimpleData({ ...simpleData, monthlyInvoices: e.target.value })
+                      setErrors({ ...errors, monthlyInvoices: "" })
+                    }}
                     placeholder="100"
-                    required
+                    className={errors.monthlyInvoices ? "border-red-500" : ""}
                   />
+                  {errors.monthlyInvoices && <p className="text-sm text-red-600 mt-1">{errors.monthlyInvoices}</p>}
                 </div>
               </div>
 
@@ -347,18 +411,30 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.implementationCost}
-                          onChange={(e) => setDetailedData({ ...detailedData, implementationCost: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, implementationCost: e.target.value })
+                            setErrors({ ...errors, implementationCost: "" })
+                          }}
                           placeholder="10000"
+                          className={errors.implementationCost ? "border-red-500" : ""}
                         />
+                        {errors.implementationCost && (
+                          <p className="text-sm text-red-600 mt-1">{errors.implementationCost}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Monthly Cost ($) *</Label>
                         <Input
                           type="number"
                           value={detailedData.monthlyCost}
-                          onChange={(e) => setDetailedData({ ...detailedData, monthlyCost: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, monthlyCost: e.target.value })
+                            setErrors({ ...errors, monthlyCost: "" })
+                          }}
                           placeholder="500"
+                          className={errors.monthlyCost ? "border-red-500" : ""}
                         />
+                        {errors.monthlyCost && <p className="text-sm text-red-600 mt-1">{errors.monthlyCost}</p>}
                       </div>
                     </div>
                     <div>
@@ -366,11 +442,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       <Input
                         type="number"
                         value={detailedData.perAnnumDirectLabourCosts}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setDetailedData({ ...detailedData, perAnnumDirectLabourCosts: e.target.value })
-                        }
+                          setErrors({ ...errors, perAnnumDirectLabourCosts: "" })
+                        }}
                         placeholder="150000"
+                        className={errors.perAnnumDirectLabourCosts ? "border-red-500" : ""}
                       />
+                      {errors.perAnnumDirectLabourCosts && (
+                        <p className="text-sm text-red-600 mt-1">{errors.perAnnumDirectLabourCosts}</p>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -406,9 +487,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.interestRate}
-                          onChange={(e) => setDetailedData({ ...detailedData, interestRate: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, interestRate: e.target.value })
+                            setErrors({ ...errors, interestRate: "" })
+                          }}
                           placeholder="8.5"
+                          className={errors.interestRate ? "border-red-500" : ""}
                         />
+                        {errors.interestRate && <p className="text-sm text-red-600 mt-1">{errors.interestRate}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -428,18 +514,30 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.currentBadDebts}
-                          onChange={(e) => setDetailedData({ ...detailedData, currentBadDebts: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, currentBadDebts: e.target.value })
+                            setErrors({ ...errors, currentBadDebts: "" })
+                          }}
                           placeholder="50000"
+                          className={errors.currentBadDebts ? "border-red-500" : ""}
                         />
+                        {errors.currentBadDebts && (
+                          <p className="text-sm text-red-600 mt-1">{errors.currentBadDebts}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Average Bad Debt (%) *</Label>
                         <Input
                           type="number"
                           value={detailedData.averageBadDebt}
-                          onChange={(e) => setDetailedData({ ...detailedData, averageBadDebt: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, averageBadDebt: e.target.value })
+                            setErrors({ ...errors, averageBadDebt: "" })
+                          }}
                           placeholder="2.5"
+                          className={errors.averageBadDebt ? "border-red-500" : ""}
                         />
+                        {errors.averageBadDebt && <p className="text-sm text-red-600 mt-1">{errors.averageBadDebt}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -459,18 +557,28 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.dsoImprovement}
-                          onChange={(e) => setDetailedData({ ...detailedData, dsoImprovement: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, dsoImprovement: e.target.value })
+                            setErrors({ ...errors, dsoImprovement: "" })
+                          }}
                           placeholder="25"
+                          className={errors.dsoImprovement ? "border-red-500" : ""}
                         />
+                        {errors.dsoImprovement && <p className="text-sm text-red-600 mt-1">{errors.dsoImprovement}</p>}
                       </div>
                       <div>
                         <Label>Labour Savings (%) *</Label>
                         <Input
                           type="number"
                           value={detailedData.labourSavings}
-                          onChange={(e) => setDetailedData({ ...detailedData, labourSavings: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, labourSavings: e.target.value })
+                            setErrors({ ...errors, labourSavings: "" })
+                          }}
                           placeholder="30"
+                          className={errors.labourSavings ? "border-red-500" : ""}
                         />
+                        {errors.labourSavings && <p className="text-sm text-red-600 mt-1">{errors.labourSavings}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -490,18 +598,28 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.currentDSODays}
-                          onChange={(e) => setDetailedData({ ...detailedData, currentDSODays: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, currentDSODays: e.target.value })
+                            setErrors({ ...errors, currentDSODays: "" })
+                          }}
                           placeholder="45"
+                          className={errors.currentDSODays ? "border-red-500" : ""}
                         />
+                        {errors.currentDSODays && <p className="text-sm text-red-600 mt-1">{errors.currentDSODays}</p>}
                       </div>
                       <div>
                         <Label>Debtors Balance ($) *</Label>
                         <Input
                           type="number"
                           value={detailedData.debtorsBalance}
-                          onChange={(e) => setDetailedData({ ...detailedData, debtorsBalance: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, debtorsBalance: e.target.value })
+                            setErrors({ ...errors, debtorsBalance: "" })
+                          }}
                           placeholder="500000"
+                          className={errors.debtorsBalance ? "border-red-500" : ""}
                         />
+                        {errors.debtorsBalance && <p className="text-sm text-red-600 mt-1">{errors.debtorsBalance}</p>}
                       </div>
                     </div>
                     <div>
@@ -539,18 +657,32 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         <Input
                           type="number"
                           value={detailedData.numberOfDebtors}
-                          onChange={(e) => setDetailedData({ ...detailedData, numberOfDebtors: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, numberOfDebtors: e.target.value })
+                            setErrors({ ...errors, numberOfDebtors: "" })
+                          }}
                           placeholder="500"
+                          className={errors.numberOfDebtors ? "border-red-500" : ""}
                         />
+                        {errors.numberOfDebtors && (
+                          <p className="text-sm text-red-600 mt-1">{errors.numberOfDebtors}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Number of Collectors *</Label>
                         <Input
                           type="number"
                           value={detailedData.numberOfCollectors}
-                          onChange={(e) => setDetailedData({ ...detailedData, numberOfCollectors: e.target.value })}
+                          onChange={(e) => {
+                            setDetailedData({ ...detailedData, numberOfCollectors: e.target.value })
+                            setErrors({ ...errors, numberOfCollectors: "" })
+                          }}
                           placeholder="3"
+                          className={errors.numberOfCollectors ? "border-red-500" : ""}
                         />
+                        {errors.numberOfCollectors && (
+                          <p className="text-sm text-red-600 mt-1">{errors.numberOfCollectors}</p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -558,9 +690,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       <Input
                         type="number"
                         value={detailedData.projectedCustomerGrowth}
-                        onChange={(e) => setDetailedData({ ...detailedData, projectedCustomerGrowth: e.target.value })}
+                        onChange={(e) => {
+                          setDetailedData({ ...detailedData, projectedCustomerGrowth: e.target.value })
+                          setErrors({ ...errors, projectedCustomerGrowth: "" })
+                        }}
                         placeholder="15"
+                        className={errors.projectedCustomerGrowth ? "border-red-500" : ""}
                       />
+                      {errors.projectedCustomerGrowth && (
+                        <p className="text-sm text-red-600 mt-1">{errors.projectedCustomerGrowth}</p>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -600,10 +739,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="text"
                     value={contactData.name}
-                    onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
+                    onChange={(e) => {
+                      setContactData({ ...contactData, name: e.target.value })
+                      setErrors({ ...errors, name: "" })
+                    }}
                     placeholder="John Smith"
-                    required
+                    className={errors.name ? "border-red-500" : ""}
                   />
+                  {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -611,10 +754,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="email"
                     value={contactData.email}
-                    onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
+                    onChange={(e) => {
+                      setContactData({ ...contactData, email: e.target.value })
+                      setErrors({ ...errors, email: "" })
+                    }}
                     placeholder="john.smith@company.com"
-                    required
+                    className={errors.email ? "border-red-500" : ""}
                   />
+                  {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -622,10 +769,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="tel"
                     value={contactData.phone}
-                    onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
+                    onChange={(e) => {
+                      setContactData({ ...contactData, phone: e.target.value })
+                      setErrors({ ...errors, phone: "" })
+                    }}
                     placeholder="+1 (555) 123-4567"
-                    required
+                    className={errors.phone ? "border-red-500" : ""}
                   />
+                  {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone}</p>}
                 </div>
 
                 <div>
@@ -633,10 +784,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                   <Input
                     type="text"
                     value={contactData.company}
-                    onChange={(e) => setContactData({ ...contactData, company: e.target.value })}
+                    onChange={(e) => {
+                      setContactData({ ...contactData, company: e.target.value })
+                      setErrors({ ...errors, company: "" })
+                    }}
                     placeholder="Acme Corporation"
-                    required
+                    className={errors.company ? "border-red-500" : ""}
                   />
+                  {errors.company && <p className="text-sm text-red-600 mt-1">{errors.company}</p>}
                 </div>
               </div>
 
