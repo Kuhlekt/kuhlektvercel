@@ -3,13 +3,24 @@ import { createClient } from "@supabase/supabase-js"
 import { sendEmail } from "@/lib/aws-ses"
 
 export async function POST(request: NextRequest) {
+  console.log("[v0] ===== SEND-VERIFICATION API CALLED =====")
+  console.log("[v0] Request URL:", request.url)
+  console.log("[v0] Request method:", request.method)
+
   try {
     const body = await request.json()
+    console.log("[v0] Request body received:", {
+      hasEmail: !!body.email,
+      hasName: !!body.name,
+      calculatorType: body.calculatorType,
+    })
+
     const { name, email, company, phone, calculatorType, inputs } = body
 
     console.log("[v0] API: Sending verification code to:", email)
 
     if (!email || !name) {
+      console.log("[v0] Validation failed: missing email or name")
       return NextResponse.json({ success: false, error: "Email and name are required" }, { status: 400 })
     }
 
@@ -17,8 +28,12 @@ export async function POST(request: NextRequest) {
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
 
+    console.log("[v0] Generated verification code, expires at:", expiresAt.toISOString())
+
     // Create Supabase client
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+    console.log("[v0] Supabase client created, attempting to store code")
 
     // Store verification code in database
     const { error: insertError } = await supabase.from("verification_codes").insert({
@@ -38,6 +53,8 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    console.log("[v0] Verification code stored in database successfully")
 
     // Prepare email content
     const emailSubject = "Your ROI Calculator Verification Code"
@@ -90,6 +107,7 @@ Phone: ${phone || "Not provided"}
     `
 
     // Send email
+    console.log("[v0] Attempting to send email via AWS SES")
     const emailResult = await sendEmail({
       to: email,
       subject: emailSubject,
@@ -113,6 +131,7 @@ Phone: ${phone || "Not provided"}
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[v0] API: Error in send-verification:", error)
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return NextResponse.json(
       {
         success: false,
