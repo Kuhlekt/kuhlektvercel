@@ -1,150 +1,120 @@
 "use server"
 
 // Simple AWS SES implementation that works in edge runtime
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+
+// Ensure region is properly set
+const region = process.env.AWS_SES_REGION || "us-east-1"
+
+const sesClient = new SESClient({
+  region: region,
+  credentials: {
+    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
+  },
+})
+
 interface EmailParams {
-  to: string
+  to: string | string[]
   subject: string
   text: string
   html?: string
+  from?: string
 }
 
-export async function sendEmailWithSES(params: EmailParams) {
-  // Check if AWS SES is configured
-  const region = process.env.AWS_SES_REGION
-  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-  const fromEmail = process.env.AWS_SES_FROM_EMAIL
+interface SendEmailParams {
+  to: string | string[]
+  subject: string
+  html: string
+  text: string
+  from?: string
+}
 
-  if (!region || !accessKeyId || !secretAccessKey || !fromEmail) {
-    console.log("AWS SES not configured, logging submission for manual follow-up")
-    console.log("Email details:", {
-      to: params.to,
-      subject: params.subject,
-      body: params.text,
-      timestamp: new Date().toISOString(),
-    })
-    return {
-      success: false,
-      message: "Email service not configured - submission logged for manual follow-up",
-      messageId: null,
-    }
-  }
-
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  from = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com",
+}: SendEmailParams): Promise<{ success: boolean; message?: string; messageId?: string }> {
   try {
-    // Validate email addresses
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(params.to)) {
-      throw new Error(`Invalid email address: ${params.to}`)
+    // Validate required environment variables
+    if (!process.env.AWS_SES_ACCESS_KEY_ID) {
+      console.error("AWS_SES_ACCESS_KEY_ID is not set")
+      return { success: false, message: "AWS SES credentials not configured" }
     }
 
-    if (params.html && !emailRegex.test(params.to)) {
-      throw new Error(`Invalid reply-to email address: ${params.to}`)
+    if (!process.env.AWS_SES_SECRET_ACCESS_KEY) {
+      console.error("AWS_SES_SECRET_ACCESS_KEY is not set")
+      return { success: false, message: "AWS SES credentials not configured" }
     }
 
-    // Use fetch to call AWS SES API directly
-    const endpoint = `https://email.${region}.amazonaws.com/`
-
-    // Create the email parameters
-    const emailParams = new URLSearchParams({
-      Action: "SendEmail",
-      Version: "2010-12-01",
-      Source: fromEmail,
-      "Message.Subject.Data": params.subject,
-      "Message.Body.Text.Data": params.text,
-    })
-
-    if (params.html) {
-      emailParams.append("Message.Body.Html.Data", params.html)
+    if (!process.env.AWS_SES_REGION) {
+      console.warn("AWS_SES_REGION is not set, using default: us-east-1")
     }
 
-    // Add destinations
-    emailParams.append(`Destination.ToAddresses.member.1`, params.to)
+    if (!process.env.AWS_SES_FROM_EMAIL) {
+      console.warn("AWS_SES_FROM_EMAIL is not set, using default: noreply@kuhlekt.com")
+    }
 
-    // Create AWS signature v4
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "")
-    const date = timestamp.substr(0, 8)
+    console.log(`Sending email to ${Array.isArray(to) ? to.join(", ") : to} from ${from} in region ${region}`)
 
-    // Create canonical request
-    const method = "POST"
-    const canonicalUri = "/"
-    const canonicalQueryString = ""
-    const canonicalHeaders = `host:email.${region}.amazonaws.com\nx-amz-date:${timestamp}\n`
-    const signedHeaders = "host;x-amz-date"
+    const toAddresses = Array.isArray(to) ? to : [to]
 
-    // Create payload
-    const payload = emailParams.toString()
-
-    // Create string to sign
-    const algorithm = "AWS4-HMAC-SHA256"
-    const credentialScope = `${date}/${region}/ses/aws4_request`
-    const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${await sha256(payload)}`
-    const stringToSign = `${algorithm}\n${timestamp}\n${credentialScope}\n${await sha256(canonicalRequest)}`
-
-    // Create signing key
-    const kDate = await hmacSha256(`AWS4${secretAccessKey!}`, date)
-    const kRegion = await hmacSha256(kDate, region!)
-    const kService = await hmacSha256(kRegion, "ses")
-    const kSigning = await hmacSha256(kService, "aws4_request")
-
-    // Create signature
-    const signature = await hmacSha256(kSigning, stringToSign, "hex")
-
-    // Create authorization header
-    const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-    console.log("Sending email via AWS SES API:", {
-      to: params.to,
-      subject: params.subject,
-      from: fromEmail,
-      region: region,
-    })
-
-    // Make the request
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-Amz-Date": timestamp,
-        Authorization: authorization,
+    const command = new SendEmailCommand({
+      Source: from,
+      Destination: {
+        ToAddresses: toAddresses,
       },
-      body: payload,
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: text,
+            Charset: "UTF-8",
+          },
+        },
+      },
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("AWS SES API Error:", errorText)
-      throw new Error(`AWS SES API error: ${response.status} ${response.statusText}`)
-    }
-
-    const responseText = await response.text()
-
-    // Parse the XML response to get MessageId
-    const messageIdMatch = responseText.match(/<MessageId>([^<]+)<\/MessageId>/)
-    const messageId = messageIdMatch ? messageIdMatch[1] : "unknown"
-
-    console.log("Email sent successfully via AWS SES API:", messageId)
+    const response = await sesClient.send(command)
+    console.log("Email sent successfully:", response.MessageId)
 
     return {
       success: true,
+      messageId: response.MessageId,
       message: "Email sent successfully",
-      messageId: messageId,
     }
   } catch (error) {
-    console.error("AWS SES Error:", error)
+    console.error("Error sending email:", error)
 
-    // Log the submission for manual follow-up even if email fails
-    console.log("Email failed, logging for manual follow-up:", {
-      to: params.to,
-      subject: params.subject,
-      body: params.text,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    })
+    let errorMessage = "Failed to send email"
+
+    if (error instanceof Error) {
+      errorMessage = error.message
+
+      // Check for common AWS SES errors
+      if (errorMessage.includes("Access Denied")) {
+        errorMessage = "AWS SES credentials are invalid or do not have permission to send emails"
+      } else if (errorMessage.includes("Email address is not verified")) {
+        errorMessage = `The sender email address ${from} is not verified in AWS SES. Please verify it in the AWS SES console.`
+      } else if (errorMessage.includes("MessageRejected")) {
+        errorMessage = "Email was rejected by AWS SES. Check that both sender and recipient emails are verified."
+      } else if (errorMessage.includes("region")) {
+        errorMessage = `Invalid AWS region: ${region}. Please check AWS_SES_REGION environment variable.`
+      }
+    }
 
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Unknown error",
-      messageId: null,
+      message: errorMessage,
     }
   }
 }
@@ -374,11 +344,93 @@ async function hmacSha256(
   return signatureArray
 }
 
-export async function sendEmail(
-  params: EmailParams,
-): Promise<{ success: boolean; message: string; messageId: string | null }> {
-  return await sendEmailWithSES(params)
-}
-
 // Legacy export for backward compatibility
 export const sendEmailLegacy = sendEmailWithSES
+
+// Helper function to send email using AWS SDK
+async function sendEmailWithSES(params: EmailParams) {
+  // Check if AWS SES is configured
+  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
+  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL
+
+  if (!accessKeyId || !secretAccessKey || !fromEmail) {
+    console.log("AWS SES not configured, logging submission for manual follow-up")
+    console.log("Email details:", {
+      to: params.to,
+      subject: params.subject,
+      body: params.text,
+      timestamp: new Date().toISOString(),
+    })
+    return {
+      success: false,
+      message: "Email service not configured - submission logged for manual follow-up",
+      messageId: null,
+    }
+  }
+
+  try {
+    // Validate email addresses
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const toAddresses = Array.isArray(params.to) ? params.to : [params.to]
+
+    for (const address of toAddresses) {
+      if (!emailRegex.test(address)) {
+        throw new Error(`Invalid email address: ${address}`)
+      }
+    }
+
+    // Use AWS SDK to send email
+    const command = new SendEmailCommand({
+      Source: fromEmail,
+      Destination: {
+        ToAddresses: toAddresses,
+      },
+      Message: {
+        Subject: {
+          Data: params.subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Text: {
+            Data: params.text,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    })
+
+    if (params.html) {
+      command.Message.Body.Html = {
+        Data: params.html,
+        Charset: "UTF-8",
+      }
+    }
+
+    const response = await sesClient.send(command)
+    console.log("Email sent successfully via AWS SES API:", response.MessageId)
+
+    return {
+      success: true,
+      message: "Email sent successfully",
+      messageId: response.MessageId,
+    }
+  } catch (error) {
+    console.error("AWS SES Error:", error)
+
+    // Log the submission for manual follow-up even if email fails
+    console.log("Email failed, logging for manual follow-up:", {
+      to: params.to,
+      subject: params.subject,
+      body: params.text,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    })
+
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+      messageId: null,
+    }
+  }
+}
