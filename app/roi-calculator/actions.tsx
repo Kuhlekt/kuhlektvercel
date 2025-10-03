@@ -3,113 +3,97 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROICalculation {
+interface ROIData {
   companyName: string
   email: string
-  annualRevenue: number
-  averageInvoiceValue: number
-  invoicesPerMonth: number
-  currentDSO: number
-  desiredDSO: number
-  employeesInAR: number
-  hoursPerWeek: number
-  hourlyRate: number
-  badDebtPercentage: number
-  cashFlowImprovement: number
-  laborCostSavings: number
-  badDebtReduction: number
-  totalAnnualSavings: number
-  roi: number
-  paybackPeriod: number
+  currentAR: number
+  avgInvoiceValue: number
+  avgDSO: number
+  collectionCosts: number
 }
 
-export async function sendROIReport(calculation: ROICalculation) {
+export async function sendROIReport(data: ROIData) {
   try {
-    const htmlContent = `
+    const currentCollectionRate = 100 - (data.collectionCosts / data.currentAR) * 100
+    const projectedDSO = Math.max(data.avgDSO * 0.6, 15)
+    const projectedCollectionRate = Math.min(currentCollectionRate * 1.25, 98)
+    const annualSavings = data.collectionCosts * 0.4
+    const cashFlowImprovement = (data.currentAR * (data.avgDSO - projectedDSO)) / data.avgDSO
+
+    const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .header { background-color: #1e40af; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; }
-            .metric { background-color: #f3f4f6; padding: 15px; margin: 10px 0; border-radius: 5px; }
-            .metric-label { font-weight: bold; color: #1e40af; }
-            .metric-value { font-size: 1.2em; color: #059669; }
-            .footer { background-color: #f3f4f6; padding: 20px; text-align: center; margin-top: 30px; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background: #f9f9f9; }
+            .metric { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #4F46E5; }
+            .metric-label { font-weight: bold; color: #4F46E5; }
+            .metric-value { font-size: 24px; color: #1a1a1a; margin: 5px 0; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Your ROI Analysis Report</h1>
-            <p>${calculation.companyName}</p>
-          </div>
-          <div class="content">
-            <h2>Key Findings</h2>
-            <div class="metric">
-              <div class="metric-label">Total Annual Savings</div>
-              <div class="metric-value">$${calculation.totalAnnualSavings.toLocaleString()}</div>
+          <div class="container">
+            <div class="header">
+              <h1>Your ROI Analysis Report</h1>
             </div>
-            <div class="metric">
-              <div class="metric-label">Return on Investment</div>
-              <div class="metric-value">${calculation.roi.toFixed(0)}%</div>
+            <div class="content">
+              <p>Dear ${data.companyName},</p>
+              <p>Thank you for using our ROI Calculator. Here's your personalized analysis:</p>
+              
+              <div class="metric">
+                <div class="metric-label">Current DSO</div>
+                <div class="metric-value">${data.avgDSO.toFixed(0)} days</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Projected DSO with Kuhlekt</div>
+                <div class="metric-value">${projectedDSO.toFixed(0)} days</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Annual Savings</div>
+                <div class="metric-value">$${annualSavings.toLocaleString()}</div>
+              </div>
+              
+              <div class="metric">
+                <div class="metric-label">Cash Flow Improvement</div>
+                <div class="metric-value">$${cashFlowImprovement.toLocaleString()}</div>
+              </div>
+              
+              <p style="margin-top: 20px;">Ready to achieve these results? Schedule a demo with our team to see Kuhlekt in action.</p>
             </div>
-            <div class="metric">
-              <div class="metric-label">Payback Period</div>
-              <div class="metric-value">${calculation.paybackPeriod.toFixed(1)} months</div>
-            </div>
-            <h3>Detailed Breakdown</h3>
-            <div class="metric">
-              <div class="metric-label">Cash Flow Improvement</div>
-              <div class="metric-value">$${calculation.cashFlowImprovement.toLocaleString()}</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Labor Cost Savings</div>
-              <div class="metric-value">$${calculation.laborCostSavings.toLocaleString()}</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Bad Debt Reduction</div>
-              <div class="metric-value">$${calculation.badDebtReduction.toLocaleString()}</div>
-            </div>
-          </div>
-          <div class="footer">
-            <p>Ready to achieve these results? Contact us to learn more about Kuhlekt.</p>
-            <p><a href="https://kuhlekt.com">Visit our website</a></p>
           </div>
         </body>
       </html>
     `
 
-    const textContent = `
-Your ROI Analysis Report - ${calculation.companyName}
-
-Key Findings:
-- Total Annual Savings: $${calculation.totalAnnualSavings.toLocaleString()}
-- Return on Investment: ${calculation.roi.toFixed(0)}%
-- Payback Period: ${calculation.paybackPeriod.toFixed(1)} months
-
-Detailed Breakdown:
-- Cash Flow Improvement: $${calculation.cashFlowImprovement.toLocaleString()}
-- Labor Cost Savings: $${calculation.laborCostSavings.toLocaleString()}
-- Bad Debt Reduction: $${calculation.badDebtReduction.toLocaleString()}
-
-Ready to achieve these results? Contact us to learn more about Kuhlekt.
-Visit our website: https://kuhlekt.com
+    const emailText = `
+      Your ROI Analysis Report
+      
+      Dear ${data.companyName},
+      
+      Current DSO: ${data.avgDSO.toFixed(0)} days
+      Projected DSO: ${projectedDSO.toFixed(0)} days
+      Annual Savings: $${annualSavings.toLocaleString()}
+      Cash Flow Improvement: $${cashFlowImprovement.toLocaleString()}
     `
 
     const result = await sendEmail({
-      to: calculation.email,
-      subject: `Your ROI Analysis Report - ${calculation.companyName}`,
-      text: textContent,
-      html: htmlContent,
+      to: data.email,
+      subject: "Your Kuhlekt ROI Analysis Report",
+      text: emailText,
+      html: emailHtml,
     })
 
     return result
   } catch (error) {
-    console.error("Error sending ROI report:", error)
+    console.error("Error in sendROIReport:", error)
     return {
       success: false,
-      message: "Failed to send ROI report",
+      message: "Failed to send report",
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
@@ -143,61 +127,39 @@ export async function generateVerificationCode(email: string) {
       }
     }
 
-    const htmlContent = `
+    const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 5px 5px; }
-            .code { font-size: 32px; font-weight: bold; color: #1e40af; text-align: center; padding: 20px; background-color: white; border-radius: 5px; letter-spacing: 5px; }
-            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+            .code { font-size: 32px; font-weight: bold; text-align: center; padding: 20px; background: #f0f0f0; margin: 20px 0; letter-spacing: 5px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Verification Code</h1>
+              <h1>Email Verification</h1>
             </div>
-            <div class="content">
-              <p>Your verification code for accessing your ROI report is:</p>
-              <div class="code">${code}</div>
-              <p>This code will expire in 10 minutes.</p>
-              <p>If you didn't request this code, please ignore this email.</p>
-            </div>
-            <div class="footer">
-              <p>© 2025 Kuhlekt. All rights reserved.</p>
-            </div>
+            <p>Your verification code is:</p>
+            <div class="code">${code}</div>
+            <p>This code will expire in 10 minutes.</p>
           </div>
         </body>
       </html>
     `
 
-    const textContent = `
-Your verification code for accessing your ROI report is: ${code}
-
-This code will expire in 10 minutes.
-
-If you didn't request this code, please ignore this email.
-
-© 2025 Kuhlekt. All rights reserved.
-    `
-
     const emailResult = await sendEmail({
       to: email,
-      subject: "Your ROI Report Verification Code",
-      text: textContent,
-      html: htmlContent,
+      subject: "Your Kuhlekt Verification Code",
+      text: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
+      html: emailHtml,
     })
 
     if (!emailResult.success) {
-      return {
-        success: false,
-        message: "Failed to send verification code",
-        error: emailResult.error,
-      }
+      return emailResult
     }
 
     return {
@@ -205,7 +167,7 @@ If you didn't request this code, please ignore this email.
       message: "Verification code sent successfully",
     }
   } catch (error) {
-    console.error("Error generating verification code:", error)
+    console.error("Error in generateVerificationCode:", error)
     return {
       success: false,
       message: "Failed to generate verification code",
@@ -218,17 +180,20 @@ export async function verifyCode(email: string, code: string) {
   try {
     const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .single()
+    const { data, error } = await supabase.from("verification_codes").select("*").eq("email", email).single()
 
     if (error || !data) {
       return {
         success: false,
-        message: "Invalid verification code",
+        message: "Invalid or expired verification code",
+      }
+    }
+
+    if (data.attempts >= 3) {
+      await supabase.from("verification_codes").delete().eq("email", email)
+      return {
+        success: false,
+        message: "Too many attempts. Please request a new code.",
       }
     }
 
@@ -240,11 +205,15 @@ export async function verifyCode(email: string, code: string) {
       }
     }
 
-    if (data.attempts >= 3) {
-      await supabase.from("verification_codes").delete().eq("email", email)
+    if (data.code !== code) {
+      await supabase
+        .from("verification_codes")
+        .update({ attempts: data.attempts + 1 })
+        .eq("email", email)
+
       return {
         success: false,
-        message: "Too many failed attempts",
+        message: "Invalid verification code",
       }
     }
 
@@ -252,10 +221,10 @@ export async function verifyCode(email: string, code: string) {
 
     return {
       success: true,
-      message: "Verification successful",
+      message: "Email verified successfully",
     }
   } catch (error) {
-    console.error("Error verifying code:", error)
+    console.error("Error in verifyCode:", error)
     return {
       success: false,
       message: "Failed to verify code",
