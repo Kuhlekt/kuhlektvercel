@@ -2,31 +2,50 @@
 const nextConfig = {
   serverExternalPackages: [
     '@aws-sdk/client-ses',
+    '@aws-sdk/smithy-client',
     '@smithy/hash-node',
     '@smithy/node-http-handler',
     '@smithy/util-stream-node',
+    '@smithy/signature-v4',
+    '@smithy/protocol-http',
+    '@smithy/middleware-retry',
+    '@smithy/middleware-stack',
   ],
   experimental: {
-    serverComponentsExternalPackages: ['bcryptjs', '@aws-sdk/client-ses'],
+    serverComponentsExternalPackages: ['bcryptjs'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
+      // Add all AWS SDK and Smithy packages to externals
       config.externals = [
         ...config.externals,
         'bcryptjs',
         '@aws-sdk/client-ses',
+        '@aws-sdk/smithy-client',
         '@smithy/hash-node',
         '@smithy/node-http-handler',
         '@smithy/util-stream-node',
+        '@smithy/signature-v4',
+        '@smithy/protocol-http',
+        '@smithy/middleware-retry',
+        '@smithy/middleware-stack',
+        'crypto',
       ]
     }
     
+    // Set fallbacks for Node.js modules
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
       crypto: false,
+      stream: false,
+      http: false,
+      https: false,
+      zlib: false,
+      path: false,
+      os: false,
     }
     
     return config
