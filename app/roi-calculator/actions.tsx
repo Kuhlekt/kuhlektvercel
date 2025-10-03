@@ -370,7 +370,6 @@ export async function verifyCode(email: string, code: string): Promise<{ success
   try {
     console.log(`[Verification] === VERIFY CODE START ===`)
     console.log(`[Verification] Email: ${email}`)
-    console.log(`[Verification] Code: ${code}`)
 
     const supabase = getSupabaseClient()
 
