@@ -15,7 +15,7 @@ export async function submitContactForm(formData: FormData) {
     to: process.env.AWS_SES_FROM_EMAIL || "",
     subject: `Contact Form Submission from ${name}`,
     text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
-    html: `<h1>Contact Form Submission</h1><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong> ${message}</p>`,
+    html: `<h2>Contact Form Submission</h2><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong> ${message}</p>`,
   })
 
   return result
@@ -25,8 +25,8 @@ export async function sendTestEmail(email: string) {
   const result = await sendEmail({
     to: email,
     subject: "Test Email",
-    text: "This is a test email",
-    html: "<h1>Test Email</h1><p>This is a test email</p>",
+    text: "This is a test email from the contact form.",
+    html: "<h1>Test Email</h1><p>This is a test email from the contact form.</p>",
   })
 
   return result
