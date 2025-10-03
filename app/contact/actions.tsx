@@ -1,13 +1,12 @@
 "use server"
 
 import { sendEmail } from "@/lib/aws-ses"
-import { testAWSSESConnection } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 export interface ContactFormState {
   success: boolean
   message: string
-  shouldClearForm?: boolean // Added flag to signal form should be cleared
+  shouldClearForm?: boolean
   errors: {
     firstName?: string
     lastName?: string
@@ -19,7 +18,6 @@ export interface ContactFormState {
 
 export async function submitContactForm(prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
   try {
-    // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
     const lastName = formData.get("lastName")?.toString()?.trim()
     const email = formData.get("email")?.toString()?.trim()
@@ -29,7 +27,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
 
     let recaptchaToken = null
 
-    // Check all possible reCAPTCHA field names
     const possibleFields = [
       "recaptcha-token",
       "g-recaptcha-response",
@@ -43,32 +40,16 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
     for (const field of possibleFields) {
       const value = formData.get(field)?.toString()?.trim()
       if (value && value.length > 10) {
-        // reCAPTCHA tokens are typically much longer
         recaptchaToken = value
         console.log(`Contact form: Found reCAPTCHA token in field '${field}'`)
         break
       }
     }
 
-    // Debug logging for all form fields
-    console.log("Contact form submission - All form fields:")
-    for (const [key, value] of formData.entries()) {
-      console.log(
-        `  ${key}: ${typeof value === "string" ? (value.length > 50 ? value.substring(0, 50) + "..." : value) : "[File]"}`,
-      )
-    }
-
-    console.log("Contact form submission - reCAPTCHA token received:", !!recaptchaToken)
-    console.log("Contact form submission - reCAPTCHA token length:", recaptchaToken?.length || 0)
-
     if (!recaptchaToken) {
       console.warn("Contact form: No reCAPTCHA token found - proceeding without verification for debugging")
-      // Don't return error, just log and continue
     } else {
-      console.log("Contact form: Verifying reCAPTCHA token...")
       const recaptchaResult = await verifyRecaptcha(recaptchaToken)
-      console.log("Contact form: reCAPTCHA result:", recaptchaResult)
-
       if (!recaptchaResult.success) {
         console.error("Contact form: reCAPTCHA verification failed:", recaptchaResult.error)
         return {
@@ -79,7 +60,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Validation
     const errors: { firstName?: string; lastName?: string; email?: string; message?: string; recaptcha?: string } = {}
 
     if (!firstName) {
@@ -96,7 +76,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       errors.email = "Please enter a valid email address"
     }
 
-    // Message is now optional - removed validation requirement
     if (Object.keys(errors).length > 0) {
       return {
         success: false,
@@ -105,7 +84,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       }
     }
 
-    // Prepare email content
     const emailSubject = `Contact Form Message from ${firstName} ${lastName}`
     const emailBody = `
       <h2>New Contact Form Submission</h2>
@@ -115,7 +93,6 @@ export async function submitContactForm(prevState: ContactFormState, formData: F
       ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
       ${message ? `<p><strong>Message:</strong></p><p>${message}</p>` : "<p><strong>Message:</strong> No message provided</p>"}
       <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
-      <p><strong>reCAPTCHA:</strong> ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}</p>
     `
 
     const emailText = `
@@ -127,15 +104,13 @@ ${company ? `Company: ${company}` : ""}
 ${phone ? `Phone: ${phone}` : ""}
 ${message ? `Message: ${message}` : "Message: No message provided"}
 Submitted: ${new Date().toLocaleString()}
-reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     `
 
-    // Send email
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
       html: emailBody,
-      text: emailText, // Added required text property
+      text: emailText,
     })
 
     if (!emailResult.success) {
@@ -143,7 +118,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       return {
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
-        shouldClearForm: false, // Don't clear form on error
+        shouldClearForm: false,
         errors: {},
       }
     }
@@ -151,7 +126,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     return {
       success: true,
       message: "Thank you for your message! We'll get back to you within 24 hours.",
-      shouldClearForm: true, // Added flag to signal form clearing
+      shouldClearForm: true,
       errors: {},
     }
   } catch (error) {
@@ -159,13 +134,34 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     return {
       success: false,
       message: "An unexpected error occurred. Please try again.",
-      shouldClearForm: false, // Don't clear form on error
+      shouldClearForm: false,
       errors: {},
     }
   }
 }
 
-// Added missing testAWSSES server action that was being imported by test page
-export async function testAWSSES() {
-  return await testAWSSESConnection()
+export async function sendTestEmail(email: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: "Test Email from Kuhlekt Contact Form",
+      html: `
+        <h2>Test Email</h2>
+        <p>This is a test email from the Kuhlekt contact form system.</p>
+        <p>Timestamp: ${new Date().toISOString()}</p>
+      `,
+      text: `Test Email - This is a test email from the Kuhlekt contact form system. Timestamp: ${new Date().toISOString()}`,
+    })
+
+    return {
+      success: result.success,
+      message: result.message || "Email sent successfully",
+    }
+  } catch (error) {
+    console.error("Error sending test email:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to send test email",
+    }
+  }
 }

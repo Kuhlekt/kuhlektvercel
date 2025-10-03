@@ -1,6 +1,5 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
-// Initialize SES client
 const getSESClient = () => {
   const region = process.env.AWS_SES_REGION
   const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
@@ -108,5 +107,52 @@ export async function sendEmail({ to, subject, html, text, from }: SendEmailPara
   }
 }
 
-// Export an alias for backward compatibility
 export const sendEmailWithSES = sendEmail
+
+export async function testAWSSESConnection(): Promise<SendEmailResult> {
+  try {
+    const testEmail = process.env.ADMIN_EMAIL || "test@example.com"
+
+    return await sendEmail({
+      to: testEmail,
+      subject: "AWS SES Connection Test",
+      html: "<p>This is a test email to verify AWS SES connection.</p>",
+      text: "This is a test email to verify AWS SES connection.",
+    })
+  } catch (error) {
+    console.error("[AWS SES] Connection test failed:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Connection test failed",
+    }
+  }
+}
+
+export async function validateSESConfiguration(): Promise<{ valid: boolean; message: string }> {
+  try {
+    const region = process.env.AWS_SES_REGION
+    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
+    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
+    const fromEmail = process.env.AWS_SES_FROM_EMAIL
+
+    if (!region) {
+      return { valid: false, message: "AWS_SES_REGION is not set" }
+    }
+    if (!accessKeyId) {
+      return { valid: false, message: "AWS_SES_ACCESS_KEY_ID is not set" }
+    }
+    if (!secretAccessKey) {
+      return { valid: false, message: "AWS_SES_SECRET_ACCESS_KEY is not set" }
+    }
+    if (!fromEmail) {
+      return { valid: false, message: "AWS_SES_FROM_EMAIL is not set" }
+    }
+
+    return { valid: true, message: "All AWS SES environment variables are set" }
+  } catch (error) {
+    return {
+      valid: false,
+      message: error instanceof Error ? error.message : "Configuration validation failed",
+    }
+  }
+}

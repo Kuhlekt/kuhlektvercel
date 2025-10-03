@@ -1,6 +1,6 @@
 "use server"
 
-import { sendEmail } from "@/lib/aws-ses"
+import { sendEmail, testAWSSESConnection, validateSESConfiguration } from "@/lib/aws-ses"
 
 export async function testEmail(email: string) {
   try {
@@ -63,6 +63,30 @@ export async function testEmail(email: string) {
     console.error("[Email Test] Error:", error)
     return {
       success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+export async function testEmailSystem() {
+  try {
+    return await testAWSSESConnection()
+  } catch (error) {
+    console.error("[Email Test System] Error:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+export async function getEmailConfigStatus() {
+  try {
+    return await validateSESConfiguration()
+  } catch (error) {
+    console.error("[Email Config Status] Error:", error)
+    return {
+      valid: false,
       message: error instanceof Error ? error.message : "Unknown error",
     }
   }
