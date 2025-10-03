@@ -408,7 +408,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               setEmailSent(true)
               console.log("[v0] Email sent successfully to admin")
             } else {
-              console.error("[v0] Failed to send email:", emailResult.error)
+              // Type guard ensures TypeScript knows 'error' property exists
+              const errorMessage = "error" in emailResult ? emailResult.error : "Unknown error"
+              console.error("[v0] Failed to send email:", errorMessage)
               // Don't block the user from seeing results if email fails
               setEmailSent(false)
             }
