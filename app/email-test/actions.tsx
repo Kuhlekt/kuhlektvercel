@@ -2,35 +2,21 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendTestEmail(email: string) {
+export async function sendTestEmail(to: string) {
   try {
     const result = await sendEmail({
-      to: email,
+      to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email to verify your email configuration is working correctly.",
+      text: "This is a test email to verify AWS SES configuration.",
       html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
-              .content { padding: 20px; background: #f9fafb; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Test Email</h1>
-              </div>
-              <div class="content">
-                <p>This is a test email to verify your email configuration is working correctly.</p>
-                <p>If you received this email, your AWS SES integration is functioning properly!</p>
-              </div>
-            </div>
-          </body>
-        </html>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Test Email</h2>
+          <p>This is a test email to verify AWS SES configuration.</p>
+          <p>If you received this email, the email service is working correctly!</p>
+          <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <p style="margin: 0;"><strong>Configuration Status:</strong> ✅ Working</p>
+          </div>
+        </div>
       `,
     })
 
