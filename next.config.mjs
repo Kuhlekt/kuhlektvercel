@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["@aws-sdk/client-ses"],
+  serverExternalPackages: [
+    "@aws-sdk/client-ses",
+    "@aws-sdk/credential-providers",
+    "@smithy/hash-node",
+    "@smithy/signature-v4",
+  ],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,17 +16,32 @@ const nextConfig = {
     serverComponentsExternalPackages: ['bcryptjs'],
   },
   webpack: (config, { isServer }) => {
-    // Simplified webpack configuration to prevent ELIFECYCLE errors
     if (isServer) {
-      config.externals = [...(config.externals || []), 'bcryptjs', '@aws-sdk/client-ses'];
+      // Externalize AWS SDK and its dependencies
+      config.externals = [
+        ...(config.externals || []),
+        'bcryptjs',
+        '@aws-sdk/client-ses',
+        '@smithy/hash-node',
+        '@smithy/signature-v4',
+        '@smithy/util-buffer-from',
+        '@smithy/util-utf8',
+      ];
     }
     
-    // Essential fallbacks only
+    // Add fallbacks for Node.js modules
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
+      crypto: false,
+      stream: false,
+      http: false,
+      https: false,
+      zlib: false,
+      path: false,
+      os: false,
     };
     
     return config;

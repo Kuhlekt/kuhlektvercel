@@ -1,86 +1,104 @@
 "use server"
 
-import { sendEmailWithSES, validateSESConfiguration } from "@/lib/aws-ses"
+import { sendEmail } from "@/lib/aws-ses"
 
-export interface TestResult {
-  success: boolean
+interface TestEmailParams {
+  to: string
+  subject: string
   message: string
-  details?: any
 }
 
-export async function testAWSSES(): Promise<TestResult> {
+export async function testEmailSend({ to, subject, message }: TestEmailParams) {
   try {
-    console.log("[Email Test] Starting AWS SES test")
+    console.log("[Email Test] Starting email test")
+    console.log("[Email Test] To:", to)
+    console.log("[Email Test] Subject:", subject)
 
-    // First validate configuration
-    const validation = validateSESConfiguration()
-    if (!validation.valid) {
-      console.error("[Email Test] Configuration validation failed:", validation.errors)
-      return {
-        success: false,
-        message: "AWS SES configuration is invalid",
-        details: validation.errors,
-      }
-    }
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .container {
+              background: #f9fafb;
+              border-radius: 8px;
+              padding: 30px;
+              border: 2px solid #0891b2;
+            }
+            .header {
+              background: #0891b2;
+              color: white;
+              padding: 20px;
+              border-radius: 6px;
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .message {
+              background: white;
+              padding: 20px;
+              border-radius: 6px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 14px;
+              color: #6b7280;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">🧪 Test Email</h1>
+            </div>
+            <div class="message">
+              <p>${message}</p>
+            </div>
+            <div class="footer">
+              <p><strong>Kuhlekt</strong> - Email System Test</p>
+              <p>Sent at: ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
 
-    console.log("[Email Test] Configuration validated successfully")
-
-    // Try to send a test email
-    const testEmailAddress = process.env.AWS_SES_FROM_EMAIL
-
-    if (!testEmailAddress) {
-      return {
-        success: false,
-        message: "AWS_SES_FROM_EMAIL environment variable is not set",
-      }
-    }
-
-    console.log("[Email Test] Sending test email to:", testEmailAddress)
-
-    const result = await sendEmailWithSES({
-      to: testEmailAddress,
-      subject: "Kuhlekt Email System Test",
-      html: `
-        <h1>Email System Test</h1>
-        <p>This is a test email from the Kuhlekt website.</p>
-        <p>If you received this email, AWS SES is configured correctly.</p>
-        <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-      `,
-      text: `
-Email System Test
-
-This is a test email from the Kuhlekt website.
-
-If you received this email, AWS SES is configured correctly.
-
-Timestamp: ${new Date().toISOString()}
-      `.trim(),
+    const result = await sendEmail({
+      to,
+      subject,
+      html,
+      text: message,
     })
 
-    console.log("[Email Test] Email send result:", result)
-
-    if (result.success) {
-      return {
-        success: true,
-        message: `Test email sent successfully to ${testEmailAddress}`,
-        details: {
-          messageId: result.messageId,
-          recipient: testEmailAddress,
-        },
-      }
-    } else {
+    if (!result.success) {
+      console.error("[Email Test] Failed to send email:", result.message)
       return {
         success: false,
         message: result.message || "Failed to send test email",
-        details: result,
       }
     }
+
+    console.log("[Email Test] Email sent successfully")
+    console.log("[Email Test] Message ID:", result.messageId)
+
+    return {
+      success: true,
+      message: `Email sent successfully! Message ID: ${result.messageId}`,
+    }
   } catch (error) {
-    console.error("[Email Test] Unexpected error:", error)
+    console.error("[Email Test] Exception:", error)
     return {
       success: false,
       message: error instanceof Error ? error.message : "An unexpected error occurred",
-      details: error,
     }
   }
 }
