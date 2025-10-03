@@ -2,12 +2,14 @@
 const nextConfig = {
   serverExternalPackages: [
     '@aws-sdk/client-ses',
-    '@aws-sdk/smithy-client',
+    '@aws-sdk/credential-providers',
     '@smithy/node-http-handler',
-    '@smithy/hash-node',
     '@smithy/protocol-http',
-    '@smithy/middleware-serde',
+    '@smithy/middleware-stack',
     '@smithy/smithy-client',
+    '@smithy/types',
+    '@smithy/util-stream',
+    '@smithy/hash-node',
   ],
   eslint: {
     ignoreDuringBuilds: true,

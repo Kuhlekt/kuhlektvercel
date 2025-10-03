@@ -3,315 +3,201 @@
 import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ROIInputs {
-  companyName: string
-  email: string
-  industry: string
-  annualRevenue: number
-  avgInvoiceValue: number
-  monthlyInvoices: number
-  currentDSO: number
-  badDebtRate: number
-  arStaffCount: number
-  avgStaffSalary: number
+export async function sendROIReport(formData: FormData) {
+  const email = formData.get("email") as string
+  const reportData = formData.get("reportData") as string
+
+  if (!email || !reportData) {
+    return { success: false, message: "Missing required fields" }
+  }
+
+  const parsedData = JSON.parse(reportData)
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .metric { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #667eea; }
+        .metric-label { font-weight: bold; color: #667eea; }
+        .metric-value { font-size: 24px; color: #333; margin: 5px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Your ROI Analysis Report</h1>
+        </div>
+        <div class="content">
+          <h2>Results Summary</h2>
+          <div class="metric">
+            <div class="metric-label">Annual Revenue</div>
+            <div class="metric-value">$${parsedData.annualRevenue?.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Current DSO</div>
+            <div class="metric-value">${parsedData.currentDSO} days</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Projected DSO with Kuhlekt</div>
+            <div class="metric-value">${parsedData.projectedDSO} days</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Annual Savings</div>
+            <div class="metric-value">$${parsedData.annualSavings?.toLocaleString()}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">ROI</div>
+            <div class="metric-value">${parsedData.roi}%</div>
+          </div>
+        </div>
+        <div class="footer">
+          <p>Thank you for using Kuhlekt's ROI Calculator</p>
+          <p>Visit us at <a href="https://kuhlekt.com">kuhlekt.com</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  const textContent = `
+Your ROI Analysis Report
+
+Results Summary:
+- Annual Revenue: $${parsedData.annualRevenue?.toLocaleString()}
+- Current DSO: ${parsedData.currentDSO} days
+- Projected DSO with Kuhlekt: ${parsedData.projectedDSO} days
+- Annual Savings: $${parsedData.annualSavings?.toLocaleString()}
+- ROI: ${parsedData.roi}%
+
+Thank you for using Kuhlekt's ROI Calculator
+Visit us at https://kuhlekt.com
+  `
+
+  const result = await sendEmail({
+    to: email,
+    subject: "Your Kuhlekt ROI Analysis Report",
+    text: textContent,
+    html: htmlContent,
+  })
+
+  return result
 }
 
-interface ROIResults {
-  currentCosts: {
-    laborCosts: number
-    badDebtLoss: number
-    opportunityCost: number
-    totalAnnual: number
+export async function generateVerificationCode(email: string) {
+  const supabase = await createClient()
+  const code = Math.floor(100000 + Math.random() * 900000).toString()
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+  const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
+
+  if (deleteError) {
+    console.error("Error deleting old codes:", deleteError)
   }
-  withKuhlekt: {
-    laborCosts: number
-    badDebtLoss: number
-    opportunityCost: number
-    softwareCost: number
-    totalAnnual: number
+
+  const { error: insertError } = await supabase
+    .from("verification_codes")
+    .insert({ email, code, expires_at: expiresAt, attempts: 0 })
+
+  if (insertError) {
+    console.error("Error inserting verification code:", insertError)
+    return { success: false, message: "Failed to generate verification code" }
   }
-  savings: {
-    annual: number
-    monthly: number
-    percentage: number
-  }
-  paybackPeriod: number
-  threeYearROI: number
-}
 
-function calculateROI(inputs: ROIInputs): ROIResults {
-  const annualInvoices = inputs.monthlyInvoices * 12
-  const annualRevenue = inputs.annualRevenue
-
-  const currentLaborCosts = inputs.arStaffCount * inputs.avgStaffSalary
-  const currentBadDebt = annualRevenue * (inputs.badDebtRate / 100)
-  const dsoImpact = (inputs.currentDSO / 365) * annualRevenue * 0.05
-  const currentTotal = currentLaborCosts + currentBadDebt + dsoImpact
-
-  const improvedDSO = inputs.currentDSO * 0.6
-  const reducedStaff = Math.max(1, Math.ceil(inputs.arStaffCount * 0.4))
-  const newLaborCosts = reducedStaff * inputs.avgStaffSalary
-  const newBadDebt = currentBadDebt * 0.5
-  const newDsoImpact = (improvedDSO / 365) * annualRevenue * 0.05
-
-  const softwareCost = Math.min(50000, Math.max(12000, annualInvoices * 2 + inputs.arStaffCount * 3000))
-
-  const newTotal = newLaborCosts + newBadDebt + newDsoImpact + softwareCost
-
-  const annualSavings = currentTotal - newTotal
-  const monthlySavings = annualSavings / 12
-  const savingsPercentage = (annualSavings / currentTotal) * 100
-  const paybackMonths = softwareCost / monthlySavings
-  const threeYearSavings = annualSavings * 3 - softwareCost * 3
-  const threeYearROI = (threeYearSavings / (softwareCost * 3)) * 100
-
-  return {
-    currentCosts: {
-      laborCosts: currentLaborCosts,
-      badDebtLoss: currentBadDebt,
-      opportunityCost: dsoImpact,
-      totalAnnual: currentTotal,
-    },
-    withKuhlekt: {
-      laborCosts: newLaborCosts,
-      badDebtLoss: newBadDebt,
-      opportunityCost: newDsoImpact,
-      softwareCost: softwareCost,
-      totalAnnual: newTotal,
-    },
-    savings: {
-      annual: annualSavings,
-      monthly: monthlySavings,
-      percentage: savingsPercentage,
-    },
-    paybackPeriod: paybackMonths,
-    threeYearROI: threeYearROI,
-  }
-}
-
-export async function generateVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
-  try {
-    const supabase = await createClient()
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
-
-    const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
-
-    if (deleteError) {
-      console.error("Error deleting old codes:", deleteError)
-    }
-
-    const { error: insertError } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      attempts: 0,
-    })
-
-    if (insertError) {
-      console.error("Error inserting verification code:", insertError)
-      return { success: false, message: "Failed to generate verification code" }
-    }
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: "Your Kuhlekt ROI Report Verification Code",
-      text: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Your Verification Code</h2>
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; text-align: center; }
+        .code { font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 5px; padding: 20px; background: white; border-radius: 10px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Email Verification</h1>
+        </div>
+        <div class="content">
           <p>Your verification code is:</p>
-          <h1 style="background: #f0f0f0; padding: 20px; text-align: center; letter-spacing: 5px;">${code}</h1>
+          <div class="code">${code}</div>
           <p>This code will expire in 10 minutes.</p>
           <p>If you didn't request this code, please ignore this email.</p>
         </div>
-      `,
-    })
-
-    if (!emailResult.success) {
-      return { success: false, message: "Failed to send verification email" }
-    }
-
-    return { success: true, message: "Verification code sent successfully" }
-  } catch (error) {
-    console.error("Error in generateVerificationCode:", error)
-    return { success: false, message: "An error occurred" }
-  }
-}
-
-export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .single()
-
-    if (error || !data) {
-      const { error: updateError } = await supabase
-        .from("verification_codes")
-        .update({ attempts: supabase.rpc("increment_attempts") })
-        .eq("email", email)
-
-      return { success: false, message: "Invalid verification code" }
-    }
-
-    if (new Date(data.expires_at) < new Date()) {
-      await supabase.from("verification_codes").delete().eq("email", email)
-      return { success: false, message: "Verification code has expired" }
-    }
-
-    if (data.attempts >= 3) {
-      await supabase.from("verification_codes").delete().eq("email", email)
-      return { success: false, message: "Too many attempts. Please request a new code." }
-    }
-
-    await supabase.from("verification_codes").delete().eq("email", email)
-
-    return { success: true, message: "Code verified successfully" }
-  } catch (error) {
-    console.error("Error in verifyCode:", error)
-    return { success: false, message: "An error occurred during verification" }
-  }
-}
-
-export async function sendROIReport(inputs: ROIInputs): Promise<{ success: boolean; message: string }> {
-  try {
-    const results = calculateROI(inputs)
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
-          .section { margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 5px; }
-          .metric { display: flex; justify-content: space-between; margin: 10px 0; }
-          .label { font-weight: bold; }
-          .value { color: #2563eb; }
-          .savings { background: #dcfce7; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Your Kuhlekt ROI Analysis</h1>
-            <p>${inputs.companyName}</p>
-          </div>
-          
-          <div class="section">
-            <h2>Current Costs (Annual)</h2>
-            <div class="metric">
-              <span class="label">Labor Costs:</span>
-              <span class="value">$${results.currentCosts.laborCosts.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Bad Debt Loss:</span>
-              <span class="value">$${results.currentCosts.badDebtLoss.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Opportunity Cost:</span>
-              <span class="value">$${results.currentCosts.opportunityCost.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Total Annual:</span>
-              <span class="value">$${results.currentCosts.totalAnnual.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <h2>With Kuhlekt (Annual)</h2>
-            <div class="metric">
-              <span class="label">Labor Costs:</span>
-              <span class="value">$${results.withKuhlekt.laborCosts.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Bad Debt Loss:</span>
-              <span class="value">$${results.withKuhlekt.badDebtLoss.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Opportunity Cost:</span>
-              <span class="value">$${results.withKuhlekt.opportunityCost.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Software Cost:</span>
-              <span class="value">$${results.withKuhlekt.softwareCost.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Total Annual:</span>
-              <span class="value">$${results.withKuhlekt.totalAnnual.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div class="savings">
-            <h2>Your Potential Savings</h2>
-            <div class="metric">
-              <span class="label">Annual Savings:</span>
-              <span class="value">$${results.savings.annual.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Monthly Savings:</span>
-              <span class="value">$${results.savings.monthly.toLocaleString()}</span>
-            </div>
-            <div class="metric">
-              <span class="label">Payback Period:</span>
-              <span class="value">${results.paybackPeriod.toFixed(1)} months</span>
-            </div>
-            <div class="metric">
-              <span class="label">3-Year ROI:</span>
-              <span class="value">${results.threeYearROI.toFixed(0)}%</span>
-            </div>
-          </div>
-
-          <p>Ready to start saving? <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo">Schedule a demo</a> to see Kuhlekt in action.</p>
+        <div class="footer">
+          <p>Kuhlekt - Automated Accounts Receivable Management</p>
         </div>
-      </body>
-      </html>
-    `
+      </div>
+    </body>
+    </html>
+  `
 
-    const emailText = `
-Your Kuhlekt ROI Analysis for ${inputs.companyName}
+  const textContent = `
+Your verification code is: ${code}
 
-Current Annual Costs:
-- Labor: $${results.currentCosts.laborCosts.toLocaleString()}
-- Bad Debt: $${results.currentCosts.badDebtLoss.toLocaleString()}
-- Opportunity Cost: $${results.currentCosts.opportunityCost.toLocaleString()}
-Total: $${results.currentCosts.totalAnnual.toLocaleString()}
+This code will expire in 10 minutes.
 
-With Kuhlekt:
-- Labor: $${results.withKuhlekt.laborCosts.toLocaleString()}
-- Bad Debt: $${results.withKuhlekt.badDebtLoss.toLocaleString()}
-- Opportunity Cost: $${results.withKuhlekt.opportunityCost.toLocaleString()}
-- Software: $${results.withKuhlekt.softwareCost.toLocaleString()}
-Total: $${results.withKuhlekt.totalAnnual.toLocaleString()}
+If you didn't request this code, please ignore this email.
 
-Your Potential Savings:
-- Annual: $${results.savings.annual.toLocaleString()}
-- Monthly: $${results.savings.monthly.toLocaleString()}
-- Payback Period: ${results.paybackPeriod.toFixed(1)} months
-- 3-Year ROI: ${results.threeYearROI.toFixed(0)}%
+Kuhlekt - Automated Accounts Receivable Management
+  `
 
-Ready to start saving? Schedule a demo at ${process.env.NEXT_PUBLIC_SITE_URL}/demo
-    `
+  const emailResult = await sendEmail({
+    to: email,
+    subject: "Your Kuhlekt Verification Code",
+    text: textContent,
+    html: htmlContent,
+  })
 
-    const result = await sendEmail({
-      to: inputs.email,
-      subject: `Your Kuhlekt ROI Analysis - ${inputs.companyName}`,
-      text: emailText,
-      html: emailHtml,
-    })
-
-    return result
-  } catch (error) {
-    console.error("Error sending ROI report:", error)
-    return {
-      success: false,
-      message: "Failed to send ROI report",
-    }
+  if (!emailResult.success) {
+    return { success: false, message: "Failed to send verification email" }
   }
+
+  return { success: true, message: "Verification code sent successfully" }
+}
+
+export async function verifyCode(email: string, code: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("verification_codes")
+    .select("*")
+    .eq("email", email)
+    .eq("code", code)
+    .single()
+
+  if (error || !data) {
+    const { error: attemptsError } = await supabase.rpc("increment_attempts", { user_email: email })
+
+    if (attemptsError) {
+      console.error("Error incrementing attempts:", attemptsError)
+    }
+
+    return { success: false, message: "Invalid verification code" }
+  }
+
+  if (new Date(data.expires_at) < new Date()) {
+    return { success: false, message: "Verification code has expired" }
+  }
+
+  if (data.attempts >= 3) {
+    return { success: false, message: "Too many attempts. Please request a new code." }
+  }
+
+  const { error: deleteError } = await supabase.from("verification_codes").delete().eq("email", email)
+
+  if (deleteError) {
+    console.error("Error deleting verification code:", deleteError)
+  }
+
+  return { success: true, message: "Email verified successfully" }
 }
