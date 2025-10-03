@@ -1,4 +1,5 @@
 "use client"
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -16,8 +17,16 @@ import {
   ArrowLeft,
   ArrowRight,
   AlertCircle,
+  Mail,
+  Shield,
 } from "lucide-react"
-import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
+import {
+  calculateSimpleROI,
+  calculateDetailedROI,
+  sendROIEmail,
+  generateVerificationCode,
+  verifyCode,
+} from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
 import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 
@@ -28,14 +37,18 @@ interface ROICalculatorModalProps {
 
 export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
   const [step, setStep] = useState<
-    "select" | "simple" | "detailed" | "contact" | "simple-results" | "detailed-results"
+    "select" | "simple" | "detailed" | "contact" | "verify" | "simple-results" | "detailed-results"
   >("select")
   const [isCalculating, setIsCalculating] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [calculatorType, setCalculatorType] = useState<"simple" | "detailed">("simple")
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [canResend, setCanResend] = useState(true)
+  const [resendTimer, setResendTimer] = useState(0)
 
-  // Simple calculator state
   const [simpleData, setSimpleData] = useState({
     currentDSO: "",
     averageInvoiceValue: "",
@@ -45,7 +58,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   })
   const [simpleResults, setSimpleResults] = useState<any>(null)
 
-  // Detailed calculator state
   const [detailedData, setDetailedData] = useState({
     implementationCost: "",
     monthlyCost: "",
@@ -65,7 +77,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   })
   const [detailedResults, setDetailedResults] = useState<any>(null)
 
-  // Contact info
   const [contactData, setContactData] = useState({
     name: "",
     email: "",
@@ -106,6 +117,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setEmailSent(false)
     setCalculatorType("simple")
     setErrors({})
+    setVerificationCode("")
+    setCanResend(true)
+    setResendTimer(0)
   }
 
   const validateSimpleForm = () => {
@@ -191,11 +205,94 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setStep("contact")
   }
 
+  const startResendTimer = () => {
+    setCanResend(false)
+    setResendTimer(60)
+
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          setCanResend(true)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
   const handleContactSubmit = async () => {
     if (!validateContactForm()) {
       return
     }
 
+    setIsSendingCode(true)
+    setErrors({})
+
+    try {
+      const result = await generateVerificationCode(contactData.email)
+
+      if (result.success) {
+        setStep("verify")
+        startResendTimer()
+      } else {
+        setErrors({ submit: result.error || "Failed to send verification code" })
+      }
+    } catch (error) {
+      setErrors({ submit: "Failed to send verification code. Please try again." })
+    } finally {
+      setIsSendingCode(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    if (!canResend) return
+
+    setIsSendingCode(true)
+    setErrors({})
+
+    try {
+      const result = await generateVerificationCode(contactData.email)
+
+      if (result.success) {
+        startResendTimer()
+        setVerificationCode("")
+      } else {
+        setErrors({ verify: result.error || "Failed to send verification code" })
+      }
+    } catch (error) {
+      setErrors({ verify: "Failed to send verification code. Please try again." })
+    } finally {
+      setIsSendingCode(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim() || verificationCode.length !== 6) {
+      setErrors({ verify: "Please enter a valid 6-digit code" })
+      return
+    }
+
+    setIsVerifying(true)
+    setErrors({})
+
+    try {
+      const result = await verifyCode(contactData.email, verificationCode)
+
+      if (result.success) {
+        // Code verified, now calculate and show results
+        await calculateAndShowResults()
+      } else {
+        setErrors({ verify: result.error || "Invalid verification code" })
+      }
+    } catch (error) {
+      setErrors({ verify: "Failed to verify code. Please try again." })
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const calculateAndShowResults = async () => {
     setIsCalculating(true)
 
     try {
@@ -210,7 +307,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         setStep("detailed-results")
       }
 
-      // Send email with results
       await sendROIEmail({
         name: contactData.name,
         email: contactData.email,
@@ -244,7 +340,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 <Calculator className="h-6 w-6 text-cyan-600" />
                 ROI Calculator
               </DialogTitle>
-              {step !== "select" && (
+              {step !== "select" && step !== "verify" && (
                 <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)}>
                   <HelpCircle className="h-5 w-5" />
                 </Button>
@@ -255,6 +351,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               {step === "simple" && "Quick ROI calculation based on DSO improvement"}
               {step === "detailed" && "Comprehensive invoice-to-cash analysis"}
               {step === "contact" && "Your contact information to receive results"}
+              {step === "verify" && "Enter the verification code sent to your email"}
               {(step === "simple-results" || step === "detailed-results") && "Your ROI analysis results"}
             </DialogDescription>
           </DialogHeader>
@@ -266,7 +363,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
           )}
 
-          {/* Calculator Selection */}
           {step === "select" && (
             <div className="space-y-4 py-4">
               <div className="grid md:grid-cols-2 gap-4">
@@ -297,7 +393,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
           )}
 
-          {/* Simple Calculator Form */}
           {step === "simple" && (
             <div className="space-y-6 py-4">
               <div className="space-y-4">
@@ -393,7 +488,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
           )}
 
-          {/* Detailed Calculator Form */}
           {step === "detailed" && (
             <div className="space-y-6 py-4">
               <Accordion type="multiple" defaultValue={["cost", "bank", "debt", "savings", "financial", "team"]}>
@@ -418,9 +512,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="10000"
                           className={errors.implementationCost ? "border-red-500" : ""}
                         />
-                        {errors.implementationCost && (
-                          <p className="text-sm text-red-600 mt-1">{errors.implementationCost}</p>
-                        )}
                       </div>
                       <div>
                         <Label>Monthly Cost ($) *</Label>
@@ -434,7 +525,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500"
                           className={errors.monthlyCost ? "border-red-500" : ""}
                         />
-                        {errors.monthlyCost && <p className="text-sm text-red-600 mt-1">{errors.monthlyCost}</p>}
                       </div>
                     </div>
                     <div>
@@ -449,9 +539,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         placeholder="150000"
                         className={errors.perAnnumDirectLabourCosts ? "border-red-500" : ""}
                       />
-                      {errors.perAnnumDirectLabourCosts && (
-                        <p className="text-sm text-red-600 mt-1">{errors.perAnnumDirectLabourCosts}</p>
-                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -494,7 +581,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="8.5"
                           className={errors.interestRate ? "border-red-500" : ""}
                         />
-                        {errors.interestRate && <p className="text-sm text-red-600 mt-1">{errors.interestRate}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -521,9 +607,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="50000"
                           className={errors.currentBadDebts ? "border-red-500" : ""}
                         />
-                        {errors.currentBadDebts && (
-                          <p className="text-sm text-red-600 mt-1">{errors.currentBadDebts}</p>
-                        )}
                       </div>
                       <div>
                         <Label>Average Bad Debt (%) *</Label>
@@ -537,7 +620,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="2.5"
                           className={errors.averageBadDebt ? "border-red-500" : ""}
                         />
-                        {errors.averageBadDebt && <p className="text-sm text-red-600 mt-1">{errors.averageBadDebt}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -564,7 +646,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="25"
                           className={errors.dsoImprovement ? "border-red-500" : ""}
                         />
-                        {errors.dsoImprovement && <p className="text-sm text-red-600 mt-1">{errors.dsoImprovement}</p>}
                       </div>
                       <div>
                         <Label>Labour Savings (%) *</Label>
@@ -578,7 +659,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="30"
                           className={errors.labourSavings ? "border-red-500" : ""}
                         />
-                        {errors.labourSavings && <p className="text-sm text-red-600 mt-1">{errors.labourSavings}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -605,7 +685,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="45"
                           className={errors.currentDSODays ? "border-red-500" : ""}
                         />
-                        {errors.currentDSODays && <p className="text-sm text-red-600 mt-1">{errors.currentDSODays}</p>}
                       </div>
                       <div>
                         <Label>Debtors Balance ($) *</Label>
@@ -619,7 +698,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500000"
                           className={errors.debtorsBalance ? "border-red-500" : ""}
                         />
-                        {errors.debtorsBalance && <p className="text-sm text-red-600 mt-1">{errors.debtorsBalance}</p>}
                       </div>
                     </div>
                     <div>
@@ -664,9 +742,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500"
                           className={errors.numberOfDebtors ? "border-red-500" : ""}
                         />
-                        {errors.numberOfDebtors && (
-                          <p className="text-sm text-red-600 mt-1">{errors.numberOfDebtors}</p>
-                        )}
                       </div>
                       <div>
                         <Label>Number of Collectors *</Label>
@@ -680,9 +755,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="3"
                           className={errors.numberOfCollectors ? "border-red-500" : ""}
                         />
-                        {errors.numberOfCollectors && (
-                          <p className="text-sm text-red-600 mt-1">{errors.numberOfCollectors}</p>
-                        )}
                       </div>
                     </div>
                     <div>
@@ -697,9 +769,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         placeholder="15"
                         className={errors.projectedCustomerGrowth ? "border-red-500" : ""}
                       />
-                      {errors.projectedCustomerGrowth && (
-                        <p className="text-sm text-red-600 mt-1">{errors.projectedCustomerGrowth}</p>
-                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -722,14 +791,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
           )}
 
-          {/* Contact Information Form */}
           {step === "contact" && (
             <div className="space-y-6 py-4">
               <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-lg mb-2">Almost there!</h3>
                 <p className="text-sm text-gray-700">
-                  Please provide your contact information to see your personalized ROI results. We'll also email you a
-                  detailed report.
+                  Please provide your contact information. We'll send a verification code to your email to ensure
+                  security.
                 </p>
               </div>
 
@@ -806,17 +874,96 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </Button>
                 <Button
                   onClick={handleContactSubmit}
-                  disabled={isCalculating}
+                  disabled={isSendingCode}
                   className="flex-1 bg-cyan-600 hover:bg-cyan-700"
                 >
-                  {isCalculating ? "Calculating..." : "View Results"}
-                  {!isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
+                  {isSendingCode ? (
+                    <>
+                      <Mail className="mr-2 h-4 w-4 animate-pulse" />
+                      Sending Code...
+                    </>
+                  ) : (
+                    <>
+                      Send Verification Code
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Simple Results */}
+          {step === "verify" && (
+            <div className="space-y-6 py-4">
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 text-center">
+                <Shield className="h-12 w-12 text-cyan-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-lg mb-2">Check Your Email</h3>
+                <p className="text-sm text-gray-700">
+                  We've sent a 6-digit verification code to
+                  <br />
+                  <strong className="text-cyan-600">{contactData.email}</strong>
+                </p>
+              </div>
+
+              {errors.verify && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <p className="text-sm text-red-600">{errors.verify}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Verification Code *</Label>
+                  <Input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+                      setVerificationCode(value)
+                      setErrors({ ...errors, verify: "" })
+                    }}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest font-mono"
+                  />
+                  <p className="text-sm text-gray-600 mt-2 text-center">Enter the 6-digit code from your email</p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <span>Didn't receive the code?</span>
+                  {canResend ? (
+                    <Button
+                      variant="link"
+                      onClick={handleResendCode}
+                      disabled={isSendingCode}
+                      className="p-0 h-auto text-cyan-600"
+                    >
+                      {isSendingCode ? "Sending..." : "Resend code"}
+                    </Button>
+                  ) : (
+                    <span className="text-gray-500">Resend in {resendTimer}s</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep("contact")} className="flex-1">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleVerifyCode}
+                  disabled={isVerifying || verificationCode.length !== 6}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                >
+                  {isVerifying ? "Verifying..." : "Verify & View Results"}
+                  {!isVerifying && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {step === "simple-results" && simpleResults && (
             <div className="space-y-6 py-4">
               {emailSent && (
@@ -863,7 +1010,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
           )}
 
-          {/* Detailed Results */}
           {step === "detailed-results" && detailedResults && (
             <div className="space-y-6 py-4">
               {emailSent && (

@@ -50,6 +50,151 @@ interface DetailedROIResults {
   paybackMonths: number
 }
 
+// In-memory storage for verification codes (in production, use a database or Redis)
+const verificationCodes = new Map<string, { code: string; timestamp: number; attempts: number }>()
+
+// Clean up old codes (older than 15 minutes)
+function cleanupOldCodes() {
+  const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
+  for (const [email, data] of verificationCodes.entries()) {
+    if (data.timestamp < fifteenMinutesAgo) {
+      verificationCodes.delete(email)
+    }
+  }
+}
+
+export async function generateVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Clean up old codes first
+    cleanupOldCodes()
+
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+
+    // Store the code with timestamp
+    verificationCodes.set(email.toLowerCase(), {
+      code,
+      timestamp: Date.now(),
+      attempts: 0,
+    })
+
+    // Send the code via email
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .code-box { background: white; border: 2px dashed #0891b2; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+            .code { font-size: 32px; font-weight: bold; color: #0891b2; letter-spacing: 5px; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Your Verification Code</h1>
+            </div>
+            <div class="content">
+              <p>Thank you for using the Kuhlekt ROI Calculator!</p>
+              <p>To access your personalized ROI results, please enter the verification code below:</p>
+              
+              <div class="code-box">
+                <div class="code">${code}</div>
+              </div>
+
+              <div class="warning">
+                <strong>⚠️ Important:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                  <li>This code will expire in 15 minutes</li>
+                  <li>Do not share this code with anyone</li>
+                  <li>If you didn't request this code, please ignore this email</li>
+                </ul>
+              </div>
+
+              <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+                Need help? Contact us at <a href="mailto:enquiries@kuhlekt.com" style="color: #0891b2;">enquiries@kuhlekt.com</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    await sendEmail({
+      to: email,
+      subject: "Your Kuhlekt ROI Calculator Verification Code",
+      html: emailHtml,
+      text: `Your verification code is: ${code}\n\nThis code will expire in 15 minutes.\n\nKuhlekt - Transforming Invoice-to-Cash`,
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error generating verification code:", error)
+    return {
+      success: false,
+      error: "Failed to send verification code. Please try again.",
+    }
+  }
+}
+
+export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    cleanupOldCodes()
+
+    const storedData = verificationCodes.get(email.toLowerCase())
+
+    if (!storedData) {
+      return {
+        success: false,
+        error: "Verification code expired or not found. Please request a new code.",
+      }
+    }
+
+    // Check if code has expired (15 minutes)
+    const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
+    if (storedData.timestamp < fifteenMinutesAgo) {
+      verificationCodes.delete(email.toLowerCase())
+      return {
+        success: false,
+        error: "Verification code has expired. Please request a new code.",
+      }
+    }
+
+    // Check attempts (max 5 attempts)
+    if (storedData.attempts >= 5) {
+      verificationCodes.delete(email.toLowerCase())
+      return {
+        success: false,
+        error: "Too many failed attempts. Please request a new code.",
+      }
+    }
+
+    // Verify the code
+    if (storedData.code !== code.trim()) {
+      storedData.attempts++
+      return {
+        success: false,
+        error: `Invalid verification code. ${5 - storedData.attempts} attempts remaining.`,
+      }
+    }
+
+    // Code is valid - remove it so it can't be reused
+    verificationCodes.delete(email.toLowerCase())
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error verifying code:", error)
+    return {
+      success: false,
+      error: "Failed to verify code. Please try again.",
+    }
+  }
+}
+
 export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<SimpleROIResults> {
   const currentDSO = Number.parseFloat(inputs.currentDSO)
   const avgInvoiceValue = Number.parseFloat(inputs.averageInvoiceValue)
@@ -86,37 +231,18 @@ export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<D
   const currentDSO = Number.parseFloat(inputs.currentDSODays)
   const debtorsBalance = Number.parseFloat(inputs.debtorsBalance)
 
-  // Calculate annual revenue from debtors balance and DSO
   const annualRevenue = (debtorsBalance / currentDSO) * daysSales
-
-  // DSO Improvement
   const dsoReductionDays = currentDSO * dsoImprovementPercent
   const newDSO = currentDSO - dsoReductionDays
-
-  // Working Capital Released
   const dailyRevenue = annualRevenue / daysSales
   const workingCapitalReleased = dailyRevenue * dsoReductionDays
-
-  // Interest Savings (on working capital released)
   const interestSavings = workingCapitalReleased * interestRate
-
-  // Labour Cost Savings
   const labourCostSavings = perAnnumDirectLabourCosts * labourSavingsPercent
-
-  // Bad Debt Reduction (40% improvement on current bad debt)
   const badDebtReduction = currentBadDebts * 0.4
-
-  // Total Annual Benefit
   const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
-
-  // Total Cost (Implementation + Annual)
   const totalImplementationAndAnnualCost = implementationCost + annualCost
-
-  // ROI Calculation
   const netBenefit = totalAnnualBenefit - annualCost
   const roi = totalImplementationAndAnnualCost > 0 ? (netBenefit / totalImplementationAndAnnualCost) * 100 : 0
-
-  // Payback Period
   const paybackMonths = totalAnnualBenefit > 0 ? (totalImplementationAndAnnualCost / totalAnnualBenefit) * 12 : 0
 
   return {
@@ -311,7 +437,6 @@ export async function sendROIEmail(data: {
       </html>
     `
 
-    // Send to customer
     await sendEmail({
       to: data.email,
       subject: emailSubject,
@@ -319,7 +444,6 @@ export async function sendROIEmail(data: {
       text: `Your ROI Calculator Results from Kuhlekt`,
     })
 
-    // Send notification to Kuhlekt
     const notificationHtml = `
       <h2>New ROI Calculator Lead</h2>
       <p><strong>Name:</strong> ${data.name}</p>
