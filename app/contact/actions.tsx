@@ -2,104 +2,109 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-interface ContactFormData {
-  name: string
-  email: string
-  company?: string
-  phone?: string
-  message: string
-}
-
-export async function submitContactForm(data: ContactFormData): Promise<{
-  success: boolean
-  message: string
-}> {
+export async function submitContactForm(formData: FormData) {
   try {
-    const { name, email, company, phone, message } = data
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    const company = formData.get("company") as string
+    const message = formData.get("message") as string
 
-    const emailResult = await sendEmail({
-      to: process.env.AWS_SES_FROM_EMAIL || "",
-      subject: `New Contact Form Submission from ${name}`,
-      text: `
-        New contact form submission:
-        
-        Name: ${name}
-        Email: ${email}
-        ${company ? `Company: ${company}` : ""}
-        ${phone ? `Phone: ${phone}` : ""}
-        
-        Message:
-        ${message}
-      `,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">New Contact Form Submission</h2>
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            ${company ? `<p><strong>Company:</strong> ${company}</p>` : ""}
-            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-            <p><strong>Message:</strong></p>
-            <p style="white-space: pre-wrap;">${message}</p>
-          </div>
-        </div>
-      `,
-    })
-
-    if (!emailResult.success) {
+    if (!name || !email || !message) {
       return {
         success: false,
-        message: "Failed to send your message. Please try again.",
+        message: "Please fill in all required fields",
       }
     }
 
-    const confirmationResult = await sendEmail({
-      to: email,
-      subject: "Thank you for contacting Kuhlekt",
-      text: `
-        Dear ${name},
-        
-        Thank you for contacting Kuhlekt. We have received your message and will get back to you as soon as possible.
-        
-        Best regards,
-        The Kuhlekt Team
-      `,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Thank you for contacting Kuhlekt</h2>
-          <p>Dear ${name},</p>
-          <p>Thank you for contacting Kuhlekt. We have received your message and will get back to you as soon as possible.</p>
-          <p style="margin-top: 30px;">Best regards,<br/>The Kuhlekt Team</p>
-        </div>
-      `,
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .field { margin: 15px 0; }
+            .label { font-weight: bold; color: #667eea; }
+            .value { margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Contact Form Submission</h1>
+            </div>
+            <div class="content">
+              <div class="field">
+                <div class="label">Name:</div>
+                <div class="value">${name}</div>
+              </div>
+              <div class="field">
+                <div class="label">Email:</div>
+                <div class="value">${email}</div>
+              </div>
+              ${
+                company
+                  ? `
+                <div class="field">
+                  <div class="label">Company:</div>
+                  <div class="value">${company}</div>
+                </div>
+              `
+                  : ""
+              }
+              <div class="field">
+                <div class="label">Message:</div>
+                <div class="value">${message}</div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const emailText = `
+New Contact Form Submission
+
+Name: ${name}
+Email: ${email}
+${company ? `Company: ${company}` : ""}
+Message: ${message}
+    `
+
+    const result = await sendEmail({
+      to: process.env.AWS_SES_FROM_EMAIL || "",
+      subject: `Contact Form: ${name}`,
+      text: emailText,
+      html: emailHtml,
     })
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to send email")
+    }
 
     return {
       success: true,
-      message: "Your message has been sent successfully. We'll be in touch soon!",
+      message: "Thank you for contacting us! We'll get back to you soon.",
     }
   } catch (error) {
     console.error("Error submitting contact form:", error)
     return {
       success: false,
-      message: "An unexpected error occurred. Please try again later.",
+      message: "Failed to send message. Please try again.",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
 
-export async function sendTestEmail(email: string): Promise<{ success: boolean; message: string }> {
+export async function sendTestEmail(to: string) {
   try {
     const result = await sendEmail({
-      to: email,
+      to,
       subject: "Test Email from Kuhlekt",
-      text: "This is a test email to verify the email configuration is working correctly.",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Test Email</h2>
-          <p>This is a test email to verify the email configuration is working correctly.</p>
-        </div>
-      `,
+      text: "This is a test email from the Kuhlekt contact form.",
+      html: "<h1>Test Email</h1><p>This is a test email from the Kuhlekt contact form.</p>",
     })
 
     return result
@@ -107,7 +112,8 @@ export async function sendTestEmail(email: string): Promise<{ success: boolean; 
     console.error("Error sending test email:", error)
     return {
       success: false,
-      message: "Failed to send test email.",
+      message: "Failed to send test email",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
