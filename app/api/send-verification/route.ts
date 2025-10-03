@@ -2,32 +2,26 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sendVerificationCode } from "@/lib/roi-verification"
 
 export async function POST(request: NextRequest) {
+  console.log("[v0] API: Sending verification code")
+
   try {
     const body = await request.json()
-    const { name, email, company, phone, calculatorType, inputs } = body
+    const { email } = body
 
-    console.log("[v0] API: Sending verification code to:", email)
+    console.log("[v0] Email received:", email)
 
-    const result = await sendVerificationCode({
-      name,
-      email,
-      company,
-      phone,
-      calculatorType,
-      inputs,
-    })
+    if (!email || typeof email !== "string") {
+      console.log("[v0] Invalid email provided")
+      return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
 
-    console.log("[v0] API: Send verification result:", result)
+    // Send verification code
+    await sendVerificationCode(email)
+    console.log("[v0] Verification code sent successfully")
 
-    return NextResponse.json(result)
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[v0] API: Error in send-verification:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to send verification code",
-      },
-      { status: 500 },
-    )
+    console.error("[v0] Error sending verification code:", error)
+    return NextResponse.json({ error: "Failed to send verification code" }, { status: 500 })
   }
 }

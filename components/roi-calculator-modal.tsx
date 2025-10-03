@@ -200,6 +200,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         }),
       })
 
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
+        const text = await response.text()
+        console.error("[v0] Response text:", text)
+        alert("Server error occurred. Please try again or contact support.")
+        return
+      }
+
       const result = await response.json()
 
       if (result.success) {
@@ -235,6 +244,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           code: verificationCode,
         }),
       })
+
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
+        const text = await response.text()
+        console.error("[v0] Response text:", text)
+        setVerificationError("Server error occurred. Please try again.")
+        return
+      }
 
       const result = await response.json()
 
@@ -299,6 +317,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           inputs: calculatorType === "simple" ? simpleData : detailedData,
         }),
       })
+
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
+        const text = await response.text()
+        console.error("[v0] Response text:", text)
+        setVerificationError("Server error occurred. Please try again.")
+        return
+      }
 
       const result = await response.json()
 
