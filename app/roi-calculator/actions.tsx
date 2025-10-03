@@ -20,18 +20,18 @@ async function storeVerificationCode(email: string, code: string): Promise<boole
     const { error } = await supabase.from("verification_codes").insert({
       email,
       code,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes
       attempts: 0,
     })
 
     if (error) {
-      console.error("Error storing verification code:", error)
+      console.error("[Store Code] Database error:", error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error("Error in storeVerificationCode:", error)
+    console.error("[Store Code] Unexpected error:", error)
     return false
   }
 }
@@ -39,62 +39,101 @@ async function storeVerificationCode(email: string, code: string): Promise<boole
 // Send verification code via email
 export async function sendVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Generate code
+    console.log("[Send Code] Starting for email:", email)
+
+    // Generate verification code
     const code = generateVerificationCode()
+    console.log("[Send Code] Generated code")
 
     // Store in database
     const stored = await storeVerificationCode(email, code)
     if (!stored) {
+      console.error("[Send Code] Failed to store code in database")
       return {
         success: false,
-        message: "Failed to generate verification code. Please try again.",
+        message: "Unable to process your request. Please try again.",
       }
     }
+    console.log("[Send Code] Stored in database")
 
     // Send email
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .code-box { background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+            .code { font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Verification Code</h1>
+            </div>
+            <div class="content">
+              <p>Hello,</p>
+              <p>You requested access to your ROI Calculator results. Please use the verification code below:</p>
+              <div class="code-box">
+                <div class="code">${code}</div>
+              </div>
+              <p><strong>This code will expire in 15 minutes.</strong></p>
+              <p>If you didn't request this code, please ignore this email.</p>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const emailText = `
+      Your Verification Code
+      
+      You requested access to your ROI Calculator results. Please use the verification code below:
+      
+      ${code}
+      
+      This code will expire in 15 minutes.
+      
+      If you didn't request this code, please ignore this email.
+      
+      © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+    `
+
     const emailResult = await sendEmail({
       to: email,
       subject: "Your ROI Calculator Verification Code",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verification Code</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; text-align: center;">
-            <h1 style="color: #2563eb; margin-bottom: 20px;">ROI Calculator Verification</h1>
-            <p style="font-size: 16px; margin-bottom: 30px;">Your verification code is:</p>
-            <div style="background-color: white; border: 2px solid #2563eb; border-radius: 8px; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb; margin-bottom: 30px;">
-              ${code}
-            </div>
-            <p style="font-size: 14px; color: #666;">This code will expire in 10 minutes.</p>
-            <p style="font-size: 14px; color: #666;">If you didn't request this code, please ignore this email.</p>
-          </div>
-        </body>
-        </html>
-      `,
-      text: `Your ROI Calculator verification code is: ${code}. This code will expire in 10 minutes.`,
+      html: emailHtml,
+      text: emailText,
     })
 
     if (!emailResult.success) {
+      console.error("[Send Code] Email send failed:", emailResult.message)
       return {
         success: false,
-        message: "Failed to send verification code. Please try again.",
+        message: "Unable to send verification code. Please try again.",
       }
     }
+
+    console.log("[Send Code] Email sent successfully")
 
     return {
       success: true,
       message: "Verification code sent successfully!",
     }
   } catch (error) {
-    console.error("Error sending verification code:", error)
+    console.error("[Send Code] Unexpected error:", error)
     return {
       success: false,
-      message: "An error occurred. Please try again.",
+      message: "An unexpected error occurred. Please try again.",
     }
   }
 }
@@ -110,13 +149,12 @@ export async function verifyCode(email: string, code: string): Promise<{ success
     if (error || !data) {
       return {
         success: false,
-        message: "Invalid or expired verification code.",
+        message: "Verification code not found or expired.",
       }
     }
 
-    // Check if code has expired
+    // Check if code is expired
     if (new Date(data.expires_at) < new Date()) {
-      // Delete expired code
       await supabase.from("verification_codes").delete().eq("email", email)
 
       return {
@@ -127,7 +165,6 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
     // Check attempts
     if (data.attempts >= 3) {
-      // Delete code after too many attempts
       await supabase.from("verification_codes").delete().eq("email", email)
 
       return {
@@ -146,22 +183,22 @@ export async function verifyCode(email: string, code: string): Promise<{ success
 
       return {
         success: false,
-        message: "Invalid verification code. Please try again.",
+        message: `Invalid code. ${2 - data.attempts} attempts remaining.`,
       }
     }
 
-    // Code is valid, delete it
+    // Code is valid - delete it
     await supabase.from("verification_codes").delete().eq("email", email)
 
     return {
       success: true,
-      message: "Email verified successfully!",
+      message: "Code verified successfully!",
     }
   } catch (error) {
-    console.error("Error verifying code:", error)
+    console.error("[Verify Code] Error:", error)
     return {
       success: false,
-      message: "An error occurred during verification.",
+      message: "An error occurred while verifying the code.",
     }
   }
 }
