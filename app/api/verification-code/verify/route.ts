@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, code } = await request.json()
+    const body = await request.json()
+    const { email, code } = body
 
     if (!email || !code) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
@@ -11,28 +12,40 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Find the most recent unused code for this email
-    const { data, error } = await supabase
+    // Find the verification code
+    const { data: verificationData, error: fetchError } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
       .eq("code", code)
       .eq("used", false)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single()
 
-    if (error || !data) {
-      return NextResponse.json({ success: false, error: "Invalid or expired code" }, { status: 400 })
+    if (fetchError || !verificationData) {
+      console.error("Verification code not found:", fetchError)
+      return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
+    }
+
+    // Check if code is expired
+    const expiresAt = new Date(verificationData.expires_at)
+    if (expiresAt < new Date()) {
+      return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
     // Mark code as used
-    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
+    const { error: updateError } = await supabase
+      .from("verification_codes")
+      .update({ used: true })
+      .eq("id", verificationData.id)
 
-    return NextResponse.json({ success: true })
+    if (updateError) {
+      console.error("Error updating verification code:", updateError)
+      return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, message: "Code verified successfully" })
   } catch (error) {
-    console.error("Error verifying code:", error)
-    return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
+    console.error("Error in verify code:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
