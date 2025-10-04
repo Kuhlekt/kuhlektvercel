@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, code } = await request.json()
 
@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Find the verification code
     const { data: verificationData, error: fetchError } = await supabase
       .from("verification_codes")
       .select("*")
@@ -24,13 +23,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    // Check if expired
     const expiresAt = new Date(verificationData.expires_at)
     if (expiresAt < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    // Mark as used
     const { error: updateError } = await supabase
       .from("verification_codes")
       .update({ used: true })
