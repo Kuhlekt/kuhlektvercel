@@ -2,69 +2,88 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export interface ROIInputs {
+export interface ROICalculatorInputs {
+  companyName: string
+  email: string
   annualRevenue: number
   averageInvoiceValue: number
+  numberOfInvoices: number
   currentDSO: number
-  staffHours: number
+  badDebtPercentage: number
 }
 
 export interface ROIResults {
-  currentCosts: {
-    laborCost: number
-    opportunityCost: number
-    totalAnnualCost: number
+  currentMetrics: {
+    totalAR: number
+    annualBadDebt: number
+    staffCosts: number
+    totalCurrentCost: number
   }
-  withKuhlekt: {
-    laborCost: number
-    opportunityCost: number
-    totalAnnualCost: number
+  projectedMetrics: {
+    newDSO: number
+    totalAR: number
+    annualBadDebt: number
+    staffCosts: number
+    totalProjectedCost: number
   }
   savings: {
-    annualSavings: number
+    dsoImprovement: number
+    cashFlowImprovement: number
+    badDebtReduction: number
+    staffCostSavings: number
+    totalAnnualSavings: number
     threeYearSavings: number
     roi: number
     paybackMonths: number
   }
 }
 
-const KUHLEKT_ANNUAL_COST = 12000
-const HOURLY_RATE = 50
-const DSO_IMPROVEMENT = 15
-const EFFICIENCY_GAIN = 0.6
+export async function calculateROI(inputs: ROICalculatorInputs): Promise<ROIResults> {
+  const { annualRevenue, averageInvoiceValue, numberOfInvoices, currentDSO, badDebtPercentage } = inputs
 
-export async function calculateROI(inputs: ROIInputs): Promise<ROIResults> {
-  const currentLaborCost = inputs.staffHours * 52 * HOURLY_RATE
-  const currentDSODays = inputs.currentDSO
-  const dailyRevenue = inputs.annualRevenue / 365
-  const currentOpportunityCost = dailyRevenue * currentDSODays * 0.05
-  const currentTotalCost = currentLaborCost + currentOpportunityCost
+  // Current state calculations
+  const currentTotalAR = (annualRevenue / 365) * currentDSO
+  const currentBadDebt = annualRevenue * (badDebtPercentage / 100)
+  const currentStaffCosts = numberOfInvoices * 15 * 12 // $15 per invoice per month
 
-  const newDSO = Math.max(currentDSODays - DSO_IMPROVEMENT, 20)
-  const newStaffHours = inputs.staffHours * (1 - EFFICIENCY_GAIN)
-  const newLaborCost = newStaffHours * 52 * HOURLY_RATE + KUHLEKT_ANNUAL_COST
-  const newOpportunityCost = dailyRevenue * newDSO * 0.05
-  const newTotalCost = newLaborCost + newOpportunityCost
+  // Projected improvements with Kuhlekt
+  const dsoReduction = Math.min(currentDSO * 0.35, 25) // 35% reduction, max 25 days
+  const newDSO = currentDSO - dsoReduction
+  const projectedTotalAR = (annualRevenue / 365) * newDSO
+  const projectedBadDebt = currentBadDebt * 0.5 // 50% reduction
+  const projectedStaffCosts = currentStaffCosts * 0.4 // 60% staff time reduction
 
-  const annualSavings = currentTotalCost - newTotalCost
-  const threeYearSavings = annualSavings * 3
-  const roi = (threeYearSavings / (KUHLEKT_ANNUAL_COST * 3)) * 100
-  const paybackMonths = (KUHLEKT_ANNUAL_COST / annualSavings) * 12
+  // Savings calculations
+  const cashFlowImprovement = currentTotalAR - projectedTotalAR
+  const badDebtReduction = currentBadDebt - projectedBadDebt
+  const staffCostSavings = currentStaffCosts - projectedStaffCosts
+  const totalAnnualSavings = cashFlowImprovement + badDebtReduction + staffCostSavings
+
+  const estimatedCost = 24000 // Annual Kuhlekt subscription
+  const roi = ((totalAnnualSavings - estimatedCost) / estimatedCost) * 100
+  const paybackMonths = (estimatedCost / totalAnnualSavings) * 12
 
   return {
-    currentCosts: {
-      laborCost: currentLaborCost,
-      opportunityCost: currentOpportunityCost,
-      totalAnnualCost: currentTotalCost,
+    currentMetrics: {
+      totalAR: currentTotalAR,
+      annualBadDebt: currentBadDebt,
+      staffCosts: currentStaffCosts,
+      totalCurrentCost: currentBadDebt + currentStaffCosts,
     },
-    withKuhlekt: {
-      laborCost: newLaborCost,
-      opportunityCost: newOpportunityCost,
-      totalAnnualCost: newTotalCost,
+    projectedMetrics: {
+      newDSO,
+      totalAR: projectedTotalAR,
+      annualBadDebt: projectedBadDebt,
+      staffCosts: projectedStaffCosts,
+      totalProjectedCost: projectedBadDebt + projectedStaffCosts + estimatedCost,
     },
     savings: {
-      annualSavings,
-      threeYearSavings,
+      dsoImprovement: dsoReduction,
+      cashFlowImprovement,
+      badDebtReduction,
+      staffCostSavings,
+      totalAnnualSavings,
+      threeYearSavings: totalAnnualSavings * 3,
       roi,
       paybackMonths,
     },
@@ -72,156 +91,141 @@ export async function calculateROI(inputs: ROIInputs): Promise<ROIResults> {
 }
 
 export async function sendROIReport(
-  email: string,
-  inputs: ROIInputs,
+  inputs: ROICalculatorInputs,
   results: ROIResults,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const subject = "Your Kuhlekt ROI Analysis Report"
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .metric { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #667eea; }
+            .metric-label { font-weight: bold; color: #667eea; }
+            .metric-value { font-size: 24px; color: #333; margin: 5px 0; }
+            .savings { background: #e8f5e9; border-left-color: #4caf50; }
+            .footer { text-align: center; padding: 20px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Custom ROI Analysis</h1>
+              <p>From Kuhlekt</p>
+            </div>
+            <div class="content">
+              <p>Dear ${inputs.companyName},</p>
+              <p>Thank you for using our ROI Calculator. Based on your inputs, here's your personalized analysis:</p>
+              
+              <h2>Current State</h2>
+              <div class="metric">
+                <div class="metric-label">Days Sales Outstanding (DSO)</div>
+                <div class="metric-value">${inputs.currentDSO} days</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Total Accounts Receivable</div>
+                <div class="metric-value">$${results.currentMetrics.totalAR.toLocaleString()}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Annual Bad Debt</div>
+                <div class="metric-value">$${results.currentMetrics.annualBadDebt.toLocaleString()}</div>
+              </div>
+              
+              <h2>Projected with Kuhlekt</h2>
+              <div class="metric savings">
+                <div class="metric-label">New DSO</div>
+                <div class="metric-value">${results.projectedMetrics.newDSO.toFixed(1)} days</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">DSO Improvement</div>
+                <div class="metric-value">${results.savings.dsoImprovement.toFixed(1)} days faster</div>
+              </div>
+              
+              <h2>Your Potential Savings</h2>
+              <div class="metric savings">
+                <div class="metric-label">Cash Flow Improvement</div>
+                <div class="metric-value">$${results.savings.cashFlowImprovement.toLocaleString()}</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">Bad Debt Reduction</div>
+                <div class="metric-value">$${results.savings.badDebtReduction.toLocaleString()}/year</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">Staff Cost Savings</div>
+                <div class="metric-value">$${results.savings.staffCostSavings.toLocaleString()}/year</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">Total Annual Savings</div>
+                <div class="metric-value">$${results.savings.totalAnnualSavings.toLocaleString()}</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">3-Year Total Savings</div>
+                <div class="metric-value">$${results.savings.threeYearSavings.toLocaleString()}</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">Return on Investment</div>
+                <div class="metric-value">${results.savings.roi.toFixed(0)}%</div>
+              </div>
+              <div class="metric savings">
+                <div class="metric-label">Payback Period</div>
+                <div class="metric-value">${results.savings.paybackMonths.toFixed(1)} months</div>
+              </div>
+              
+              <p style="margin-top: 30px;">Ready to unlock these savings? Our team would love to discuss how Kuhlekt can transform your accounts receivable process.</p>
+              <p style="text-align: center; margin-top: 20px;">
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://kuhlekt.com"}/demo" style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Schedule a Demo</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p>Questions? Contact us at sales@kuhlekt.com</p>
+              <p>© 2025 Kuhlekt. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
 
-    const text = `
-Dear Valued Customer,
+    const emailText = `
+Your Custom ROI Analysis from Kuhlekt
 
-Thank you for using the Kuhlekt ROI Calculator. Here are your personalized results:
+Dear ${inputs.companyName},
 
-CURRENT SITUATION:
-- Annual Revenue: $${inputs.annualRevenue.toLocaleString()}
-- Average Invoice Value: $${inputs.averageInvoiceValue.toLocaleString()}
-- Current DSO: ${inputs.currentDSO} days
-- Weekly Staff Hours: ${inputs.staffHours}
+Thank you for using our ROI Calculator. Based on your inputs, here's your personalized analysis:
 
-CURRENT COSTS:
-- Labor Cost: $${results.currentCosts.laborCost.toLocaleString()}
-- Opportunity Cost: $${results.currentCosts.opportunityCost.toLocaleString()}
-- Total Annual Cost: $${results.currentCosts.totalAnnualCost.toLocaleString()}
+CURRENT STATE
+Days Sales Outstanding: ${inputs.currentDSO} days
+Total Accounts Receivable: $${results.currentMetrics.totalAR.toLocaleString()}
+Annual Bad Debt: $${results.currentMetrics.annualBadDebt.toLocaleString()}
 
-WITH KUHLEKT:
-- Labor Cost: $${results.withKuhlekt.laborCost.toLocaleString()}
-- Opportunity Cost: $${results.withKuhlekt.opportunityCost.toLocaleString()}
-- Total Annual Cost: $${results.withKuhlekt.totalAnnualCost.toLocaleString()}
+PROJECTED WITH KUHLEKT
+New DSO: ${results.projectedMetrics.newDSO.toFixed(1)} days
+DSO Improvement: ${results.savings.dsoImprovement.toFixed(1)} days faster
 
-YOUR SAVINGS:
-- Annual Savings: $${results.savings.annualSavings.toLocaleString()}
-- 3-Year Savings: $${results.savings.threeYearSavings.toLocaleString()}
-- ROI: ${results.savings.roi.toFixed(0)}%
-- Payback Period: ${results.savings.paybackMonths.toFixed(1)} months
+YOUR POTENTIAL SAVINGS
+Cash Flow Improvement: $${results.savings.cashFlowImprovement.toLocaleString()}
+Bad Debt Reduction: $${results.savings.badDebtReduction.toLocaleString()}/year
+Staff Cost Savings: $${results.savings.staffCostSavings.toLocaleString()}/year
+Total Annual Savings: $${results.savings.totalAnnualSavings.toLocaleString()}
+3-Year Total Savings: $${results.savings.threeYearSavings.toLocaleString()}
+Return on Investment: ${results.savings.roi.toFixed(0)}%
+Payback Period: ${results.savings.paybackMonths.toFixed(1)} months
 
-Ready to transform your accounts receivable process? Contact us to schedule a demo!
+Ready to unlock these savings? Schedule a demo at ${process.env.NEXT_PUBLIC_SITE_URL || "https://kuhlekt.com"}/demo
 
-Best regards,
-The Kuhlekt Team
-    `.trim()
+Questions? Contact us at sales@kuhlekt.com
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-    .section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .section h2 { color: #667eea; margin-top: 0; }
-    .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .metric:last-child { border-bottom: none; }
-    .label { font-weight: 600; color: #555; }
-    .value { color: #667eea; font-weight: 700; }
-    .highlight { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
-    .highlight h2 { margin: 0 0 10px 0; font-size: 24px; }
-    .highlight .big-number { font-size: 36px; font-weight: 700; margin: 10px 0; }
-    .cta { text-align: center; margin: 30px 0; }
-    .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Your Kuhlekt ROI Analysis</h1>
-      <p>Personalized savings calculation based on your business metrics</p>
-    </div>
-    <div class="content">
-      <div class="section">
-        <h2>📊 Your Current Situation</h2>
-        <div class="metric">
-          <span class="label">Annual Revenue:</span>
-          <span class="value">$${inputs.annualRevenue.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Average Invoice Value:</span>
-          <span class="value">$${inputs.averageInvoiceValue.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Current DSO:</span>
-          <span class="value">${inputs.currentDSO} days</span>
-        </div>
-        <div class="metric">
-          <span class="label">Weekly Staff Hours:</span>
-          <span class="value">${inputs.staffHours} hours</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>💰 Current Costs</h2>
-        <div class="metric">
-          <span class="label">Labor Cost:</span>
-          <span class="value">$${results.currentCosts.laborCost.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Opportunity Cost:</span>
-          <span class="value">$${results.currentCosts.opportunityCost.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Total Annual Cost:</span>
-          <span class="value">$${results.currentCosts.totalAnnualCost.toLocaleString()}</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>🚀 With Kuhlekt</h2>
-        <div class="metric">
-          <span class="label">Labor Cost:</span>
-          <span class="value">$${results.withKuhlekt.laborCost.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Opportunity Cost:</span>
-          <span class="value">$${results.withKuhlekt.opportunityCost.toLocaleString()}</span>
-        </div>
-        <div class="metric">
-          <span class="label">Total Annual Cost:</span>
-          <span class="value">$${results.withKuhlekt.totalAnnualCost.toLocaleString()}</span>
-        </div>
-      </div>
-
-      <div class="highlight">
-        <h2>💎 Your Potential Savings</h2>
-        <div class="big-number">$${results.savings.annualSavings.toLocaleString()}</div>
-        <p style="margin: 5px 0;">Annual Savings</p>
-        <div style="margin-top: 20px;">
-          <p><strong>3-Year Savings:</strong> $${results.savings.threeYearSavings.toLocaleString()}</p>
-          <p><strong>ROI:</strong> ${results.savings.roi.toFixed(0)}%</p>
-          <p><strong>Payback Period:</strong> ${results.savings.paybackMonths.toFixed(1)} months</p>
-        </div>
-      </div>
-
-      <div class="cta">
-        <a href="https://kuhlekt.com/demo" class="button">Schedule Your Demo</a>
-      </div>
-
-      <p style="text-align: center; color: #666; font-size: 14px;">
-        Questions? Contact us at info@kuhlekt.com or visit kuhlekt.com
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-    `.trim()
+© 2025 Kuhlekt. All rights reserved.
+    `
 
     const result = await sendEmail({
-      to: email,
-      subject,
-      text,
-      html,
+      to: inputs.email,
+      subject: `Your Custom ROI Analysis - ${inputs.companyName}`,
+      text: emailText,
+      html: emailHtml,
     })
 
     return result
