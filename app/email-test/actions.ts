@@ -14,6 +14,6 @@ export async function sendTestEmail(email: string) {
     return result
   } catch (error) {
     console.error("Error sending test email:", error)
-    return { success: false, error: "Failed to send email" }
+    return { success: false, error: "Failed to send test email" }
   }
 }

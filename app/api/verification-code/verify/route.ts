@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       .select("*")
       .eq("email", email)
       .eq("code", code)
-      .gte("expires_at", new Date().toISOString())
+      .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
