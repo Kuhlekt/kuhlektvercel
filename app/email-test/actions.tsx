@@ -2,36 +2,23 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function testEmail(formData: FormData) {
-  try {
-    const toEmail = formData.get("email") as string
+export async function sendTestEmail(formData: FormData) {
+  const email = formData.get("email") as string
 
-    if (!toEmail) {
-      return {
-        success: false,
-        message: "Please provide an email address",
-      }
-    }
+  const subject = "Test Email from Kuhlekt"
+  const text = "This is a test email to verify AWS SES integration."
+  const html = `
+    <h1>Test Email</h1>
+    <p>This is a test email to verify AWS SES integration.</p>
+    <p>If you received this, the email service is working correctly!</p>
+  `
 
-    const result = await sendEmail({
-      to: toEmail,
-      subject: "Test Email from Kuhlekt",
-      text: "This is a test email from the Kuhlekt platform. If you received this, the email service is working correctly!",
-      html: `
-        <h2>Test Email from Kuhlekt</h2>
-        <p>This is a test email from the Kuhlekt platform.</p>
-        <p>If you received this, the email service is working correctly!</p>
-        <p>Best regards,<br>The Kuhlekt Team</p>
-      `,
-    })
+  const result = await sendEmail({
+    to: email,
+    subject,
+    text,
+    html,
+  })
 
-    return result
-  } catch (error) {
-    console.error("Error sending test email:", error)
-    return {
-      success: false,
-      message: "Failed to send test email",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return result
 }
