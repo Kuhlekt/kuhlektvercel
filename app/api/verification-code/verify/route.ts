@@ -11,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    // Get the verification code from database
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -24,13 +23,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    // Check if expired
     const expiresAt = new Date(data.expires_at)
     if (expiresAt < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    // Mark as used
     await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     return NextResponse.json({ success: true })
