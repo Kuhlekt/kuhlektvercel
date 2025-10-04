@@ -142,34 +142,104 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const validateDetailedForm = () => {
     const newErrors: Record<string, string> = {}
 
-    const requiredFields: (keyof typeof detailedData)[] = [
-      "implementationCost",
-      "monthlyCost",
-      "perAnnumDirectLabourCosts",
-      "interestRate",
-      "averageBadDebt",
-      "currentBadDebts",
-      "labourSavings",
-      "dsoImprovement",
-      "currentDSODays",
-      "debtorsBalance",
-      "numberOfDebtors",
-      "numberOfCollectors",
-      "projectedCustomerGrowth",
-    ]
+    // Check implementation cost
+    if (!detailedData.implementationCost || detailedData.implementationCost.trim() === "") {
+      newErrors.implementationCost = "Required"
+    } else if (isNaN(Number(detailedData.implementationCost)) || Number(detailedData.implementationCost) < 0) {
+      newErrors.implementationCost = "Must be a valid positive number"
+    }
 
-    requiredFields.forEach((field) => {
-      const value = detailedData[field]
-      if (value === "" || value === null || value === undefined) {
-        newErrors[field] = "Required"
-      } else if (typeof value === "string") {
-        const numValue = Number.parseFloat(value)
-        if (isNaN(numValue) || numValue < 0) {
-          newErrors[field] = "Must be a valid positive number"
-        }
-      }
-    })
+    // Check monthly cost
+    if (!detailedData.monthlyCost || detailedData.monthlyCost.trim() === "") {
+      newErrors.monthlyCost = "Required"
+    } else if (isNaN(Number(detailedData.monthlyCost)) || Number(detailedData.monthlyCost) < 0) {
+      newErrors.monthlyCost = "Must be a valid positive number"
+    }
 
+    // Check labour costs
+    if (!detailedData.perAnnumDirectLabourCosts || detailedData.perAnnumDirectLabourCosts.trim() === "") {
+      newErrors.perAnnumDirectLabourCosts = "Required"
+    } else if (
+      isNaN(Number(detailedData.perAnnumDirectLabourCosts)) ||
+      Number(detailedData.perAnnumDirectLabourCosts) < 0
+    ) {
+      newErrors.perAnnumDirectLabourCosts = "Must be a valid positive number"
+    }
+
+    // Check interest rate
+    if (!detailedData.interestRate || detailedData.interestRate.trim() === "") {
+      newErrors.interestRate = "Required"
+    } else if (isNaN(Number(detailedData.interestRate)) || Number(detailedData.interestRate) < 0) {
+      newErrors.interestRate = "Must be a valid positive number"
+    }
+
+    // Check average bad debt
+    if (!detailedData.averageBadDebt || detailedData.averageBadDebt.trim() === "") {
+      newErrors.averageBadDebt = "Required"
+    } else if (isNaN(Number(detailedData.averageBadDebt)) || Number(detailedData.averageBadDebt) < 0) {
+      newErrors.averageBadDebt = "Must be a valid positive number"
+    }
+
+    // Check current bad debts
+    if (!detailedData.currentBadDebts || detailedData.currentBadDebts.trim() === "") {
+      newErrors.currentBadDebts = "Required"
+    } else if (isNaN(Number(detailedData.currentBadDebts)) || Number(detailedData.currentBadDebts) < 0) {
+      newErrors.currentBadDebts = "Must be a valid positive number"
+    }
+
+    // Check labour savings
+    if (!detailedData.labourSavings || detailedData.labourSavings.trim() === "") {
+      newErrors.labourSavings = "Required"
+    } else if (isNaN(Number(detailedData.labourSavings)) || Number(detailedData.labourSavings) < 0) {
+      newErrors.labourSavings = "Must be a valid positive number"
+    }
+
+    // Check DSO improvement
+    if (!detailedData.dsoImprovement || detailedData.dsoImprovement.trim() === "") {
+      newErrors.dsoImprovement = "Required"
+    } else if (isNaN(Number(detailedData.dsoImprovement)) || Number(detailedData.dsoImprovement) < 0) {
+      newErrors.dsoImprovement = "Must be a valid positive number"
+    }
+
+    // Check current DSO days
+    if (!detailedData.currentDSODays || detailedData.currentDSODays.trim() === "") {
+      newErrors.currentDSODays = "Required"
+    } else if (isNaN(Number(detailedData.currentDSODays)) || Number(detailedData.currentDSODays) < 0) {
+      newErrors.currentDSODays = "Must be a valid positive number"
+    }
+
+    // Check debtors balance
+    if (!detailedData.debtorsBalance || detailedData.debtorsBalance.trim() === "") {
+      newErrors.debtorsBalance = "Required"
+    } else if (isNaN(Number(detailedData.debtorsBalance)) || Number(detailedData.debtorsBalance) < 0) {
+      newErrors.debtorsBalance = "Must be a valid positive number"
+    }
+
+    // Check number of debtors
+    if (!detailedData.numberOfDebtors || detailedData.numberOfDebtors.trim() === "") {
+      newErrors.numberOfDebtors = "Required"
+    } else if (isNaN(Number(detailedData.numberOfDebtors)) || Number(detailedData.numberOfDebtors) < 0) {
+      newErrors.numberOfDebtors = "Must be a valid positive number"
+    }
+
+    // Check number of collectors
+    if (!detailedData.numberOfCollectors || detailedData.numberOfCollectors.trim() === "") {
+      newErrors.numberOfCollectors = "Required"
+    } else if (isNaN(Number(detailedData.numberOfCollectors)) || Number(detailedData.numberOfCollectors) < 0) {
+      newErrors.numberOfCollectors = "Must be a valid positive number"
+    }
+
+    // Check projected customer growth
+    if (!detailedData.projectedCustomerGrowth || detailedData.projectedCustomerGrowth.trim() === "") {
+      newErrors.projectedCustomerGrowth = "Required"
+    } else if (
+      isNaN(Number(detailedData.projectedCustomerGrowth)) ||
+      Number(detailedData.projectedCustomerGrowth) < 0
+    ) {
+      newErrors.projectedCustomerGrowth = "Must be a valid positive number"
+    }
+
+    console.log("Validation errors:", newErrors)
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -200,9 +270,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   }
 
   const handleDetailedSubmit = () => {
+    console.log("Submitting detailed form with data:", detailedData)
     if (!validateDetailedForm()) {
+      console.log("Validation failed")
       return
     }
+    console.log("Validation passed, moving to contact")
     setCalculatorType("detailed")
     setStep("contact")
   }
