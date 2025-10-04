@@ -11,36 +11,34 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Get the most recent unused code for this email
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
-      .eq("email", email.toLowerCase())
+      .eq("email", email)
       .eq("code", code)
       .eq("used", false)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single()
 
     if (error || !data) {
-      return NextResponse.json({ success: false, error: "Invalid or expired verification code" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    // Mark code as used
+    const expiresAt = new Date(data.expires_at)
+    if (expiresAt < new Date()) {
+      await supabase.from("verification_codes").delete().eq("id", data.id)
+      return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
+    }
+
     const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     if (updateError) {
-      console.error("Error marking code as used:", updateError)
+      console.error("Error updating verification code:", updateError)
       return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Code verified successfully",
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error in verify code:", error)
+    console.error("Error verifying code:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
