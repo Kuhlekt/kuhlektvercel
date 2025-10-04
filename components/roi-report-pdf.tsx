@@ -41,27 +41,62 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
         return
       }
 
-      // Calculate additional metrics for detailed report
-      const currentCapacity = results.numberOfDebtors || 0
-      const implementationCapacity = Math.round(currentCapacity * 1.5) // 50% increase
-      const additionalCapacity = implementationCapacity - currentCapacity
-      const growthScenario = Math.round(currentCapacity * 0.5) // 50% customer increase
-      const additionalAutomation = Math.round(additionalCapacity * 0.8) // 80% automation
+      // Parse input values
+      const numberOfDebtors = Number.parseFloat(inputs.numberOfDebtors) || 0
+      const numberOfCollectors = Number.parseFloat(inputs.numberOfCollectors) || 1
+      const dsoImprovement = Number.parseFloat(inputs.dsoImprovement) || 25
+      const labourSavings = Number.parseFloat(inputs.labourSavings) || 30
+      const implementationCost = Number.parseFloat(inputs.implementationCost) || 0
+      const monthlyCost = Number.parseFloat(inputs.monthlyCost) || 0
+      const currentDSODays = Number.parseFloat(inputs.currentDSODays) || 45
+      const debtorsBalance = Number.parseFloat(inputs.debtorsBalance) || 0
 
-      // Payment terms analysis
+      // Calculate capacity metrics
+      const currentCapacity = numberOfDebtors / numberOfCollectors
+      const additionalCapacityPercent = labourSavings / 100
+      const additionalCapacity = Math.round(currentCapacity * additionalCapacityPercent)
+      const implementationCapacity = Math.round(currentCapacity + additionalCapacity)
+
+      // Growth scenario - 50% customer increase
+      const growthScenarioCustomers = Math.round(numberOfDebtors * 0.5)
+
+      // Payment terms analysis - calculate based on actual data
+      const dailyRevenue = debtorsBalance / currentDSODays
+      const dsoImprovementPercent = dsoImprovement / 100
+
       const paymentTermsData = [
-        { term: "Net 30", currentDSO: 45, improvedDSO: 32, released: Math.round(results.workingCapitalReleased * 0.3) },
-        { term: "Net 60", currentDSO: 75, improvedDSO: 52, released: Math.round(results.workingCapitalReleased * 0.5) },
+        {
+          term: "Net 30",
+          currentDSO: Math.round(currentDSODays * 1.0), // Assuming current is Net 30
+          improvedDSO: Math.round(currentDSODays * (1 - dsoImprovementPercent)),
+          get released() {
+            return Math.round((this.currentDSO - this.improvedDSO) * dailyRevenue)
+          },
+        },
+        {
+          term: "Net 60",
+          currentDSO: Math.round(currentDSODays * 1.5), // 50% longer
+          improvedDSO: Math.round(currentDSODays * 1.5 * (1 - dsoImprovementPercent)),
+          get released() {
+            return Math.round((this.currentDSO - this.improvedDSO) * dailyRevenue)
+          },
+        },
         {
           term: "Net 90",
-          currentDSO: 105,
-          improvedDSO: 73,
-          released: Math.round(results.workingCapitalReleased * 0.7),
+          currentDSO: Math.round(currentDSODays * 2.0), // Double
+          improvedDSO: Math.round(currentDSODays * 2.0 * (1 - dsoImprovementPercent)),
+          get released() {
+            return Math.round((this.currentDSO - this.improvedDSO) * dailyRevenue)
+          },
         },
       ]
 
       // First year investment
-      const firstYearInvestment = (Number(inputs.implementationCost) || 0) + (Number(inputs.monthlyCost) || 0) * 12
+      const annualCost = monthlyCost * 12
+      const totalFirstYearCost = implementationCost + annualCost
+
+      // Bad debt reduction assumption (50% improvement)
+      const badDebtReductionPercent = 50
 
       const htmlContent = `
       <!DOCTYPE html>
@@ -560,12 +595,12 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             
             <div class="info-box">
               <h4>Cash Flow Cost Savings</h4>
-              <p>To calculate Monthly Cash Flow improvements, please see Annual Recurring Savings in the Financial Impact section.</p>
+              <p>Monthly Cash Flow improvements: $${Math.round((results.totalAnnualBenefit || 0) / 12).toLocaleString()} per month. This includes interest savings, labour cost reductions, and bad debt improvements.</p>
             </div>
             
             <div class="info-box">
               <h4>Current DSO</h4>
-              <p>Current DSO is important. Cash and Annual Savings are calculated against this metric along with the cost of capital and cost of debt from the company statement.</p>
+              <p>Your current DSO of ${currentDSODays} days is the baseline metric. Savings are calculated against this metric along with your cost of capital. By improving DSO to ${results.newDSO?.toFixed(0) || currentDSODays} days, you'll release $${results.workingCapitalReleased?.toLocaleString() || "0"} in working capital.</p>
             </div>
             
             <div class="section">
@@ -582,9 +617,9 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 <tbody>
                   ${paymentTermsData
                     .map(
-                      (term) => `
-                    <tr class="highlight">
-                      <td><strong>${term.term}</strong></td>
+                      (term, idx) => `
+                    <tr class="${idx === 0 ? "highlight" : ""}">
+                      <td><strong>${term.term}${idx === 0 ? " (Current)" : ""}</strong></td>
                       <td>${term.currentDSO} days</td>
                       <td style="color: #16a34a; font-weight: 600;">${term.improvedDSO} days</td>
                       <td style="color: #0891b2; font-weight: 600;">$${term.released.toLocaleString()}</td>
@@ -611,11 +646,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="capacity-grid">
                 <div class="capacity-card current">
                   <div class="label">Current Capacity</div>
-                  <div class="value">${currentCapacity.toLocaleString()}</div>
+                  <div class="value">${Math.round(currentCapacity).toLocaleString()}</div>
+                  <p style="font-size: 11px; color: #78716c; margin-top: 8px;">customers per collector</p>
                 </div>
                 <div class="capacity-card implementation">
                   <div class="label">With Implementation</div>
                   <div class="value">${implementationCapacity.toLocaleString()}</div>
+                  <p style="font-size: 11px; color: #78716c; margin-top: 8px;">customers per collector</p>
                 </div>
               </div>
               
@@ -626,11 +663,11 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 </div>
                 <div class="mini-metric">
                   <div class="label">Growth Enabled</div>
-                  <div class="value">${((additionalCapacity / currentCapacity) * 100).toFixed(0)}%</div>
+                  <div class="value">${Math.round((additionalCapacity / currentCapacity) * 100)}%</div>
                 </div>
                 <div class="mini-metric">
                   <div class="label">Efficiency Gain</div>
-                  <div class="value">${inputs.labourSavings || 40}%</div>
+                  <div class="value">${labourSavings}%</div>
                 </div>
               </div>
               
@@ -639,35 +676,42 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 <div class="growth-metrics">
                   <div class="growth-metric">
                     <div class="label">New Customers</div>
-                    <div class="value">${growthScenario.toLocaleString()}</div>
+                    <div class="value">${growthScenarioCustomers.toLocaleString()}</div>
                   </div>
                   <div class="growth-metric">
-                    <div class="label">Handled by Current Team</div>
-                    <div class="value">${growthScenario.toLocaleString()}</div>
+                    <div class="label">Handled Without Hiring</div>
+                    <div class="value">${Math.min(growthScenarioCustomers, additionalCapacity).toLocaleString()}</div>
                   </div>
                 </div>
               </div>
               
               <div class="info-box">
                 <h4>Additional Customer Business Goal</h4>
-                <p>Without automation: would need ${Math.ceil(growthScenario / 100)} new collectors. 
-                With automation: ${additionalAutomation.toLocaleString()} additional customers handled automatically.</p>
+                <p>Without automation: would need ${Math.ceil(growthScenarioCustomers / currentCapacity)} new collectors at ~$50,000 each = $${(Math.ceil(growthScenarioCustomers / currentCapacity) * 50000).toLocaleString()} hiring cost. 
+                With automation: ${additionalCapacity.toLocaleString()} additional customers handled automatically, saving significant hiring and training costs.</p>
               </div>
             </div>
             
             <div class="section">
               <div class="section-title">Investment vs Annual Savings</div>
               <div class="chart-placeholder">
-                <p>Investment: $${firstYearInvestment.toLocaleString()} | Annual Savings: $${results.totalAnnualBenefit?.toLocaleString() || "0"}</p>
+                <div>
+                  <p style="margin-bottom: 15px;"><strong>First Year Investment:</strong> $${totalFirstYearCost.toLocaleString()}</p>
+                  <p style="margin-bottom: 15px;"><strong>Annual Savings:</strong> $${(results.totalAnnualBenefit || 0).toLocaleString()}</p>
+                  <p style="color: #16a34a; font-weight: 600;"><strong>Net Benefit (First Year):</strong> $${((results.totalAnnualBenefit || 0) - totalFirstYearCost).toLocaleString()}</p>
+                </div>
               </div>
             </div>
             
             <div class="section">
               <div class="section-title">Cumulative Savings Over Time (3 Years)</div>
               <div class="chart-placeholder">
-                <p>Year 1: $${results.totalAnnualBenefit?.toLocaleString() || "0"} | 
-                Year 2: $${((results.totalAnnualBenefit || 0) * 2).toLocaleString()} | 
-                Year 3: $${((results.totalAnnualBenefit || 0) * 3).toLocaleString()}</p>
+                <div style="text-align: left; padding: 0 40px;">
+                  <p style="margin-bottom: 10px;"><strong>Year 1:</strong> $${((results.totalAnnualBenefit || 0) - implementationCost).toLocaleString()} (after implementation cost)</p>
+                  <p style="margin-bottom: 10px;"><strong>Year 2:</strong> $${((results.totalAnnualBenefit || 0) * 2 - totalFirstYearCost).toLocaleString()} (cumulative)</p>
+                  <p style="margin-bottom: 10px;"><strong>Year 3:</strong> $${((results.totalAnnualBenefit || 0) * 3 - totalFirstYearCost - annualCost * 2).toLocaleString()} (cumulative)</p>
+                  <p style="margin-top: 20px; color: #16a34a; font-weight: 600;"><strong>3-Year Total Savings:</strong> $${(results.threeYearValue || 0).toLocaleString()}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -679,8 +723,11 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             <div class="section">
               <div class="section-title">DSO Comparison</div>
               <div class="chart-placeholder">
-                <p>Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days | 
-                Improved DSO: ${results.newDSO?.toFixed(0) || "0"} days</p>
+                <div>
+                  <p style="margin-bottom: 15px;"><strong>Current DSO:</strong> ${results.currentDSO?.toFixed(0) || currentDSODays} days</p>
+                  <p style="margin-bottom: 15px; color: #16a34a;"><strong>Improved DSO:</strong> ${results.newDSO?.toFixed(0) || currentDSODays} days</p>
+                  <p style="margin-top: 20px; font-weight: 600;"><strong>Improvement:</strong> ${results.dsoReductionDays?.toFixed(0) || "0"} days faster (${dsoImprovement}% reduction)</p>
+                </div>
               </div>
             </div>
             
@@ -689,11 +736,11 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="savings-cards">
                 <div class="savings-card dso">
                   <div class="label">DSO Improvement</div>
-                  <div class="value">${inputs.dsoImprovement || 40}%</div>
+                  <div class="value">${dsoImprovement}%</div>
                 </div>
                 <div class="savings-card bad-debt">
                   <div class="label">Bad Debt Reduction</div>
-                  <div class="value">30%</div>
+                  <div class="value">${badDebtReductionPercent}%</div>
                 </div>
               </div>
             </div>
@@ -704,19 +751,32 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="financial-grid">
                 <div class="financial-item positive">
                   <div class="label">Annual Recurring Savings</div>
-                  <div class="value">$${results.totalAnnualBenefit?.toLocaleString() || "0"}</div>
+                  <div class="value">$${(results.totalAnnualBenefit || 0).toLocaleString()}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Interest + Labour + Bad Debt</p>
                 </div>
                 <div class="financial-item positive">
                   <div class="label">One-Time Cash Flow (Better Balance)</div>
-                  <div class="value">$${results.workingCapitalReleased?.toLocaleString() || "0"}</div>
+                  <div class="value">$${(results.workingCapitalReleased || 0).toLocaleString()}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Working capital released</p>
                 </div>
                 <div class="financial-item positive">
                   <div class="label">Monthly Operational Savings</div>
                   <div class="value">$${Math.round((results.totalAnnualBenefit || 0) / 12).toLocaleString()}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Reduced labour costs</p>
                 </div>
                 <div class="financial-item negative">
                   <div class="label">Total First Year Investment</div>
-                  <div class="value">-$${firstYearInvestment.toLocaleString()}</div>
+                  <div class="value">-$${totalFirstYearCost.toLocaleString()}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Implementation + Annual cost</p>
+                </div>
+              </div>
+              
+              <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+                <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Breakdown of Annual Savings:</h4>
+                <div style="font-size: 12px; color: #4b5563;">
+                  <p style="margin-bottom: 6px;">• Interest Savings: $${(results.interestSavings || 0).toLocaleString()}</p>
+                  <p style="margin-bottom: 6px;">• Labour Cost Savings: $${(results.labourCostSavings || 0).toLocaleString()}</p>
+                  <p style="margin-bottom: 6px;">• Bad Debt Reduction: $${(results.badDebtReduction || 0).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -726,15 +786,18 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="dso-metrics">
                 <div class="dso-metric current">
                   <div class="label">Current</div>
-                  <div class="value">${results.currentDSO?.toFixed(0) || "0"}</div>
+                  <div class="value">${results.currentDSO?.toFixed(0) || currentDSODays}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">days</p>
                 </div>
                 <div class="dso-metric improved">
                   <div class="label">Improved</div>
-                  <div class="value">${results.newDSO?.toFixed(0) || "0"}</div>
+                  <div class="value">${results.newDSO?.toFixed(0) || currentDSODays}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">days</p>
                 </div>
                 <div class="dso-metric reduction">
                   <div class="label">Reduction</div>
                   <div class="value">${results.dsoReductionDays?.toFixed(0) || "0"}</div>
+                  <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">days faster</p>
                 </div>
               </div>
             </div>
@@ -746,12 +809,18 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 automated collection workflows and customer self-service, 
                 your organization can achieve a <strong>${results.roi?.toFixed(0) || "0"}% ROI</strong> within 
                 <strong>${results.paybackMonths?.toFixed(1) || "0"} months</strong>. You should expect to improve 
-                DSO by <strong>${inputs.dsoImprovement || 40}%</strong>, freeing up <strong>$${results.workingCapitalReleased?.toLocaleString() || "0"}</strong> 
+                DSO by <strong>${dsoImprovement}%</strong> (from ${results.currentDSO?.toFixed(0) || currentDSODays} to ${results.newDSO?.toFixed(0) || currentDSODays} days), freeing up <strong>$${(results.workingCapitalReleased || 0).toLocaleString()}</strong> 
                 in working capital without adding headcount.
               </p>
               <p>
-                Additionally, your team can handle <strong>${((additionalCapacity / currentCapacity) * 100).toFixed(0)}%</strong> 
-                more customers without hiring, while delivering superior customer 
+                The total annual benefit of <strong>$${(results.totalAnnualBenefit || 0).toLocaleString()}</strong> includes 
+                <strong>$${(results.interestSavings || 0).toLocaleString()}</strong> in interest savings, 
+                <strong>$${(results.labourCostSavings || 0).toLocaleString()}</strong> in labour cost reductions, and 
+                <strong>$${(results.badDebtReduction || 0).toLocaleString()}</strong> in bad debt improvements.
+              </p>
+              <p>
+                Additionally, your team of ${numberOfCollectors} collectors can handle <strong>${Math.round((additionalCapacity / currentCapacity) * 100)}%</strong> 
+                more customers (${additionalCapacity.toLocaleString()} additional accounts) without hiring, while delivering superior customer 
                 experience through 24/7 portal access and automated communications.
               </p>
             </div>
