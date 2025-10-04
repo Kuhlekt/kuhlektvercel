@@ -13,170 +13,140 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, company, calculatorType, results, inputs } = await request.json()
 
-    if (!name || !email || !company || !calculatorType || !results) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
-    }
-
-    let emailBody = ""
+    let htmlContent = ""
 
     if (calculatorType === "simple") {
-      emailBody = `
+      htmlContent = `
         <!DOCTYPE html>
         <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ROI Calculation Results</title>
-          </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-            <table role="presentation" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 40px 0;">
-                  <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <tr>
-                      <td style="padding: 40px 30px;">
-                        <h1 style="color: #0891b2; margin: 0 0 10px 0; font-size: 28px;">ROI Calculation Results</h1>
-                        <p style="color: #666; font-size: 14px; margin: 0 0 30px 0;">For ${company}</p>
-                        
-                        <div style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 0 0 30px 0;">
-                          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 10px 0;">Estimated Annual Savings</p>
-                          <p style="color: #ffffff; font-size: 48px; font-weight: bold; margin: 0;">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                        </div>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .highlight { background: white; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+            .metric:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #666; }
+            .value { font-weight: bold; color: #0891b2; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your ROI Analysis Results</h1>
+            </div>
+            <div class="content">
+              <p>Dear ${name},</p>
+              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your personalized results:</p>
+              
+              <div class="highlight">
+                <h2 style="margin-top: 0; color: #0891b2;">Estimated Annual Savings</h2>
+                <p style="font-size: 36px; font-weight: bold; color: #0891b2; margin: 10px 0;">
+                  $${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              </div>
 
-                        <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0;">
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Current Cash Tied Up</p>
-                              <p style="color: #333; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Cash Released</p>
-                              <p style="color: #10b981; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Current DSO</p>
-                              <p style="color: #333; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${inputs.currentDSO} days</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">New DSO</p>
-                              <p style="color: #0891b2; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${results.newDSO?.toFixed(0)} days</p>
-                            </td>
-                          </tr>
-                        </table>
+              <div class="highlight">
+                <h3>Key Metrics</h3>
+                <div class="metric">
+                  <span class="label">Current Cash Tied Up:</span>
+                  <span class="value">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Cash Released:</span>
+                  <span class="value">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Current DSO:</span>
+                  <span class="value">${inputs.currentDSO} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">New DSO:</span>
+                  <span class="value">${results.newDSO?.toFixed(0)} days</span>
+                </div>
+              </div>
 
-                        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #0891b2;">
-                          <p style="color: #333; font-size: 14px; line-height: 22px; margin: 0;">
-                            <strong>Next Steps:</strong> Our team will reach out to discuss how Kuhlekt can help you achieve these results. 
-                            In the meantime, feel free to explore our platform or schedule a demo.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
-                        <p style="color: #999; font-size: 12px; line-height: 18px; margin: 0; text-align: center;">
-                          © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </body>
+              <p>Ready to unlock these savings? Contact us to schedule a demo and see how Kuhlekt can transform your accounts receivable process.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
         </html>
       `
     } else {
-      emailBody = `
+      htmlContent = `
         <!DOCTYPE html>
         <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Detailed ROI Analysis</title>
-          </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-            <table role="presentation" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 40px 0;">
-                  <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <tr>
-                      <td style="padding: 40px 30px;">
-                        <h1 style="color: #0891b2; margin: 0 0 10px 0; font-size: 28px;">Detailed ROI Analysis</h1>
-                        <p style="color: #666; font-size: 14px; margin: 0 0 30px 0;">For ${company}</p>
-                        
-                        <div style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); padding: 30px; border-radius: 8px; text-align: center; margin: 0 0 30px 0;">
-                          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 10px 0;">Total Annual Benefit</p>
-                          <p style="color: #ffffff; font-size: 48px; font-weight: bold; margin: 0 0 10px 0;">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                          <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;">ROI: ${results.roi?.toFixed(0)}% • Payback: ${results.paybackMonths?.toFixed(1)} months</p>
-                        </div>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .highlight { background: white; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+            .metric:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #666; }
+            .value { font-weight: bold; color: #0891b2; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Comprehensive ROI Analysis</h1>
+            </div>
+            <div class="content">
+              <p>Dear ${name},</p>
+              <p>Thank you for using the Kuhlekt Detailed ROI Calculator. Here is your comprehensive analysis:</p>
+              
+              <div class="highlight">
+                <h2 style="margin-top: 0; color: #0891b2;">Total Annual Benefit</h2>
+                <p style="font-size: 36px; font-weight: bold; color: #0891b2; margin: 10px 0;">
+                  $${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
+                  <span style="color: #666;">ROI: <strong style="color: #0891b2;">${results.roi?.toFixed(0)}%</strong></span>
+                  <span style="color: #666;">Payback: <strong style="color: #0891b2;">${results.paybackMonths?.toFixed(1)} months</strong></span>
+                </div>
+              </div>
 
-                        <h2 style="color: #333; font-size: 20px; margin: 0 0 15px 0;">Key Benefits</h2>
-                        <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 30px 0;">
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">DSO Improvement</p>
-                              <p style="color: #333; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${results.dsoReductionDays?.toFixed(0)} days</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Working Capital Released</p>
-                              <p style="color: #10b981; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Interest Savings</p>
-                              <p style="color: #10b981; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Labour Savings</p>
-                              <p style="color: #10b981; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">Bad Debt Reduction</p>
-                              <p style="color: #10b981; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
-                              <p style="color: #666; font-size: 14px; margin: 0;">ROI</p>
-                              <p style="color: #0891b2; font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${results.roi?.toFixed(0)}%</p>
-                            </td>
-                          </tr>
-                        </table>
+              <div class="highlight">
+                <h3>Key Benefits Breakdown</h3>
+                <div class="metric">
+                  <span class="label">DSO Improvement:</span>
+                  <span class="value">${results.dsoReductionDays?.toFixed(0)} days</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Working Capital Released:</span>
+                  <span class="value">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Interest Savings:</span>
+                  <span class="value">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Labour Savings:</span>
+                  <span class="value">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Bad Debt Reduction:</span>
+                  <span class="value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
 
-                        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #0891b2;">
-                          <p style="color: #333; font-size: 14px; line-height: 22px; margin: 0;">
-                            <strong>Next Steps:</strong> Our team will reach out to discuss how Kuhlekt can help you achieve these results. 
-                            In the meantime, feel free to explore our platform or schedule a demo.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
-                        <p style="color: #999; font-size: 12px; line-height: 18px; margin: 0; text-align: center;">
-                          © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </body>
+              <p>These results demonstrate the significant impact Kuhlekt can have on your business. Contact us today to schedule a personalized demo.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
         </html>
       `
     }
@@ -188,21 +158,24 @@ export async function POST(request: NextRequest) {
       },
       Message: {
         Subject: {
-          Data: `Your Kuhlekt ROI Analysis - ${company}`,
+          Data: `Your Kuhlekt ROI Analysis Results - ${company}`,
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
-            Data: emailBody,
+            Data: htmlContent,
+            Charset: "UTF-8",
           },
         },
       },
     }
 
-    await sesClient.send(new SendEmailCommand(emailParams))
+    const command = new SendEmailCommand(emailParams)
+    await sesClient.send(command)
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error sending email:", error)
+    console.error("Error sending ROI email:", error)
     return NextResponse.json({ success: false, error: "Failed to send email" }, { status: 500 })
   }
 }
