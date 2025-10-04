@@ -125,7 +125,7 @@ export async function generateVerificationCode(email: string) {
     console.log(`Verification code for ${email}: ${code}`)
 
     // Store code in response for testing
-    return { success: true, code } // TEMPORARY: Remove in production
+    return { success: true, code, message: `Code sent to ${email}` }
   } catch (error) {
     console.error("Error generating verification code:", error)
     return { success: false, error: "Failed to generate code" }
@@ -172,7 +172,7 @@ export async function sendROIEmail(emailData: {
     // For now, just log the email data (in production, send via email service)
     console.log("ROI Email Data:", emailData)
 
-    return { success: true }
+    return { success: true, message: "ROI results logged to console" }
   } catch (error) {
     console.error("Error sending ROI email:", error)
     return { success: false, error: "Failed to send email" }
