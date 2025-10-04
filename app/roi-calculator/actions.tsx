@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server"
 import { sendEmail } from "@/lib/aws-ses"
 
 export async function generateVerificationCode(email: string) {
+  const supabase = await createClient()
   const code = Math.floor(100000 + Math.random() * 900000).toString()
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
-
-  const supabase = await createClient()
 
   const { error } = await supabase.from("verification_codes").insert({
     email,
@@ -21,7 +20,18 @@ export async function generateVerificationCode(email: string) {
     return { success: false, message: "Failed to generate verification code" }
   }
 
-  return { success: true, code }
+  const emailResult = await sendEmail({
+    to: email,
+    subject: "Your ROI Report Verification Code",
+    text: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
+    html: `<p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in 10 minutes.</p>`,
+  })
+
+  if (!emailResult.success) {
+    return { success: false, message: "Failed to send verification email" }
+  }
+
+  return { success: true, message: "Verification code sent to your email" }
 }
 
 export async function verifyCode(email: string, code: string) {
@@ -43,73 +53,26 @@ export async function verifyCode(email: string, code: string) {
   }
 
   if (data.attempts >= 3) {
-    return { success: false, message: "Too many attempts" }
+    return { success: false, message: "Too many attempts. Please request a new code." }
   }
 
-  await supabase.from("verification_codes").delete().eq("email", email).eq("code", code)
+  await supabase
+    .from("verification_codes")
+    .update({ attempts: data.attempts + 1 })
+    .eq("id", data.id)
 
-  return { success: true }
+  await supabase.from("verification_codes").delete().eq("id", data.id)
+
+  return { success: true, message: "Email verified successfully" }
 }
 
-export async function sendROIReport(
-  email: string,
-  reportData: {
-    currentAR: number
-    invoiceVolume: number
-    avgDSO: number
-    collectionRate: number
-    potentialSavings: number
-    timeReduction: number
-    dsoReduction: number
-    collectionImprovement: number
-  },
-) {
-  const htmlContent = `
-    <html>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <h2>Your ROI Calculator Results</h2>
-        <h3>Current Metrics</h3>
-        <ul>
-          <li>Annual Receivables: $${reportData.currentAR.toLocaleString()}</li>
-          <li>Invoice Volume: ${reportData.invoiceVolume.toLocaleString()}</li>
-          <li>Average DSO: ${reportData.avgDSO} days</li>
-          <li>Collection Rate: ${reportData.collectionRate}%</li>
-        </ul>
-        <h3>Projected Improvements with Kuhlekt</h3>
-        <ul>
-          <li>Potential Annual Savings: $${reportData.potentialSavings.toLocaleString()}</li>
-          <li>Time Reduction: ${reportData.timeReduction}%</li>
-          <li>DSO Reduction: ${reportData.dsoReduction} days</li>
-          <li>Collection Rate Improvement: ${reportData.collectionImprovement}%</li>
-        </ul>
-        <p>Ready to transform your accounts receivable process? <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo">Schedule a demo</a> today!</p>
-      </body>
-    </html>
-  `
-
-  const textContent = `
-Your ROI Calculator Results
-
-Current Metrics:
-- Annual Receivables: $${reportData.currentAR.toLocaleString()}
-- Invoice Volume: ${reportData.invoiceVolume.toLocaleString()}
-- Average DSO: ${reportData.avgDSO} days
-- Collection Rate: ${reportData.collectionRate}%
-
-Projected Improvements with Kuhlekt:
-- Potential Annual Savings: $${reportData.potentialSavings.toLocaleString()}
-- Time Reduction: ${reportData.timeReduction}%
-- DSO Reduction: ${reportData.dsoReduction} days
-- Collection Rate Improvement: ${reportData.collectionImprovement}%
-
-Ready to transform your accounts receivable process? Schedule a demo today!
-Visit: ${process.env.NEXT_PUBLIC_SITE_URL}/demo
-  `
-
-  return await sendEmail({
+export async function sendROIReport(email: string, reportData: any) {
+  const emailResult = await sendEmail({
     to: email,
-    subject: "Your Kuhlekt ROI Calculator Results",
-    text: textContent,
-    html: htmlContent,
+    subject: "Your ROI Analysis Report",
+    text: `Here is your ROI analysis report.`,
+    html: `<h1>Your ROI Analysis Report</h1><p>Thank you for using our ROI calculator.</p>`,
   })
+
+  return emailResult
 }
