@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -442,6 +444,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     }
   }
 
+  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      action()
+    }
+  }
+
   const renderCalculatorTypeStep = () => (
     <div className="space-y-4 md:space-y-6">
       <div className="text-center space-y-2">
@@ -502,13 +511,19 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   )
 
   const renderSimpleCalculatorInputs = () => (
-    <div className="space-y-4 md:space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleContinueFromInputs()
+      }}
+      className="space-y-4 md:space-y-6"
+    >
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
           <h3 className="text-xl md:text-2xl font-bold">Simple ROI Calculator</h3>
           <p className="text-xs md:text-sm text-muted-foreground">Quick estimate of your potential savings</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)} className="flex-shrink-0">
+        <Button type="button" variant="ghost" size="icon" onClick={() => setShowHelp(true)} className="flex-shrink-0">
           <HelpCircle className="h-5 w-5" />
         </Button>
       </div>
@@ -597,6 +612,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             inputMode="decimal"
             value={simpleInputs.simpleCostOfCapital}
             onChange={(e) => setSimpleInputs({ ...simpleInputs, simpleCostOfCapital: e.target.value })}
+            onKeyPress={(e) => handleKeyPress(e, handleContinueFromInputs)}
             placeholder="e.g., 8"
             className="text-base md:text-sm"
           />
@@ -608,358 +624,373 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
+        <Button type="button" variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
           Back
         </Button>
-        <Button onClick={handleContinueFromInputs} className="flex-1">
+        <Button type="submit" className="flex-1">
           Continue
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   const renderDetailedCalculatorInputs = () => (
-    <div className="space-y-4 md:space-y-6 max-h-[60vh] md:max-h-[70vh] overflow-y-auto pr-2">
-      <div className="flex items-center justify-between sticky top-0 bg-background z-10 pb-3 md:pb-4">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-xl md:text-2xl font-bold">Detailed ROI Calculator</h3>
-          <p className="text-xs md:text-sm text-muted-foreground">Comprehensive analysis of your potential ROI</p>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleContinueFromInputs()
+      }}
+      className="space-y-4 md:space-y-6"
+    >
+      <div className="max-h-[60vh] md:max-h-[70vh] overflow-y-auto pr-2 space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between sticky top-0 bg-background z-10 pb-3 md:pb-4">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xl md:text-2xl font-bold">Detailed ROI Calculator</h3>
+            <p className="text-xs md:text-sm text-muted-foreground">Comprehensive analysis of your potential ROI</p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={() => setShowHelp(true)} className="flex-shrink-0">
+            <HelpCircle className="h-5 w-5" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)} className="flex-shrink-0">
-          <HelpCircle className="h-5 w-5" />
-        </Button>
+
+        <div className="space-y-5 md:space-y-6">
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
+              <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+              Cost Structure
+            </h4>
+            <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
+              <div className="space-y-2">
+                <Label htmlFor="implementationCost" className="text-sm md:text-base">
+                  Implementation Cost ($) *
+                </Label>
+                <Input
+                  id="implementationCost"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.implementationCost}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, implementationCost: e.target.value })}
+                  placeholder="e.g., 50000"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.implementationCost && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.implementationCost}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="monthlyCost" className="text-sm md:text-base">
+                  Monthly Subscription Cost ($) *
+                </Label>
+                <Input
+                  id="monthlyCost"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.monthlyCost}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, monthlyCost: e.target.value })}
+                  placeholder="e.g., 2000"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.monthlyCost && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.monthlyCost}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="perAnnumDirectLabourCosts" className="text-sm md:text-base">
+                  Annual Direct Labour Costs ($) *
+                </Label>
+                <Input
+                  id="perAnnumDirectLabourCosts"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.perAnnumDirectLabourCosts}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, perAnnumDirectLabourCosts: e.target.value })}
+                  placeholder="e.g., 150000"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.perAnnumDirectLabourCosts && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.perAnnumDirectLabourCosts}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+              Financial Metrics
+            </h4>
+            <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
+              <div className="space-y-2">
+                <Label htmlFor="interestType" className="text-sm md:text-base">
+                  Interest Type *
+                </Label>
+                <Select
+                  value={detailedInputs.interestType}
+                  onValueChange={(value: "loan" | "deposit") =>
+                    setDetailedInputs({ ...detailedInputs, interestType: value })
+                  }
+                >
+                  <SelectTrigger id="interestType" className="text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
+                    <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="interestRate" className="text-sm md:text-base">
+                  Interest Rate (%) *
+                </Label>
+                <Input
+                  id="interestRate"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={detailedInputs.interestRate}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, interestRate: e.target.value })}
+                  placeholder="e.g., 7.5"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.interestRate && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.interestRate}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="averageBadDebt" className="text-sm md:text-base">
+                  Average Bad Debt Rate (%) *
+                </Label>
+                <Input
+                  id="averageBadDebt"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={detailedInputs.averageBadDebt}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, averageBadDebt: e.target.value })}
+                  placeholder="e.g., 2.5"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.averageBadDebt && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.averageBadDebt}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currentBadDebts" className="text-sm md:text-base">
+                  Current Annual Bad Debts ($) *
+                </Label>
+                <Input
+                  id="currentBadDebts"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.currentBadDebts}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, currentBadDebts: e.target.value })}
+                  placeholder="e.g., 50000"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.currentBadDebts && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.currentBadDebts}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
+              <Calculator className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+              Accounts Receivable Data
+            </h4>
+            <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
+              <div className="space-y-2">
+                <Label htmlFor="currentDSODays" className="text-sm md:text-base">
+                  Current DSO (Days) *
+                </Label>
+                <Input
+                  id="currentDSODays"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.currentDSODays}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, currentDSODays: e.target.value })}
+                  placeholder="e.g., 45"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.currentDSODays && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.currentDSODays}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="debtorsBalance" className="text-sm md:text-base">
+                  Total Debtors Balance ($) *
+                </Label>
+                <Input
+                  id="debtorsBalance"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.debtorsBalance}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, debtorsBalance: e.target.value })}
+                  placeholder="e.g., 500000"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.debtorsBalance && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.debtorsBalance}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="averagePaymentTerms" className="text-sm md:text-base">
+                  Average Payment Terms *
+                </Label>
+                <Select
+                  value={detailedInputs.averagePaymentTerms}
+                  onValueChange={(value) => setDetailedInputs({ ...detailedInputs, averagePaymentTerms: value })}
+                >
+                  <SelectTrigger id="averagePaymentTerms" className="text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="net0">Net 0 (Immediate)</SelectItem>
+                    <SelectItem value="net30">Net 30</SelectItem>
+                    <SelectItem value="net60">Net 60</SelectItem>
+                    <SelectItem value="net90">Net 90</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="numberOfDebtors" className="text-sm md:text-base">
+                  Number of Debtors *
+                </Label>
+                <Input
+                  id="numberOfDebtors"
+                  type="number"
+                  inputMode="numeric"
+                  value={detailedInputs.numberOfDebtors}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfDebtors: e.target.value })}
+                  placeholder="e.g., 500"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.numberOfDebtors && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.numberOfDebtors}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
+              <Users className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
+              Team & Growth
+            </h4>
+            <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
+              <div className="space-y-2">
+                <Label htmlFor="numberOfCollectors" className="text-sm md:text-base">
+                  Number of Collections Staff *
+                </Label>
+                <Input
+                  id="numberOfCollectors"
+                  type="number"
+                  inputMode="numeric"
+                  value={detailedInputs.numberOfCollectors}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfCollectors: e.target.value })}
+                  placeholder="e.g., 3"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.numberOfCollectors && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.numberOfCollectors}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectedCustomerGrowth" className="text-sm md:text-base">
+                  Projected Customer Growth (%) *
+                </Label>
+                <Input
+                  id="projectedCustomerGrowth"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.projectedCustomerGrowth}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, projectedCustomerGrowth: e.target.value })}
+                  placeholder="e.g., 15"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.projectedCustomerGrowth && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.projectedCustomerGrowth}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-semibold text-base md:text-lg">Improvement Targets</h4>
+            <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
+              <div className="space-y-2">
+                <Label htmlFor="labourSavings" className="text-sm md:text-base">
+                  Expected Labour Savings (%) *
+                </Label>
+                <Input
+                  id="labourSavings"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.labourSavings}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, labourSavings: e.target.value })}
+                  placeholder="e.g., 30"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.labourSavings && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.labourSavings}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Typical range: 25-40% through automation</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dsoImprovement" className="text-sm md:text-base">
+                  Expected DSO Improvement (%) *
+                </Label>
+                <Input
+                  id="dsoImprovement"
+                  type="number"
+                  inputMode="decimal"
+                  value={detailedInputs.dsoImprovement}
+                  onChange={(e) => setDetailedInputs({ ...detailedInputs, dsoImprovement: e.target.value })}
+                  onKeyPress={(e) => handleKeyPress(e, handleContinueFromInputs)}
+                  placeholder="e.g., 25"
+                  className="text-base md:text-sm"
+                />
+                {validationErrors.dsoImprovement && (
+                  <p className="text-xs md:text-sm text-red-500">{validationErrors.dsoImprovement}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Typical range: 20-30%</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-5 md:space-y-6">
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
-            <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-            Cost Structure
-          </h4>
-          <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
-            <div className="space-y-2">
-              <Label htmlFor="implementationCost" className="text-sm md:text-base">
-                Implementation Cost ($) *
-              </Label>
-              <Input
-                id="implementationCost"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.implementationCost}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, implementationCost: e.target.value })}
-                placeholder="e.g., 50000"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.implementationCost && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.implementationCost}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="monthlyCost" className="text-sm md:text-base">
-                Monthly Subscription Cost ($) *
-              </Label>
-              <Input
-                id="monthlyCost"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.monthlyCost}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, monthlyCost: e.target.value })}
-                placeholder="e.g., 2000"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.monthlyCost && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.monthlyCost}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="perAnnumDirectLabourCosts" className="text-sm md:text-base">
-                Annual Direct Labour Costs ($) *
-              </Label>
-              <Input
-                id="perAnnumDirectLabourCosts"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.perAnnumDirectLabourCosts}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, perAnnumDirectLabourCosts: e.target.value })}
-                placeholder="e.g., 150000"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.perAnnumDirectLabourCosts && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.perAnnumDirectLabourCosts}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-            Financial Metrics
-          </h4>
-          <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
-            <div className="space-y-2">
-              <Label htmlFor="interestType" className="text-sm md:text-base">
-                Interest Type *
-              </Label>
-              <Select
-                value={detailedInputs.interestType}
-                onValueChange={(value: "loan" | "deposit") =>
-                  setDetailedInputs({ ...detailedInputs, interestType: value })
-                }
-              >
-                <SelectTrigger id="interestType" className="text-base md:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="loan">Loan Interest (Cost)</SelectItem>
-                  <SelectItem value="deposit">Deposit Interest (Income)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="interestRate" className="text-sm md:text-base">
-                Interest Rate (%) *
-              </Label>
-              <Input
-                id="interestRate"
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                value={detailedInputs.interestRate}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, interestRate: e.target.value })}
-                placeholder="e.g., 7.5"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.interestRate && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.interestRate}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="averageBadDebt" className="text-sm md:text-base">
-                Average Bad Debt Rate (%) *
-              </Label>
-              <Input
-                id="averageBadDebt"
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                value={detailedInputs.averageBadDebt}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, averageBadDebt: e.target.value })}
-                placeholder="e.g., 2.5"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.averageBadDebt && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.averageBadDebt}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="currentBadDebts" className="text-sm md:text-base">
-                Current Annual Bad Debts ($) *
-              </Label>
-              <Input
-                id="currentBadDebts"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.currentBadDebts}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, currentBadDebts: e.target.value })}
-                placeholder="e.g., 50000"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.currentBadDebts && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.currentBadDebts}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
-            <Calculator className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-            Accounts Receivable Data
-          </h4>
-          <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
-            <div className="space-y-2">
-              <Label htmlFor="currentDSODays" className="text-sm md:text-base">
-                Current DSO (Days) *
-              </Label>
-              <Input
-                id="currentDSODays"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.currentDSODays}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, currentDSODays: e.target.value })}
-                placeholder="e.g., 45"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.currentDSODays && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.currentDSODays}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="debtorsBalance" className="text-sm md:text-base">
-                Total Debtors Balance ($) *
-              </Label>
-              <Input
-                id="debtorsBalance"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.debtorsBalance}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, debtorsBalance: e.target.value })}
-                placeholder="e.g., 500000"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.debtorsBalance && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.debtorsBalance}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="averagePaymentTerms" className="text-sm md:text-base">
-                Average Payment Terms *
-              </Label>
-              <Select
-                value={detailedInputs.averagePaymentTerms}
-                onValueChange={(value) => setDetailedInputs({ ...detailedInputs, averagePaymentTerms: value })}
-              >
-                <SelectTrigger id="averagePaymentTerms" className="text-base md:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="net0">Net 0 (Immediate)</SelectItem>
-                  <SelectItem value="net30">Net 30</SelectItem>
-                  <SelectItem value="net60">Net 60</SelectItem>
-                  <SelectItem value="net90">Net 90</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="numberOfDebtors" className="text-sm md:text-base">
-                Number of Debtors *
-              </Label>
-              <Input
-                id="numberOfDebtors"
-                type="number"
-                inputMode="numeric"
-                value={detailedInputs.numberOfDebtors}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfDebtors: e.target.value })}
-                placeholder="e.g., 500"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.numberOfDebtors && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.numberOfDebtors}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-semibold text-base md:text-lg flex items-center gap-2">
-            <Users className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-            Team & Growth
-          </h4>
-          <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
-            <div className="space-y-2">
-              <Label htmlFor="numberOfCollectors" className="text-sm md:text-base">
-                Number of Collections Staff *
-              </Label>
-              <Input
-                id="numberOfCollectors"
-                type="number"
-                inputMode="numeric"
-                value={detailedInputs.numberOfCollectors}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfCollectors: e.target.value })}
-                placeholder="e.g., 3"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.numberOfCollectors && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.numberOfCollectors}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="projectedCustomerGrowth" className="text-sm md:text-base">
-                Projected Customer Growth (%) *
-              </Label>
-              <Input
-                id="projectedCustomerGrowth"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.projectedCustomerGrowth}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, projectedCustomerGrowth: e.target.value })}
-                placeholder="e.g., 15"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.projectedCustomerGrowth && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.projectedCustomerGrowth}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 md:space-y-4">
-          <h4 className="font-semibold text-base md:text-lg">Improvement Targets</h4>
-          <div className="space-y-3 md:space-y-4 pl-0 md:pl-7">
-            <div className="space-y-2">
-              <Label htmlFor="labourSavings" className="text-sm md:text-base">
-                Expected Labour Savings (%) *
-              </Label>
-              <Input
-                id="labourSavings"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.labourSavings}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, labourSavings: e.target.value })}
-                placeholder="e.g., 30"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.labourSavings && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.labourSavings}</p>
-              )}
-              <p className="text-xs text-muted-foreground">Typical range: 25-40% through automation</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dsoImprovement" className="text-sm md:text-base">
-                Expected DSO Improvement (%) *
-              </Label>
-              <Input
-                id="dsoImprovement"
-                type="number"
-                inputMode="decimal"
-                value={detailedInputs.dsoImprovement}
-                onChange={(e) => setDetailedInputs({ ...detailedInputs, dsoImprovement: e.target.value })}
-                placeholder="e.g., 25"
-                className="text-base md:text-sm"
-              />
-              {validationErrors.dsoImprovement && (
-                <p className="text-xs md:text-sm text-red-500">{validationErrors.dsoImprovement}</p>
-              )}
-              <p className="text-xs text-muted-foreground">Typical range: 20-30%</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-2 sticky bottom-0 bg-background pt-3 md:pt-4">
-        <Button variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
+      <div className="flex gap-2 sticky bottom-0 bg-background pt-3 md:pt-4 border-t">
+        <Button type="button" variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
           Back
         </Button>
-        <Button onClick={handleContinueFromInputs} className="flex-1">
+        <Button type="submit" className="flex-1">
           Continue
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   const renderContactForm = () => (
-    <div className="space-y-4 md:space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleSubmitContact()
+      }}
+      className="space-y-4 md:space-y-6"
+    >
       <div className="text-center space-y-2">
         <h3 className="text-xl md:text-2xl font-bold">Almost There!</h3>
         <p className="text-sm md:text-base text-muted-foreground">
@@ -1021,6 +1052,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             inputMode="tel"
             value={contactInfo.phone}
             onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+            onKeyPress={(e) => handleKeyPress(e, handleSubmitContact)}
             placeholder="+1 (555) 123-4567"
             className="text-base md:text-sm"
           />
@@ -1039,18 +1071,24 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" onClick={() => setStep("calculator-inputs")} className="flex-1">
+        <Button type="button" variant="outline" onClick={() => setStep("calculator-inputs")} className="flex-1">
           Back
         </Button>
-        <Button onClick={handleSubmitContact} disabled={isSubmitting} className="flex-1">
+        <Button type="submit" disabled={isSubmitting} className="flex-1">
           {isSubmitting ? "Sending Code..." : "Send Verification Code"}
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   const renderVerificationStep = () => (
-    <div className="space-y-4 md:space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleVerifyCode()
+      }}
+      className="space-y-4 md:space-y-6"
+    >
       <div className="text-center space-y-2">
         <h3 className="text-xl md:text-2xl font-bold">Verify Your Email</h3>
         <p className="text-sm md:text-base text-muted-foreground">
@@ -1067,6 +1105,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             id="verificationCode"
             value={verificationCode}
             onChange={(e) => setVerificationCode(e.target.value)}
+            onKeyPress={(e) => handleKeyPress(e, handleVerifyCode)}
             placeholder="Enter 6-digit code"
             maxLength={6}
             inputMode="numeric"
@@ -1081,14 +1120,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       </div>
 
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" onClick={() => setStep("contact-form")} className="flex-1">
+        <Button type="button" variant="outline" onClick={() => setStep("contact-form")} className="flex-1">
           Back
         </Button>
-        <Button onClick={handleVerifyCode} disabled={isVerifying} className="flex-1">
+        <Button type="submit" disabled={isVerifying} className="flex-1">
           {isVerifying ? "Verifying..." : "Verify & View Results"}
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   const renderSimpleResults = () => {

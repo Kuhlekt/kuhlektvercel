@@ -1,4 +1,4 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+import { SESClient, SendEmailCommand, GetAccountSendingEnabledCommand } from "@aws-sdk/client-ses"
 
 const sesClient = new SESClient({
   region: process.env.AWS_SES_REGION || "us-east-1",
@@ -9,22 +9,19 @@ const sesClient = new SESClient({
 })
 
 interface EmailParams {
-  to: string | string[]
+  to: string
   subject: string
   html: string
   text?: string
-  from?: string
 }
 
-export async function sendEmail({ to, subject, html, text, from }: EmailParams) {
-  const fromEmail = from || process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
-
-  const toAddresses = Array.isArray(to) ? to : [to]
+export async function sendEmailWithSES({ to, subject, html, text }: EmailParams) {
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
 
   const params = {
     Source: fromEmail,
     Destination: {
-      ToAddresses: toAddresses,
+      ToAddresses: [to],
     },
     Message: {
       Subject: {
@@ -36,12 +33,12 @@ export async function sendEmail({ to, subject, html, text, from }: EmailParams) 
           Data: html,
           Charset: "UTF-8",
         },
-        ...(text && {
-          Text: {
-            Data: text,
-            Charset: "UTF-8",
-          },
-        }),
+        Text: text
+          ? {
+              Data: text,
+              Charset: "UTF-8",
+            }
+          : undefined,
       },
     },
   }
@@ -49,45 +46,55 @@ export async function sendEmail({ to, subject, html, text, from }: EmailParams) 
   try {
     const command = new SendEmailCommand(params)
     const response = await sesClient.send(command)
+    console.log("Email sent successfully:", response.MessageId)
     return { success: true, messageId: response.MessageId }
   } catch (error) {
-    console.error("Error sending email via SES:", error)
+    console.error("Error sending email with SES:", error)
     throw error
   }
 }
 
-// Export as alias for compatibility
-export const sendEmailWithSES = sendEmail
-
 export async function testAWSSESConnection() {
   try {
-    const testEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
-
-    const result = await sendEmail({
-      to: testEmail,
-      subject: "AWS SES Connection Test",
-      html: "<p>This is a test email to verify AWS SES connection.</p>",
-      text: "This is a test email to verify AWS SES connection.",
-    })
-
-    return { success: true, messageId: result.messageId }
+    const command = new GetAccountSendingEnabledCommand({})
+    const response = await sesClient.send(command)
+    console.log("SES Connection Test:", response)
+    return { success: true, enabled: response.Enabled }
   } catch (error) {
-    console.error("AWS SES connection test failed:", error)
+    console.error("SES Connection Test Failed:", error)
     return { success: false, error: String(error) }
   }
 }
 
 export async function validateSESConfiguration() {
-  const requiredVars = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY", "AWS_SES_REGION", "AWS_SES_FROM_EMAIL"]
+  const requiredEnvVars = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY", "AWS_SES_REGION", "AWS_SES_FROM_EMAIL"]
 
-  const missing = requiredVars.filter((varName) => !process.env[varName])
+  const missingVars = requiredEnvVars.filter((varName) => !process.env[varName])
 
-  if (missing.length > 0) {
+  if (missingVars.length > 0) {
     return {
       valid: false,
-      error: `Missing required environment variables: ${missing.join(", ")}`,
+      error: `Missing required environment variables: ${missingVars.join(", ")}`,
     }
   }
 
-  return { valid: true }
+  try {
+    const testResult = await testAWSSESConnection()
+    if (!testResult.success) {
+      return {
+        valid: false,
+        error: "SES connection test failed",
+      }
+    }
+
+    return {
+      valid: true,
+      message: "SES configuration is valid",
+    }
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Configuration validation error: ${String(error)}`,
+    }
+  }
 }
