@@ -1,9 +1,9 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, code } = await request.json()
 
@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    // Get the verification code from database
-    const { data: verification, error: fetchError } = await supabase
+    const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
@@ -20,24 +19,19 @@ export async function POST(request: NextRequest) {
       .eq("used", false)
       .single()
 
-    if (fetchError || !verification) {
+    if (error || !data) {
       return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    // Check if code is expired
-    if (new Date(verification.expires_at) < new Date()) {
+    const expiresAt = new Date(data.expires_at)
+    if (expiresAt < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    // Mark code as used
-    const { error: updateError } = await supabase
-      .from("verification_codes")
-      .update({ used: true })
-      .eq("id", verification.id)
+    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     if (updateError) {
-      console.error("Error updating verification code:", updateError)
-      return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
+      console.error("Error marking code as used:", updateError)
     }
 
     return NextResponse.json({ success: true })
