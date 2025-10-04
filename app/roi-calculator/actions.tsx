@@ -2,26 +2,53 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendROIReport(formData: FormData) {
+export async function submitROICalculator(formData: FormData) {
   try {
+    const name = formData.get("name") as string
     const email = formData.get("email") as string
     const company = formData.get("company") as string
-    const name = formData.get("name") as string
-    const reportData = formData.get("reportData") as string
+    const annualRevenue = formData.get("annualRevenue") as string
+    const currentDSO = formData.get("currentDSO") as string
+    const invoiceVolume = formData.get("invoiceVolume") as string
+
+    const emailText = `
+ROI Calculator Submission
+
+Name: ${name}
+Email: ${email}
+Company: ${company}
+Annual Revenue: ${annualRevenue}
+Current DSO: ${currentDSO}
+Invoice Volume: ${invoiceVolume}
+    `
+
+    const emailHtml = `
+      <h2>ROI Calculator Submission</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Company:</strong> ${company}</p>
+      <p><strong>Annual Revenue:</strong> ${annualRevenue}</p>
+      <p><strong>Current DSO:</strong> ${currentDSO}</p>
+      <p><strong>Invoice Volume:</strong> ${invoiceVolume}</p>
+    `
 
     const result = await sendEmail({
-      to: email,
-      subject: `ROI Report for ${company}`,
-      text: `Hello ${name},\n\nThank you for calculating your ROI with Kuhlekt.\n\nYour report data:\n${reportData}`,
-      html: `<h1>Hello ${name},</h1><p>Thank you for calculating your ROI with Kuhlekt.</p><p>Your report data:</p><pre>${reportData}</pre>`,
+      to: process.env.AWS_SES_FROM_EMAIL || "",
+      subject: `ROI Calculator Submission from ${name}`,
+      text: emailText,
+      html: emailHtml,
     })
 
-    return result
+    if (result.success) {
+      return { success: true, message: "ROI calculation submitted successfully!" }
+    } else {
+      return { success: false, message: result.message, error: result.error }
+    }
   } catch (error) {
-    console.error("Error in sendROIReport:", error)
+    console.error("Error submitting ROI calculator:", error)
     return {
       success: false,
-      message: "Failed to send ROI report",
+      message: "Failed to submit ROI calculation",
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
