@@ -116,6 +116,10 @@ export async function sendROIEmail(emailData: {
       body: JSON.stringify(emailData),
     })
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
     const result = await response.json()
     return result
   } catch (error) {
@@ -134,6 +138,10 @@ export async function generateVerificationCode(email: string) {
       body: JSON.stringify({ email }),
     })
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
     const result = await response.json()
     return result
   } catch (error) {
@@ -151,6 +159,10 @@ export async function verifyCode(email: string, code: string) {
       },
       body: JSON.stringify({ email, code }),
     })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
 
     const result = await response.json()
     return result

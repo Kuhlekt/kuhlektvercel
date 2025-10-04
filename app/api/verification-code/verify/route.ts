@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, code } = await request.json()
 
@@ -11,11 +11,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // Find the most recent unused code for this email
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
       .eq("code", code)
+      .eq("used", false)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
@@ -25,7 +27,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid or expired code" }, { status: 400 })
     }
 
-    await supabase.from("verification_codes").delete().eq("id", data.id)
+    // Mark code as used
+    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
