@@ -1,11 +1,7 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { email, code } = await request.json()
 
@@ -13,9 +9,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email and code are required" }, { status: 400 })
     }
 
-    console.log("[Verification] Verifying code for:", email)
+    console.log("[verifyCode] Verifying code for email:", email)
+    console.log("[verifyCode] Code to verify:", code)
 
-    // Find valid, unused code that hasn't expired
+    const supabase = await createClient()
+
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -28,27 +26,23 @@ export async function POST(request: Request) {
       .single()
 
     if (error || !data) {
-      console.error("[Verification] No valid code found:", error)
+      console.error("[verifyCode] No valid code found:", error)
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 })
     }
 
-    console.log("[Verification] Valid code found, marking as used")
+    console.log("[verifyCode] Valid code found:", data)
 
-    // Mark code as used
     const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     if (updateError) {
-      console.error("[Verification] Error marking code as used:", updateError)
+      console.error("[verifyCode] Error marking code as used:", updateError)
       return NextResponse.json({ error: "Failed to verify code" }, { status: 500 })
     }
 
-    console.log("[Verification] Code verified successfully")
+    console.log("[verifyCode] Code marked as used")
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[Verification] Error:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
-    )
+    console.error("[verifyCode] Error:", error)
+    return NextResponse.json({ error: "Failed to verify code" }, { status: 500 })
   }
 }

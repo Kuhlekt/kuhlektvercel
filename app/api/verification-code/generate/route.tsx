@@ -1,23 +1,18 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-async function sendClickSendEmail(to: string, subject: string, html: string) {
+async function sendClickSendEmail(to: string, subject: string, body: string) {
   const username = process.env.CLICKSEND_USERNAME
   const apiKey = process.env.CLICKSEND_API_KEY
-  const fromEmail = process.env.CLICKSEND_FROM_EMAIL || "support@kuhlekt.com"
+  const fromEmail = process.env.CLICKSEND_FROM_EMAIL
 
-  if (!username || !apiKey) {
+  if (!username || !apiKey || !fromEmail) {
     throw new Error("ClickSend credentials not configured")
   }
 
   const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
 
   // First, fetch verified email addresses to get the email_address_id
-  console.log("[ClickSend] Fetching email addresses...")
   const addressesResponse = await fetch("https://rest.clicksend.com/v3/email/addresses", {
     method: "GET",
     headers: {
@@ -41,26 +36,21 @@ async function sendClickSendEmail(to: string, subject: string, html: string) {
   )
 
   if (!emailAddress) {
-    console.error("[ClickSend] No verified email found matching:", fromEmail)
     throw new Error(`Email address ${fromEmail} not found or not verified in ClickSend`)
   }
 
   const emailAddressId = emailAddress.email_address_id
+
   console.log("[ClickSend] Using email_address_id:", emailAddressId)
 
   const payload = {
-    to: [
-      {
-        email: to,
-        name: to.split("@")[0],
-      },
-    ],
+    to: [{ email: to, name: to.split("@")[0] }],
     from: {
       email_address_id: emailAddressId,
       name: "Kuhlekt",
     },
-    subject: subject,
-    body: html,
+    subject,
+    body,
   }
 
   console.log("[ClickSend] Sending email with payload:", JSON.stringify(payload, null, 2))
@@ -68,16 +58,16 @@ async function sendClickSendEmail(to: string, subject: string, html: string) {
   const response = await fetch("https://rest.clicksend.com/v3/email/send", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   })
 
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error("[ClickSend] Error response:", errorText)
-    throw new Error(`ClickSend API error: ${response.status} - ${errorText}`)
+    const errorBody = await response.text()
+    console.error("[ClickSend] Error response:", errorBody)
+    throw new Error(`Failed to send email: ${response.status} - ${errorBody}`)
   }
 
   const result = await response.json()
@@ -85,7 +75,7 @@ async function sendClickSendEmail(to: string, subject: string, html: string) {
   return result
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json()
 
@@ -93,129 +83,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    console.log("[Verification Code] Generating code for:", email)
+    console.log("[generateVerificationCode] Starting for email:", email)
 
-    // Generate 6-digit code
+    const supabase = await createClient()
     const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-    // Store in Supabase
-    const { error: dbError } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      used: false,
-    })
+    console.log("[generateVerificationCode] Generated code:", code)
+    console.log("[generateVerificationCode] Expires at:", expiresAt)
 
-    if (dbError) {
-      console.error("[Verification Code] Database error:", dbError)
-      return NextResponse.json({ error: "Failed to store verification code" }, { status: 500 })
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .insert({
+        email,
+        code,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[generateVerificationCode] Database error:", error)
+      return NextResponse.json({ error: "Failed to generate verification code" }, { status: 500 })
     }
 
-    console.log("[Verification Code] Code stored in database:", code)
+    console.log("[generateVerificationCode] Code saved to database:", data)
 
-    // Send email via ClickSend
-    const emailHtml = `
-      <!DOCTYPE html>
+    const emailBody = `
       <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              line-height: 1.6; 
-              color: #333; 
-              margin: 0;
-              padding: 0;
-            }
-            .container { 
-              max-width: 600px; 
-              margin: 0 auto; 
-              padding: 20px; 
-            }
-            .header {
-              text-align: center;
-              padding: 20px 0;
-              border-bottom: 2px solid #0891b2;
-            }
-            .logo {
-              font-size: 24px;
-              font-weight: bold;
-              color: #0891b2;
-            }
-            .content {
-              padding: 30px 0;
-            }
-            .code-box { 
-              font-size: 36px; 
-              font-weight: bold; 
-              color: #0891b2; 
-              letter-spacing: 8px; 
-              text-align: center; 
-              padding: 30px; 
-              background: linear-gradient(to bottom, #f0f9ff, #e0f2fe); 
-              border: 2px solid #0891b2;
-              border-radius: 10px; 
-              margin: 30px 0; 
-            }
-            .info {
-              background: #f9fafb;
-              border-left: 4px solid #0891b2;
-              padding: 15px;
-              margin: 20px 0;
-            }
-            .footer { 
-              margin-top: 30px; 
-              padding-top: 20px; 
-              border-top: 1px solid #ddd; 
-              font-size: 12px; 
-              color: #666; 
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo">Kuhlekt</div>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #0891b2;">Your Verification Code</h2>
+            <p>Thank you for using the Kuhlekt ROI Calculator.</p>
+            <p>Your verification code is:</p>
+            <div style="background-color: #f0f9ff; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+              <h1 style="font-size: 36px; letter-spacing: 8px; margin: 0; color: #0891b2;">${code}</h1>
             </div>
-            <div class="content">
-              <h2 style="color: #0891b2;">Your ROI Calculator Verification Code</h2>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Please use the following code to verify your email and receive your ROI calculation results:</p>
-              <div class="code-box">${code}</div>
-              <div class="info">
-                <p style="margin: 0;"><strong>Important:</strong></p>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                  <li>This code will expire in <strong>10 minutes</strong></li>
-                  <li>Enter this code in the verification page to view your results</li>
-                  <li>If you didn't request this code, please ignore this email</li>
-                </ul>
-              </div>
-              <p>Once verified, you'll receive a detailed ROI analysis showing your potential savings and return on investment.</p>
-            </div>
-            <div class="footer">
-              <p><strong>Kuhlekt</strong> - Invoice-to-Cash Platform</p>
-              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-              <p>This is an automated email. Please do not reply to this message.</p>
-            </div>
+            <p>This code will expire in 15 minutes.</p>
+            <p>If you didn't request this code, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+            <p style="font-size: 12px; color: #6b7280;">
+              © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+            </p>
           </div>
         </body>
       </html>
     `
 
-    try {
-      await sendClickSendEmail(email, "Your Kuhlekt ROI Calculator Verification Code", emailHtml)
-      console.log("[Verification Code] Email sent successfully to:", email)
-    } catch (emailError) {
-      console.error("[Verification Code] Email sending error:", emailError)
-      return NextResponse.json({ error: "Failed to send verification email" }, { status: 500 })
-    }
+    console.log("[generateVerificationCode] Sending email to:", email)
+    await sendClickSendEmail(email, "Your Kuhlekt ROI Calculator Verification Code", emailBody)
+    console.log("[generateVerificationCode] Email sent successfully")
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[Verification Code] Error in generate verification code:", error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 },
-    )
+    console.error("[generateVerificationCode] Error:", error)
+    return NextResponse.json({ error: "Failed to send verification code" }, { status: 500 })
   }
 }

@@ -72,7 +72,9 @@ interface DetailedResults {
   totalAnnualBenefit: number
   roi: number
   paybackMonths: number
-  totalImplementationAndAnnualCost: number
+  implementationCost: number
+  annualCost: number
+  totalFirstYearCost: number
   netBenefit: number
   threeYearValue: number
   currentCapacity: number
@@ -196,104 +198,46 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const validateDetailedForm = () => {
     const errors: Record<string, string> = {}
 
-    // Implementation Cost
-    if (!detailedInputs.implementationCost || detailedInputs.implementationCost.trim() === "") {
+    if (!detailedInputs.implementationCost || Number.parseFloat(detailedInputs.implementationCost) < 0) {
       errors.implementationCost = "Implementation cost is required"
-    } else if (isNaN(Number(detailedInputs.implementationCost)) || Number(detailedInputs.implementationCost) < 0) {
-      errors.implementationCost = "Implementation cost must be a valid number"
     }
-
-    // Monthly Cost
-    if (!detailedInputs.monthlyCost || detailedInputs.monthlyCost.trim() === "") {
+    if (!detailedInputs.monthlyCost || Number.parseFloat(detailedInputs.monthlyCost) < 0) {
       errors.monthlyCost = "Monthly cost is required"
-    } else if (isNaN(Number(detailedInputs.monthlyCost)) || Number(detailedInputs.monthlyCost) < 0) {
-      errors.monthlyCost = "Monthly cost must be a valid number"
     }
-
-    // Per Annum Direct Labour Costs
-    if (!detailedInputs.perAnnumDirectLabourCosts || detailedInputs.perAnnumDirectLabourCosts.trim() === "") {
+    if (!detailedInputs.perAnnumDirectLabourCosts || Number.parseFloat(detailedInputs.perAnnumDirectLabourCosts) < 0) {
       errors.perAnnumDirectLabourCosts = "Direct labour costs are required"
-    } else if (
-      isNaN(Number(detailedInputs.perAnnumDirectLabourCosts)) ||
-      Number(detailedInputs.perAnnumDirectLabourCosts) < 0
-    ) {
-      errors.perAnnumDirectLabourCosts = "Direct labour costs must be a valid number"
     }
-
-    // Interest Rate
-    if (!detailedInputs.interestRate || detailedInputs.interestRate.trim() === "") {
+    if (!detailedInputs.interestRate || Number.parseFloat(detailedInputs.interestRate) < 0) {
       errors.interestRate = "Interest rate is required"
-    } else if (isNaN(Number(detailedInputs.interestRate)) || Number(detailedInputs.interestRate) < 0) {
-      errors.interestRate = "Interest rate must be a valid number"
     }
-
-    // Average Bad Debt
-    if (!detailedInputs.averageBadDebt || detailedInputs.averageBadDebt.trim() === "") {
+    if (!detailedInputs.averageBadDebt || Number.parseFloat(detailedInputs.averageBadDebt) < 0) {
       errors.averageBadDebt = "Average bad debt is required"
-    } else if (isNaN(Number(detailedInputs.averageBadDebt)) || Number(detailedInputs.averageBadDebt) < 0) {
-      errors.averageBadDebt = "Average bad debt must be a valid number"
     }
-
-    // Current Bad Debts
-    if (!detailedInputs.currentBadDebts || detailedInputs.currentBadDebts.trim() === "") {
+    if (!detailedInputs.currentBadDebts || Number.parseFloat(detailedInputs.currentBadDebts) < 0) {
       errors.currentBadDebts = "Current bad debts are required"
-    } else if (isNaN(Number(detailedInputs.currentBadDebts)) || Number(detailedInputs.currentBadDebts) < 0) {
-      errors.currentBadDebts = "Current bad debts must be a valid number"
     }
-
-    // Labour Savings
-    if (!detailedInputs.labourSavings || detailedInputs.labourSavings.trim() === "") {
+    if (!detailedInputs.labourSavings || Number.parseFloat(detailedInputs.labourSavings) < 0) {
       errors.labourSavings = "Labour savings percentage is required"
-    } else if (isNaN(Number(detailedInputs.labourSavings)) || Number(detailedInputs.labourSavings) < 0) {
-      errors.labourSavings = "Labour savings must be a valid number"
     }
-
-    // DSO Improvement
-    if (!detailedInputs.dsoImprovement || detailedInputs.dsoImprovement.trim() === "") {
+    if (!detailedInputs.dsoImprovement || Number.parseFloat(detailedInputs.dsoImprovement) < 0) {
       errors.dsoImprovement = "DSO improvement percentage is required"
-    } else if (isNaN(Number(detailedInputs.dsoImprovement)) || Number(detailedInputs.dsoImprovement) < 0) {
-      errors.dsoImprovement = "DSO improvement must be a valid number"
     }
-
-    // Current DSO Days
-    if (!detailedInputs.currentDSODays || detailedInputs.currentDSODays.trim() === "") {
+    if (!detailedInputs.currentDSODays || Number.parseFloat(detailedInputs.currentDSODays) < 0) {
       errors.currentDSODays = "Current DSO days are required"
-    } else if (isNaN(Number(detailedInputs.currentDSODays)) || Number(detailedInputs.currentDSODays) < 0) {
-      errors.currentDSODays = "Current DSO days must be a valid number"
     }
-
-    // Debtors Balance
-    if (!detailedInputs.debtorsBalance || detailedInputs.debtorsBalance.trim() === "") {
+    if (!detailedInputs.debtorsBalance || Number.parseFloat(detailedInputs.debtorsBalance) < 0) {
       errors.debtorsBalance = "Debtors balance is required"
-    } else if (isNaN(Number(detailedInputs.debtorsBalance)) || Number(detailedInputs.debtorsBalance) < 0) {
-      errors.debtorsBalance = "Debtors balance must be a valid number"
     }
-
-    // Number of Debtors
-    if (!detailedInputs.numberOfDebtors || detailedInputs.numberOfDebtors.trim() === "") {
+    if (!detailedInputs.numberOfDebtors || Number.parseFloat(detailedInputs.numberOfDebtors) < 0) {
       errors.numberOfDebtors = "Number of debtors is required"
-    } else if (isNaN(Number(detailedInputs.numberOfDebtors)) || Number(detailedInputs.numberOfDebtors) < 0) {
-      errors.numberOfDebtors = "Number of debtors must be a valid number"
     }
-
-    // Number of Collectors
-    if (!detailedInputs.numberOfCollectors || detailedInputs.numberOfCollectors.trim() === "") {
+    if (!detailedInputs.numberOfCollectors || Number.parseFloat(detailedInputs.numberOfCollectors) < 0) {
       errors.numberOfCollectors = "Number of collectors is required"
-    } else if (isNaN(Number(detailedInputs.numberOfCollectors)) || Number(detailedInputs.numberOfCollectors) < 0) {
-      errors.numberOfCollectors = "Number of collectors must be a valid number"
     }
-
-    // Projected Customer Growth
-    if (!detailedInputs.projectedCustomerGrowth || detailedInputs.projectedCustomerGrowth.trim() === "") {
+    if (!detailedInputs.projectedCustomerGrowth || Number.parseFloat(detailedInputs.projectedCustomerGrowth) < 0) {
       errors.projectedCustomerGrowth = "Projected customer growth is required"
-    } else if (
-      isNaN(Number(detailedInputs.projectedCustomerGrowth)) ||
-      Number(detailedInputs.projectedCustomerGrowth) < 0
-    ) {
-      errors.projectedCustomerGrowth = "Projected customer growth must be a valid number"
     }
 
-    console.log("Validation errors:", errors)
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -355,49 +299,24 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     const numberOfCollectors = Number.parseFloat(detailedInputs.numberOfCollectors)
     const projectedGrowth = Number.parseFloat(detailedInputs.projectedCustomerGrowth) / 100
 
-    // DSO Calculations
     const dsoReductionDays = currentDSODays * dsoImprovement
     const newDSO = currentDSODays - dsoReductionDays
-
-    // Working Capital Released
     const dailyRevenue = debtorsBalance / currentDSODays
     const workingCapitalReleased = dailyRevenue * dsoReductionDays
-
-    // Interest Savings
     const interestSavings = workingCapitalReleased * interestRate
-
-    // Labour Cost Savings
     const labourCostSavings = labourCosts * labourSavings
-
-    // Bad Debt Reduction (50% improvement)
     const badDebtReduction = currentBadDebts * 0.5
-
-    // Total Annual Benefit
     const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
-
-    // Total Cost (First Year)
-    const totalImplementationAndAnnualCost = implementationCost + monthlyCost * 12
-
-    // ROI Calculation
-    const netBenefit = totalAnnualBenefit - monthlyCost * 12
+    const annualCost = monthlyCost * 12
+    const totalFirstYearCost = implementationCost + annualCost
+    const netBenefit = totalAnnualBenefit - annualCost
     const roi = (netBenefit / implementationCost) * 100
-
-    // Payback Period
     const paybackMonths = implementationCost / (totalAnnualBenefit / 12)
-
-    // 3-Year Value
-    const threeYearValue = totalAnnualBenefit * 3 - implementationCost - monthlyCost * 36
-
-    // Current Capacity (debtors per collector)
+    const threeYearValue = totalAnnualBenefit * 3 - implementationCost - annualCost * 3
     const currentCapacity = numberOfDebtors / numberOfCollectors
-
-    // Additional Capacity (with 30% efficiency gain)
     const additionalCapacity = currentCapacity * 0.3
-
-    // Projected Growth Value
     const projectedGrowthValue = numberOfDebtors * projectedGrowth
 
-    // Payment Terms Analysis
     const paymentTermsAnalysis = [
       { term: "Net 0", currentDSO: currentDSODays * 0.5, improvedDSO: currentDSODays * 0.5 * (1 - dsoImprovement) },
       { term: "Net 30", currentDSO: currentDSODays, improvedDSO: newDSO },
@@ -419,7 +338,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       totalAnnualBenefit,
       roi,
       paybackMonths,
-      totalImplementationAndAnnualCost,
+      implementationCost,
+      annualCost,
+      totalFirstYearCost,
       netBenefit,
       threeYearValue,
       currentCapacity,
@@ -492,7 +413,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         throw new Error("Invalid verification code")
       }
 
-      // Send ROI results email
       const emailData = {
         name: contactInfo.name,
         email: contactInfo.email,
@@ -689,7 +609,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       </div>
 
       <div className="space-y-6">
-        {/* Cost Structure */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
@@ -738,7 +657,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Financial Metrics */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -807,7 +725,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Accounts Receivable Data */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
@@ -876,7 +793,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Team & Growth */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
@@ -913,7 +829,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Improvement Targets */}
         <div className="space-y-4">
           <h4 className="font-semibold text-lg">Improvement Targets</h4>
           <div className="space-y-4 pl-7">
@@ -1147,13 +1062,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
     return (
       <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-        {/* Header */}
         <div className="text-center space-y-2 sticky top-0 bg-background z-10 pb-4">
           <h3 className="text-2xl font-bold text-primary">Your Projected ROI</h3>
           <p className="text-sm text-muted-foreground">Comprehensive analysis of your potential return</p>
         </div>
 
-        {/* ROI & Payback Cards */}
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg border-2 border-cyan-500 bg-gradient-to-br from-cyan-50 to-cyan-100 p-6 text-center">
             <p className="text-sm font-medium text-cyan-700 mb-2">ROI</p>
@@ -1172,7 +1085,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Cash Flow Analysis */}
         <div className="rounded-lg border bg-gradient-to-br from-blue-50 to-white p-4">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-blue-600" />
@@ -1198,7 +1110,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Payment Terms Impact Analysis */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
@@ -1240,7 +1151,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </p>
         </div>
 
-        {/* Business Growth Without Additional Headcount */}
         <div className="space-y-3">
           <h4 className="font-semibold">Business Growth Without Additional Headcount</h4>
           <div className="grid grid-cols-2 gap-4">
@@ -1253,9 +1163,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </div>
             <div className="rounded-lg border-2 border-cyan-500 bg-cyan-50 p-4 text-center">
               <p className="text-sm text-cyan-700 mb-1">Implementation Cost</p>
-              <p className="text-3xl font-bold text-cyan-600">
-                ${Number.parseFloat(detailedInputs.implementationCost).toLocaleString()}
-              </p>
+              <p className="text-3xl font-bold text-cyan-600">${detailedResults.implementationCost.toLocaleString()}</p>
             </div>
           </div>
           <div className="rounded-lg border bg-gradient-to-br from-cyan-50 to-white p-4">
@@ -1287,7 +1195,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Financial Impact Summary */}
         <div className="space-y-3">
           <h4 className="font-semibold flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
@@ -1338,7 +1245,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
                 <p className="text-2xl font-bold text-rose-600">
                   $
-                  {detailedResults.totalImplementationAndAnnualCost.toLocaleString(undefined, {
+                  {detailedResults.totalFirstYearCost.toLocaleString(undefined, {
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -1347,7 +1254,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* DSO Improvement */}
         <div className="space-y-3">
           <h4 className="font-semibold">DSO Improvement</h4>
           <div className="grid grid-cols-3 gap-3">
@@ -1369,23 +1275,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        {/* Savings Assumptions */}
-        <div className="space-y-3">
-          <h4 className="font-semibold">Savings Assumptions</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-lg border-2 border-cyan-500 bg-cyan-50 p-4 text-center">
-              <p className="text-sm text-cyan-700 mb-1">Current DSO</p>
-              <p className="text-3xl font-bold text-cyan-600">{detailedResults.currentDSO.toFixed(0)}</p>
-              <p className="text-xs text-cyan-700 mt-1">days</p>
-            </div>
-            <div className="rounded-lg border-2 border-rose-300 bg-rose-50 p-4 text-center">
-              <p className="text-sm text-rose-700 mb-1">DSO Improvement</p>
-              <p className="text-3xl font-bold text-rose-600">{detailedInputs.dsoImprovement}%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary */}
         <div className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/5 to-primary/10 p-6">
           <h4 className="font-semibold text-lg mb-3">Summary</h4>
           <div className="space-y-3 text-sm">
