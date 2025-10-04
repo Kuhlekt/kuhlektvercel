@@ -41,6 +41,28 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
         return
       }
 
+      // Calculate additional metrics for detailed report
+      const currentCapacity = results.numberOfDebtors || 0
+      const implementationCapacity = Math.round(currentCapacity * 1.5) // 50% increase
+      const additionalCapacity = implementationCapacity - currentCapacity
+      const growthScenario = Math.round(currentCapacity * 0.5) // 50% customer increase
+      const additionalAutomation = Math.round(additionalCapacity * 0.8) // 80% automation
+
+      // Payment terms analysis
+      const paymentTermsData = [
+        { term: "Net 30", currentDSO: 45, improvedDSO: 32, released: Math.round(results.workingCapitalReleased * 0.3) },
+        { term: "Net 60", currentDSO: 75, improvedDSO: 52, released: Math.round(results.workingCapitalReleased * 0.5) },
+        {
+          term: "Net 90",
+          currentDSO: 105,
+          improvedDSO: 73,
+          released: Math.round(results.workingCapitalReleased * 0.7),
+        },
+      ]
+
+      // First year investment
+      const firstYearInvestment = (Number(inputs.implementationCost) || 0) + (Number(inputs.monthlyCost) || 0) * 12
+
       const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -55,14 +77,18 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             }
             
             body {
-              font-family: 'Arial', sans-serif;
-              line-height: 1.6;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+              line-height: 1.5;
               color: #1f2937;
-              background: white;
-              padding: 40px;
+              background: #f9fafb;
+              padding: 0;
             }
             
             .page {
+              background: white;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 40px;
               page-break-after: always;
             }
             
@@ -70,66 +96,83 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               page-break-after: auto;
             }
             
-            .container {
-              max-width: 900px;
-              margin: 0 auto;
-            }
-            
-            .logo-container {
-              text-align: center;
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid #0891b2;
-            }
-            
-            .logo {
-              max-width: 250px;
-              height: auto;
-            }
-            
-            .header {
-              text-align: center;
-              margin-bottom: 40px;
-            }
-            
-            .header h1 {
-              color: #0891b2;
-              font-size: 32px;
-              margin-bottom: 10px;
-            }
-            
-            .header .subtitle {
-              color: #6b7280;
-              font-size: 18px;
-            }
-            
-            .summary-box {
-              background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
-              border: 2px solid #0891b2;
-              border-radius: 12px;
+            .header-banner {
+              background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+              color: white;
               padding: 30px;
+              border-radius: 12px;
               margin-bottom: 30px;
+            }
+            
+            .header-banner h1 {
+              font-size: 28px;
+              font-weight: 700;
+              margin-bottom: 8px;
+            }
+            
+            .header-banner .subtitle {
+              font-size: 14px;
+              opacity: 0.9;
+            }
+            
+            .logo-small {
+              width: 120px;
+              margin-bottom: 15px;
+            }
+            
+            .metric-cards {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              margin-bottom: 30px;
+            }
+            
+            .metric-card {
+              border: 2px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 24px;
               text-align: center;
             }
             
-            .summary-box .label {
-              color: #0e7490;
-              font-size: 14px;
+            .metric-card.positive {
+              background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%);
+              border-color: #84cc16;
+            }
+            
+            .metric-card.negative {
+              background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+              border-color: #ef4444;
+            }
+            
+            .metric-card .label {
+              font-size: 12px;
               font-weight: 600;
               text-transform: uppercase;
-              margin-bottom: 10px;
+              margin-bottom: 12px;
+              color: #6b7280;
             }
             
-            .summary-box .value {
-              color: #0891b2;
-              font-size: 48px;
-              font-weight: bold;
-              margin-bottom: 10px;
+            .metric-card .value {
+              font-size: 36px;
+              font-weight: 700;
+              margin-bottom: 8px;
             }
             
-            .summary-box .description {
-              color: #0e7490;
-              font-size: 14px;
+            .metric-card.positive .value {
+              color: #16a34a;
+            }
+            
+            .metric-card.negative .value {
+              color: #dc2626;
+            }
+            
+            .metric-card .note {
+              font-size: 11px;
+              color: #6b7280;
+              background: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              display: inline-block;
             }
             
             .section {
@@ -137,60 +180,52 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               page-break-inside: avoid;
             }
             
-            .section-header {
-              background: #0891b2;
-              color: white;
-              padding: 12px 20px;
-              border-radius: 6px;
+            .section-title {
               font-size: 18px;
-              font-weight: bold;
+              font-weight: 700;
+              color: #0891b2;
               margin-bottom: 15px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid #0891b2;
             }
             
-            .metrics-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
+            .info-box {
+              background: #f0f9ff;
+              border-left: 4px solid #0891b2;
+              padding: 16px;
+              border-radius: 6px;
               margin-bottom: 20px;
             }
             
-            .metric-card {
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 20px;
-              background: white;
-            }
-            
-            .metric-card .metric-label {
-              color: #6b7280;
-              font-size: 14px;
+            .info-box h4 {
+              font-size: 13px;
+              font-weight: 600;
+              color: #0e7490;
               margin-bottom: 8px;
             }
             
-            .metric-card .metric-value {
-              color: #0891b2;
-              font-size: 28px;
-              font-weight: bold;
-            }
-            
-            .metric-card .metric-note {
-              color: #9ca3af;
+            .info-box p {
               font-size: 12px;
-              margin-top: 4px;
+              color: #164e63;
+              line-height: 1.6;
             }
             
             .data-table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 15px;
+              margin: 15px 0;
+              font-size: 13px;
+            }
+            
+            .data-table thead {
+              background: #f3f4f6;
             }
             
             .data-table th {
-              background: #f3f4f6;
-              color: #374151;
               padding: 12px;
               text-align: left;
               font-weight: 600;
+              color: #374151;
               border-bottom: 2px solid #0891b2;
             }
             
@@ -199,39 +234,285 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               border-bottom: 1px solid #e5e7eb;
             }
             
-            .data-table tr:last-child td {
-              border-bottom: none;
+            .data-table .highlight {
+              background: #ecfeff;
+              font-weight: 600;
             }
             
-            .next-steps {
-              background: #f9fafb;
-              border-left: 4px solid #0891b2;
+            .capacity-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin: 15px 0;
+            }
+            
+            .capacity-card {
+              border: 2px solid #e5e7eb;
+              border-radius: 8px;
               padding: 20px;
-              margin-top: 30px;
-              page-break-inside: avoid;
+              text-align: center;
             }
             
-            .next-steps h3 {
+            .capacity-card.current {
+              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+              border-color: #f59e0b;
+            }
+            
+            .capacity-card.implementation {
+              background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+              border-color: #8b5cf6;
+            }
+            
+            .capacity-card .label {
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: #6b7280;
+              margin-bottom: 10px;
+            }
+            
+            .capacity-card .value {
+              font-size: 32px;
+              font-weight: 700;
+              color: #1f2937;
+            }
+            
+            .mini-metrics {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 12px;
+              margin: 15px 0;
+            }
+            
+            .mini-metric {
+              background: #f0f9ff;
+              border: 1px solid #0891b2;
+              border-radius: 8px;
+              padding: 16px;
+              text-align: center;
+            }
+            
+            .mini-metric .label {
+              font-size: 10px;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: #0e7490;
+              margin-bottom: 8px;
+            }
+            
+            .mini-metric .value {
+              font-size: 24px;
+              font-weight: 700;
               color: #0891b2;
+            }
+            
+            .growth-box {
+              background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+              border: 2px solid #10b981;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 15px 0;
+            }
+            
+            .growth-box h4 {
+              font-size: 14px;
+              font-weight: 600;
+              color: #065f46;
+              margin-bottom: 12px;
+            }
+            
+            .growth-metrics {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+            }
+            
+            .growth-metric {
+              background: white;
+              padding: 12px;
+              border-radius: 6px;
+              text-align: center;
+            }
+            
+            .growth-metric .label {
+              font-size: 11px;
+              color: #6b7280;
+              margin-bottom: 6px;
+            }
+            
+            .growth-metric .value {
+              font-size: 24px;
+              font-weight: 700;
+              color: #059669;
+            }
+            
+            .chart-placeholder {
+              background: white;
+              border: 2px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 30px;
+              margin: 15px 0;
+              text-align: center;
+              min-height: 200px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            .chart-placeholder p {
+              color: #9ca3af;
+              font-size: 14px;
+            }
+            
+            .savings-cards {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin: 15px 0;
+            }
+            
+            .savings-card {
+              border: 2px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 20px;
+              text-align: center;
+            }
+            
+            .savings-card.dso {
+              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+              border-color: #f59e0b;
+            }
+            
+            .savings-card.bad-debt {
+              background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+              border-color: #ef4444;
+            }
+            
+            .savings-card .label {
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: #6b7280;
+              margin-bottom: 10px;
+            }
+            
+            .savings-card .value {
+              font-size: 36px;
+              font-weight: 700;
+              color: #1f2937;
+            }
+            
+            .financial-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin: 15px 0;
+            }
+            
+            .financial-item {
+              background: white;
+              border: 2px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 16px;
+            }
+            
+            .financial-item .label {
+              font-size: 12px;
+              font-weight: 600;
+              color: #6b7280;
+              margin-bottom: 8px;
+            }
+            
+            .financial-item .value {
+              font-size: 24px;
+              font-weight: 700;
+            }
+            
+            .financial-item.positive .value {
+              color: #16a34a;
+            }
+            
+            .financial-item.negative .value {
+              color: #dc2626;
+            }
+            
+            .dso-metrics {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 12px;
+              margin: 15px 0;
+            }
+            
+            .dso-metric {
+              border: 2px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 16px;
+              text-align: center;
+            }
+            
+            .dso-metric.current {
+              background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+              border-color: #ef4444;
+            }
+            
+            .dso-metric.improved {
+              background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+              border-color: #10b981;
+            }
+            
+            .dso-metric.reduction {
+              background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+              border-color: #8b5cf6;
+            }
+            
+            .dso-metric .label {
+              font-size: 10px;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: #6b7280;
+              margin-bottom: 8px;
+            }
+            
+            .dso-metric .value {
+              font-size: 28px;
+              font-weight: 700;
+              color: #1f2937;
+            }
+            
+            .summary-box {
+              background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+              border: 2px solid #0891b2;
+              border-radius: 12px;
+              padding: 24px;
+              margin: 20px 0;
+            }
+            
+            .summary-box h3 {
+              font-size: 16px;
+              font-weight: 700;
+              color: #0e7490;
               margin-bottom: 15px;
             }
             
-            .next-steps ol {
-              margin-left: 20px;
+            .summary-box p {
+              font-size: 13px;
+              color: #164e63;
+              line-height: 1.8;
+              margin-bottom: 10px;
             }
             
-            .next-steps li {
-              margin-bottom: 8px;
-              color: #4b5563;
+            .summary-box strong {
+              color: #0891b2;
+              font-weight: 700;
             }
             
             .footer {
-              margin-top: 40px;
+              margin-top: 30px;
               padding-top: 20px;
               border-top: 2px solid #e5e7eb;
               text-align: center;
+              font-size: 11px;
               color: #6b7280;
-              font-size: 14px;
             }
             
             .footer strong {
@@ -240,274 +521,246 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             
             @media print {
               body {
-                padding: 20px;
-              }
-              
-              .summary-box {
-                page-break-inside: avoid;
-              }
-              
-              .section {
-                page-break-inside: avoid;
+                background: white;
               }
               
               .page {
-                page-break-after: always;
+                padding: 20px;
+                max-width: 100%;
               }
               
-              .page:last-child {
-                page-break-after: auto;
+              .page-break {
+                page-break-before: always;
               }
             }
           </style>
         </head>
         <body>
-           Page 1: Results 
+           Page 1: Main Results 
           <div class="page">
-            <div class="container">
-              ${
-                logoBase64
-                  ? `<div class="logo-container">
-                <img src="${logoBase64}" alt="Kuhlekt" class="logo" />
-              </div>`
-                  : '<div class="logo-container"><h2 style="color: #0891b2;">Kuhlekt</h2></div>'
-              }
+            ${logoBase64 ? `<img src="${logoBase64}" alt="Kuhlekt" class="logo-small" />` : '<div style="height: 40px;"></div>'}
+            
+            <div class="header-banner">
+              <h1>Your Projected ROI</h1>
+              <div class="subtitle">Analysis Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+            </div>
+            
+            <div class="metric-cards">
+              <div class="metric-card positive">
+                <div class="label">ROI</div>
+                <div class="value">${results.roi?.toFixed(1) || "0.0"}%</div>
+                <div class="note">Return on Investment</div>
+              </div>
+              <div class="metric-card negative">
+                <div class="label">Payback Period</div>
+                <div class="value">${results.paybackMonths?.toFixed(1) || "0.0"}</div>
+                <div class="note">Months</div>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <h4>Cash Flow Cost Savings</h4>
+              <p>To calculate Monthly Cash Flow improvements, please see Annual Recurring Savings in the Financial Impact section.</p>
+            </div>
+            
+            <div class="info-box">
+              <h4>Current DSO</h4>
+              <p>Current DSO is important. Cash and Annual Savings are calculated against this metric along with the cost of capital and cost of debt from the company statement.</p>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Payment Terms Impact Analysis</div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Payment Terms</th>
+                    <th>Current DSO</th>
+                    <th>Improved DSO</th>
+                    <th>Working Capital Released</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${paymentTermsData
+                    .map(
+                      (term) => `
+                    <tr class="highlight">
+                      <td><strong>${term.term}</strong></td>
+                      <td>${term.currentDSO} days</td>
+                      <td style="color: #16a34a; font-weight: 600;">${term.improvedDSO} days</td>
+                      <td style="color: #0891b2; font-weight: 600;">$${term.released.toLocaleString()}</td>
+                    </tr>
+                  `,
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+              <p style="font-size: 11px; color: #6b7280; margin-top: 10px;">
+                Note: Actual DSO is typically 50% higher than normal payment terms.
+                e.g., 30-day payment terms often results in 45-day DSO.
+              </p>
+            </div>
+          </div>
+          
+           Page 2: Capacity & Growth Analysis 
+          <div class="page page-break">
+            ${logoBase64 ? `<img src="${logoBase64}" alt="Kuhlekt" class="logo-small" />` : '<div style="height: 40px;"></div>'}
+            
+            <div class="section">
+              <div class="section-title">Business Growth Without Additional Headcount</div>
               
-              <div class="header">
-                <h1>${calculatorType === "simple" ? "Simple ROI Analysis Report" : "Detailed ROI Analysis Report"}</h1>
-                <div class="subtitle">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+              <div class="capacity-grid">
+                <div class="capacity-card current">
+                  <div class="label">Current Capacity</div>
+                  <div class="value">${currentCapacity.toLocaleString()}</div>
+                </div>
+                <div class="capacity-card implementation">
+                  <div class="label">With Implementation</div>
+                  <div class="value">${implementationCapacity.toLocaleString()}</div>
+                </div>
               </div>
               
-              ${
-                calculatorType === "simple"
-                  ? `
-              <div class="summary-box">
-                <div class="label">Estimated Annual Savings</div>
-                <div class="value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div class="description">Based on ${results.dsoImprovement?.toFixed(0)}% DSO improvement and ${results.costOfCapital?.toFixed(0)}% cost of capital</div>
+              <div class="mini-metrics">
+                <div class="mini-metric">
+                  <div class="label">Additional Capacity (No New Hires)</div>
+                  <div class="value">+${additionalCapacity.toLocaleString()}</div>
+                </div>
+                <div class="mini-metric">
+                  <div class="label">Growth Enabled</div>
+                  <div class="value">${((additionalCapacity / currentCapacity) * 100).toFixed(0)}%</div>
+                </div>
+                <div class="mini-metric">
+                  <div class="label">Efficiency Gain</div>
+                  <div class="value">${inputs.labourSavings || 40}%</div>
+                </div>
               </div>
               
-              <div class="section">
-                <div class="section-header">Key Results Summary</div>
-                <div class="metrics-grid">
-                  <div class="metric-card">
-                    <div class="metric-label">Current Cash Tied Up</div>
-                    <div class="metric-value">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+              <div class="growth-box">
+                <h4>✓ Growth Scenario: 50% Customer Increase</h4>
+                <div class="growth-metrics">
+                  <div class="growth-metric">
+                    <div class="label">New Customers</div>
+                    <div class="value">${growthScenario.toLocaleString()}</div>
                   </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Cash Released</div>
-                    <div class="metric-value">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    <div class="metric-note">From faster collections</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Current DSO</div>
-                    <div class="metric-value">${results.currentDSO?.toFixed(0)} days</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Projected New DSO</div>
-                    <div class="metric-value">${results.newDSO?.toFixed(0)} days</div>
-                    <div class="metric-note">${results.dsoImprovement?.toFixed(0)}% improvement</div>
+                  <div class="growth-metric">
+                    <div class="label">Handled by Current Team</div>
+                    <div class="value">${growthScenario.toLocaleString()}</div>
                   </div>
                 </div>
               </div>
-              `
-                  : `
-              <div class="summary-box">
-                <div class="label">Total Annual Benefit</div>
-                <div class="value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div class="description">ROI: ${results.roi?.toFixed(0)}% | Payback Period: ${results.paybackMonths?.toFixed(1)} months</div>
-              </div>
               
-              <div class="section">
-                <div class="section-header">Financial Benefits Breakdown</div>
-                <div class="metrics-grid">
-                  <div class="metric-card">
-                    <div class="metric-label">Working Capital Released</div>
-                    <div class="metric-value">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Interest Savings (Annual)</div>
-                    <div class="metric-value">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Labour Cost Savings</div>
-                    <div class="metric-value">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    <div class="metric-note">Through automation</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Bad Debt Reduction</div>
-                    <div class="metric-value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                    <div class="metric-note">50% improvement</div>
-                  </div>
-                </div>
+              <div class="info-box">
+                <h4>Additional Customer Business Goal</h4>
+                <p>Without automation: would need ${Math.ceil(growthScenario / 100)} new collectors. 
+                With automation: ${additionalAutomation.toLocaleString()} additional customers handled automatically.</p>
               </div>
-              
-              <div class="section">
-                <div class="section-header">DSO Improvement Analysis</div>
-                <div class="metrics-grid">
-                  <div class="metric-card">
-                    <div class="metric-label">Current DSO</div>
-                    <div class="metric-value">${results.currentDSO?.toFixed(0)} days</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Projected New DSO</div>
-                    <div class="metric-value">${results.newDSO?.toFixed(0)} days</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Days Reduced</div>
-                    <div class="metric-value">${results.dsoReductionDays?.toFixed(0)}</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-label">Return on Investment</div>
-                    <div class="metric-value">${results.roi?.toFixed(0)}%</div>
-                    <div class="metric-note">Payback: ${results.paybackMonths?.toFixed(1)} months</div>
-                  </div>
-                </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Investment vs Annual Savings</div>
+              <div class="chart-placeholder">
+                <p>Investment: $${firstYearInvestment.toLocaleString()} | Annual Savings: $${results.totalAnnualBenefit?.toLocaleString() || "0"}</p>
               </div>
-              `
-              }
-              
-              <div class="footer">
-                <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
-                <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
-                <p style="margin-top: 10px; font-size: 12px;">This report is generated based on the inputs provided and represents estimated outcomes. Actual results may vary based on implementation and business-specific factors.</p>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Cumulative Savings Over Time (3 Years)</div>
+              <div class="chart-placeholder">
+                <p>Year 1: $${results.totalAnnualBenefit?.toLocaleString() || "0"} | 
+                Year 2: $${((results.totalAnnualBenefit || 0) * 2).toLocaleString()} | 
+                Year 3: $${((results.totalAnnualBenefit || 0) * 3).toLocaleString()}</p>
               </div>
             </div>
           </div>
-
-           Page 2: Input Summary 
-          <div class="page">
-            <div class="container">
-              ${
-                logoBase64
-                  ? `<div class="logo-container">
-                <img src="${logoBase64}" alt="Kuhlekt" class="logo" />
-              </div>`
-                  : '<div class="logo-container"><h2 style="color: #0891b2;">Kuhlekt</h2></div>'
-              }
-              
-              <div class="header">
-                <h1>Input Summary</h1>
-                <div class="subtitle">${calculatorType === "simple" ? "Simple Calculator" : "Detailed Calculator"}</div>
+          
+           Page 3: Financial Impact & Summary 
+          <div class="page page-break">
+            ${logoBase64 ? `<img src="${logoBase64}" alt="Kuhlekt" class="logo-small" />` : '<div style="height: 40px;"></div>'}
+            
+            <div class="section">
+              <div class="section-title">DSO Comparison</div>
+              <div class="chart-placeholder">
+                <p>Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days | 
+                Improved DSO: ${results.newDSO?.toFixed(0) || "0"} days</p>
               </div>
-              
-              <div class="section">
-                <div class="section-header">Your Inputs</div>
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Parameter</th>
-                      <th>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${
-                      calculatorType === "simple"
-                        ? `
-                      <tr>
-                        <td>Current DSO</td>
-                        <td>${inputs.currentDSO} days</td>
-                      </tr>
-                      <tr>
-                        <td>Average Invoice Value</td>
-                        <td>$${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Monthly Invoices</td>
-                        <td>${Number.parseFloat(inputs.monthlyInvoices).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Expected DSO Improvement</td>
-                        <td>${inputs.simpleDSOImprovement}%</td>
-                      </tr>
-                      <tr>
-                        <td>Cost of Capital</td>
-                        <td>${inputs.simpleCostOfCapital}%</td>
-                      </tr>
-                    `
-                        : `
-                      <tr>
-                        <td>Implementation Cost</td>
-                        <td>$${Number.parseFloat(inputs.implementationCost).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Monthly Cost</td>
-                        <td>$${Number.parseFloat(inputs.monthlyCost).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Per Annum Direct Labour Costs</td>
-                        <td>$${Number.parseFloat(inputs.perAnnumDirectLabourCosts).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Interest Type</td>
-                        <td>${inputs.interestType === "loan" ? "Loan Interest" : "Deposit Interest"}</td>
-                      </tr>
-                      <tr>
-                        <td>Interest Rate</td>
-                        <td>${inputs.interestRate}%</td>
-                      </tr>
-                      <tr>
-                        <td>Average Bad Debt</td>
-                        <td>${inputs.averageBadDebt}%</td>
-                      </tr>
-                      <tr>
-                        <td>Current Bad Debts</td>
-                        <td>$${Number.parseFloat(inputs.currentBadDebts).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Labour Savings</td>
-                        <td>${inputs.labourSavings}%</td>
-                      </tr>
-                      <tr>
-                        <td>DSO Improvement</td>
-                        <td>${inputs.dsoImprovement}%</td>
-                      </tr>
-                      <tr>
-                        <td>Current DSO Days</td>
-                        <td>${inputs.currentDSODays} days</td>
-                      </tr>
-                      <tr>
-                        <td>Debtors Balance</td>
-                        <td>$${Number.parseFloat(inputs.debtorsBalance).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Average Payment Terms</td>
-                        <td>${inputs.averagePaymentTerms.replace("net", "Net ")}</td>
-                      </tr>
-                      <tr>
-                        <td>Number of Debtors</td>
-                        <td>${Number.parseFloat(inputs.numberOfDebtors).toLocaleString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Number of Collectors</td>
-                        <td>${inputs.numberOfCollectors}</td>
-                      </tr>
-                      <tr>
-                        <td>Projected Customer Growth</td>
-                        <td>${inputs.projectedCustomerGrowth}%</td>
-                      </tr>
-                    `
-                    }
-                  </tbody>
-                </table>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Savings Assumptions</div>
+              <div class="savings-cards">
+                <div class="savings-card dso">
+                  <div class="label">DSO Improvement</div>
+                  <div class="value">${inputs.dsoImprovement || 40}%</div>
+                </div>
+                <div class="savings-card bad-debt">
+                  <div class="label">Bad Debt Reduction</div>
+                  <div class="value">30%</div>
+                </div>
               </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Financial Impact</div>
               
-              <div class="next-steps">
-                <h3>Recommended Next Steps</h3>
-                <ol>
-                  <li><strong>Schedule a Demo:</strong> See Kuhlekt in action with a personalized demonstration tailored to your business needs.</li>
-                  <li><strong>Review Case Studies:</strong> Learn how similar companies have achieved these results with our platform.</li>
-                  <li><strong>Implementation Planning:</strong> Discuss timeline, resources, and integration with our implementation team.</li>
-                  <li><strong>Pricing Discussion:</strong> Explore pricing options and potential customizations for your organization.</li>
-                  <li><strong>Contact Us:</strong> Reach out to our team at <strong>enquiries@kuhlekt.com</strong> for any questions.</li>
-                </ol>
+              <div class="financial-grid">
+                <div class="financial-item positive">
+                  <div class="label">Annual Recurring Savings</div>
+                  <div class="value">$${results.totalAnnualBenefit?.toLocaleString() || "0"}</div>
+                </div>
+                <div class="financial-item positive">
+                  <div class="label">One-Time Cash Flow (Better Balance)</div>
+                  <div class="value">$${results.workingCapitalReleased?.toLocaleString() || "0"}</div>
+                </div>
+                <div class="financial-item positive">
+                  <div class="label">Monthly Operational Savings</div>
+                  <div class="value">$${Math.round((results.totalAnnualBenefit || 0) / 12).toLocaleString()}</div>
+                </div>
+                <div class="financial-item negative">
+                  <div class="label">Total First Year Investment</div>
+                  <div class="value">-$${firstYearInvestment.toLocaleString()}</div>
+                </div>
               </div>
-              
-              <div class="footer">
-                <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
-                <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
-                <p style="margin-top: 10px; font-size: 12px;">This report is generated based on the inputs provided and represents estimated outcomes. Actual results may vary based on implementation and business-specific factors.</p>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">DSO Improvement</div>
+              <div class="dso-metrics">
+                <div class="dso-metric current">
+                  <div class="label">Current</div>
+                  <div class="value">${results.currentDSO?.toFixed(0) || "0"}</div>
+                </div>
+                <div class="dso-metric improved">
+                  <div class="label">Improved</div>
+                  <div class="value">${results.newDSO?.toFixed(0) || "0"}</div>
+                </div>
+                <div class="dso-metric reduction">
+                  <div class="label">Reduction</div>
+                  <div class="value">${results.dsoReductionDays?.toFixed(0) || "0"}</div>
+                </div>
               </div>
+            </div>
+            
+            <div class="summary-box">
+              <h3>Summary</h3>
+              <p>
+                By implementing the Kuhlekt invoice-to-cash platform with 
+                automated collection workflows and customer self-service, 
+                your organization can achieve a <strong>${results.roi?.toFixed(0) || "0"}% ROI</strong> within 
+                <strong>${results.paybackMonths?.toFixed(1) || "0"} months</strong>. You should expect to improve 
+                DSO by <strong>${inputs.dsoImprovement || 40}%</strong>, freeing up <strong>$${results.workingCapitalReleased?.toLocaleString() || "0"}</strong> 
+                in working capital without adding headcount.
+              </p>
+              <p>
+                Additionally, your team can handle <strong>${((additionalCapacity / currentCapacity) * 100).toFixed(0)}%</strong> 
+                more customers without hiring, while delivering superior customer 
+                experience through 24/7 portal access and automated communications.
+              </p>
+            </div>
+            
+            <div class="footer">
+              <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
+              <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
+              <p style="margin-top: 10px;">This report is generated based on the inputs provided and represents estimated outcomes. 
+              Actual results may vary based on implementation and business-specific factors.</p>
             </div>
           </div>
         </body>
