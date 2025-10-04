@@ -20,21 +20,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 })
     }
 
+    // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    const { error } = await supabase.from("verification_codes").insert({
+    // Store in database
+    const { error: dbError } = await supabase.from("verification_codes").insert({
       email: email.toLowerCase(),
       code,
       expires_at: expiresAt.toISOString(),
       used: false,
     })
 
-    if (error) {
-      console.error("Error storing verification code:", error)
+    if (dbError) {
+      console.error("Error storing verification code:", dbError)
       return NextResponse.json({ success: false, error: "Failed to generate code" }, { status: 500 })
     }
 
+    // Send email via AWS SES
     const emailParams = {
       Source: process.env.AWS_SES_FROM_EMAIL!,
       Destination: {
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error generating verification code:", error)
-    return NextResponse.json({ success: false, error: "Failed to send code" }, { status: 500 })
+    console.error("Error in generate verification code route:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

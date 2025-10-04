@@ -11,8 +11,11 @@ const sesClient = new SESClient({
 
 export async function POST(request: Request) {
   try {
-    const emailData = await request.json()
-    const { name, email, company, calculatorType, results } = emailData
+    const { name, email, company, calculatorType, results } = await request.json()
+
+    if (!name || !email || !company || !calculatorType || !results) {
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    }
 
     let htmlContent = ""
 
@@ -128,7 +131,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error sending ROI email:", error)
-    return NextResponse.json({ success: false, error: "Failed to send email" }, { status: 500 })
+    console.error("Error in send ROI email route:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
