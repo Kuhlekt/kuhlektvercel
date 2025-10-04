@@ -12,10 +12,6 @@ const sesClient = new SESClient({
   },
 })
 
-function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
 export async function POST(request: Request) {
   try {
     const { email } = await request.json()
@@ -24,79 +20,70 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 })
     }
 
-    const code = generateCode()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // Store code in database
-    const { error: dbError } = await supabase.from("verification_codes").insert({
+    // Store in database with 10 minute expiration
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    const { error: insertError } = await supabase.from("verification_codes").insert({
       email: email.toLowerCase(),
       code,
       expires_at: expiresAt.toISOString(),
       used: false,
     })
 
-    if (dbError) {
-      console.error("Error storing verification code:", dbError)
+    if (insertError) {
+      console.error("Error storing verification code:", insertError)
       return NextResponse.json({ success: false, error: "Failed to generate code" }, { status: 500 })
     }
 
-    // Send email
+    // Send email via AWS SES
     const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Your Verification Code</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .code-box { background: white; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+            .code { font-size: 32px; font-weight: bold; color: #0891b2; letter-spacing: 8px; font-family: monospace; }
+            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+          </style>
         </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  <tr>
-                    <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); border-radius: 8px 8px 0 0;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Verification Code</h1>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 40px 30px;">
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5; color: #333333;">
-                        Your verification code for the ROI Calculator is:
-                      </p>
-                      <div style="background-color: #f0f9ff; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
-                        <p style="margin: 0; font-size: 36px; font-weight: bold; color: #0891b2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-                          ${code}
-                        </p>
-                      </div>
-                      <p style="margin: 20px 0 0; font-size: 14px; line-height: 1.5; color: #666666;">
-                        This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 30px; text-align: center; background-color: #f8f8f8; border-radius: 0 0 8px 8px;">
-                      <p style="margin: 0; font-size: 12px; color: #999999;">
-                        © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">Kuhlekt ROI Calculator</h1>
+            </div>
+            <div class="content">
+              <h2 style="color: #0891b2; margin-top: 0;">Your Verification Code</h2>
+              <p>Thank you for using the Kuhlekt ROI Calculator. Please use the code below to verify your email and view your results:</p>
+              <div class="code-box">
+                <div class="code">${code}</div>
+              </div>
+              <p><strong>This code will expire in 10 minutes.</strong></p>
+              <p>If you didn't request this code, please ignore this email.</p>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
         </body>
       </html>
     `
 
-    const sendEmailCommand = new SendEmailCommand({
+    const emailParams = {
       Source: process.env.AWS_SES_FROM_EMAIL!,
       Destination: {
         ToAddresses: [email],
       },
       Message: {
         Subject: {
-          Data: "Your ROI Calculator Verification Code",
+          Data: "Your Kuhlekt ROI Calculator Verification Code",
           Charset: "UTF-8",
         },
         Body: {
@@ -106,9 +93,9 @@ export async function POST(request: Request) {
           },
         },
       },
-    })
+    }
 
-    await sesClient.send(sendEmailCommand)
+    await sesClient.send(new SendEmailCommand(emailParams))
 
     return NextResponse.json({ success: true })
   } catch (error) {
