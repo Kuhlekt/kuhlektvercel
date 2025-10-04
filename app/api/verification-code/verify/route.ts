@@ -11,11 +11,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    // Find the verification code
     const { data: codes, error: fetchError } = await supabase
       .from("verification_codes")
       .select("*")
-      .eq("email", email)
+      .eq("email", email.toLowerCase())
       .eq("code", code)
       .eq("used", false)
       .order("created_at", { ascending: false })
@@ -32,12 +31,10 @@ export async function POST(request: NextRequest) {
 
     const verificationCode = codes[0]
 
-    // Check if expired
     if (new Date(verificationCode.expires_at) < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    // Mark as used
     const { error: updateError } = await supabase
       .from("verification_codes")
       .update({ used: true })
