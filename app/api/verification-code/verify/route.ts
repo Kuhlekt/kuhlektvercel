@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
       .select("*")
       .eq("email", email)
       .eq("code", code)
-      .eq("verified", false)
-      .gt("expires_at", new Date().toISOString())
+      .gte("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid or expired code" }, { status: 400 })
     }
 
-    await supabase.from("verification_codes").update({ verified: true }).eq("id", data.id)
+    await supabase.from("verification_codes").delete().eq("id", data.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
