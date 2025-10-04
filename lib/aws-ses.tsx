@@ -53,6 +53,11 @@ export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailPa
   }
 }
 
+// Alias for sendEmailWithSES to match expected export name
+export async function sendEmailWithSES({ to, subject, htmlBody, textBody }: SendEmailParams) {
+  return sendEmail({ to, subject, htmlBody, textBody })
+}
+
 export async function testAWSSESConnection() {
   try {
     const testEmail = process.env.AWS_SES_FROM_EMAIL || ""
