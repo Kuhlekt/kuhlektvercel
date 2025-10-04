@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
-    // Get the verification code
-    const { data: verificationData, error: fetchError } = await supabase
+    // Find the verification code
+    const { data: codes, error: fetchError } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
@@ -20,15 +20,20 @@ export async function POST(request: NextRequest) {
       .eq("used", false)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
 
-    if (fetchError || !verificationData) {
+    if (fetchError) {
+      console.error("Database error:", fetchError)
+      return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
+    }
+
+    if (!codes || codes.length === 0) {
       return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    // Check if code is expired
-    const expiresAt = new Date(verificationData.expires_at)
-    if (expiresAt < new Date()) {
+    const verificationCode = codes[0]
+
+    // Check if expired
+    if (new Date(verificationCode.expires_at) < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
@@ -36,16 +41,16 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from("verification_codes")
       .update({ used: true })
-      .eq("id", verificationData.id)
+      .eq("id", verificationCode.id)
 
     if (updateError) {
-      console.error("Error updating verification code:", updateError)
+      console.error("Database error:", updateError)
       return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error in verify route:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error("Error verifying code:", error)
+    return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
   }
 }
