@@ -15,7 +15,7 @@ interface EmailParams {
   text?: string
 }
 
-export async function sendEmailWithSES({ to, subject, html, text }: EmailParams) {
+export async function sendEmail({ to, subject, html, text }: EmailParams) {
   const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
 
   const params = {
@@ -53,6 +53,9 @@ export async function sendEmailWithSES({ to, subject, html, text }: EmailParams)
     throw error
   }
 }
+
+// Export as alias for compatibility
+export const sendEmailWithSES = sendEmail
 
 export async function testAWSSESConnection() {
   try {
