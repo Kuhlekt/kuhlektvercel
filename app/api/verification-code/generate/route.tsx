@@ -1,47 +1,42 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
 const sesClient = new SESClient({
-  region: process.env.AWS_SES_REGION || "us-east-1",
+  region: process.env.AWS_SES_REGION!,
   credentials: {
     accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
   },
 })
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { email } = body
+    const { email } = await request.json()
 
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 })
     }
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Store in database
+    // Store in Supabase
     const supabase = await createClient()
-
-    // Set expiration to 10 minutes from now
-    const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
-
-    const { error: insertError } = await supabase.from("verification_codes").insert({
-      email,
+    const { error: dbError } = await supabase.from("verification_codes").insert({
+      email: email.toLowerCase(),
       code,
       expires_at: expiresAt.toISOString(),
       used: false,
     })
 
-    if (insertError) {
-      console.error("Error storing verification code:", insertError)
+    if (dbError) {
+      console.error("Database error:", dbError)
       return NextResponse.json({ success: false, error: "Failed to generate code" }, { status: 500 })
     }
 
-    // Send email via AWS SES
+    // Send email via SES
     const emailParams = {
       Source: process.env.AWS_SES_FROM_EMAIL!,
       Destination: {
@@ -49,7 +44,7 @@ export async function POST(request: NextRequest) {
       },
       Message: {
         Subject: {
-          Data: "Your Kuhlekt ROI Calculator Verification Code",
+          Data: "Your Verification Code - Kuhlekt ROI Calculator",
           Charset: "UTF-8",
         },
         Body: {
@@ -58,26 +53,24 @@ export async function POST(request: NextRequest) {
               <!DOCTYPE html>
               <html>
                 <head>
-                  <meta charset="UTF-8">
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 </head>
-                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); padding: 30px; border-radius: 10px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">Verification Code</h1>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 28px;">Kuhlekt</h1>
+                    <p style="color: white; margin: 10px 0 0 0; font-size: 14px;">ROI Calculator Verification</p>
                   </div>
-                  <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin-top: 20px;">
-                    <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-                      Thank you for using the Kuhlekt ROI Calculator. Here is your verification code:
-                    </p>
-                    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #0891b2;">
-                      <p style="font-size: 36px; font-weight: bold; color: #0891b2; margin: 0; letter-spacing: 8px;">
-                        ${code}
-                      </p>
+                  <div style="background: #f9fafb; padding: 40px 30px; border-radius: 0 0 10px 10px;">
+                    <h2 style="color: #0891b2; margin-top: 0;">Your Verification Code</h2>
+                    <p style="font-size: 16px; color: #555;">Please use the following code to verify your email and view your ROI calculation results:</p>
+                    <div style="background: white; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+                      <div style="font-size: 36px; font-weight: bold; color: #0891b2; letter-spacing: 8px; font-family: monospace;">${code}</div>
                     </div>
-                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
-                      This code will expire in 10 minutes.
-                    </p>
+                    <p style="font-size: 14px; color: #666;">This code will expire in <strong>10 minutes</strong>.</p>
+                    <p style="font-size: 14px; color: #666;">If you didn't request this code, please ignore this email.</p>
                   </div>
-                  <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+                  <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
                     <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
                   </div>
                 </body>
@@ -85,15 +78,28 @@ export async function POST(request: NextRequest) {
             `,
             Charset: "UTF-8",
           },
+          Text: {
+            Data: `Your Kuhlekt ROI Calculator verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+            Charset: "UTF-8",
+          },
         },
       },
     }
 
-    await sesClient.send(new SendEmailCommand(emailParams))
+    try {
+      const command = new SendEmailCommand(emailParams)
+      await sesClient.send(command)
 
-    return NextResponse.json({ success: true, message: "Verification code sent" })
+      return NextResponse.json({
+        success: true,
+        message: "Verification code sent successfully",
+      })
+    } catch (emailError) {
+      console.error("SES error:", emailError)
+      return NextResponse.json({ success: false, error: "Failed to send verification email" }, { status: 500 })
+    }
   } catch (error) {
     console.error("Error in generate verification code:", error)
-    return NextResponse.json({ success: false, error: "Failed to send verification code" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
