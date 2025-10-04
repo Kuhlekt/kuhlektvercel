@@ -8,18 +8,21 @@ const sesClient = new SESClient({
   },
 })
 
-interface SendEmailParams {
+interface EmailParams {
   to: string | string[]
   subject: string
-  htmlBody: string
-  textBody?: string
+  html: string
+  text?: string
+  from?: string
 }
 
-export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, text, from }: EmailParams) {
+  const fromEmail = from || process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
+
   const toAddresses = Array.isArray(to) ? to : [to]
 
   const params = {
-    Source: process.env.AWS_SES_FROM_EMAIL || "",
+    Source: fromEmail,
     Destination: {
       ToAddresses: toAddresses,
     },
@@ -30,12 +33,12 @@ export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailPa
       },
       Body: {
         Html: {
-          Data: htmlBody,
+          Data: html,
           Charset: "UTF-8",
         },
-        ...(textBody && {
+        ...(text && {
           Text: {
-            Data: textBody,
+            Data: text,
             Charset: "UTF-8",
           },
         }),
@@ -53,40 +56,5 @@ export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailPa
   }
 }
 
-// Alias for sendEmailWithSES to match expected export name
-export async function sendEmailWithSES({ to, subject, htmlBody, textBody }: SendEmailParams) {
-  return sendEmail({ to, subject, htmlBody, textBody })
-}
-
-export async function testAWSSESConnection() {
-  try {
-    const testEmail = process.env.AWS_SES_FROM_EMAIL || ""
-
-    const result = await sendEmail({
-      to: testEmail,
-      subject: "AWS SES Connection Test",
-      htmlBody: "<p>This is a test email to verify AWS SES connection.</p>",
-      textBody: "This is a test email to verify AWS SES connection.",
-    })
-
-    return { success: true, messageId: result.messageId }
-  } catch (error) {
-    console.error("AWS SES connection test failed:", error)
-    return { success: false, error: String(error) }
-  }
-}
-
-export async function validateSESConfiguration() {
-  const requiredVars = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY", "AWS_SES_REGION", "AWS_SES_FROM_EMAIL"]
-
-  const missing = requiredVars.filter((varName) => !process.env[varName])
-
-  if (missing.length > 0) {
-    return {
-      valid: false,
-      error: `Missing required environment variables: ${missing.join(", ")}`,
-    }
-  }
-
-  return { valid: true }
-}
+// Export as alias for compatibility
+export const sendEmailWithSES = sendEmail
