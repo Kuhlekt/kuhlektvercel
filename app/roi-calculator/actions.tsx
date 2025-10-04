@@ -2,364 +2,460 @@
 
 import { createClient } from "@/lib/supabase/server"
 
-// ROI Calculation Types
-interface SimpleROIInputs {
-  currentAR: number
-  averageInvoiceValue: number
-  collectionPeriod: number
-}
-
-interface DetailedROIInputs extends SimpleROIInputs {
-  staffCost: number
-  staffHours: number
-  badDebtRate: number
-  latePaymentRate: number
-}
-
-interface ROIResults {
-  currentCosts: number
-  projectedCosts: number
+interface SimpleROIResult {
+  currentARDays: number
+  projectedARDays: number
+  currentRevenueLoss: number
+  projectedRevenueLoss: number
   annualSavings: number
   roi: number
   paybackPeriod: number
-  additionalMetrics?: {
-    timeRecovered: number
-    reductionInBadDebt: number
-    improvedCashFlow: number
+}
+
+interface DetailedROIResult extends SimpleROIResult {
+  currentCosts: {
+    staffCost: number
+    systemCost: number
+    latePaymentCost: number
+    totalCost: number
+  }
+  projectedCosts: {
+    staffCost: number
+    systemCost: number
+    latePaymentCost: number
+    totalCost: number
+  }
+  improvements: {
+    timeReduction: number
+    errorReduction: number
+    cashFlowImprovement: number
   }
 }
 
-// Calculate Simple ROI
-export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<ROIResults> {
-  const { currentAR, averageInvoiceValue, collectionPeriod } = inputs
+export async function calculateSimpleROI(data: {
+  monthlyRevenue: number
+  currentDSO: number
+  targetDSO: number
+}): Promise<SimpleROIResult> {
+  const { monthlyRevenue, currentDSO, targetDSO } = data
 
-  // Simple ROI calculation
-  const annualRevenue = (currentAR / collectionPeriod) * 365
-  const currentCosts = annualRevenue * 0.03 // Assume 3% of revenue for manual collection
-  const projectedCosts = 12000 // Annual subscription cost (example)
-  const annualSavings = currentCosts - projectedCosts
-  const roi = (annualSavings / projectedCosts) * 100
-  const paybackPeriod = projectedCosts / (annualSavings / 12)
+  const annualRevenue = monthlyRevenue * 12
+  const currentARDays = currentDSO
+  const projectedARDays = targetDSO
+
+  const currentRevenueLoss = (annualRevenue * currentARDays) / 365
+  const projectedRevenueLoss = (annualRevenue * projectedARDays) / 365
+  const annualSavings = currentRevenueLoss - projectedRevenueLoss
+
+  const implementationCost = 50000 // Example implementation cost
+  const roi = ((annualSavings - implementationCost) / implementationCost) * 100
+  const paybackPeriod = implementationCost / (annualSavings / 12)
 
   return {
-    currentCosts,
-    projectedCosts,
+    currentARDays,
+    projectedARDays,
+    currentRevenueLoss,
+    projectedRevenueLoss,
     annualSavings,
     roi,
     paybackPeriod,
   }
 }
 
-// Calculate Detailed ROI
-export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<ROIResults> {
-  const { currentAR, averageInvoiceValue, collectionPeriod, staffCost, staffHours, badDebtRate, latePaymentRate } =
-    inputs
+export async function calculateDetailedROI(data: {
+  annualRevenue: number
+  currentDSO: number
+  targetDSO: number
+  arStaffCount: number
+  avgStaffCost: number
+  currentSystemCost: number
+  latePaymentRate: number
+}): Promise<DetailedROIResult> {
+  const { annualRevenue, currentDSO, targetDSO, arStaffCount, avgStaffCost, currentSystemCost, latePaymentRate } = data
 
-  // Detailed ROI calculation
-  const annualRevenue = (currentAR / collectionPeriod) * 365
-  const manualCollectionCost = staffCost * staffHours * 52 // Annual staff cost
-  const badDebtCost = currentAR * (badDebtRate / 100)
-  const latePaymentCost = currentAR * (latePaymentRate / 100) * 0.02 // Assume 2% interest on late payments
+  // Calculate current costs
+  const currentStaffCost = arStaffCount * avgStaffCost
+  const currentLatePaymentCost = annualRevenue * (latePaymentRate / 100) * 0.02
+  const currentTotalCost = currentStaffCost + currentSystemCost + currentLatePaymentCost
 
-  const currentCosts = manualCollectionCost + badDebtCost + latePaymentCost
-  const projectedCosts = 12000 // Annual subscription cost
-  const annualSavings = currentCosts - projectedCosts
-  const roi = (annualSavings / projectedCosts) * 100
-  const paybackPeriod = projectedCosts / (annualSavings / 12)
+  // Calculate projected costs (assuming automation reduces staff needs by 40%)
+  const projectedStaffCost = currentStaffCost * 0.6
+  const projectedSystemCost = 35000 // Annual cost for Kuhlekt
+  const projectedLatePaymentCost = currentLatePaymentCost * 0.3 // 70% reduction
+  const projectedTotalCost = projectedStaffCost + projectedSystemCost + projectedLatePaymentCost
 
-  // Additional metrics
-  const timeRecovered = staffHours * 52 * 0.7 // Assume 70% time recovery
-  const reductionInBadDebt = badDebtCost * 0.5 // Assume 50% reduction
-  const improvedCashFlow = currentAR * 0.3 // Assume 30% improvement in cash flow
+  // Calculate improvements
+  const timeReduction = 60 // 60% time reduction
+  const errorReduction = 75 // 75% error reduction
+  const cashFlowImprovement = ((currentDSO - targetDSO) / currentDSO) * 100
+
+  // Calculate ROI metrics
+  const currentARDays = currentDSO
+  const projectedARDays = targetDSO
+  const currentRevenueLoss = (annualRevenue * currentARDays) / 365
+  const projectedRevenueLoss = (annualRevenue * projectedARDays) / 365
+  const annualSavings = currentTotalCost - projectedTotalCost + (currentRevenueLoss - projectedRevenueLoss)
+
+  const implementationCost = 50000
+  const roi = ((annualSavings - implementationCost) / implementationCost) * 100
+  const paybackPeriod = implementationCost / (annualSavings / 12)
 
   return {
-    currentCosts,
-    projectedCosts,
+    currentARDays,
+    projectedARDays,
+    currentRevenueLoss,
+    projectedRevenueLoss,
     annualSavings,
     roi,
     paybackPeriod,
-    additionalMetrics: {
-      timeRecovered,
-      reductionInBadDebt,
-      improvedCashFlow,
+    currentCosts: {
+      staffCost: currentStaffCost,
+      systemCost: currentSystemCost,
+      latePaymentCost: currentLatePaymentCost,
+      totalCost: currentTotalCost,
+    },
+    projectedCosts: {
+      staffCost: projectedStaffCost,
+      systemCost: projectedSystemCost,
+      latePaymentCost: projectedLatePaymentCost,
+      totalCost: projectedTotalCost,
+    },
+    improvements: {
+      timeReduction,
+      errorReduction,
+      cashFlowImprovement,
     },
   }
 }
 
-// Generate Verification Code
-export async function generateVerificationCode(
-  email: string,
-): Promise<{ success: boolean; message: string; code?: string }> {
+export async function generateVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
   try {
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
     // Store in Supabase
     const supabase = await createClient()
-    const { error: insertError } = await supabase.from("verification_codes").insert({
+    const { error: dbError } = await supabase.from("verification_codes").insert({
       email,
       code,
       expires_at: expiresAt.toISOString(),
       used: false,
     })
 
-    if (insertError) {
-      console.error("Supabase insert error:", insertError)
-      return {
-        success: false,
-        message: `Failed to generate verification code: ${insertError.message}`,
-        code, // Return code for testing even if DB insert fails
-      }
+    if (dbError) {
+      console.error("Database error:", dbError)
+      return { success: false, message: "Failed to generate verification code" }
     }
 
-    // Send email via ClickSend
-    if (process.env.CLICKSEND_USERNAME && process.env.CLICKSEND_API_KEY) {
-      const auth = Buffer.from(`${process.env.CLICKSEND_USERNAME}:${process.env.CLICKSEND_API_KEY}`).toString("base64")
+    // Send email via ClickSend using Basic Auth
+    const username = process.env.CLICKSEND_USERNAME
+    const apiKey = process.env.CLICKSEND_API_KEY
 
-      const emailHtml = `
+    if (!username || !apiKey) {
+      console.error("ClickSend credentials missing")
+      console.log("Verification code for testing:", code)
+      return { success: true, message: "Verification code generated (email disabled for testing)" }
+    }
+
+    // Create Basic Auth token
+    const authToken = Buffer.from(`${username}:${apiKey}`).toString("base64")
+
+    const emailPayload = {
+      to: [
+        {
+          email: email,
+          name: email.split("@")[0],
+        },
+      ],
+      from: {
+        email_address_id: Number.parseInt(process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0"),
+        name: "Kuhlekt",
+      },
+      subject: "Your Verification Code",
+      body: `
         <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .code-box { background: #f7fafc; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
-            .code { font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #667eea; }
-            .content { padding: 20px; background: white; }
-            .footer { text-align: center; padding: 20px; color: #718096; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Your Verification Code</h1>
-            </div>
-            <div class="content">
-              <p>Thank you for your interest in our ROI Calculator!</p>
-              <p>Please use the verification code below to access your results:</p>
-              <div class="code-box">
-                <div class="code">${code}</div>
-              </div>
-              <p><strong>This code will expire in 10 minutes.</strong></p>
-              <p>If you didn't request this code, please ignore this email.</p>
-            </div>
-            <div class="footer">
-              <p>&copy; 2025 Kuhlekt. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verification Code</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+              <tr>
+                <td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="background-color: #1e40af; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Kuhlekt ROI Calculator</h1>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 40px 30px;">
+                        <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 20px;">Your Verification Code</h2>
+                        <p style="color: #666666; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">
+                          Thank you for using the Kuhlekt ROI Calculator. Please use the verification code below to receive your ROI analysis:
+                        </p>
+                        <div style="background-color: #f8f9fa; border: 2px solid #1e40af; border-radius: 8px; padding: 20px; text-align: center; margin: 0 0 30px 0;">
+                          <span style="font-size: 32px; font-weight: bold; color: #1e40af; letter-spacing: 8px;">${code}</span>
+                        </div>
+                        <p style="color: #666666; font-size: 14px; line-height: 1.5; margin: 0;">
+                          This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #999999; font-size: 12px; margin: 0;">
+                          © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
         </html>
-      `
+      `,
+    }
 
-      const emailResponse = await fetch("https://rest.clicksend.com/v3/email/send", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email_address_id: process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0",
-          to: [{ email, name: email }],
-          from: { email_address_id: process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0" },
-          subject: "Your ROI Calculator Verification Code",
-          body: emailHtml,
-        }),
-      })
+    const response = await fetch("https://rest.clicksend.com/v3/email/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${authToken}`,
+      },
+      body: JSON.stringify(emailPayload),
+    })
 
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text()
-        console.error("ClickSend error:", errorText)
-        console.log("Verification code (email failed):", code)
-        return {
-          success: true,
-          message: "Verification code generated but email failed to send. Check console for code.",
-          code,
-        }
-      }
-    } else {
-      console.log("Verification code (no email configured):", code)
-      return {
-        success: true,
-        message: "Verification code generated. Check console for code (email not configured).",
-        code,
-      }
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("ClickSend API error:", response.status, errorText)
+      console.log("Verification code for testing:", code)
+      return { success: true, message: "Verification code generated (email delivery failed but code saved)" }
     }
 
     return { success: true, message: "Verification code sent to your email" }
   } catch (error) {
     console.error("Error generating verification code:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to generate verification code",
-    }
+    return { success: false, message: "An error occurred while generating verification code" }
   }
 }
 
-// Verify Code
 export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
   try {
     const supabase = await createClient()
 
-    // Find the code
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
       .eq("code", code)
       .eq("used", false)
-      .gt("expires_at", new Date().toISOString())
+      .gte("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single()
 
     if (error || !data) {
       return { success: false, message: "Invalid or expired verification code" }
     }
 
-    // Mark as used
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
+    // Mark code as used
+    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
-    if (updateError) {
-      console.error("Error marking code as used:", updateError)
-    }
-
-    return { success: true, message: "Code verified successfully" }
+    return { success: true, message: "Verification successful" }
   } catch (error) {
     console.error("Error verifying code:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to verify code",
-    }
+    return { success: false, message: "An error occurred while verifying code" }
   }
 }
 
-// Send ROI Email
 export async function sendROIEmail(
   email: string,
-  results: ROIResults,
-  isDetailed: boolean,
+  calculationType: "simple" | "detailed",
+  results: SimpleROIResult | DetailedROIResult,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    if (!process.env.CLICKSEND_USERNAME || !process.env.CLICKSEND_API_KEY) {
-      console.log("ROI Results (email not configured):", results)
-      return { success: true, message: "Results calculated. Check console (email not configured)." }
+    const username = process.env.CLICKSEND_USERNAME
+    const apiKey = process.env.CLICKSEND_API_KEY
+
+    if (!username || !apiKey) {
+      console.error("ClickSend credentials missing")
+      return { success: false, message: "Email service not configured" }
     }
 
-    const auth = Buffer.from(`${process.env.CLICKSEND_USERNAME}:${process.env.CLICKSEND_API_KEY}`).toString("base64")
+    // Create Basic Auth token
+    const authToken = Buffer.from(`${username}:${apiKey}`).toString("base64")
 
-    const formatCurrency = (value: number) => {
-      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value)
-    }
+    const isDetailed = calculationType === "detailed"
+    const detailedResults = isDetailed ? (results as DetailedROIResult) : null
 
-    const emailHtml = `
+    const emailBody = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { padding: 20px; background: white; }
-          .metric { background: #f7fafc; border-left: 4px solid #667eea; padding: 15px; margin: 10px 0; }
-          .metric-label { font-size: 14px; color: #718096; text-transform: uppercase; }
-          .metric-value { font-size: 24px; font-weight: bold; color: #667eea; }
-          .highlight { background: #e6fffa; border-left: 4px solid #38b2ac; padding: 15px; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #718096; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Your ROI Analysis Results</h1>
-          </div>
-          <div class="content">
-            <p>Thank you for using our ROI Calculator. Here are your ${isDetailed ? "detailed" : "simple"} results:</p>
-            
-            <div class="metric">
-              <div class="metric-label">Current Annual Costs</div>
-              <div class="metric-value">${formatCurrency(results.currentCosts)}</div>
-            </div>
-            
-            <div class="metric">
-              <div class="metric-label">Projected Annual Costs with Kuhlekt</div>
-              <div class="metric-value">${formatCurrency(results.projectedCosts)}</div>
-            </div>
-            
-            <div class="highlight">
-              <div class="metric-label">Annual Savings</div>
-              <div class="metric-value">${formatCurrency(results.annualSavings)}</div>
-            </div>
-            
-            <div class="metric">
-              <div class="metric-label">Return on Investment</div>
-              <div class="metric-value">${results.roi.toFixed(1)}%</div>
-            </div>
-            
-            <div class="metric">
-              <div class="metric-label">Payback Period</div>
-              <div class="metric-value">${results.paybackPeriod.toFixed(1)} months</div>
-            </div>
-            
-            ${
-              isDetailed && results.additionalMetrics
-                ? `
-              <h3 style="margin-top: 30px; color: #667eea;">Additional Benefits</h3>
-              
-              <div class="metric">
-                <div class="metric-label">Time Recovered (Hours/Year)</div>
-                <div class="metric-value">${results.additionalMetrics.timeRecovered.toFixed(0)}</div>
-              </div>
-              
-              <div class="metric">
-                <div class="metric-label">Reduction in Bad Debt</div>
-                <div class="metric-value">${formatCurrency(results.additionalMetrics.reductionInBadDebt)}</div>
-              </div>
-              
-              <div class="metric">
-                <div class="metric-label">Improved Cash Flow</div>
-                <div class="metric-value">${formatCurrency(results.additionalMetrics.improvedCashFlow)}</div>
-              </div>
-            `
-                : ""
-            }
-            
-            <p style="margin-top: 30px;">Ready to transform your accounts receivable process? <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://kuhlekt.com"}" style="color: #667eea; text-decoration: none; font-weight: bold;">Get Started Today</a></p>
-          </div>
-          <div class="footer">
-            <p>&copy; 2025 Kuhlekt. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your ROI Analysis</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="background-color: #1e40af; padding: 30px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your ROI Analysis Results</h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 20px;">Key Metrics</h2>
+                      
+                      <table width="100%" cellpadding="10" cellspacing="0" style="margin-bottom: 30px;">
+                        <tr>
+                          <td style="background-color: #f8f9fa; padding: 15px; border-radius: 4px;">
+                            <strong style="color: #333333;">Annual Savings:</strong><br>
+                            <span style="color: #10b981; font-size: 24px; font-weight: bold;">$${results.annualSavings.toLocaleString()}</span>
+                          </td>
+                        </tr>
+                        <tr><td style="height: 10px;"></td></tr>
+                        <tr>
+                          <td style="background-color: #f8f9fa; padding: 15px; border-radius: 4px;">
+                            <strong style="color: #333333;">ROI:</strong><br>
+                            <span style="color: #1e40af; font-size: 24px; font-weight: bold;">${results.roi.toFixed(1)}%</span>
+                          </td>
+                        </tr>
+                        <tr><td style="height: 10px;"></td></tr>
+                        <tr>
+                          <td style="background-color: #f8f9fa; padding: 15px; border-radius: 4px;">
+                            <strong style="color: #333333;">Payback Period:</strong><br>
+                            <span style="color: #333333; font-size: 20px; font-weight: bold;">${results.paybackPeriod.toFixed(1)} months</span>
+                          </td>
+                        </tr>
+                      </table>
+
+                      ${
+                        detailedResults
+                          ? `
+                      <h2 style="color: #333333; margin: 30px 0 20px 0; font-size: 20px;">Detailed Analysis</h2>
+                      
+                      <h3 style="color: #666666; margin: 20px 0 10px 0; font-size: 16px;">Current Costs</h3>
+                      <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px;">
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Staff Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.currentCosts.staffCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">System Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.currentCosts.systemCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Late Payment Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.currentCosts.latePaymentCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #333333; padding: 8px 0; font-weight: bold;">Total:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; font-weight: bold;">$${detailedResults.currentCosts.totalCost.toLocaleString()}</td>
+                        </tr>
+                      </table>
+
+                      <h3 style="color: #666666; margin: 20px 0 10px 0; font-size: 16px;">Projected Costs with Kuhlekt</h3>
+                      <table width="100%" cellpadding="8" cellspacing="0" style="margin-bottom: 20px;">
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Staff Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.projectedCosts.staffCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">System Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.projectedCosts.systemCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Late Payment Cost:</td>
+                          <td style="color: #333333; padding: 8px 0; text-align: right; border-bottom: 1px solid #e5e7eb;">$${detailedResults.projectedCosts.latePaymentCost.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #10b981; padding: 8px 0; font-weight: bold;">Total:</td>
+                          <td style="color: #10b981; padding: 8px 0; text-align: right; font-weight: bold;">$${detailedResults.projectedCosts.totalCost.toLocaleString()}</td>
+                        </tr>
+                      </table>
+
+                      <h3 style="color: #666666; margin: 20px 0 10px 0; font-size: 16px;">Key Improvements</h3>
+                      <table width="100%" cellpadding="8" cellspacing="0">
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0;">Time Reduction:</td>
+                          <td style="color: #10b981; padding: 8px 0; text-align: right; font-weight: bold;">${detailedResults.improvements.timeReduction}%</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0;">Error Reduction:</td>
+                          <td style="color: #10b981; padding: 8px 0; text-align: right; font-weight: bold;">${detailedResults.improvements.errorReduction}%</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #666666; padding: 8px 0;">Cash Flow Improvement:</td>
+                          <td style="color: #10b981; padding: 8px 0; text-align: right; font-weight: bold;">${detailedResults.improvements.cashFlowImprovement.toFixed(1)}%</td>
+                        </tr>
+                      </table>
+                      `
+                          : ""
+                      }
+
+                      <div style="margin-top: 40px; padding: 20px; background-color: #eff6ff; border-left: 4px solid #1e40af; border-radius: 4px;">
+                        <p style="color: #1e40af; margin: 0; font-weight: bold;">Ready to see these results in your business?</p>
+                        <p style="color: #666666; margin: 10px 0 0 0;">Schedule a demo with our team to learn how Kuhlekt can transform your accounts receivable process.</p>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                      <p style="color: #999999; font-size: 12px; margin: 0;">
+                        © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
       </html>
     `
 
-    const emailResponse = await fetch("https://rest.clicksend.com/v3/email/send", {
+    const emailPayload = {
+      to: [
+        {
+          email: email,
+          name: email.split("@")[0],
+        },
+      ],
+      from: {
+        email_address_id: Number.parseInt(process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0"),
+        name: "Kuhlekt",
+      },
+      subject: "Your ROI Analysis Results",
+      body: emailBody,
+    }
+
+    const response = await fetch("https://rest.clicksend.com/v3/email/send", {
       method: "POST",
       headers: {
-        Authorization: `Basic ${auth}`,
         "Content-Type": "application/json",
+        Authorization: `Basic ${authToken}`,
       },
-      body: JSON.stringify({
-        email_address_id: process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0",
-        to: [{ email, name: email }],
-        from: { email_address_id: process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0" },
-        subject: "Your ROI Analysis Results - Kuhlekt",
-        body: emailHtml,
-      }),
+      body: JSON.stringify(emailPayload),
     })
 
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text()
-      console.error("ClickSend error:", errorText)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("ClickSend API error:", response.status, errorText)
       return { success: false, message: "Failed to send ROI results email" }
     }
 
     return { success: true, message: "ROI results sent to your email" }
   } catch (error) {
     console.error("Error sending ROI email:", error)
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Failed to send ROI email",
-    }
+    return { success: false, message: "An error occurred while sending ROI results" }
   }
 }
