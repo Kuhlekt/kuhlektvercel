@@ -11,20 +11,22 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    const { data: verification, error } = await supabase
+    const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
       .eq("code", code)
-      .eq("used", false)
+      .eq("verified", false)
       .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single()
 
-    if (error || !verification) {
+    if (error || !data) {
       return NextResponse.json({ success: false, error: "Invalid or expired code" }, { status: 400 })
     }
 
-    await supabase.from("verification_codes").update({ used: true }).eq("id", verification.id)
+    await supabase.from("verification_codes").update({ verified: true }).eq("id", data.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
