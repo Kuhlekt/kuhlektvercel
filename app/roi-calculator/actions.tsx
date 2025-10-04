@@ -1,58 +1,27 @@
 "use server"
 
 import { sendEmail } from "@/lib/aws-ses"
-import { createClient } from "@/lib/supabase/server"
 
 export async function sendROIReport(formData: FormData) {
-  try {
-    const name = formData.get("name") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const annualRevenue = formData.get("annualRevenue") as string
-    const dso = formData.get("dso") as string
-    const collectionCosts = formData.get("collectionCosts") as string
+  const email = formData.get("email") as string
+  const companyName = formData.get("companyName") as string
+  const annualRevenue = formData.get("annualRevenue") as string
+  const currentDSO = formData.get("currentDSO") as string
+  const targetDSO = formData.get("targetDSO") as string
+  const savings = formData.get("savings") as string
+  const roiPercentage = formData.get("roiPercentage") as string
 
-    const supabase = await createClient()
+  const subject = `Your Kuhlekt ROI Report - ${companyName}`
+  const text = `ROI Calculator Results for ${companyName}\n\nAnnual Revenue: ${annualRevenue}\nCurrent DSO: ${currentDSO}\nTarget DSO: ${targetDSO}\nEstimated Annual Savings: ${savings}\nROI: ${roiPercentage}%`
+  const html = `
+    <h1>ROI Calculator Results for ${companyName}</h1>
+    <p><strong>Annual Revenue:</strong> ${annualRevenue}</p>
+    <p><strong>Current DSO:</strong> ${currentDSO}</p>
+    <p><strong>Target DSO:</strong> ${targetDSO}</p>
+    <p><strong>Estimated Annual Savings:</strong> ${savings}</p>
+    <p><strong>ROI:</strong> ${roiPercentage}%</p>
+  `
 
-    const { error: dbError } = await supabase.from("roi_submissions").insert({
-      name,
-      email,
-      company,
-      annual_revenue: Number.parseFloat(annualRevenue),
-      dso: Number.parseInt(dso),
-      collection_costs: Number.parseFloat(collectionCosts),
-      created_at: new Date().toISOString(),
-    })
-
-    if (dbError) {
-      console.error("Database error:", dbError)
-    }
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: "Your ROI Analysis Report",
-      text: `Hi ${name},\n\nThank you for using our ROI calculator. Your personalized report is attached.\n\nBest regards,\nKuhlekt Team`,
-      html: `<h1>Hi ${name},</h1><p>Thank you for using our ROI calculator. Your personalized report is attached.</p><p>Best regards,<br/>Kuhlekt Team</p>`,
-    })
-
-    if (!emailResult.success) {
-      return {
-        success: false,
-        message: emailResult.message,
-        error: emailResult.error,
-      }
-    }
-
-    return {
-      success: true,
-      message: "ROI report sent successfully",
-    }
-  } catch (error) {
-    console.error("Error in sendROIReport:", error)
-    return {
-      success: false,
-      message: "Failed to send ROI report",
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const result = await sendEmail({ to: email, subject, text, html })
+  return result
 }
