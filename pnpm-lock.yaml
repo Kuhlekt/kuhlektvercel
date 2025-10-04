@@ -90,7 +90,7 @@ importers:
         specifier: ^19
         version: 19.0.0(react@19.0.0)
       server-only:
-        specifier: latest
+        specifier: 0.0.1
         version: 0.0.1
       tailwind-merge:
         specifier: ^2.5.5
