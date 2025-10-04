@@ -2,26 +2,20 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function testEmail(formData: FormData) {
+export async function sendTestEmail(formData: FormData) {
   try {
-    const to = formData.get("to") as string
-    const subject = formData.get("subject") as string
-    const message = formData.get("message") as string
-
-    if (!to || !subject || !message) {
-      return { success: false, message: "All fields are required" }
-    }
+    const email = formData.get("email") as string
 
     const result = await sendEmail({
-      to,
-      subject,
-      text: message,
-      html: `<p>${message}</p>`,
+      to: email,
+      subject: "Test Email from Kuhlekt",
+      text: "This is a test email from Kuhlekt.",
+      html: "<h1>Test Email</h1><p>This is a test email from Kuhlekt.</p>",
     })
 
     return result
   } catch (error) {
-    console.error("Error testing email:", error)
+    console.error("Error in sendTestEmail:", error)
     return {
       success: false,
       message: "Failed to send test email",
