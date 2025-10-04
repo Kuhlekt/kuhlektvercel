@@ -181,9 +181,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     if (!contactData.phone.trim()) {
       newErrors.phone = "Phone is required"
     }
-    if (!contactData.company.trim()) {
-      newErrors.company = "Company is required"
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -296,7 +293,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
       if (result.success) {
         console.log("[ROI Calculator] Code verified successfully, calculating results")
-        // Code verified, now calculate and show results
         await calculateAndShowResults()
       } else {
         console.error("[ROI Calculator] Verification failed:", result.error)
@@ -874,7 +870,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </div>
 
                 <div>
-                  <Label>Company Name *</Label>
+                  <Label>Company Name</Label>
                   <Input
                     type="text"
                     value={contactData.company}
@@ -883,9 +879,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                       setErrors({ ...errors, company: "" })
                     }}
                     placeholder="Acme Corporation"
-                    className={errors.company ? "border-red-500" : ""}
                   />
-                  {errors.company && <p className="text-sm text-red-600 mt-1">{errors.company}</p>}
                 </div>
               </div>
 
