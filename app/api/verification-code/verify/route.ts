@@ -28,11 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
-
-    if (updateError) {
-      console.error("Error marking code as used:", updateError)
-    }
+    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
