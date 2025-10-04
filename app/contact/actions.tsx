@@ -2,135 +2,89 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function sendContactForm(formData: FormData) {
+export interface ContactFormData {
+  name: string
+  email: string
+  company?: string
+  phone?: string
+  message: string
+}
+
+export async function submitContactForm(data: ContactFormData): Promise<{ success: boolean; message: string }> {
   try {
-    const name = formData.get("name") as string
-    const email = formData.get("email") as string
-    const company = formData.get("company") as string
-    const phone = formData.get("phone") as string
-    const message = formData.get("message") as string
+    const subject = `New Contact Form Submission from ${data.name}`
 
-    if (!name || !email || !message) {
-      return {
-        success: false,
-        message: "Name, email, and message are required",
-      }
-    }
+    const text = `
+New contact form submission:
 
-    // Send email to admin
-    const adminSubject = "New Contact Form Submission"
-    const adminText = `New contact form submission:\n\nName: ${name}\nEmail: ${email}\nCompany: ${company || "N/A"}\nPhone: ${phone || "N/A"}\nMessage: ${message}`
-    const adminHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2563eb; color: white; padding: 20px; }
-            .content { padding: 20px; background-color: #f9fafb; }
-            .field { margin: 15px 0; }
-            .label { font-weight: bold; color: #1f2937; }
-            .value { color: #4b5563; margin-top: 5px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h2>New Contact Form Submission</h2>
-            </div>
-            <div class="content">
-              <div class="field">
-                <div class="label">Name:</div>
-                <div class="value">${name}</div>
-              </div>
-              <div class="field">
-                <div class="label">Email:</div>
-                <div class="value">${email}</div>
-              </div>
-              <div class="field">
-                <div class="label">Company:</div>
-                <div class="value">${company || "N/A"}</div>
-              </div>
-              <div class="field">
-                <div class="label">Phone:</div>
-                <div class="value">${phone || "N/A"}</div>
-              </div>
-              <div class="field">
-                <div class="label">Message:</div>
-                <div class="value">${message}</div>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
+Name: ${data.name}
+Email: ${data.email}
+Company: ${data.company || "N/A"}
+Phone: ${data.phone || "N/A"}
+
+Message:
+${data.message}
     `
 
-    const adminResult = await sendEmail({
-      to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
-      subject: adminSubject,
-      text: adminText,
-      html: adminHtml,
-    })
-
-    if (!adminResult.success) {
-      return adminResult
-    }
-
-    // Send confirmation email to user
-    const userSubject = "Thank you for contacting Kuhlekt"
-    const userText = `Hi ${name},\n\nThank you for reaching out to Kuhlekt. We've received your message and will get back to you shortly.\n\nYour message:\n${message}\n\nBest regards,\nThe Kuhlekt Team`
-    const userHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f9fafb; }
-            .message-box { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2563eb; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Thank You for Contacting Us</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${name},</p>
-              <p>Thank you for reaching out to Kuhlekt. We've received your message and will get back to you shortly.</p>
-              
-              <div class="message-box">
-                <strong>Your message:</strong>
-                <p>${message}</p>
-              </div>
-
-              <p>If you have any urgent questions, please don't hesitate to call us.</p>
-              <p>Best regards,<br>The Kuhlekt Team</p>
-            </div>
-          </div>
-        </body>
-      </html>
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+    .content { background: #f9fafb; padding: 20px; }
+    .field { margin: 15px 0; padding: 10px; background: white; border-radius: 4px; }
+    .label { font-weight: bold; color: #4b5563; }
+    .value { color: #1f2937; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>New Contact Form Submission</h2>
+    </div>
+    <div class="content">
+      <div class="field">
+        <div class="label">Name:</div>
+        <div class="value">${data.name}</div>
+      </div>
+      <div class="field">
+        <div class="label">Email:</div>
+        <div class="value">${data.email}</div>
+      </div>
+      <div class="field">
+        <div class="label">Company:</div>
+        <div class="value">${data.company || "N/A"}</div>
+      </div>
+      <div class="field">
+        <div class="label">Phone:</div>
+        <div class="value">${data.phone || "N/A"}</div>
+      </div>
+      <div class="field">
+        <div class="label">Message:</div>
+        <div class="value">${data.message}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
     `
 
-    await sendEmail({
-      to: email,
-      subject: userSubject,
-      text: userText,
-      html: userHtml,
+    const result = await sendEmail({
+      to: process.env.AWS_SES_FROM_EMAIL || "info@kuhlekt.com",
+      subject,
+      text,
+      html,
     })
 
-    return {
-      success: true,
-      message: "Your message has been sent successfully",
-    }
+    return result
   } catch (error) {
-    console.error("Error in sendContactForm:", error)
+    console.error("Error submitting contact form:", error)
     return {
       success: false,
-      message: "Failed to send contact form",
-      error: error instanceof Error ? error.message : "Unknown error",
+      message: "Failed to submit contact form",
     }
   }
 }
