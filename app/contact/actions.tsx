@@ -2,28 +2,47 @@
 
 import { sendEmail } from "@/lib/aws-ses"
 
-export async function submitContactForm(formData: FormData) {
-  const name = formData.get("name") as string
-  const email = formData.get("email") as string
-  const message = formData.get("message") as string
+export async function submitContactForm(formData: {
+  name: string
+  email: string
+  company: string
+  message: string
+}) {
+  const htmlContent = `
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${formData.name}</p>
+        <p><strong>Email:</strong> ${formData.email}</p>
+        <p><strong>Company:</strong> ${formData.company}</p>
+        <p><strong>Message:</strong></p>
+        <p>${formData.message}</p>
+      </body>
+    </html>
+  `
 
-  const result = await sendEmail({
+  const textContent = `
+New Contact Form Submission
+
+Name: ${formData.name}
+Email: ${formData.email}
+Company: ${formData.company}
+Message: ${formData.message}
+  `
+
+  return await sendEmail({
     to: process.env.AWS_SES_FROM_EMAIL || "",
-    subject: `Contact Form Submission from ${name}`,
-    text: `Name: ${name}\nEmail: ${email}\n\nMessage: ${message}`,
-    html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong> ${message}</p>`,
+    subject: `New Contact Form Submission from ${formData.name}`,
+    text: textContent,
+    html: htmlContent,
   })
-
-  return result
 }
 
-export async function sendTestEmail(email: string) {
-  const result = await sendEmail({
-    to: email,
-    subject: "Test Email",
-    text: "This is a test email",
-    html: "<p>This is a test email</p>",
+export async function sendTestEmail(to: string) {
+  return await sendEmail({
+    to,
+    subject: "Test Email from Kuhlekt",
+    text: "This is a test email to verify AWS SES configuration.",
+    html: "<p>This is a test email to verify AWS SES configuration.</p>",
   })
-
-  return result
 }
