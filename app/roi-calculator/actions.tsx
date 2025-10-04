@@ -2,135 +2,208 @@
 
 import { createClient } from "@/lib/supabase/server"
 
-interface SimpleROIInputs {
-  monthlyRevenue: number
+interface SimpleROICalculation {
   currentDSO: number
   targetDSO: number
-}
-
-interface DetailedROIInputs {
   annualRevenue: number
-  currentDSO: number
-  invoiceVolume: number
-  avgInvoiceValue: number
-  collectionCosts: number
+  dsoImprovement: number
+  dsoImprovementPercentage: number
+  cashReleased: number
+  monthlyBenefit: number
+  threeYearBenefit: number
 }
 
-interface ROIResult {
-  annualSavings: number
-  cashFlowImprovement: number
-  timeToROI: number
-  details: {
-    currentCashCycle: number
-    improvedCashCycle: number
-    workingCapitalGain: number
-    efficiencyGain: number
+interface DetailedROICalculation {
+  currentMetrics: {
+    dso: number
+    collectionEffectiveness: number
+    badDebtRatio: number
+    costPerInvoice: number
+  }
+  projectedMetrics: {
+    dso: number
+    collectionEffectiveness: number
+    badDebtRatio: number
+    costPerInvoice: number
+  }
+  improvements: {
+    dsoReduction: number
+    dsoReductionPercentage: number
+    ceIncrease: number
+    badDebtReduction: number
+    costSavingsPerInvoice: number
+  }
+  financialImpact: {
+    cashReleased: number
+    annualSavings: number
+    badDebtRecovery: number
+    totalFirstYearBenefit: number
+    threeYearBenefit: number
+    roi: number
+    paybackPeriod: number
   }
 }
 
-export async function calculateSimpleROI(inputs: SimpleROIInputs): Promise<ROIResult> {
-  const { monthlyRevenue, currentDSO, targetDSO } = inputs
-
-  const dsoReduction = currentDSO - targetDSO
-  const dailyRevenue = monthlyRevenue / 30
-  const cashFlowImprovement = dailyRevenue * dsoReduction
-  const annualSavings = cashFlowImprovement * 12
-
-  return {
-    annualSavings,
-    cashFlowImprovement,
-    timeToROI: 3, // months
-    details: {
-      currentCashCycle: currentDSO,
-      improvedCashCycle: targetDSO,
-      workingCapitalGain: cashFlowImprovement,
-      efficiencyGain: (dsoReduction / currentDSO) * 100,
-    },
-  }
-}
-
-export async function calculateDetailedROI(inputs: DetailedROIInputs): Promise<ROIResult> {
-  const { annualRevenue, currentDSO, invoiceVolume, avgInvoiceValue, collectionCosts } = inputs
-
-  const targetDSO = Math.max(currentDSO * 0.6, 15) // 40% improvement or 15 days minimum
-  const dsoReduction = currentDSO - targetDSO
-
+export async function calculateSimpleROI(
+  currentDSO: number,
+  targetDSO: number,
+  annualRevenue: number,
+): Promise<SimpleROICalculation> {
+  const dsoImprovement = currentDSO - targetDSO
+  const dsoImprovementPercentage = (dsoImprovement / currentDSO) * 100
   const dailyRevenue = annualRevenue / 365
-  const cashFlowImprovement = dailyRevenue * dsoReduction
-
-  const automationSavings = collectionCosts * 0.7 // 70% reduction in collection costs
-  const annualSavings = cashFlowImprovement * 12 + automationSavings
+  const cashReleased = dailyRevenue * dsoImprovement
+  const monthlyBenefit = cashReleased / 12
+  const threeYearBenefit = cashReleased * 3
 
   return {
-    annualSavings,
-    cashFlowImprovement,
-    timeToROI: 4, // months
-    details: {
-      currentCashCycle: currentDSO,
-      improvedCashCycle: targetDSO,
-      workingCapitalGain: cashFlowImprovement,
-      efficiencyGain: (dsoReduction / currentDSO) * 100,
+    currentDSO,
+    targetDSO,
+    annualRevenue,
+    dsoImprovement,
+    dsoImprovementPercentage,
+    cashReleased,
+    monthlyBenefit,
+    threeYearBenefit,
+  }
+}
+
+export async function calculateDetailedROI(
+  annualRevenue: number,
+  currentDSO: number,
+  currentCE: number,
+  currentBadDebt: number,
+  monthlyInvoiceVolume: number,
+  currentCostPerInvoice: number,
+  estimatedImplementationCost: number,
+): Promise<DetailedROICalculation> {
+  // Projected improvements with Kuhlekt
+  const projectedDSO = Math.max(currentDSO * 0.6, 15) // 40% improvement, minimum 15 days
+  const projectedCE = Math.min(currentCE * 1.25, 98) // 25% improvement, max 98%
+  const projectedBadDebt = currentBadDebt * 0.5 // 50% reduction
+  const projectedCostPerInvoice = currentCostPerInvoice * 0.4 // 60% cost reduction
+
+  // Calculate improvements
+  const dsoReduction = currentDSO - projectedDSO
+  const dsoReductionPercentage = (dsoReduction / currentDSO) * 100
+  const ceIncrease = projectedCE - currentCE
+  const badDebtReduction = currentBadDebt - projectedBadDebt
+  const costSavingsPerInvoice = currentCostPerInvoice - projectedCostPerInvoice
+
+  // Financial impact calculations
+  const dailyRevenue = annualRevenue / 365
+  const cashReleased = dailyRevenue * dsoReduction
+  const annualInvoiceVolume = monthlyInvoiceVolume * 12
+  const annualSavings = costSavingsPerInvoice * annualInvoiceVolume
+  const badDebtRecovery = (annualRevenue * badDebtReduction) / 100
+  const totalFirstYearBenefit = cashReleased + annualSavings + badDebtRecovery
+  const threeYearBenefit = (annualSavings + badDebtRecovery) * 3 + cashReleased
+  const roi = ((threeYearBenefit - estimatedImplementationCost) / estimatedImplementationCost) * 100
+  const paybackPeriod = estimatedImplementationCost / (totalFirstYearBenefit / 12)
+
+  return {
+    currentMetrics: {
+      dso: currentDSO,
+      collectionEffectiveness: currentCE,
+      badDebtRatio: currentBadDebt,
+      costPerInvoice: currentCostPerInvoice,
+    },
+    projectedMetrics: {
+      dso: projectedDSO,
+      collectionEffectiveness: projectedCE,
+      badDebtRatio: projectedBadDebt,
+      costPerInvoice: projectedCostPerInvoice,
+    },
+    improvements: {
+      dsoReduction,
+      dsoReductionPercentage,
+      ceIncrease,
+      badDebtReduction,
+      costSavingsPerInvoice,
+    },
+    financialImpact: {
+      cashReleased,
+      annualSavings,
+      badDebtRecovery,
+      totalFirstYearBenefit,
+      threeYearBenefit,
+      roi,
+      paybackPeriod,
     },
   }
 }
 
-async function sendClickSendEmail(to: string, subject: string, body: string) {
+async function sendClickSendEmail(to: string, subject: string, body: string): Promise<void> {
   const username = process.env.CLICKSEND_USERNAME
   const apiKey = process.env.CLICKSEND_API_KEY
   const fromEmail = process.env.CLICKSEND_FROM_EMAIL || "noreply@kuhlekt.com"
-  const emailAddressId = Number.parseInt(process.env.CLICKSEND_EMAIL_ADDRESS_ID || "0")
 
   if (!username || !apiKey) {
     throw new Error("ClickSend credentials not configured")
   }
 
-  if (!emailAddressId || emailAddressId === 0) {
-    throw new Error("ClickSend email address ID not configured")
-  }
-
-  const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
-
-  const payload = {
-    to: [
-      {
-        email: to,
-        name: to.split("@")[0],
-      },
-    ],
-    from: {
-      email_address_id: emailAddressId,
-      name: "Kuhlekt",
+  // First, fetch the list of verified email addresses to get the email_address_id
+  const listResponse = await fetch("https://rest.clicksend.com/v3/email/addresses", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Basic " + Buffer.from(`${username}:${apiKey}`).toString("base64"),
     },
-    subject,
-    body,
+  })
+
+  if (!listResponse.ok) {
+    const errorText = await listResponse.text()
+    throw new Error(`Failed to fetch email addresses: ${listResponse.status} - ${errorText}`)
   }
 
+  const listData = await listResponse.json()
+
+  // Find the matching email address
+  const emailAddress = listData.data?.data?.find(
+    (addr: any) => addr.email_address.toLowerCase() === fromEmail.toLowerCase(),
+  )
+
+  if (!emailAddress) {
+    throw new Error(`Email address ${fromEmail} not found in verified addresses. Please verify it in ClickSend first.`)
+  }
+
+  const emailAddressId = emailAddress.email_address_id
+
+  // Now send the email with the correct email_address_id
   const response = await fetch("https://rest.clicksend.com/v3/email/send", {
     method: "POST",
     headers: {
-      Authorization: `Basic ${auth}`,
       "Content-Type": "application/json",
+      Authorization: "Basic " + Buffer.from(`${username}:${apiKey}`).toString("base64"),
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      to: [{ email: to, name: "" }],
+      from: {
+        email_address_id: emailAddressId,
+        name: "Kuhlekt",
+      },
+      subject: subject,
+      body: body,
+    }),
   })
 
   if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to send email via ClickSend: ${response.status} ${response.statusText} - ${errorBody}`)
+    const errorText = await response.text()
+    throw new Error(`Failed to send email via ClickSend: ${response.status} - ${errorText}`)
   }
-
-  return await response.json()
 }
 
-export async function generateVerificationCode(email: string) {
+export async function generateVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
 
-    // Generate 6-digit code
+    // Generate a 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-    // Store in database
+    // Store in database with 10-minute expiration
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+
     const { error: dbError } = await supabase.from("verification_codes").insert({
       email,
       code,
@@ -140,26 +213,26 @@ export async function generateVerificationCode(email: string) {
 
     if (dbError) {
       console.error("Database error:", dbError)
-      throw new Error("Failed to generate verification code")
+      return { success: false, error: "Failed to generate verification code" }
     }
 
-    // Send email with code
+    // Send verification code via ClickSend
     const emailSubject = "Your Kuhlekt ROI Calculator Verification Code"
     const emailBody = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #2563eb;">Your Verification Code</h2>
-            <p>Thank you for using the Kuhlekt ROI Calculator!</p>
+            <p>Thank you for using the Kuhlekt ROI Calculator.</p>
             <p>Your verification code is:</p>
-            <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;">
               ${code}
             </div>
-            <p>This code will expire in 15 minutes.</p>
+            <p>This code will expire in 10 minutes.</p>
             <p>If you didn't request this code, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
             <p style="font-size: 12px; color: #6b7280;">
-              © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
+              This is an automated message from Kuhlekt. Please do not reply to this email.
             </p>
           </div>
         </body>
@@ -178,10 +251,11 @@ export async function generateVerificationCode(email: string) {
   }
 }
 
-export async function verifyCode(email: string, code: string) {
+export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
 
+    // Find valid, unused code
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -203,55 +277,134 @@ export async function verifyCode(email: string, code: string) {
     return { success: true }
   } catch (error) {
     console.error("Error verifying code:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to verify code",
-    }
+    return { success: false, error: "Failed to verify code" }
   }
 }
 
 export async function sendROIEmail(
   email: string,
-  name: string,
-  company: string,
-  roiData: ROIResult,
-  inputs: SimpleROIInputs | DetailedROIInputs,
-) {
+  companyName: string,
+  contactName: string,
+  roiData: DetailedROICalculation,
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const emailSubject = `Your Kuhlekt ROI Analysis - ${company}`
+    const emailSubject = `Your Kuhlekt ROI Analysis Report - ${companyName}`
     const emailBody = `
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2563eb;">Your ROI Analysis Results</h1>
-            <p>Hi ${name},</p>
-            <p>Thank you for using the Kuhlekt ROI Calculator. Here are your results:</p>
+          <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #2563eb; border-bottom: 3px solid #2563eb; padding-bottom: 10px;">
+              ROI Analysis Report
+            </h1>
             
-            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Key Findings</h2>
-              <p><strong>Annual Savings:</strong> $${roiData.annualSavings.toLocaleString()}</p>
-              <p><strong>Cash Flow Improvement:</strong> $${roiData.cashFlowImprovement.toLocaleString()}</p>
-              <p><strong>Time to ROI:</strong> ${roiData.timeToROI} months</p>
-            </div>
-
-            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Detailed Analysis</h2>
-              <p><strong>Current Cash Cycle:</strong> ${roiData.details.currentCashCycle} days</p>
-              <p><strong>Improved Cash Cycle:</strong> ${roiData.details.improvedCashCycle} days</p>
-              <p><strong>Working Capital Gain:</strong> $${roiData.details.workingCapitalGain.toLocaleString()}</p>
-              <p><strong>Efficiency Gain:</strong> ${roiData.details.efficiencyGain.toFixed(1)}%</p>
-            </div>
-
-            <p>Ready to transform your accounts receivable process? Our team is here to help you achieve these results.</p>
+            <p>Dear ${contactName},</p>
+            <p>Thank you for your interest in Kuhlekt's Accounts Receivable Management Solution. Below is your personalized ROI analysis for ${companyName}.</p>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://kuhlekt.com/demo" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Schedule a Demo</a>
+            <h2 style="color: #1e40af; margin-top: 30px;">Current Performance Metrics</h2>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr style="background-color: #f3f4f6;">
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Days Sales Outstanding (DSO)</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">${roiData.currentMetrics.dso.toFixed(1)} days</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Collection Effectiveness</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">${roiData.currentMetrics.collectionEffectiveness.toFixed(1)}%</td>
+              </tr>
+              <tr style="background-color: #f3f4f6;">
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Bad Debt Ratio</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">${roiData.currentMetrics.badDebtRatio.toFixed(2)}%</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Cost Per Invoice</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">$${roiData.currentMetrics.costPerInvoice.toFixed(2)}</td>
+              </tr>
+            </table>
+
+            <h2 style="color: #1e40af; margin-top: 30px;">Projected Performance with Kuhlekt</h2>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr style="background-color: #dbeafe;">
+                <td style="padding: 12px; border: 1px solid #93c5fd;"><strong>Days Sales Outstanding (DSO)</strong></td>
+                <td style="padding: 12px; border: 1px solid #93c5fd;">${roiData.projectedMetrics.dso.toFixed(1)} days</td>
+                <td style="padding: 12px; border: 1px solid #93c5fd; color: #059669;"><strong>↓ ${roiData.improvements.dsoReduction.toFixed(1)} days (${roiData.improvements.dsoReductionPercentage.toFixed(1)}%)</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Collection Effectiveness</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">${roiData.projectedMetrics.collectionEffectiveness.toFixed(1)}%</td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; color: #059669;"><strong>↑ ${roiData.improvements.ceIncrease.toFixed(1)}%</strong></td>
+              </tr>
+              <tr style="background-color: #dbeafe;">
+                <td style="padding: 12px; border: 1px solid #93c5fd;"><strong>Bad Debt Ratio</strong></td>
+                <td style="padding: 12px; border: 1px solid #93c5fd;">${roiData.projectedMetrics.badDebtRatio.toFixed(2)}%</td>
+                <td style="padding: 12px; border: 1px solid #93c5fd; color: #059669;"><strong>↓ ${roiData.improvements.badDebtReduction.toFixed(2)}%</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Cost Per Invoice</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;">$${roiData.projectedMetrics.costPerInvoice.toFixed(2)}</td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; color: #059669;"><strong>↓ $${roiData.improvements.costSavingsPerInvoice.toFixed(2)}</strong></td>
+              </tr>
+            </table>
+
+            <h2 style="color: #1e40af; margin-top: 30px;">Financial Impact</h2>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin: 20px 0;">
+              <h3 style="margin-top: 0; font-size: 24px;">3-Year Total Benefit</h3>
+              <p style="font-size: 48px; font-weight: bold; margin: 20px 0;">$${roiData.financialImpact.threeYearBenefit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
 
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="font-size: 12px; color: #6b7280;">
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr style="background-color: #f3f4f6;">
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Cash Released (One-Time)</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">$${roiData.financialImpact.cashReleased.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Annual Process Savings</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">$${roiData.financialImpact.annualSavings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+              </tr>
+              <tr style="background-color: #f3f4f6;">
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Bad Debt Recovery (Annual)</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">$${roiData.financialImpact.badDebtRecovery.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>First Year Total Benefit</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">$${roiData.financialImpact.totalFirstYearBenefit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+              </tr>
+              <tr style="background-color: #dcfce7;">
+                <td style="padding: 12px; border: 1px solid #86efac;"><strong>Return on Investment (ROI)</strong></td>
+                <td style="padding: 12px; border: 1px solid #86efac; text-align: right; font-weight: bold; color: #059669;">${roiData.financialImpact.roi.toFixed(0)}%</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #e5e7eb;"><strong>Payback Period</strong></td>
+                <td style="padding: 12px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${roiData.financialImpact.paybackPeriod.toFixed(1)} months</td>
+              </tr>
+            </table>
+
+            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0;">
+              <p style="margin: 0;"><strong>Note:</strong> This analysis is based on industry benchmarks and typical improvements seen with Kuhlekt implementations. Actual results may vary based on your specific circumstances.</p>
+            </div>
+
+            <h2 style="color: #1e40af; margin-top: 30px;">Next Steps</h2>
+            <ol style="line-height: 2;">
+              <li>Review this analysis with your finance team</li>
+              <li>Schedule a personalized demo to see Kuhlekt in action</li>
+              <li>Discuss implementation timeline and customization options</li>
+              <li>Start your journey to improved cash flow and efficiency</li>
+            </ol>
+
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" 
+                 style="display: inline-block; background-color: #2563eb; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">
+                Schedule Your Demo
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 40px 0;">
+            
+            <p style="font-size: 14px; color: #6b7280;">
+              Questions? Contact us at <a href="mailto:info@kuhlekt.com" style="color: #2563eb;">info@kuhlekt.com</a> or visit our website at <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #2563eb;">kuhlekt.com</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 30px;">
               © ${new Date().getFullYear()} Kuhlekt. All rights reserved.<br>
-              This analysis is based on the information you provided and industry benchmarks.
+              This email was sent to ${email} as part of your ROI analysis request.
             </p>
           </div>
         </body>
