@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: Request) {
   try {
@@ -11,33 +9,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    const { data: verificationData, error: fetchError } = await supabase
+    const supabase = await createClient()
+
+    // Find the verification code
+    const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
-      .eq("email", email.toLowerCase())
+      .eq("email", email)
       .eq("code", code)
       .eq("used", false)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single()
 
-    if (fetchError || !verificationData) {
+    if (error || !data) {
       return NextResponse.json({ success: false, error: "Invalid verification code" }, { status: 400 })
     }
 
-    const expiresAt = new Date(verificationData.expires_at)
+    // Check if expired
+    const expiresAt = new Date(data.expires_at)
     if (expiresAt < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
-    const { error: updateError } = await supabase
-      .from("verification_codes")
-      .update({ used: true })
-      .eq("id", verificationData.id)
+    // Mark as used
+    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     if (updateError) {
       console.error("Error marking code as used:", updateError)
-      return NextResponse.json({ success: false, error: "Failed to verify code" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
