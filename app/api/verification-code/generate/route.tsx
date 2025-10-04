@@ -1,14 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+import { createClient } from "@supabase/supabase-js"
 
-const sesClient = new SESClient({
+const ses = new SESClient({
   region: process.env.AWS_SES_REGION!,
   credentials: {
     accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY!,
   },
 })
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,12 +22,13 @@ export async function POST(request: NextRequest) {
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Store in Supabase
-    const supabase = await createClient()
+    // Store in database
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+
     const { error: dbError } = await supabase.from("verification_codes").insert({
-      email,
+      email: email.toLowerCase(),
       code,
       expires_at: expiresAt.toISOString(),
       used: false,
@@ -33,66 +36,32 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error("Database error:", dbError)
-      return NextResponse.json({ success: false, error: "Failed to store verification code" }, { status: 500 })
+      return NextResponse.json({ success: false, error: "Failed to generate code" }, { status: 500 })
     }
 
-    // Send email via SES
-    const params = {
+    // Send email
+    const emailParams = {
       Source: process.env.AWS_SES_FROM_EMAIL!,
       Destination: {
         ToAddresses: [email],
       },
       Message: {
         Subject: {
-          Data: "Your Kuhlekt ROI Calculator Verification Code",
+          Data: "Your Verification Code",
           Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: `
-              <!DOCTYPE html>
               <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Verification Code</title>
-                </head>
-                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 40px 20px;">
-                    <tr>
-                      <td align="center">
-                        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                          <tr>
-                            <td style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); padding: 40px 20px; text-align: center;">
-                              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Verification Code</h1>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 40px 30px;">
-                              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                                Thank you for using the Kuhlekt ROI Calculator. Your verification code is:
-                              </p>
-                              <div style="background-color: #f0f9ff; border: 2px solid #06b6d4; border-radius: 8px; padding: 30px; text-align: center; margin: 30px 0;">
-                                <div style="font-size: 48px; font-weight: bold; color: #0891b2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-                                  ${code}
-                                </div>
-                              </div>
-                              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                                This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-                              </p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="background-color: #f8f8f8; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
-                              <p style="color: #999999; font-size: 12px; margin: 0;">
-                                © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                              </p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #0891b2;">Your Verification Code</h2>
+                  <p>Your verification code is:</p>
+                  <div style="background-color: #f0f9ff; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0891b2; margin: 20px 0;">
+                    ${code}
+                  </div>
+                  <p>This code will expire in 10 minutes.</p>
+                  <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
                 </body>
               </html>
             `,
@@ -102,15 +71,12 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    try {
-      await sesClient.send(new SendEmailCommand(params))
-      return NextResponse.json({ success: true })
-    } catch (emailError) {
-      console.error("Email error:", emailError)
-      return NextResponse.json({ success: false, error: "Failed to send verification email" }, { status: 500 })
-    }
+    const command = new SendEmailCommand(emailParams)
+    await ses.send(command)
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Generate code error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error("Error generating verification code:", error)
+    return NextResponse.json({ success: false, error: "Failed to generate code" }, { status: 500 })
   }
 }
