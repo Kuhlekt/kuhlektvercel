@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
-      .eq("email", email)
+      .eq("email", email.toLowerCase())
       .eq("code", code)
       .eq("used", false)
       .single()
