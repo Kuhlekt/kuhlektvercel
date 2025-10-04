@@ -10,29 +10,29 @@ const sesClient = new SESClient({
   },
 })
 
-export async function submitContact(formData: FormData) {
+export async function submitContactForm(formData: FormData) {
   try {
-    const email = formData.get("email") as string
     const name = formData.get("name") as string
+    const email = formData.get("email") as string
     const message = formData.get("message") as string
 
     const command = new SendEmailCommand({
-      Source: process.env.AWS_SES_FROM_EMAIL!,
+      Source: process.env.AWS_SES_FROM_EMAIL,
       Destination: {
-        ToAddresses: [email],
+        ToAddresses: [process.env.AWS_SES_FROM_EMAIL || ""],
       },
       Message: {
         Subject: {
-          Data: "Contact Form Submission",
+          Data: `Contact Form: ${name}`,
           Charset: "UTF-8",
         },
         Body: {
           Text: {
-            Data: `Thank you ${name}! We received your message: ${message}`,
+            Data: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
             Charset: "UTF-8",
           },
           Html: {
-            Data: `<p>Thank you ${name}! We received your message: ${message}</p>`,
+            Data: `<h2>Contact Form Submission</h2><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong></p><p>${message}</p>`,
             Charset: "UTF-8",
           },
         },
@@ -41,9 +41,9 @@ export async function submitContact(formData: FormData) {
 
     await sesClient.send(command)
 
-    return { success: true, message: "Contact form submitted successfully" }
+    return { success: true, message: "Message sent successfully" }
   } catch (error) {
-    console.error("Error:", error)
-    return { success: false, message: "Failed to submit" }
+    console.error("Error in submitContactForm:", error)
+    return { success: false, message: "Failed to send message" }
   }
 }
