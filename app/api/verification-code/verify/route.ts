@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Find the verification code
+    // Get the verification code
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -25,17 +25,12 @@ export async function POST(request: Request) {
     }
 
     // Check if expired
-    const expiresAt = new Date(data.expires_at)
-    if (expiresAt < new Date()) {
+    if (new Date(data.expires_at) < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
     // Mark as used
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
-
-    if (updateError) {
-      console.error("Error marking code as used:", updateError)
-    }
+    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
