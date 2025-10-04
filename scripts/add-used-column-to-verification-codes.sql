@@ -8,19 +8,16 @@ BEGIN
         AND column_name = 'used'
     ) THEN
         ALTER TABLE verification_codes 
-        ADD COLUMN used BOOLEAN DEFAULT false NOT NULL;
+        ADD COLUMN used BOOLEAN NOT NULL DEFAULT false;
     END IF;
 END $$;
 
--- Create index for faster lookups
+-- Create index for better query performance
 CREATE INDEX IF NOT EXISTS idx_verification_codes_email_code 
-ON verification_codes(email, code) 
-WHERE used = false;
+ON verification_codes(email, code, used);
 
--- Create index for cleanup of expired codes
 CREATE INDEX IF NOT EXISTS idx_verification_codes_expires_at 
-ON verification_codes(expires_at) 
-WHERE used = false;
+ON verification_codes(expires_at);
 
 -- Add comment
-COMMENT ON COLUMN verification_codes.used IS 'Whether the verification code has been used';
+COMMENT ON COLUMN verification_codes.used IS 'Indicates whether the verification code has been used';
