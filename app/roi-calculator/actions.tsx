@@ -2,242 +2,327 @@
 
 import { createClient } from "@/lib/supabase/server"
 
-// ROI Calculation Functions
-export async function calculateSimpleROI(formData: FormData) {
-  const monthlyInvoiceVolume = Number.parseFloat(formData.get("monthlyInvoiceVolume") as string)
-  const averageInvoiceValue = Number.parseFloat(formData.get("averageInvoiceValue") as string)
-  const currentDSO = Number.parseFloat(formData.get("currentDSO") as string)
+// ROI Calculation functions
+export async function calculateSimpleROI(data: {
+  currentARBalance: number
+  averageInvoiceValue: number
+  monthlyInvoices: number
+  averageDSO: number
+}) {
+  const { currentARBalance, averageInvoiceValue, monthlyInvoices, averageDSO } = data
 
-  // Simple ROI calculations
-  const annualRevenue = monthlyInvoiceVolume * averageInvoiceValue * 12
-  const targetDSO = Math.max(currentDSO * 0.7, 30) // 30% improvement or minimum 30 days
-  const dsoReduction = currentDSO - targetDSO
-  const cashFlowImprovement = (annualRevenue / 365) * dsoReduction
-  const estimatedAnnualSavings = cashFlowImprovement * 0.05 // 5% cost of capital
+  // Calculate current annual revenue
+  const annualRevenue = averageInvoiceValue * monthlyInvoices * 12
+
+  // Estimate current bad debt (industry average 1-2%)
+  const currentBadDebtRate = 0.015
+  const currentBadDebt = annualRevenue * currentBadDebtRate
+
+  // Calculate potential improvements with Kuhlekt
+  const targetDSO = Math.max(15, averageDSO * 0.6) // 40% improvement
+  const dsoReduction = averageDSO - targetDSO
+  const dsoImprovementPercent = (dsoReduction / averageDSO) * 100
+
+  // Calculate cash flow improvement
+  const dailyRevenue = annualRevenue / 365
+  const cashFlowImprovement = dailyRevenue * dsoReduction
+
+  // Calculate bad debt reduction (50% improvement)
+  const improvedBadDebtRate = currentBadDebtRate * 0.5
+  const badDebtSavings = annualRevenue * (currentBadDebtRate - improvedBadDebtRate)
+
+  // Calculate staff time savings (assume 30% time savings)
+  const estimatedARStaffCost = 60000 // Annual cost per AR staff member
+  const staffTimeSavings = estimatedARStaffCost * 0.3
+
+  // Total annual savings
+  const totalAnnualSavings = cashFlowImprovement + badDebtSavings + staffTimeSavings
+
+  // Calculate ROI (assuming $15,000 annual software cost)
+  const annualSoftwareCost = 15000
+  const roi = ((totalAnnualSavings - annualSoftwareCost) / annualSoftwareCost) * 100
+  const paybackMonths = annualSoftwareCost / (totalAnnualSavings / 12)
 
   return {
-    monthlyInvoiceVolume,
-    averageInvoiceValue,
-    currentDSO,
+    // Current state
+    currentDSO: averageDSO,
+    currentBadDebt,
+    currentARBalance,
+
+    // Improvements
     targetDSO,
     dsoReduction,
+    dsoImprovementPercent,
     cashFlowImprovement,
-    estimatedAnnualSavings,
-    annualRevenue,
+    badDebtSavings,
+    staffTimeSavings,
+
+    // Financial results
+    totalAnnualSavings,
+    annualSoftwareCost,
+    netAnnualBenefit: totalAnnualSavings - annualSoftwareCost,
+    roi,
+    paybackMonths,
+
+    // Additional metrics
+    threeYearValue: (totalAnnualSavings - annualSoftwareCost) * 3,
   }
 }
 
-export async function calculateDetailedROI(formData: FormData) {
-  const monthlyInvoiceVolume = Number.parseFloat(formData.get("monthlyInvoiceVolume") as string)
-  const averageInvoiceValue = Number.parseFloat(formData.get("averageInvoiceValue") as string)
-  const currentDSO = Number.parseFloat(formData.get("currentDSO") as string)
-  const arTeamSize = Number.parseFloat(formData.get("arTeamSize") as string)
-  const averageArSalary = Number.parseFloat(formData.get("averageArSalary") as string)
-  const collectionRate = Number.parseFloat(formData.get("collectionRate") as string)
+export async function calculateDetailedROI(data: {
+  currentARBalance: number
+  averageInvoiceValue: number
+  monthlyInvoices: number
+  averageDSO: number
+  currentBadDebtRate: number
+  arStaffCount: number
+  averageStaffCost: number
+  industryType: string
+}) {
+  const {
+    currentARBalance,
+    averageInvoiceValue,
+    monthlyInvoices,
+    averageDSO,
+    currentBadDebtRate,
+    arStaffCount,
+    averageStaffCost,
+    industryType,
+  } = data
 
-  // Detailed ROI calculations
-  const annualRevenue = monthlyInvoiceVolume * averageInvoiceValue * 12
-  const targetDSO = Math.max(currentDSO * 0.7, 30)
-  const dsoReduction = currentDSO - targetDSO
-  const cashFlowImprovement = (annualRevenue / 365) * dsoReduction
-  const estimatedAnnualSavings = cashFlowImprovement * 0.05
+  // Calculate current annual revenue
+  const annualRevenue = averageInvoiceValue * monthlyInvoices * 12
+
+  // Calculate current bad debt
+  const currentBadDebt = annualRevenue * (currentBadDebtRate / 100)
+
+  // Industry-specific improvements
+  const industryFactors: Record<
+    string,
+    { dsoImprovement: number; badDebtImprovement: number; efficiencyGain: number }
+  > = {
+    manufacturing: { dsoImprovement: 0.45, badDebtImprovement: 0.55, efficiencyGain: 0.35 },
+    wholesale: { dsoImprovement: 0.4, badDebtImprovement: 0.5, efficiencyGain: 0.3 },
+    services: { dsoImprovement: 0.5, badDebtImprovement: 0.6, efficiencyGain: 0.4 },
+    technology: { dsoImprovement: 0.45, badDebtImprovement: 0.55, efficiencyGain: 0.35 },
+    healthcare: { dsoImprovement: 0.35, badDebtImprovement: 0.45, efficiencyGain: 0.25 },
+    other: { dsoImprovement: 0.4, badDebtImprovement: 0.5, efficiencyGain: 0.3 },
+  }
+
+  const factors = industryFactors[industryType] || industryFactors.other
+
+  // Calculate improvements
+  const targetDSO = Math.max(15, averageDSO * (1 - factors.dsoImprovement))
+  const dsoReduction = averageDSO - targetDSO
+  const dsoImprovementPercent = (dsoReduction / averageDSO) * 100
+
+  // Cash flow improvement
+  const dailyRevenue = annualRevenue / 365
+  const cashFlowImprovement = dailyRevenue * dsoReduction
+
+  // Bad debt reduction
+  const improvedBadDebtRate = currentBadDebtRate * (1 - factors.badDebtImprovement)
+  const badDebtSavings = annualRevenue * ((currentBadDebtRate - improvedBadDebtRate) / 100)
 
   // Staff efficiency gains
-  const currentArCost = arTeamSize * averageArSalary
-  const expectedEfficiencyGain = 0.4 // 40% efficiency improvement
-  const potentialStaffSavings = currentArCost * expectedEfficiencyGain
+  const totalStaffCost = arStaffCount * averageStaffCost
+  const staffTimeSavings = totalStaffCost * factors.efficiencyGain
 
-  // Collection improvements
-  const targetCollectionRate = Math.min(collectionRate + 5, 98) // 5% improvement, max 98%
-  const collectionImprovement = targetCollectionRate - collectionRate
-  const additionalCollections = (annualRevenue * collectionImprovement) / 100
+  // Collection cost reduction (phone, mail, etc.)
+  const estimatedCollectionCosts = annualRevenue * 0.02 // 2% of revenue
+  const collectionCostSavings = estimatedCollectionCosts * 0.4 // 40% reduction
 
-  // Total benefits
-  const totalAnnualBenefit = estimatedAnnualSavings + potentialStaffSavings + additionalCollections
+  // Total annual savings
+  const totalAnnualSavings = cashFlowImprovement + badDebtSavings + staffTimeSavings + collectionCostSavings
 
-  // Estimated implementation cost (conservative estimate)
-  const estimatedImplementationCost = 50000
-  const roi = ((totalAnnualBenefit - estimatedImplementationCost) / estimatedImplementationCost) * 100
-  const paybackPeriod = estimatedImplementationCost / (totalAnnualBenefit / 12)
+  // Calculate ROI (assuming $15,000 annual software cost)
+  const annualSoftwareCost = 15000
+  const roi = ((totalAnnualSavings - annualSoftwareCost) / annualSoftwareCost) * 100
+  const paybackMonths = annualSoftwareCost / (totalAnnualSavings / 12)
 
   return {
-    monthlyInvoiceVolume,
-    averageInvoiceValue,
-    currentDSO,
+    // Current state
+    currentDSO: averageDSO,
+    currentBadDebt,
+    currentBadDebtRate,
+    currentARBalance,
+    annualRevenue,
+
+    // Improvements
     targetDSO,
     dsoReduction,
+    dsoImprovementPercent,
+    improvedBadDebtRate,
+
+    // Savings breakdown
     cashFlowImprovement,
-    estimatedAnnualSavings,
-    annualRevenue,
-    arTeamSize,
-    averageArSalary,
-    currentArCost,
-    potentialStaffSavings,
-    collectionRate,
-    targetCollectionRate,
-    collectionImprovement,
-    additionalCollections,
-    totalAnnualBenefit,
-    estimatedImplementationCost,
+    badDebtSavings,
+    staffTimeSavings,
+    collectionCostSavings,
+
+    // Financial results
+    totalAnnualSavings,
+    annualSoftwareCost,
+    netAnnualBenefit: totalAnnualSavings - annualSoftwareCost,
     roi,
-    paybackPeriod,
+    paybackMonths,
+
+    // Long-term value
+    threeYearValue: (totalAnnualSavings - annualSoftwareCost) * 3,
+    fiveYearValue: (totalAnnualSavings - annualSoftwareCost) * 5,
   }
 }
 
-// Verification Code Functions
-export async function generateVerificationCode(email: string): Promise<{ success: boolean; message: string }> {
+// ClickSend Email Helper
+async function sendClickSendEmail(to: string, subject: string, body: string) {
+  const username = process.env.CLICKSEND_USERNAME
+  const apiKey = process.env.CLICKSEND_API_KEY
+  const emailAddressId = process.env.CLICKSEND_EMAIL_ADDRESS_ID
+
+  if (!username || !apiKey || !emailAddressId) {
+    console.error("ClickSend credentials not configured")
+    return { success: false, error: "Email service not configured" }
+  }
+
   try {
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+    const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
 
-    // Store in Supabase
-    const supabase = await createClient()
-    const { error: dbError } = await supabase.from("verification_codes").insert({
-      email,
-      code,
-      expires_at: expiresAt.toISOString(),
-      used: false,
-    })
-
-    if (dbError) {
-      console.error("Database error:", dbError)
-      return { success: false, message: "Failed to generate verification code" }
-    }
-
-    // Send email via ClickSend
-    const clicksendUsername = process.env.CLICKSEND_USERNAME
-    const clicksendApiKey = process.env.CLICKSEND_API_KEY
-    const clicksendEmailAddressId = process.env.CLICKSEND_EMAIL_ADDRESS_ID
-
-    if (!clicksendUsername || !clicksendApiKey || !clicksendEmailAddressId) {
-      console.error("ClickSend credentials not configured")
-      console.log("Verification code (for testing):", code)
-      return { success: true, message: "Verification code generated (email not configured)" }
-    }
-
-    const authToken = Buffer.from(`${clicksendUsername}:${clicksendApiKey}`).toString("base64")
-
-    const emailPayload = {
-      from: {
-        email_address_id: Number.parseInt(clicksendEmailAddressId),
-        name: "Kuhlekt",
-      },
-      to: [
-        {
-          email: email,
-          name: email.split("@")[0],
-        },
-      ],
-      subject: "Your ROI Calculator Verification Code",
-      body: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .code { font-size: 32px; font-weight: bold; color: #667eea; text-align: center; padding: 20px; background: white; border-radius: 5px; margin: 20px 0; letter-spacing: 5px; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Verification Code</h1>
-            </div>
-            <div class="content">
-              <p>Hello,</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Your verification code is:</p>
-              <div class="code">${code}</div>
-              <p>This code will expire in 10 minutes.</p>
-              <p>If you didn't request this code, please ignore this email.</p>
-              <div class="footer">
-                <p>© 2025 Kuhlekt. All rights reserved.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-    }
-
-    const emailResponse = await fetch("https://rest.clicksend.com/v3/email/send", {
+    const response = await fetch("https://rest.clicksend.com/v3/email/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${authToken}`,
+        Authorization: `Basic ${auth}`,
       },
-      body: JSON.stringify(emailPayload),
+      body: JSON.stringify({
+        to: [{ email: to, name: to }],
+        from: {
+          email_address_id: Number.parseInt(emailAddressId, 10),
+          name: "Kuhlekt ROI Calculator",
+        },
+        subject,
+        body,
+      }),
     })
 
-    const emailData = await emailResponse.text()
+    const result = await response.json()
 
-    if (!emailResponse.ok) {
-      console.error("ClickSend API error:", emailResponse.status, emailData)
-      console.log("Verification code (for testing):", code)
-      return { success: true, message: "Verification code generated (email delivery pending)" }
+    if (!response.ok) {
+      console.error("ClickSend API error:", result)
+      return { success: false, error: result }
     }
 
-    return { success: true, message: "Verification code sent successfully" }
+    return { success: true, data: result }
   } catch (error) {
-    console.error("Error generating verification code:", error)
-    return { success: false, message: "An error occurred while generating verification code" }
+    console.error("Error sending email:", error)
+    return { success: false, error }
   }
 }
 
-export async function verifyCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
+// Verification Code Generation
+export async function generateVerificationCode(email: string) {
   try {
     const supabase = await createClient()
 
-    // Get the verification code
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+
+    // Store in database with 10-minute expiration
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    const { error: insertError } = await supabase.from("verification_codes").insert({
+      email,
+      code,
+      expires_at: expiresAt,
+      used: false,
+    })
+
+    if (insertError) {
+      console.error("Error storing verification code:", insertError)
+      throw new Error("Failed to generate verification code")
+    }
+
+    // Send email via ClickSend
+    const emailBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
+          .code { font-size: 32px; font-weight: bold; color: #2563eb; text-align: center; padding: 20px; background: white; border-radius: 8px; margin: 20px 0; letter-spacing: 5px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Kuhlekt ROI Calculator</h1>
+          </div>
+          <div class="content">
+            <h2>Your Verification Code</h2>
+            <p>Please use the following code to verify your email and receive your ROI calculation results:</p>
+            <div class="code">${code}</div>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this code, please ignore this email.</p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const emailResult = await sendClickSendEmail(email, "Your Kuhlekt ROI Calculator Verification Code", emailBody)
+
+    if (!emailResult.success) {
+      console.error("Failed to send verification email:", emailResult.error)
+      // Still return success if code was stored, just log the email error
+      console.log("Verification code (email failed to send):", code)
+    }
+
+    return { success: true, code: process.env.NODE_ENV === "development" ? code : undefined }
+  } catch (error) {
+    console.error("Error in generateVerificationCode:", error)
+    throw error
+  }
+}
+
+// Verify Code
+export async function verifyCode(email: string, code: string) {
+  try {
+    const supabase = await createClient()
+
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
       .eq("code", code)
       .eq("used", false)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single()
 
     if (error || !data) {
-      return { success: false, message: "Invalid verification code" }
+      return { success: false, error: "Invalid or expired verification code" }
     }
 
-    // Check if expired
-    if (new Date(data.expires_at) < new Date()) {
-      return { success: false, message: "Verification code has expired" }
-    }
-
-    // Mark as used
+    // Mark code as used
     await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
-    return { success: true, message: "Verification successful" }
+    return { success: true }
   } catch (error) {
     console.error("Error verifying code:", error)
-    return { success: false, message: "An error occurred during verification" }
+    return { success: false, error: "Verification failed" }
   }
 }
 
-// Email ROI Results Function
-export async function sendROIEmail(
-  email: string,
-  results: any,
-  calculationType: "simple" | "detailed",
-): Promise<{ success: boolean; message: string }> {
+// Send ROI Email
+export async function sendROIEmail(email: string, results: any, calculationType: "simple" | "detailed") {
   try {
-    const clicksendUsername = process.env.CLICKSEND_USERNAME
-    const clicksendApiKey = process.env.CLICKSEND_API_KEY
-    const clicksendEmailAddressId = process.env.CLICKSEND_EMAIL_ADDRESS_ID
-
-    if (!clicksendUsername || !clicksendApiKey || !clicksendEmailAddressId) {
-      console.error("ClickSend credentials not configured")
-      return { success: false, message: "Email service not configured" }
-    }
-
-    const authToken = Buffer.from(`${clicksendUsername}:${clicksendApiKey}`).toString("base64")
-
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat("en-US", {
         style: "currency",
@@ -247,11 +332,8 @@ export async function sendROIEmail(
       }).format(value)
     }
 
-    const formatNumber = (value: number, decimals = 0) => {
-      return new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }).format(value)
+    const formatPercent = (value: number) => {
+      return `${value.toFixed(1)}%`
     }
 
     let emailBody = ""
@@ -264,60 +346,75 @@ export async function sendROIEmail(
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .metric { background: white; padding: 20px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #667eea; }
-            .metric-label { color: #666; font-size: 14px; margin-bottom: 5px; }
-            .metric-value { font-size: 24px; font-weight: bold; color: #667eea; }
-            .highlight { background: #667eea; color: white; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+            .header { background: #2563eb; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; }
+            .metric { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #2563eb; }
+            .metric-label { font-size: 14px; color: #666; text-transform: uppercase; }
+            .metric-value { font-size: 28px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+            .highlight { background: #2563eb; color: white; padding: 25px; text-align: center; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-radius: 0 0 8px 8px; }
+            .cta { display: inline-block; background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Your ROI Analysis Results</h1>
+              <h1>Your Kuhlekt ROI Analysis</h1>
+              <p>Discover your potential savings with automated receivables management</p>
             </div>
             <div class="content">
-              <p>Hello,</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your results:</p>
-              
-              <div class="metric">
-                <div class="metric-label">Annual Revenue</div>
-                <div class="metric-value">${formatCurrency(results.annualRevenue)}</div>
+              <div class="highlight">
+                <h2 style="margin: 0;">Estimated Annual Savings</h2>
+                <div style="font-size: 42px; font-weight: bold; margin: 15px 0;">${formatCurrency(results.totalAnnualSavings)}</div>
+                <p style="margin: 0;">ROI: ${formatPercent(results.roi)}</p>
               </div>
-              
-              <div class="metric">
-                <div class="metric-label">Current DSO</div>
-                <div class="metric-value">${formatNumber(results.currentDSO)} days</div>
-              </div>
-              
-              <div class="metric">
-                <div class="metric-label">Target DSO</div>
-                <div class="metric-value">${formatNumber(results.targetDSO)} days</div>
-              </div>
+
+              <h3>Key Improvements</h3>
               
               <div class="metric">
                 <div class="metric-label">DSO Reduction</div>
-                <div class="metric-value">${formatNumber(results.dsoReduction)} days</div>
+                <div class="metric-value">${results.dsoReduction.toFixed(1)} days</div>
+                <p>From ${results.currentDSO} to ${results.targetDSO.toFixed(1)} days (${formatPercent(results.dsoImprovementPercent)} improvement)</p>
               </div>
-              
-              <div class="highlight">
-                <div class="metric-label" style="color: white;">Cash Flow Improvement</div>
-                <div class="metric-value" style="color: white; font-size: 32px;">${formatCurrency(results.cashFlowImprovement)}</div>
-              </div>
-              
+
               <div class="metric">
-                <div class="metric-label">Estimated Annual Savings</div>
-                <div class="metric-value">${formatCurrency(results.estimatedAnnualSavings)}</div>
+                <div class="metric-label">Cash Flow Improvement</div>
+                <div class="metric-value">${formatCurrency(results.cashFlowImprovement)}</div>
+                <p>Faster collection means more cash available for business operations</p>
               </div>
-              
-              <p style="margin-top: 30px;">Ready to unlock these savings? Contact us to learn how Kuhlekt can help optimize your accounts receivable.</p>
-              
-              <div class="footer">
-                <p>© 2025 Kuhlekt. All rights reserved.</p>
-                <p><a href="https://kuhlekt.com">Visit our website</a></p>
+
+              <div class="metric">
+                <div class="metric-label">Bad Debt Reduction</div>
+                <div class="metric-value">${formatCurrency(results.badDebtSavings)}</div>
+                <p>Recover more revenue through better collection processes</p>
               </div>
+
+              <div class="metric">
+                <div class="metric-label">Staff Time Savings</div>
+                <div class="metric-value">${formatCurrency(results.staffTimeSavings)}</div>
+                <p>Automation reduces manual work and increases productivity</p>
+              </div>
+
+              <h3>Investment Summary</h3>
+              <div class="metric">
+                <div class="metric-label">Payback Period</div>
+                <div class="metric-value">${results.paybackMonths.toFixed(1)} months</div>
+                <p>Net Annual Benefit: ${formatCurrency(results.netAnnualBenefit)}</p>
+                <p>3-Year Value: ${formatCurrency(results.threeYearValue)}</p>
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" class="cta">Schedule a Demo</a>
+              </div>
+
+              <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                These calculations are estimates based on industry benchmarks and your provided data. 
+                Actual results may vary based on your specific business circumstances.
+              </p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+              <p>${process.env.NEXT_PUBLIC_SITE_URL}</p>
             </div>
           </div>
         </body>
@@ -331,125 +428,125 @@ export async function sendROIEmail(
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .section { margin: 20px 0; }
-            .section-title { font-size: 20px; font-weight: bold; color: #667eea; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
-            .metric { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #667eea; }
-            .metric-label { color: #666; font-size: 14px; margin-bottom: 5px; }
-            .metric-value { font-size: 20px; font-weight: bold; color: #667eea; }
-            .highlight { background: #667eea; color: white; padding: 25px; border-radius: 5px; text-align: center; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+            .header { background: #2563eb; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; }
+            .metric { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #2563eb; }
+            .metric-label { font-size: 14px; color: #666; text-transform: uppercase; }
+            .metric-value { font-size: 28px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+            .highlight { background: #2563eb; color: white; padding: 25px; text-align: center; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-radius: 0 0 8px 8px; }
+            .cta { display: inline-block; background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+            .section { margin: 30px 0; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Your Detailed ROI Analysis</h1>
+              <h1>Your Detailed Kuhlekt ROI Analysis</h1>
+              <p>Comprehensive analysis of your receivables automation opportunity</p>
             </div>
             <div class="content">
-              <p>Hello,</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here is your comprehensive analysis:</p>
-              
+              <div class="highlight">
+                <h2 style="margin: 0;">Total Annual Savings</h2>
+                <div style="font-size: 42px; font-weight: bold; margin: 15px 0;">${formatCurrency(results.totalAnnualSavings)}</div>
+                <p style="margin: 0;">ROI: ${formatPercent(results.roi)}</p>
+              </div>
+
               <div class="section">
-                <div class="section-title">Business Overview</div>
+                <h3>Current State Analysis</h3>
                 <div class="metric">
                   <div class="metric-label">Annual Revenue</div>
                   <div class="metric-value">${formatCurrency(results.annualRevenue)}</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-label">Monthly Invoice Volume</div>
-                  <div class="metric-value">${formatNumber(results.monthlyInvoiceVolume)}</div>
+                  <div class="metric-label">Current DSO</div>
+                  <div class="metric-value">${results.currentDSO} days</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-label">Average Invoice Value</div>
-                  <div class="metric-value">${formatCurrency(results.averageInvoiceValue)}</div>
+                  <div class="metric-label">Current Bad Debt</div>
+                  <div class="metric-value">${formatCurrency(results.currentBadDebt)}</div>
+                  <p>${formatPercent(results.currentBadDebtRate)} of revenue</p>
                 </div>
               </div>
-              
+
               <div class="section">
-                <div class="section-title">Cash Flow Impact</div>
-                <div class="metric">
-                  <div class="metric-label">Current DSO</div>
-                  <div class="metric-value">${formatNumber(results.currentDSO)} days</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-label">Target DSO</div>
-                  <div class="metric-value">${formatNumber(results.targetDSO)} days</div>
-                </div>
+                <h3>Projected Improvements</h3>
                 <div class="metric">
                   <div class="metric-label">DSO Reduction</div>
-                  <div class="metric-value">${formatNumber(results.dsoReduction)} days</div>
+                  <div class="metric-value">${results.dsoReduction.toFixed(1)} days</div>
+                  <p>Target DSO: ${results.targetDSO.toFixed(1)} days (${formatPercent(results.dsoImprovementPercent)} improvement)</p>
                 </div>
+                <div class="metric">
+                  <div class="metric-label">Bad Debt Rate Reduction</div>
+                  <div class="metric-value">${formatPercent(results.currentBadDebtRate - results.improvedBadDebtRate)}</div>
+                  <p>From ${formatPercent(results.currentBadDebtRate)} to ${formatPercent(results.improvedBadDebtRate)}</p>
+                </div>
+              </div>
+
+              <div class="section">
+                <h3>Savings Breakdown</h3>
                 <div class="metric">
                   <div class="metric-label">Cash Flow Improvement</div>
                   <div class="metric-value">${formatCurrency(results.cashFlowImprovement)}</div>
+                  <p>Faster collection means more working capital</p>
                 </div>
                 <div class="metric">
-                  <div class="metric-label">Annual Savings (5% cost of capital)</div>
-                  <div class="metric-value">${formatCurrency(results.estimatedAnnualSavings)}</div>
+                  <div class="metric-label">Bad Debt Reduction</div>
+                  <div class="metric-value">${formatCurrency(results.badDebtSavings)}</div>
+                  <p>Better collection processes recover more revenue</p>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Staff Efficiency Gains</div>
+                  <div class="metric-value">${formatCurrency(results.staffTimeSavings)}</div>
+                  <p>Automation increases team productivity</p>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Collection Cost Reduction</div>
+                  <div class="metric-value">${formatCurrency(results.collectionCostSavings)}</div>
+                  <p>Lower operational costs for collections</p>
                 </div>
               </div>
-              
+
               <div class="section">
-                <div class="section-title">Operational Efficiency</div>
+                <h3>Investment Summary</h3>
                 <div class="metric">
-                  <div class="metric-label">AR Team Size</div>
-                  <div class="metric-value">${formatNumber(results.arTeamSize)}</div>
+                  <div class="metric-label">Annual Software Cost</div>
+                  <div class="metric-value">${formatCurrency(results.annualSoftwareCost)}</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-label">Current AR Cost</div>
-                  <div class="metric-value">${formatCurrency(results.currentArCost)}</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-label">Potential Staff Savings (40% efficiency gain)</div>
-                  <div class="metric-value">${formatCurrency(results.potentialStaffSavings)}</div>
-                </div>
-              </div>
-              
-              <div class="section">
-                <div class="section-title">Collection Performance</div>
-                <div class="metric">
-                  <div class="metric-label">Current Collection Rate</div>
-                  <div class="metric-value">${formatNumber(results.collectionRate, 1)}%</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-label">Target Collection Rate</div>
-                  <div class="metric-value">${formatNumber(results.targetCollectionRate, 1)}%</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-label">Additional Collections</div>
-                  <div class="metric-value">${formatCurrency(results.additionalCollections)}</div>
-                </div>
-              </div>
-              
-              <div class="highlight">
-                <div class="metric-label" style="color: white;">Total Annual Benefit</div>
-                <div class="metric-value" style="color: white; font-size: 36px;">${formatCurrency(results.totalAnnualBenefit)}</div>
-              </div>
-              
-              <div class="section">
-                <div class="section-title">Investment Analysis</div>
-                <div class="metric">
-                  <div class="metric-label">Estimated Implementation Cost</div>
-                  <div class="metric-value">${formatCurrency(results.estimatedImplementationCost)}</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-label">Return on Investment (ROI)</div>
-                  <div class="metric-value">${formatNumber(results.roi, 1)}%</div>
+                  <div class="metric-label">Net Annual Benefit</div>
+                  <div class="metric-value">${formatCurrency(results.netAnnualBenefit)}</div>
                 </div>
                 <div class="metric">
                   <div class="metric-label">Payback Period</div>
-                  <div class="metric-value">${formatNumber(results.paybackPeriod, 1)} months</div>
+                  <div class="metric-value">${results.paybackMonths.toFixed(1)} months</div>
                 </div>
               </div>
-              
-              <p style="margin-top: 30px;">Ready to transform your accounts receivable? Contact us today to discuss how Kuhlekt can help you achieve these results.</p>
-              
-              <div class="footer">
-                <p>© 2025 Kuhlekt. All rights reserved.</p>
-                <p><a href="https://kuhlekt.com">Visit our website</a></p>
+
+              <div class="section">
+                <h3>Long-Term Value</h3>
+                <div class="metric">
+                  <div class="metric-label">3-Year Value</div>
+                  <div class="metric-value">${formatCurrency(results.threeYearValue)}</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">5-Year Value</div>
+                  <div class="metric-value">${formatCurrency(results.fiveYearValue)}</div>
+                </div>
               </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" class="cta">Schedule a Demo</a>
+              </div>
+
+              <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                These calculations are estimates based on industry benchmarks and your provided data. 
+                Actual results may vary based on your specific business circumstances.
+              </p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+              <p>${process.env.NEXT_PUBLIC_SITE_URL}</p>
             </div>
           </div>
         </body>
@@ -457,40 +554,16 @@ export async function sendROIEmail(
       `
     }
 
-    const emailPayload = {
-      from: {
-        email_address_id: Number.parseInt(clicksendEmailAddressId),
-        name: "Kuhlekt",
-      },
-      to: [
-        {
-          email: email,
-          name: email.split("@")[0],
-        },
-      ],
-      subject: "Your Kuhlekt ROI Analysis Results",
-      body: emailBody,
+    const emailResult = await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
+
+    if (!emailResult.success) {
+      console.error("Failed to send ROI email:", emailResult.error)
+      return { success: false, error: "Failed to send email" }
     }
 
-    const emailResponse = await fetch("https://rest.clicksend.com/v3/email/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${authToken}`,
-      },
-      body: JSON.stringify(emailPayload),
-    })
-
-    const emailData = await emailResponse.text()
-
-    if (!emailResponse.ok) {
-      console.error("ClickSend API error:", emailResponse.status, emailData)
-      return { success: false, message: "Failed to send ROI results email" }
-    }
-
-    return { success: true, message: "ROI results sent successfully" }
+    return { success: true }
   } catch (error) {
     console.error("Error sending ROI email:", error)
-    return { success: false, message: "An error occurred while sending ROI results" }
+    return { success: false, error: "Failed to send email" }
   }
 }
