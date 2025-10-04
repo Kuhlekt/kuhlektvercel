@@ -1,47 +1,23 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 
-// ROI Calculation Types
-interface SimpleROIInput {
-  currentRevenue: number
-  invoiceVolume: number
-  averageDSO: number
-}
+const supabaseUrl = process.env.SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-interface DetailedROIInput extends SimpleROIInput {
-  collectionCosts: number
-  badDebtRate: number
-  interestRate: number
-}
-
-interface ROIResult {
-  annualSavings: number
-  threeYearROI: number
-  paybackPeriod: number
-  dsoImprovement: number
-  cashFlowImprovement: number
-}
-
-// ClickSend Email Function
-async function sendClickSendEmail(to: string, subject: string, body: string): Promise<void> {
+async function sendClickSendEmail(to: string, subject: string, html: string) {
   const username = process.env.CLICKSEND_USERNAME
   const apiKey = process.env.CLICKSEND_API_KEY
-  const emailAddressId = process.env.CLICKSEND_EMAIL_ADDRESS_ID
+  const fromEmail = process.env.CLICKSEND_FROM_EMAIL || "support@kuhlekt.com"
 
-  if (!username || !apiKey || !emailAddressId) {
+  if (!username || !apiKey) {
     throw new Error("ClickSend credentials not configured")
-  }
-
-  // Parse email_address_id as integer
-  const parsedEmailAddressId = Number.parseInt(emailAddressId, 10)
-
-  if (isNaN(parsedEmailAddressId)) {
-    throw new Error(`Invalid CLICKSEND_EMAIL_ADDRESS_ID - not a number: ${emailAddressId}`)
   }
 
   const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
 
+  // Simplified payload without email_address_id - will use default verified sender
   const payload = {
     to: [
       {
@@ -50,11 +26,11 @@ async function sendClickSendEmail(to: string, subject: string, body: string): Pr
       },
     ],
     from: {
-      email_address_id: parsedEmailAddressId,
+      email_address: fromEmail,
       name: "Kuhlekt",
     },
     subject: subject,
-    body: body,
+    body: html,
   }
 
   console.log("ClickSend payload:", JSON.stringify(payload, null, 2))
@@ -68,170 +44,75 @@ async function sendClickSendEmail(to: string, subject: string, body: string): Pr
     body: JSON.stringify(payload),
   })
 
-  const responseData = await response.json()
-
   if (!response.ok) {
-    console.error("ClickSend error:", responseData)
-    throw new Error(
-      `fetch to https://rest.clicksend.com/v3/email/send failed with status ${response.status} and body: ${JSON.stringify(responseData)}`,
-    )
+    const errorText = await response.text()
+    console.error("ClickSend error:", errorText)
+    throw new Error(`ClickSend API error: ${response.status} - ${errorText}`)
   }
 
-  console.log("ClickSend success:", responseData)
+  return await response.json()
 }
 
-// Simple ROI Calculation
-export async function calculateSimpleROI(input: SimpleROIInput): Promise<ROIResult> {
-  const { currentRevenue, invoiceVolume, averageDSO } = input
-
-  // Assumptions for simple calculation
-  const targetDSO = Math.max(averageDSO * 0.7, 30) // 30% improvement
-  const dsoReduction = averageDSO - targetDSO
-  const dailyRevenue = currentRevenue / 365
-  const cashFlowImprovement = dailyRevenue * dsoReduction
-
-  // Annual savings calculation
-  const interestRate = 0.06 // 6% cost of capital
-  const annualSavings = cashFlowImprovement * interestRate
-
-  // Implementation cost estimate (simplified)
-  const implementationCost = invoiceVolume * 2 // $2 per invoice setup
-
-  const paybackPeriod = implementationCost / annualSavings
-  const threeYearROI = ((annualSavings * 3 - implementationCost) / implementationCost) * 100
-
-  return {
-    annualSavings: Math.round(annualSavings),
-    threeYearROI: Math.round(threeYearROI),
-    paybackPeriod: Math.round(paybackPeriod * 10) / 10,
-    dsoImprovement: Math.round(dsoReduction),
-    cashFlowImprovement: Math.round(cashFlowImprovement),
-  }
-}
-
-// Detailed ROI Calculation
-export async function calculateDetailedROI(input: DetailedROIInput): Promise<ROIResult> {
-  const { currentRevenue, invoiceVolume, averageDSO, collectionCosts, badDebtRate, interestRate } = input
-
-  // DSO improvement
-  const targetDSO = Math.max(averageDSO * 0.7, 30)
-  const dsoReduction = averageDSO - targetDSO
-  const dailyRevenue = currentRevenue / 365
-  const cashFlowImprovement = dailyRevenue * dsoReduction
-
-  // Collection cost savings (50% reduction in manual work)
-  const collectionSavings = collectionCosts * 0.5
-
-  // Bad debt reduction (30% improvement)
-  const badDebtSavings = currentRevenue * badDebtRate * 0.3
-
-  // Interest savings from improved cash flow
-  const interestSavings = cashFlowImprovement * interestRate
-
-  // Total annual savings
-  const annualSavings = collectionSavings + badDebtSavings + interestSavings
-
-  // Implementation cost (more detailed)
-  const setupCost = 5000
-  const perInvoiceCost = invoiceVolume * 2
-  const implementationCost = setupCost + perInvoiceCost
-
-  const paybackPeriod = implementationCost / annualSavings
-  const threeYearROI = ((annualSavings * 3 - implementationCost) / implementationCost) * 100
-
-  return {
-    annualSavings: Math.round(annualSavings),
-    threeYearROI: Math.round(threeYearROI),
-    paybackPeriod: Math.round(paybackPeriod * 10) / 10,
-    dsoImprovement: Math.round(dsoReduction),
-    cashFlowImprovement: Math.round(cashFlowImprovement),
-  }
-}
-
-// Generate Verification Code
-export async function generateVerificationCode(
-  email: string,
-): Promise<{ success: boolean; code?: string; error?: string }> {
+export async function generateVerificationCode(email: string) {
   try {
-    const supabase = await createClient()
-
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Store in database
+    // Store in Supabase
     const { error: dbError } = await supabase.from("verification_codes").insert({
       email,
       code,
-      expires_at: expiresAt.toISOString(),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       used: false,
     })
 
     if (dbError) {
       console.error("Database error:", dbError)
-      throw new Error(`Database error: ${dbError.message}`)
+      throw new Error("Failed to store verification code")
     }
 
     // Send email via ClickSend
-    try {
-      await sendClickSendEmail(
-        email,
-        "Your Kuhlekt ROI Calculator Verification Code",
-        `
-          <html>
-            <head>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #0066cc; color: white; padding: 20px; text-align: center; }
-                .content { padding: 30px; background-color: #f9f9f9; }
-                .code { font-size: 32px; font-weight: bold; color: #0066cc; text-align: center; padding: 20px; background-color: white; border: 2px solid #0066cc; border-radius: 5px; margin: 20px 0; }
-                .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>Kuhlekt ROI Calculator</h1>
-                </div>
-                <div class="content">
-                  <p>Thank you for your interest in Kuhlekt's AR automation solutions!</p>
-                  <p>Your verification code is:</p>
-                  <div class="code">${code}</div>
-                  <p>This code will expire in 10 minutes.</p>
-                  <p>If you didn't request this code, please ignore this email.</p>
-                </div>
-                <div class="footer">
-                  <p>&copy; ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-                </div>
-              </div>
-            </body>
-          </html>
-        `,
-      )
-    } catch (emailError) {
-      console.error("Email sending error:", emailError)
-      // Still return success with the code for testing
-      console.log("Verification code (email failed):", code)
-    }
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .code { font-size: 32px; font-weight: bold; color: #0066cc; letter-spacing: 5px; text-align: center; padding: 20px; background: #f5f5f5; border-radius: 5px; margin: 20px 0; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>Your ROI Calculator Verification Code</h2>
+            <p>Please use the following code to verify your email and receive your ROI calculation results:</p>
+            <div class="code">${code}</div>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this code, please ignore this email.</p>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
 
-    return { success: true, code }
+    await sendClickSendEmail(email, "Your Kuhlekt ROI Calculator Verification Code", emailHtml)
+    console.log("Verification email sent successfully to:", email)
+
+    return { success: true }
   } catch (error) {
     console.error("Error generating verification code:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw error
   }
 }
 
-// Verify Code
-export async function verifyCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyCode(email: string, code: string) {
   try {
-    const supabase = await createClient()
-
-    // Find valid code
-    const { data, error: fetchError } = await supabase
+    // Find the most recent unused code for this email
+    const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
       .eq("email", email)
@@ -242,144 +123,114 @@ export async function verifyCode(email: string, code: string): Promise<{ success
       .limit(1)
       .single()
 
-    if (fetchError || !data) {
-      return { success: false, error: "Invalid or expired code" }
+    if (error || !data) {
+      return { success: false, error: "Invalid or expired verification code" }
     }
 
-    // Mark as used
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
-
-    if (updateError) {
-      console.error("Error marking code as used:", updateError)
-      return { success: false, error: "Failed to verify code" }
-    }
+    // Mark code as used
+    await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
 
     return { success: true }
   } catch (error) {
     console.error("Error verifying code:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    return { success: false, error: "Failed to verify code" }
   }
 }
 
-// Send ROI Email
-export async function sendROIEmail(
-  email: string,
-  results: ROIResult,
-  input: SimpleROIInput | DetailedROIInput,
-): Promise<{ success: boolean; error?: string }> {
+export async function sendROIReport(email: string, pdfBase64: string) {
   try {
-    const isDetailed = "collectionCosts" in input
-
-    const emailBody = `
+    const emailHtml = `
+      <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8">
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #0066cc; color: white; padding: 20px; text-align: center; }
-            .content { padding: 30px; background-color: #f9f9f9; }
-            .results { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
-            .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-            .metric-label { font-weight: bold; }
-            .metric-value { color: #0066cc; font-weight: bold; }
-            .cta { text-align: center; margin: 30px 0; }
-            .button { display: inline-block; padding: 15px 30px; background-color: #0066cc; color: white; text-decoration: none; border-radius: 5px; }
-            .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+            .header { background: #0066cc; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+            .button { display: inline-block; padding: 12px 24px; background: #0066cc; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Your Kuhlekt ROI Analysis</h1>
+              <h1>Your ROI Calculation Results</h1>
             </div>
             <div class="content">
               <p>Thank you for using the Kuhlekt ROI Calculator!</p>
-              <p>Based on your ${isDetailed ? "detailed" : "simple"} analysis, here are your potential savings with Kuhlekt's AR automation:</p>
-              
-              <div class="results">
-                <div class="metric">
-                  <span class="metric-label">Annual Savings:</span>
-                  <span class="metric-value">$${results.annualSavings.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">3-Year ROI:</span>
-                  <span class="metric-value">${results.threeYearROI.toLocaleString()}%</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Payback Period:</span>
-                  <span class="metric-value">${results.paybackPeriod} months</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">DSO Improvement:</span>
-                  <span class="metric-value">${results.dsoImprovement} days</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Cash Flow Improvement:</span>
-                  <span class="metric-value">$${results.cashFlowImprovement.toLocaleString()}</span>
-                </div>
+              <p>Your detailed ROI report is attached to this email as a PDF document.</p>
+              <p>The report includes:</p>
+              <ul>
+                <li>Your current accounts receivable metrics</li>
+                <li>Potential savings with automation</li>
+                <li>Projected return on investment</li>
+                <li>Key recommendations for improvement</li>
+              </ul>
+              <p>If you have any questions about your results or would like to discuss how Kuhlekt can help improve your accounts receivable process, please don't hesitate to contact us.</p>
+              <a href="https://kuhlekt.com/contact" class="button">Contact Us</a>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
+                <p>This email was sent to ${email} because you requested an ROI calculation.</p>
               </div>
-
-              ${
-                isDetailed
-                  ? `
-              <h3>Your Input Data:</h3>
-              <div class="results">
-                <div class="metric">
-                  <span class="metric-label">Annual Revenue:</span>
-                  <span class="metric-value">$${input.currentRevenue.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Invoice Volume:</span>
-                  <span class="metric-value">${input.invoiceVolume.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Average DSO:</span>
-                  <span class="metric-value">${input.averageDSO} days</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Collection Costs:</span>
-                  <span class="metric-value">$${(input as DetailedROIInput).collectionCosts.toLocaleString()}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Bad Debt Rate:</span>
-                  <span class="metric-value">${((input as DetailedROIInput).badDebtRate * 100).toFixed(1)}%</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Interest Rate:</span>
-                  <span class="metric-value">${((input as DetailedROIInput).interestRate * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-              `
-                  : ""
-              }
-
-              <div class="cta">
-                <p>Ready to transform your accounts receivable process?</p>
-                <a href="https://kuhlekt.com/demo" class="button">Schedule a Demo</a>
-              </div>
-
-              <p>Our team is ready to show you how Kuhlekt can help your business achieve these results and more.</p>
-            </div>
-            <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-              <p>Questions? Contact us at support@kuhlekt.com</p>
             </div>
           </div>
         </body>
       </html>
     `
 
-    await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
+    const username = process.env.CLICKSEND_USERNAME
+    const apiKey = process.env.CLICKSEND_API_KEY
+    const fromEmail = process.env.CLICKSEND_FROM_EMAIL || "support@kuhlekt.com"
+
+    if (!username || !apiKey) {
+      throw new Error("ClickSend credentials not configured")
+    }
+
+    const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
+
+    const payload = {
+      to: [
+        {
+          email: email,
+          name: email.split("@")[0],
+        },
+      ],
+      from: {
+        email_address: fromEmail,
+        name: "Kuhlekt",
+      },
+      subject: "Your Kuhlekt ROI Calculator Results",
+      body: emailHtml,
+      attachments: [
+        {
+          content: pdfBase64,
+          type: "application/pdf",
+          filename: "kuhlekt-roi-report.pdf",
+          disposition: "attachment",
+        },
+      ],
+    }
+
+    const response = await fetch("https://rest.clicksend.com/v3/email/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${auth}`,
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("ClickSend error:", errorText)
+      throw new Error(`Failed to send ROI report: ${response.status}`)
+    }
 
     return { success: true }
   } catch (error) {
-    console.error("Error sending ROI email:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    console.error("Error sending ROI report:", error)
+    throw error
   }
 }
