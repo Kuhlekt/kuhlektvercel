@@ -9,6 +9,15 @@ const sesClient = new SESClient({
   },
 })
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
 export async function POST(request: Request) {
   try {
     const { name, email, company, calculatorType, results, inputs } = await request.json()
@@ -22,79 +31,54 @@ export async function POST(request: Request) {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>ROI Calculator Results</title>
           </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 0;">
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
               <tr>
                 <td align="center">
-                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
-                      <td style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 40px; text-align: center;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Your ROI Analysis Results</h1>
+                      <td style="background-color: #1e40af; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Your ROI Calculation Results</h1>
                       </td>
                     </tr>
                     <tr>
-                      <td style="padding: 40px;">
-                        <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px;">Dear ${name},</p>
-                        <p style="margin: 0 0 30px 0; color: #333333; font-size: 16px; line-height: 24px;">
-                          Thank you for using the Kuhlekt ROI Calculator. Here are your personalized results:
-                        </p>
+                      <td style="padding: 40px 30px;">
+                        <h2 style="color: #1e40af; margin: 0 0 20px;">Hi ${name},</h2>
+                        <p style="font-size: 16px; color: #333333; margin: 0 0 30px;">Thank you for using our ROI calculator. Here are your results:</p>
                         
-                        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; padding: 30px; margin: 30px 0; text-align: center;">
-                          <div style="color: #0891b2; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
-                            Estimated Annual Savings
-                          </div>
-                          <div style="color: #0891b2; font-size: 48px; font-weight: bold; margin: 10px 0;">
-                            $${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </div>
+                        <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 30px;">
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Current DSO</td>
+                            <td style="text-align: right;">${results.currentDSO} days</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">New DSO</td>
+                            <td style="text-align: right;">${results.newDSO.toFixed(1)} days</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">DSO Improvement</td>
+                            <td style="text-align: right;">${results.dsoImprovement}%</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">Cash Released</td>
+                            <td style="text-align: right; color: #16a34a; font-weight: bold;">${formatCurrency(results.cashReleased)}</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Annual Savings</td>
+                            <td style="text-align: right; color: #16a34a; font-weight: bold;">${formatCurrency(results.annualSavings)}</td>
+                          </tr>
+                        </table>
+
+                        <p style="font-size: 14px; color: #666666; margin: 20px 0;">Want to learn more about how Kuhlekt can help improve your accounts receivable process?</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" style="display: inline-block; background-color: #1e40af; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 4px; font-weight: bold;">Schedule a Demo</a>
                         </div>
-
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
-                          <tr>
-                            <td style="padding: 20px; background-color: #f8f9fa; border-radius: 8px; width: 48%;">
-                              <div style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">Current Cash Tied Up</div>
-                              <div style="color: #111827; font-size: 24px; font-weight: bold;">
-                                $${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                            <td style="width: 4%;"></td>
-                            <td style="padding: 20px; background-color: #f0fdf4; border-radius: 8px; width: 48%;">
-                              <div style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">Cash Released</div>
-                              <div style="color: #16a34a; font-size: 24px; font-weight: bold;">
-                                $${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                          </tr>
-                        </table>
-
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
-                          <tr>
-                            <td style="padding: 20px; background-color: #f8f9fa; border-radius: 8px; width: 48%;">
-                              <div style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">Current DSO</div>
-                              <div style="color: #111827; font-size: 24px; font-weight: bold;">${inputs.currentDSO} days</div>
-                            </td>
-                            <td style="width: 4%;"></td>
-                            <td style="padding: 20px; background-color: #f0f9ff; border-radius: 8px; width: 48%;">
-                              <div style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">New DSO</div>
-                              <div style="color: #0891b2; font-size: 24px; font-weight: bold;">${results.newDSO?.toFixed(0)} days</div>
-                            </td>
-                          </tr>
-                        </table>
-
-                        <p style="margin: 30px 0 20px 0; color: #333333; font-size: 16px; line-height: 24px;">
-                          These results demonstrate the potential financial impact of implementing Kuhlekt's automated accounts receivable solution at ${company}.
-                        </p>
                       </td>
                     </tr>
                     <tr>
-                      <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                        <p style="margin: 0 0 15px 0; color: #333333; font-size: 16px; font-weight: bold;">
-                          Ready to unlock these savings?
-                        </p>
-                        <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                          © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                        </p>
+                      <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="font-size: 12px; color: #999999; margin: 0;">© 2025 Kuhlekt. All rights reserved.</p>
                       </td>
                     </tr>
                   </table>
@@ -111,91 +95,95 @@ export async function POST(request: Request) {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Detailed ROI Analysis</title>
           </head>
-          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 0;">
+          <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
               <tr>
                 <td align="center">
-                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
-                      <td style="background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); padding: 40px; text-align: center;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Detailed ROI Analysis</h1>
+                      <td style="background-color: #1e40af; padding: 30px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Your Detailed ROI Analysis</h1>
                       </td>
                     </tr>
                     <tr>
-                      <td style="padding: 40px;">
-                        <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px;">Dear ${name},</p>
-                        <p style="margin: 0 0 30px 0; color: #333333; font-size: 16px; line-height: 24px;">
-                          Here is your comprehensive ROI analysis for ${company}:
-                        </p>
+                      <td style="padding: 40px 30px;">
+                        <h2 style="color: #1e40af; margin: 0 0 20px;">Hi ${name},</h2>
+                        <p style="font-size: 16px; color: #333333; margin: 0 0 30px;">Thank you for using our detailed ROI calculator. Here's your comprehensive analysis:</p>
                         
-                        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; padding: 30px; margin: 30px 0; text-align: center;">
-                          <div style="color: #0891b2; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
-                            Total Annual Benefit
-                          </div>
-                          <div style="color: #0891b2; font-size: 48px; font-weight: bold; margin: 10px 0;">
-                            $${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </div>
-                          <div style="color: #6b7280; font-size: 14px; margin-top: 15px;">
-                            ROI: <strong>${results.roi?.toFixed(0)}%</strong> | Payback: <strong>${results.paybackMonths?.toFixed(1)} months</strong>
-                          </div>
+                        <h3 style="color: #1e40af; margin: 30px 0 15px;">Investment Summary</h3>
+                        <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 30px;">
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Implementation Cost</td>
+                            <td style="text-align: right;">${formatCurrency(results.implementationCost)}</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">Annual Cost</td>
+                            <td style="text-align: right;">${formatCurrency(results.annualCost)}</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Total First Year Cost</td>
+                            <td style="text-align: right; font-weight: bold;">${formatCurrency(results.totalFirstYearCost)}</td>
+                          </tr>
+                        </table>
+
+                        <h3 style="color: #1e40af; margin: 30px 0 15px;">Annual Benefits</h3>
+                        <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 30px;">
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Labour Cost Savings</td>
+                            <td style="text-align: right; color: #16a34a;">${formatCurrency(results.labourCostSavings)}</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">Interest Savings</td>
+                            <td style="text-align: right; color: #16a34a;">${formatCurrency(results.interestSavings)}</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Bad Debt Reduction</td>
+                            <td style="text-align: right; color: #16a34a;">${formatCurrency(results.badDebtReduction)}</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">Working Capital Released</td>
+                            <td style="text-align: right; color: #16a34a;">${formatCurrency(results.workingCapitalReleased)}</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333; font-size: 16px;">Total Annual Benefit</td>
+                            <td style="text-align: right; color: #16a34a; font-weight: bold; font-size: 16px;">${formatCurrency(results.totalAnnualBenefit)}</td>
+                          </tr>
+                        </table>
+
+                        <h3 style="color: #1e40af; margin: 30px 0 15px;">ROI Metrics</h3>
+                        <table width="100%" cellpadding="10" cellspacing="0" style="border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 30px;">
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">DSO Reduction</td>
+                            <td style="text-align: right;">${results.dsoReductionDays.toFixed(1)} days</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333;">New DSO</td>
+                            <td style="text-align: right;">${results.newDSODays.toFixed(1)} days</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Net Annual Benefit</td>
+                            <td style="text-align: right; color: #16a34a; font-weight: bold;">${formatCurrency(results.netAnnualBenefit)}</td>
+                          </tr>
+                          <tr>
+                            <td style="font-weight: bold; color: #333; font-size: 18px;">ROI</td>
+                            <td style="text-align: right; color: #16a34a; font-weight: bold; font-size: 18px;">${results.roi.toFixed(1)}%</td>
+                          </tr>
+                          <tr style="background-color: #f8f9fa;">
+                            <td style="font-weight: bold; color: #333;">Payback Period</td>
+                            <td style="text-align: right; font-weight: bold;">${results.paybackMonths.toFixed(1)} months</td>
+                          </tr>
+                        </table>
+
+                        <p style="font-size: 14px; color: #666666; margin: 20px 0;">Ready to achieve these results? Let's discuss how Kuhlekt can transform your accounts receivable process.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" style="display: inline-block; background-color: #1e40af; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 4px; font-weight: bold;">Schedule a Demo</a>
                         </div>
-
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
-                          <tr>
-                            <td style="padding: 15px; background-color: #f8f9fa; border-radius: 8px; width: 31%; text-align: center;">
-                              <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">DSO Improvement</div>
-                              <div style="color: #111827; font-size: 20px; font-weight: bold;">${results.dsoReductionDays?.toFixed(0)} days</div>
-                            </td>
-                            <td style="width: 3.5%;"></td>
-                            <td style="padding: 15px; background-color: #f0fdf4; border-radius: 8px; width: 31%; text-align: center;">
-                              <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Working Capital</div>
-                              <div style="color: #16a34a; font-size: 20px; font-weight: bold;">
-                                $${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                            <td style="width: 3.5%;"></td>
-                            <td style="padding: 15px; background-color: #f0fdf4; border-radius: 8px; width: 31%; text-align: center;">
-                              <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Interest Savings</div>
-                              <div style="color: #16a34a; font-size: 20px; font-weight: bold;">
-                                $${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                          </tr>
-                        </table>
-
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
-                          <tr>
-                            <td style="padding: 15px; background-color: #f0fdf4; border-radius: 8px; width: 48%; text-align: center;">
-                              <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Labour Savings</div>
-                              <div style="color: #16a34a; font-size: 20px; font-weight: bold;">
-                                $${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                            <td style="width: 4%;"></td>
-                            <td style="padding: 15px; background-color: #f0fdf4; border-radius: 8px; width: 48%; text-align: center;">
-                              <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Bad Debt Reduction</div>
-                              <div style="color: #16a34a; font-size: 20px; font-weight: bold;">
-                                $${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </td>
-                          </tr>
-                        </table>
-
-                        <p style="margin: 30px 0 20px 0; color: #333333; font-size: 16px; line-height: 24px;">
-                          This comprehensive analysis shows the significant financial benefits Kuhlekt can deliver to ${company}.
-                        </p>
                       </td>
                     </tr>
                     <tr>
-                      <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-                        <p style="margin: 0 0 15px 0; color: #333333; font-size: 16px; font-weight: bold;">
-                          Ready to transform your accounts receivable?
-                        </p>
-                        <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                          © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-                        </p>
+                      <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="font-size: 12px; color: #999999; margin: 0;">© 2025 Kuhlekt. All rights reserved.</p>
                       </td>
                     </tr>
                   </table>
@@ -214,17 +202,20 @@ export async function POST(request: Request) {
       },
       Message: {
         Subject: {
-          Data: `Your Kuhlekt ROI Analysis Results - ${company}`,
+          Data: `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculation Results`,
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: htmlContent,
+            Charset: "UTF-8",
           },
         },
       },
     }
 
-    await sesClient.send(new SendEmailCommand(emailParams))
+    const command = new SendEmailCommand(emailParams)
+    await sesClient.send(command)
 
     return NextResponse.json({ success: true })
   } catch (error) {

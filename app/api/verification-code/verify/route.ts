@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Email and code are required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     // Get the verification code
     const { data, error } = await supabase
@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     }
 
     // Check if expired
-    if (new Date(data.expires_at) < new Date()) {
+    const expiresAt = new Date(data.expires_at)
+    if (expiresAt < new Date()) {
       return NextResponse.json({ success: false, error: "Verification code has expired" }, { status: 400 })
     }
 
