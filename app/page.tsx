@@ -82,14 +82,14 @@ export default function HomePage() {
 
             <div className="relative">
               <Image
-                src="/images/v200-businesswoman-hero.png"
+                src="/images/businesswoman.png"
                 alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
                 width={500}
                 height={350}
                 className="rounded-lg w-full h-auto max-w-lg"
               />
 
-              <Card className="absolute bottom-6 left-6 w-64 bg-white shadow-xl z-20 border-0">
+              <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-1 mb-3">
                     {[...Array(5)].map((_, i) => (

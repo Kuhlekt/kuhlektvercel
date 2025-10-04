@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
+import { useState } from "react"
 
 interface ROIReportPDFProps {
   calculatorType: "simple" | "detailed"
@@ -10,166 +11,284 @@ interface ROIReportPDFProps {
 }
 
 export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFProps) {
-  const generatePDF = () => {
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) return
+  const [isGenerating, setIsGenerating] = useState(false)
 
-    const htmlContent = `
+  const getImageAsBase64 = async (imagePath: string): Promise<string> => {
+    try {
+      const response = await fetch(imagePath)
+      const blob = await response.blob()
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } catch (error) {
+      console.error("Error loading image:", error)
+      return ""
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    setIsGenerating(true)
+
+    try {
+      const logoBase64 = await getImageAsBase64("/images/kuhlekt-logo-tm.png")
+
+      const printWindow = window.open("", "_blank")
+      if (!printWindow) {
+        setIsGenerating(false)
+        return
+      }
+
+      const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <meta charset="utf-8">
-          <title>Kuhlekt ROI Analysis Report</title>
+          <meta charset="UTF-8">
+          <title>ROI Calculator Report - Kuhlekt</title>
           <style>
-            @page {
-              size: A4;
-              margin: 20mm;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
+            * {
               margin: 0;
               padding: 0;
+              box-sizing: border-box;
             }
+            
+            body {
+              font-family: 'Arial', sans-serif;
+              line-height: 1.6;
+              color: #1f2937;
+              background: white;
+              padding: 40px;
+            }
+            
             .page {
               page-break-after: always;
-              padding: 20px;
             }
+            
             .page:last-child {
               page-break-after: auto;
             }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
+            
+            .container {
+              max-width: 900px;
+              margin: 0 auto;
+            }
+            
+            .logo-container {
+              text-align: center;
               margin-bottom: 30px;
               padding-bottom: 20px;
               border-bottom: 3px solid #0891b2;
             }
+            
             .logo {
-              width: 150px;
+              max-width: 250px;
               height: auto;
             }
-            .report-title {
-              text-align: right;
+            
+            .header {
+              text-align: center;
+              margin-bottom: 40px;
             }
-            .report-title h1 {
-              margin: 0;
-              font-size: 24px;
+            
+            .header h1 {
               color: #0891b2;
+              font-size: 32px;
+              margin-bottom: 10px;
             }
-            .report-title p {
-              margin: 5px 0 0 0;
+            
+            .header .subtitle {
+              color: #6b7280;
+              font-size: 18px;
+            }
+            
+            .summary-box {
+              background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+              border: 2px solid #0891b2;
+              border-radius: 12px;
+              padding: 30px;
+              margin-bottom: 30px;
+              text-align: center;
+            }
+            
+            .summary-box .label {
+              color: #0e7490;
               font-size: 14px;
-              color: #666;
+              font-weight: 600;
+              text-transform: uppercase;
+              margin-bottom: 10px;
             }
+            
+            .summary-box .value {
+              color: #0891b2;
+              font-size: 48px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            
+            .summary-box .description {
+              color: #0e7490;
+              font-size: 14px;
+            }
+            
             .section {
               margin-bottom: 30px;
+              page-break-inside: avoid;
             }
-            .section-title {
+            
+            .section-header {
+              background: #0891b2;
+              color: white;
+              padding: 12px 20px;
+              border-radius: 6px;
               font-size: 18px;
               font-weight: bold;
-              color: #0891b2;
               margin-bottom: 15px;
-              padding-bottom: 10px;
-              border-bottom: 2px solid #e5e7eb;
             }
-            .highlight-box {
-              background: linear-gradient(to bottom right, #ecfeff, #dbeafe);
-              border: 2px solid #0891b2;
-              border-radius: 10px;
-              padding: 20px;
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            .highlight-box h2 {
-              font-size: 14px;
-              color: #666;
-              margin: 0 0 10px 0;
-            }
-            .highlight-box .value {
-              font-size: 42px;
-              font-weight: bold;
-              color: #0891b2;
-              margin: 0;
-            }
+            
             .metrics-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
+              gap: 20px;
               margin-bottom: 20px;
             }
+            
             .metric-card {
               border: 1px solid #e5e7eb;
               border-radius: 8px;
-              padding: 15px;
+              padding: 20px;
+              background: white;
             }
-            .metric-label {
-              font-size: 12px;
-              color: #666;
+            
+            .metric-card .metric-label {
+              color: #6b7280;
+              font-size: 14px;
               margin-bottom: 8px;
             }
-            .metric-value {
-              font-size: 24px;
-              font-weight: bold;
+            
+            .metric-card .metric-value {
               color: #0891b2;
+              font-size: 28px;
+              font-weight: bold;
             }
-            .metric-value.positive {
-              color: #16a34a;
+            
+            .metric-card .metric-note {
+              color: #9ca3af;
+              font-size: 12px;
+              margin-top: 4px;
             }
-            .inputs-table {
+            
+            .data-table {
               width: 100%;
               border-collapse: collapse;
               margin-top: 15px;
             }
-            .inputs-table th,
-            .inputs-table td {
-              padding: 10px;
+            
+            .data-table th {
+              background: #f3f4f6;
+              color: #374151;
+              padding: 12px;
               text-align: left;
+              font-weight: 600;
+              border-bottom: 2px solid #0891b2;
+            }
+            
+            .data-table td {
+              padding: 12px;
               border-bottom: 1px solid #e5e7eb;
             }
-            .inputs-table th {
-              background-color: #f9fafb;
-              font-weight: bold;
-              color: #0891b2;
+            
+            .data-table tr:last-child td {
+              border-bottom: none;
             }
+            
+            .next-steps {
+              background: #f9fafb;
+              border-left: 4px solid #0891b2;
+              padding: 20px;
+              margin-top: 30px;
+              page-break-inside: avoid;
+            }
+            
+            .next-steps h3 {
+              color: #0891b2;
+              margin-bottom: 15px;
+            }
+            
+            .next-steps ol {
+              margin-left: 20px;
+            }
+            
+            .next-steps li {
+              margin-bottom: 8px;
+              color: #4b5563;
+            }
+            
             .footer {
               margin-top: 40px;
               padding-top: 20px;
               border-top: 2px solid #e5e7eb;
-              font-size: 12px;
-              color: #666;
               text-align: center;
+              color: #6b7280;
+              font-size: 14px;
             }
+            
+            .footer strong {
+              color: #0891b2;
+            }
+            
             @media print {
               body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                padding: 20px;
+              }
+              
+              .summary-box {
+                page-break-inside: avoid;
+              }
+              
+              .section {
+                page-break-inside: avoid;
+              }
+              
+              .page {
+                page-break-after: always;
+              }
+              
+              .page:last-child {
+                page-break-after: auto;
               }
             }
           </style>
         </head>
         <body>
-           Page 1 
+           Page 1: Results 
           <div class="page">
-            <div class="header">
-              <img src="/images/kuhlekt-logo-tm.png" alt="Kuhlekt Logo" class="logo" />
-              <div class="report-title">
-                <h1>ROI Analysis Report</h1>
-                <p>${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+            <div class="container">
+              ${
+                logoBase64
+                  ? `<div class="logo-container">
+                <img src="${logoBase64}" alt="Kuhlekt" class="logo" />
+              </div>`
+                  : '<div class="logo-container"><h2 style="color: #0891b2;">Kuhlekt</h2></div>'
+              }
+              
+              <div class="header">
+                <h1>${calculatorType === "simple" ? "Simple ROI Analysis Report" : "Detailed ROI Analysis Report"}</h1>
+                <div class="subtitle">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
               </div>
-            </div>
-
-            <div class="section">
+              
               ${
                 calculatorType === "simple"
                   ? `
-                <div class="highlight-box">
-                  <h2>Estimated Annual Savings</h2>
-                  <p class="value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                </div>
-
+              <div class="summary-box">
+                <div class="label">Estimated Annual Savings</div>
+                <div class="value">$${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div class="description">Based on ${results.dsoImprovement?.toFixed(0)}% DSO improvement and ${results.costOfCapital?.toFixed(0)}% cost of capital</div>
+              </div>
+              
+              <div class="section">
+                <div class="section-header">Key Results Summary</div>
                 <div class="metrics-grid">
                   <div class="metric-card">
                     <div class="metric-label">Current Cash Tied Up</div>
@@ -177,210 +296,243 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   </div>
                   <div class="metric-card">
                     <div class="metric-label">Cash Released</div>
-                    <div class="metric-value positive">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-value">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-note">From faster collections</div>
                   </div>
                   <div class="metric-card">
                     <div class="metric-label">Current DSO</div>
-                    <div class="metric-value">${inputs.currentDSO} days</div>
+                    <div class="metric-value">${results.currentDSO?.toFixed(0)} days</div>
                   </div>
                   <div class="metric-card">
-                    <div class="metric-label">New DSO</div>
-                    <div class="metric-value positive">${results.newDSO?.toFixed(0)} days</div>
+                    <div class="metric-label">Projected New DSO</div>
+                    <div class="metric-value">${results.newDSO?.toFixed(0)} days</div>
+                    <div class="metric-note">${results.dsoImprovement?.toFixed(0)}% improvement</div>
                   </div>
                 </div>
+              </div>
               `
                   : `
-                <div class="highlight-box">
-                  <h2>Total Annual Benefit</h2>
-                  <p class="value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                  <p style="font-size: 14px; color: #666; margin-top: 10px;">
-                    ROI: ${results.roi?.toFixed(0)}% • Payback: ${results.paybackMonths?.toFixed(1)} months
-                  </p>
-                </div>
-
+              <div class="summary-box">
+                <div class="label">Total Annual Benefit</div>
+                <div class="value">$${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div class="description">ROI: ${results.roi?.toFixed(0)}% | Payback Period: ${results.paybackMonths?.toFixed(1)} months</div>
+              </div>
+              
+              <div class="section">
+                <div class="section-header">Financial Benefits Breakdown</div>
                 <div class="metrics-grid">
                   <div class="metric-card">
-                    <div class="metric-label">DSO Improvement</div>
-                    <div class="metric-value">${results.dsoReductionDays?.toFixed(0)} days</div>
-                  </div>
-                  <div class="metric-card">
                     <div class="metric-label">Working Capital Released</div>
-                    <div class="metric-value positive">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-value">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                   <div class="metric-card">
-                    <div class="metric-label">Interest Savings</div>
-                    <div class="metric-value positive">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-label">Interest Savings (Annual)</div>
+                    <div class="metric-value">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                   <div class="metric-card">
-                    <div class="metric-label">Labour Savings</div>
-                    <div class="metric-value positive">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-label">Labour Cost Savings</div>
+                    <div class="metric-value">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-note">Through automation</div>
                   </div>
                   <div class="metric-card">
                     <div class="metric-label">Bad Debt Reduction</div>
-                    <div class="metric-value positive">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-value">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    <div class="metric-note">50% improvement</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="section">
+                <div class="section-header">DSO Improvement Analysis</div>
+                <div class="metrics-grid">
+                  <div class="metric-card">
+                    <div class="metric-label">Current DSO</div>
+                    <div class="metric-value">${results.currentDSO?.toFixed(0)} days</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="metric-label">Projected New DSO</div>
+                    <div class="metric-value">${results.newDSO?.toFixed(0)} days</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="metric-label">Days Reduced</div>
+                    <div class="metric-value">${results.dsoReductionDays?.toFixed(0)}</div>
                   </div>
                   <div class="metric-card">
                     <div class="metric-label">Return on Investment</div>
-                    <div class="metric-value positive">${results.roi?.toFixed(0)}%</div>
+                    <div class="metric-value">${results.roi?.toFixed(0)}%</div>
+                    <div class="metric-note">Payback: ${results.paybackMonths?.toFixed(1)} months</div>
                   </div>
                 </div>
+              </div>
               `
               }
-            </div>
-
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-              <p>This report was generated using the Kuhlekt ROI Calculator</p>
+              
+              <div class="footer">
+                <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
+                <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
+                <p style="margin-top: 10px; font-size: 12px;">This report is generated based on the inputs provided and represents estimated outcomes. Actual results may vary based on implementation and business-specific factors.</p>
+              </div>
             </div>
           </div>
 
            Page 2: Input Summary 
           <div class="page">
-            <div class="header">
-              <img src="/images/kuhlekt-logo-tm.png" alt="Kuhlekt Logo" class="logo" />
-              <div class="report-title">
+            <div class="container">
+              ${
+                logoBase64
+                  ? `<div class="logo-container">
+                <img src="${logoBase64}" alt="Kuhlekt" class="logo" />
+              </div>`
+                  : '<div class="logo-container"><h2 style="color: #0891b2;">Kuhlekt</h2></div>'
+              }
+              
+              <div class="header">
                 <h1>Input Summary</h1>
-                <p>${calculatorType === "simple" ? "Simple Calculator" : "Detailed Calculator"}</p>
+                <div class="subtitle">${calculatorType === "simple" ? "Simple Calculator" : "Detailed Calculator"}</div>
               </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Your Inputs</div>
-              <table class="inputs-table">
-                <thead>
-                  <tr>
-                    <th>Parameter</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${
-                    calculatorType === "simple"
-                      ? `
+              
+              <div class="section">
+                <div class="section-header">Your Inputs</div>
+                <table class="data-table">
+                  <thead>
                     <tr>
-                      <td>Current DSO</td>
-                      <td>${inputs.currentDSO} days</td>
+                      <th>Parameter</th>
+                      <th>Value</th>
                     </tr>
-                    <tr>
-                      <td>Average Invoice Value</td>
-                      <td>$${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Monthly Invoices</td>
-                      <td>${Number.parseFloat(inputs.monthlyInvoices).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Expected DSO Improvement</td>
-                      <td>${inputs.simpleDSOImprovement}%</td>
-                    </tr>
-                    <tr>
-                      <td>Cost of Capital</td>
-                      <td>${inputs.simpleCostOfCapital}%</td>
-                    </tr>
-                  `
-                      : `
-                    <tr>
-                      <td>Implementation Cost</td>
-                      <td>$${Number.parseFloat(inputs.implementationCost).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Monthly Cost</td>
-                      <td>$${Number.parseFloat(inputs.monthlyCost).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Per Annum Direct Labour Costs</td>
-                      <td>$${Number.parseFloat(inputs.perAnnumDirectLabourCosts).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Interest Type</td>
-                      <td>${inputs.interestType === "loan" ? "Loan Interest" : "Deposit Interest"}</td>
-                    </tr>
-                    <tr>
-                      <td>Interest Rate</td>
-                      <td>${inputs.interestRate}%</td>
-                    </tr>
-                    <tr>
-                      <td>Average Bad Debt</td>
-                      <td>${inputs.averageBadDebt}%</td>
-                    </tr>
-                    <tr>
-                      <td>Current Bad Debts</td>
-                      <td>$${Number.parseFloat(inputs.currentBadDebts).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Labour Savings</td>
-                      <td>${inputs.labourSavings}%</td>
-                    </tr>
-                    <tr>
-                      <td>DSO Improvement</td>
-                      <td>${inputs.dsoImprovement}%</td>
-                    </tr>
-                    <tr>
-                      <td>Current DSO Days</td>
-                      <td>${inputs.currentDSODays} days</td>
-                    </tr>
-                    <tr>
-                      <td>Debtors Balance</td>
-                      <td>$${Number.parseFloat(inputs.debtorsBalance).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Average Payment Terms</td>
-                      <td>${inputs.averagePaymentTerms.replace("net", "Net ")}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Debtors</td>
-                      <td>${Number.parseFloat(inputs.numberOfDebtors).toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Collectors</td>
-                      <td>${inputs.numberOfCollectors}</td>
-                    </tr>
-                    <tr>
-                      <td>Projected Customer Growth</td>
-                      <td>${inputs.projectedCustomerGrowth}%</td>
-                    </tr>
-                  `
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            <div class="section">
-              <div class="section-title">About This Analysis</div>
-              <p>
-                This ROI analysis is based on the inputs you provided and industry benchmarks. 
-                The calculations demonstrate the potential financial benefits of implementing 
-                Kuhlekt's accounts receivable automation platform.
-              </p>
-              <p style="margin-top: 15px;">
-                <strong>Next Steps:</strong> Schedule a personalized demo to see how Kuhlekt 
-                can help you achieve these results and transform your AR process.
-              </p>
-            </div>
-
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Kuhlekt. All rights reserved.</p>
-              <p>Contact us at support@kuhlekt.com or visit www.kuhlekt.com</p>
+                  </thead>
+                  <tbody>
+                    ${
+                      calculatorType === "simple"
+                        ? `
+                      <tr>
+                        <td>Current DSO</td>
+                        <td>${inputs.currentDSO} days</td>
+                      </tr>
+                      <tr>
+                        <td>Average Invoice Value</td>
+                        <td>$${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Monthly Invoices</td>
+                        <td>${Number.parseFloat(inputs.monthlyInvoices).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Expected DSO Improvement</td>
+                        <td>${inputs.simpleDSOImprovement}%</td>
+                      </tr>
+                      <tr>
+                        <td>Cost of Capital</td>
+                        <td>${inputs.simpleCostOfCapital}%</td>
+                      </tr>
+                    `
+                        : `
+                      <tr>
+                        <td>Implementation Cost</td>
+                        <td>$${Number.parseFloat(inputs.implementationCost).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Monthly Cost</td>
+                        <td>$${Number.parseFloat(inputs.monthlyCost).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Per Annum Direct Labour Costs</td>
+                        <td>$${Number.parseFloat(inputs.perAnnumDirectLabourCosts).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Interest Type</td>
+                        <td>${inputs.interestType === "loan" ? "Loan Interest" : "Deposit Interest"}</td>
+                      </tr>
+                      <tr>
+                        <td>Interest Rate</td>
+                        <td>${inputs.interestRate}%</td>
+                      </tr>
+                      <tr>
+                        <td>Average Bad Debt</td>
+                        <td>${inputs.averageBadDebt}%</td>
+                      </tr>
+                      <tr>
+                        <td>Current Bad Debts</td>
+                        <td>$${Number.parseFloat(inputs.currentBadDebts).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Labour Savings</td>
+                        <td>${inputs.labourSavings}%</td>
+                      </tr>
+                      <tr>
+                        <td>DSO Improvement</td>
+                        <td>${inputs.dsoImprovement}%</td>
+                      </tr>
+                      <tr>
+                        <td>Current DSO Days</td>
+                        <td>${inputs.currentDSODays} days</td>
+                      </tr>
+                      <tr>
+                        <td>Debtors Balance</td>
+                        <td>$${Number.parseFloat(inputs.debtorsBalance).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Average Payment Terms</td>
+                        <td>${inputs.averagePaymentTerms.replace("net", "Net ")}</td>
+                      </tr>
+                      <tr>
+                        <td>Number of Debtors</td>
+                        <td>${Number.parseFloat(inputs.numberOfDebtors).toLocaleString()}</td>
+                      </tr>
+                      <tr>
+                        <td>Number of Collectors</td>
+                        <td>${inputs.numberOfCollectors}</td>
+                      </tr>
+                      <tr>
+                        <td>Projected Customer Growth</td>
+                        <td>${inputs.projectedCustomerGrowth}%</td>
+                      </tr>
+                    `
+                    }
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="next-steps">
+                <h3>Recommended Next Steps</h3>
+                <ol>
+                  <li><strong>Schedule a Demo:</strong> See Kuhlekt in action with a personalized demonstration tailored to your business needs.</li>
+                  <li><strong>Review Case Studies:</strong> Learn how similar companies have achieved these results with our platform.</li>
+                  <li><strong>Implementation Planning:</strong> Discuss timeline, resources, and integration with our implementation team.</li>
+                  <li><strong>Pricing Discussion:</strong> Explore pricing options and potential customizations for your organization.</li>
+                  <li><strong>Contact Us:</strong> Reach out to our team at <strong>enquiries@kuhlekt.com</strong> for any questions.</li>
+                </ol>
+              </div>
+              
+              <div class="footer">
+                <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
+                <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
+                <p style="margin-top: 10px; font-size: 12px;">This report is generated based on the inputs provided and represents estimated outcomes. Actual results may vary based on implementation and business-specific factors.</p>
+              </div>
             </div>
           </div>
         </body>
       </html>
     `
 
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
 
-    printWindow.onload = () => {
       setTimeout(() => {
         printWindow.print()
-      }, 250)
+        setIsGenerating(false)
+      }, 500)
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      setIsGenerating(false)
     }
   }
 
   return (
-    <Button onClick={generatePDF} className="w-full bg-cyan-600 hover:bg-cyan-700">
-      <Download className="mr-2 h-4 w-4" />
-      Download PDF Report
-    </Button>
+    <div className="flex justify-center">
+      <Button onClick={handleDownloadPDF} variant="outline" className="gap-2 bg-transparent" disabled={isGenerating}>
+        <Download className="h-4 w-4" />
+        {isGenerating ? "Generating PDF..." : "Download PDF Report"}
+      </Button>
+    </div>
   )
 }

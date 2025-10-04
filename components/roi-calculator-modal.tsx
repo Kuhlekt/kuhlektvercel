@@ -160,8 +160,13 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
     requiredFields.forEach((field) => {
       const value = detailedData[field]
-      if (!value || (typeof value === "string" && Number.parseFloat(value) < 0)) {
+      if (value === "" || value === null || value === undefined) {
         newErrors[field] = "Required"
+      } else if (typeof value === "string") {
+        const numValue = Number.parseFloat(value)
+        if (isNaN(numValue) || numValue < 0) {
+          newErrors[field] = "Must be a valid positive number"
+        }
       }
     })
 
@@ -534,6 +539,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="10000"
                           className={errors.implementationCost ? "border-red-500" : ""}
                         />
+                        {errors.implementationCost && (
+                          <p className="text-sm text-red-600 mt-1">{errors.implementationCost}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Monthly Cost ($) *</Label>
@@ -547,6 +555,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500"
                           className={errors.monthlyCost ? "border-red-500" : ""}
                         />
+                        {errors.monthlyCost && <p className="text-sm text-red-600 mt-1">{errors.monthlyCost}</p>}
                       </div>
                     </div>
                     <div>
@@ -561,6 +570,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         placeholder="150000"
                         className={errors.perAnnumDirectLabourCosts ? "border-red-500" : ""}
                       />
+                      {errors.perAnnumDirectLabourCosts && (
+                        <p className="text-sm text-red-600 mt-1">{errors.perAnnumDirectLabourCosts}</p>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -603,6 +615,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="8.5"
                           className={errors.interestRate ? "border-red-500" : ""}
                         />
+                        {errors.interestRate && <p className="text-sm text-red-600 mt-1">{errors.interestRate}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -629,6 +642,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="50000"
                           className={errors.currentBadDebts ? "border-red-500" : ""}
                         />
+                        {errors.currentBadDebts && (
+                          <p className="text-sm text-red-600 mt-1">{errors.currentBadDebts}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Average Bad Debt (%) *</Label>
@@ -642,6 +658,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="2.5"
                           className={errors.averageBadDebt ? "border-red-500" : ""}
                         />
+                        {errors.averageBadDebt && <p className="text-sm text-red-600 mt-1">{errors.averageBadDebt}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -668,6 +685,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="25"
                           className={errors.dsoImprovement ? "border-red-500" : ""}
                         />
+                        {errors.dsoImprovement && <p className="text-sm text-red-600 mt-1">{errors.dsoImprovement}</p>}
                       </div>
                       <div>
                         <Label>Labour Savings (%) *</Label>
@@ -681,6 +699,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="30"
                           className={errors.labourSavings ? "border-red-500" : ""}
                         />
+                        {errors.labourSavings && <p className="text-sm text-red-600 mt-1">{errors.labourSavings}</p>}
                       </div>
                     </div>
                   </AccordionContent>
@@ -707,6 +726,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="45"
                           className={errors.currentDSODays ? "border-red-500" : ""}
                         />
+                        {errors.currentDSODays && <p className="text-sm text-red-600 mt-1">{errors.currentDSODays}</p>}
                       </div>
                       <div>
                         <Label>Debtors Balance ($) *</Label>
@@ -720,6 +740,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500000"
                           className={errors.debtorsBalance ? "border-red-500" : ""}
                         />
+                        {errors.debtorsBalance && <p className="text-sm text-red-600 mt-1">{errors.debtorsBalance}</p>}
                       </div>
                     </div>
                     <div>
@@ -764,6 +785,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="500"
                           className={errors.numberOfDebtors ? "border-red-500" : ""}
                         />
+                        {errors.numberOfDebtors && (
+                          <p className="text-sm text-red-600 mt-1">{errors.numberOfDebtors}</p>
+                        )}
                       </div>
                       <div>
                         <Label>Number of Collectors *</Label>
@@ -777,6 +801,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                           placeholder="3"
                           className={errors.numberOfCollectors ? "border-red-500" : ""}
                         />
+                        {errors.numberOfCollectors && (
+                          <p className="text-sm text-red-600 mt-1">{errors.numberOfCollectors}</p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -791,6 +818,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                         placeholder="15"
                         className={errors.projectedCustomerGrowth ? "border-red-500" : ""}
                       />
+                      {errors.projectedCustomerGrowth && (
+                        <p className="text-sm text-red-600 mt-1">{errors.projectedCustomerGrowth}</p>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -876,9 +906,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                     value={contactData.company}
                     onChange={(e) => {
                       setContactData({ ...contactData, company: e.target.value })
-                      setErrors({ ...errors, company: "" })
                     }}
-                    placeholder="Acme Corporation"
+                    placeholder="Acme Corporation (Optional)"
                   />
                 </div>
               </div>
