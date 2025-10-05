@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // Remove .single() and handle the array response
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -23,16 +24,25 @@ export async function POST(request: NextRequest) {
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
 
-    if (error || !data) {
-      console.error("[verifyCode] No valid code found:", error)
+    if (error) {
+      console.error("[verifyCode] Database error:", error)
+      return NextResponse.json({ error: "Database error occurred" }, { status: 500 })
+    }
+
+    // Check if we got any results
+    if (!data || data.length === 0) {
+      console.error("[verifyCode] No valid code found")
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 })
     }
 
-    console.log("[verifyCode] Valid code found:", data)
+    const verificationRecord = data[0]
+    console.log("[verifyCode] Valid code found:", verificationRecord)
 
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
+    const { error: updateError } = await supabase
+      .from("verification_codes")
+      .update({ used: true })
+      .eq("id", verificationRecord.id)
 
     if (updateError) {
       console.error("[verifyCode] Error marking code as used:", updateError)
