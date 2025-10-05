@@ -1,254 +1,261 @@
-import { type NextRequest, NextResponse } from "next/server"
-
-async function sendClickSendEmail(to: string, subject: string, body: string) {
-  const username = process.env.CLICKSEND_USERNAME
-  const apiKey = process.env.CLICKSEND_API_KEY
-  const fromEmail = process.env.CLICKSEND_FROM_EMAIL
-
-  if (!username || !apiKey || !fromEmail) {
-    console.error("[ClickSend] Missing credentials:", {
-      username: !!username,
-      apiKey: !!apiKey,
-      fromEmail: !!fromEmail,
-    })
-    throw new Error("ClickSend credentials not configured")
-  }
-
-  const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
-
-  // First, fetch verified email addresses to get the email_address_id
-  const addressesResponse = await fetch("https://rest.clicksend.com/v3/email/addresses", {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!addressesResponse.ok) {
-    const errorText = await addressesResponse.text()
-    console.error("[ClickSend] Failed to fetch email addresses:", errorText)
-    throw new Error(`Failed to fetch email addresses: ${addressesResponse.status}`)
-  }
-
-  const addressesData = await addressesResponse.json()
-  console.log("[ClickSend] Email addresses response:", JSON.stringify(addressesData, null, 2))
-
-  // Find the email address that matches our from email
-  const emailAddress = addressesData.data?.data?.find(
-    (addr: any) => addr.email_address === fromEmail && addr.verified === 1,
-  )
-
-  if (!emailAddress) {
-    console.error("[ClickSend] Email address not found or not verified:", fromEmail)
-    throw new Error(`Email address ${fromEmail} not found or not verified in ClickSend`)
-  }
-
-  const emailAddressId = emailAddress.email_address_id
-
-  console.log("[ClickSend] Using email_address_id:", emailAddressId)
-
-  const payload = {
-    to: [{ email: to, name: to.split("@")[0] }],
-    from: {
-      email_address_id: emailAddressId,
-      name: "Kuhlekt",
-    },
-    subject,
-    body,
-  }
-
-  console.log("[ClickSend] Sending email with payload:", JSON.stringify(payload, null, 2))
-
-  const response = await fetch("https://rest.clicksend.com/v3/email/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error("[ClickSend] Error response:", errorBody)
-    throw new Error(`Failed to send email: ${response.status} - ${errorBody}`)
-  }
-
-  const result = await response.json()
-  console.log("[ClickSend] Email sent successfully:", result)
-  return result
-}
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { sendEmail } from "@/lib/email-service"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[ROI Email] Request received")
     const body = await request.json()
-    const { name, email, company, phone, calculatorType, results, inputs } = body
+    console.log("[ROI Email] Request body:", JSON.stringify(body, null, 2))
 
-    console.log("[sendROIEmail] Request received")
-    console.log("[sendROIEmail] Calculator type:", calculatorType)
-    console.log("[sendROIEmail] Email:", email)
-    console.log("[sendROIEmail] Results:", JSON.stringify(results, null, 2))
+    const { email, calculatorType, results, inputs } = body
 
-    if (!email || !name || !calculatorType || !results) {
-      console.error("[sendROIEmail] Missing required fields:", {
-        email: !!email,
-        name: !!name,
-        calculatorType: !!calculatorType,
-        results: !!results,
-      })
+    console.log("[ROI Email] Calculator type:", calculatorType)
+    console.log("[ROI Email] Sending to email:", email)
+    console.log("[ROI Email] Results:", JSON.stringify(results, null, 2))
+
+    if (!email || !calculatorType || !results) {
+      console.error("[ROI Email] Missing required fields:", { email, calculatorType, results: !!results })
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Format the email body based on calculator type
+    let emailSubject = ""
     let emailBody = ""
 
     if (calculatorType === "simple") {
-      console.log("[sendROIEmail] Building simple calculator email")
+      console.log("[ROI Email] Processing simple calculator email")
+      emailSubject = "Your ROI Calculator Results - Kuhlekt"
       emailBody = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0891b2;">Your ROI Analysis Results</h2>
-              <p>Dear ${name},</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your results:</p>
-              
-              <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0891b2;">Estimated Annual Savings</h3>
-                <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </p>
-              </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your ROI Results</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+    <h1 style="margin: 0; font-size: 28px;">Your Projected ROI</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">Analysis Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+  </div>
 
-              <h3>Key Metrics:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Current DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.currentDSO?.toFixed(0)} days</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">New DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #0891b2;">${results.newDSO?.toFixed(0)} days</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Current Cash Tied Up</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Cash Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+  <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h2 style="color: #0891b2; margin-top: 0;">Key Results</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+      <div style="background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%); padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #84cc16;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 10px;">ROI</div>
+        <div style="font-size: 36px; font-weight: 700; color: #16a34a;">${results.roi?.toFixed(1) || "0.0"}%</div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">Return on Investment</div>
+      </div>
+      
+      <div style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #ef4444;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 10px;">Payback Period</div>
+        <div style="font-size: 36px; font-weight: 700; color: #dc2626;">${results.paybackMonths?.toFixed(1) || "0.0"}</div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">Months</div>
+      </div>
+    </div>
 
-              ${company ? `<p>Company: ${company}</p>` : ""}
-              ${phone ? `<p>Phone: ${phone}</p>` : ""}
-              
-              <p style="margin-top: 30px;">
-                Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
-              </p>
+    <div style="background: #f0f9ff; border-left: 4px solid #0891b2; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+      <h3 style="color: #0e7490; margin-top: 0; font-size: 14px;">Annual Savings</h3>
+      <p style="font-size: 13px; color: #164e63; margin: 0;">
+        Total annual benefit: <strong style="color: #0891b2;">$${(results.totalAnnualBenefit || 0).toLocaleString()}</strong>
+      </p>
+    </div>
 
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-              <p style="font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-              </p>
-            </div>
-          </body>
-        </html>
-      `
+    <div style="background: #f0f9ff; border-left: 4px solid #0891b2; padding: 15px; border-radius: 6px;">
+      <h3 style="color: #0e7490; margin-top: 0; font-size: 14px;">Working Capital Released</h3>
+      <p style="font-size: 13px; color: #164e63; margin: 0;">
+        One-time cash flow improvement: <strong style="color: #0891b2;">$${(results.workingCapitalReleased || 0).toLocaleString()}</strong>
+      </p>
+    </div>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); border: 2px solid #0891b2; border-radius: 10px; padding: 20px; margin-bottom: 30px;">
+    <h3 style="color: #0e7490; margin-top: 0;">What This Means for Your Business</h3>
+    <p style="font-size: 13px; color: #164e63; line-height: 1.8;">
+      By implementing the Kuhlekt invoice-to-cash platform, your organization can achieve a 
+      <strong style="color: #0891b2;">${results.roi?.toFixed(0) || "0"}% ROI</strong> within 
+      <strong style="color: #0891b2;">${results.paybackMonths?.toFixed(1) || "0"} months</strong>. 
+      The total annual benefit of <strong style="color: #0891b2;">$${(results.totalAnnualBenefit || 0).toLocaleString()}</strong> 
+      includes interest savings, labour cost reductions, and bad debt improvements.
+    </p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 10px;">
+    <h3 style="color: #0891b2; margin-top: 0;">Ready to Learn More?</h3>
+    <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
+      Schedule a personalized demo to see how Kuhlekt can transform your invoice-to-cash process.
+    </p>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" 
+       style="display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+      Schedule a Demo
+    </a>
+  </div>
+
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 11px; color: #6b7280;">
+    <p><strong style="color: #0891b2;">Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
+    <p>Visit us at <a href="https://kuhlekt.com" style="color: #0891b2;">kuhlekt.com</a> | Email: enquiries@kuhlekt.com</p>
+    <p style="margin-top: 10px;">
+      This report is generated based on the inputs provided and represents estimated outcomes. 
+      Actual results may vary based on implementation and business-specific factors.
+    </p>
+  </div>
+</body>
+</html>
+`
     } else if (calculatorType === "detailed") {
-      console.log("[sendROIEmail] Building detailed calculator email")
+      console.log("[ROI Email] Processing detailed calculator email")
+      emailSubject = "Your Detailed ROI Analysis - Kuhlekt"
+
+      // Parse input values for detailed email
+      const numberOfDebtors = Number.parseFloat(inputs?.numberOfDebtors) || 0
+      const numberOfCollectors = Number.parseFloat(inputs?.numberOfCollectors) || 1
+      const currentCapacity = numberOfDebtors / numberOfCollectors
+      const labourSavings = Number.parseFloat(inputs?.labourSavings) || 30
+      const additionalCapacity = Math.round(currentCapacity * (labourSavings / 100))
+
       emailBody = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0891b2;">Your Comprehensive ROI Analysis</h2>
-              <p>Dear ${name},</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your detailed results:</p>
-              
-              <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0891b2;">Total Annual Benefit</h3>
-                <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </p>
-                <p style="margin: 0;">
-                  <strong>ROI:</strong> ${results.roi?.toFixed(0)}% | 
-                  <strong>Payback:</strong> ${results.paybackMonths?.toFixed(1)} months
-                </p>
-              </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your Detailed ROI Analysis</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+    <h1 style="margin: 0; font-size: 28px;">Your Detailed ROI Analysis</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">Analysis Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+  </div>
 
-              <h3>Key Benefits:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">DSO Improvement</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.dsoReductionDays?.toFixed(0)} days</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Working Capital Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Interest Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Labour Cost Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Bad Debt Reduction</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+  <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h2 style="color: #0891b2; margin-top: 0;">Key Results</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+      <div style="background: linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%); padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #84cc16;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 10px;">ROI</div>
+        <div style="font-size: 36px; font-weight: 700; color: #16a34a;">${results.roi?.toFixed(1) || "0.0"}%</div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">Return on Investment</div>
+      </div>
+      
+      <div style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #ef4444;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 10px;">Payback Period</div>
+        <div style="font-size: 36px; font-weight: 700; color: #dc2626;">${results.paybackMonths?.toFixed(1) || "0.0"}</div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">Months</div>
+      </div>
+    </div>
 
-              <h3>Investment:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Implementation Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.implementationCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Annual Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.annualCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Total First Year Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.totalFirstYearCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+    <h3 style="color: #0891b2; font-size: 16px; margin-top: 25px; margin-bottom: 10px;">Financial Impact</h3>
+    
+    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+      <div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 5px;">Annual Recurring Savings</div>
+      <div style="font-size: 24px; font-weight: 700; color: #16a34a;">$${(results.totalAnnualBenefit || 0).toLocaleString()}</div>
+      <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">Interest + Labour + Bad Debt</div>
+    </div>
 
-              ${company ? `<p>Company: ${company}</p>` : ""}
-              ${phone ? `<p>Phone: ${phone}</p>` : ""}
-              
-              <p style="margin-top: 30px;">
-                Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
-              </p>
+    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+      <div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 5px;">Working Capital Released</div>
+      <div style="font-size: 24px; font-weight: 700; color: #16a34a;">$${(results.workingCapitalReleased || 0).toLocaleString()}</div>
+      <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">One-time cash flow improvement</div>
+    </div>
 
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-              <p style="font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-              </p>
-            </div>
-          </body>
-        </html>
-      `
+    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px;">
+      <div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 5px;">DSO Improvement</div>
+      <div style="font-size: 24px; font-weight: 700; color: #0891b2;">${results.dsoReductionDays?.toFixed(0) || "0"} days</div>
+      <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">From ${results.currentDSO?.toFixed(0) || "0"} to ${results.newDSO?.toFixed(0) || "0"} days</div>
+    </div>
+  </div>
+
+  <div style="background: #f9fafb; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h3 style="color: #0891b2; margin-top: 0;">Capacity Growth Without Hiring</h3>
+    <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px;">
+      Your team can handle <strong style="color: #0891b2;">${additionalCapacity.toLocaleString()}</strong> more customers 
+      without additional headcount.
+    </p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Current Capacity</div>
+        <div style="font-size: 28px; font-weight: 700; color: #1f2937;">${Math.round(currentCapacity).toLocaleString()}</div>
+        <div style="font-size: 11px; color: #78716c; margin-top: 5px;">customers per collector</div>
+      </div>
+      
+      <div style="background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%); border: 2px solid #8b5cf6; border-radius: 8px; padding: 15px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">With Implementation</div>
+        <div style="font-size: 28px; font-weight: 700; color: #1f2937;">${Math.round(currentCapacity + additionalCapacity).toLocaleString()}</div>
+        <div style="font-size: 11px; color: #78716c; margin-top: 5px;">customers per collector</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); border: 2px solid #0891b2; border-radius: 10px; padding: 20px; margin-bottom: 30px;">
+    <h3 style="color: #0e7490; margin-top: 0;">Summary</h3>
+    <p style="font-size: 13px; color: #164e63; line-height: 1.8;">
+      By implementing the Kuhlekt invoice-to-cash platform with automated collection workflows 
+      and customer self-service, your organization can achieve a 
+      <strong style="color: #0891b2;">${results.roi?.toFixed(0) || "0"}% ROI</strong> within 
+      <strong style="color: #0891b2;">${results.paybackMonths?.toFixed(1) || "0"} months</strong>. 
+      You should expect to improve DSO by <strong style="color: #0891b2;">${results.dsoReductionDays?.toFixed(0) || "0"} days</strong>, 
+      freeing up <strong style="color: #0891b2;">$${(results.workingCapitalReleased || 0).toLocaleString()}</strong> 
+      in working capital without adding headcount.
+    </p>
+  </div>
+
+  
+      in working capital without adding headcount.
+    </p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; background: #f9fafb; border-radius: 10px;">
+    <h3 style="color: #0891b2; margin-top: 0;">Ready to Learn More?</h3>
+    <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
+      Schedule a personalized demo to see how Kuhlekt can transform your invoice-to-cash process.
+    </p>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/demo" 
+       style="display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+      Schedule a Demo
+    </a>
+  </div>
+
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 11px; color: #6b7280;">
+    <p><strong style="color: #0891b2;">Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
+    <p>Visit us at <a href="https://kuhlekt.com" style="color: #0891b2;">kuhlekt.com</a> | Email: enquiries@kuhlekt.com</p>
+    <p style="margin-top: 10px;">
+      This report is generated based on the inputs provided and represents estimated outcomes. 
+      Actual results may vary based on implementation and business-specific factors.
+    </p>
+  </div>
+</body>
+</html>
+`
     } else {
-      console.error("[sendROIEmail] Invalid calculator type:", calculatorType)
+      console.error("[ROI Email] Unknown calculator type:", calculatorType)
       return NextResponse.json({ error: "Invalid calculator type" }, { status: 400 })
     }
 
-    console.log("[sendROIEmail] Sending email to:", email)
-    await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
-    console.log("[sendROIEmail] Email sent successfully")
+    console.log("[ROI Email] Calling sendEmail function")
+    console.log("[ROI Email] Email subject:", emailSubject)
 
-    return NextResponse.json({ success: true })
+    // Send the email
+    const emailResult = await sendEmail({
+      to: email,
+      subject: emailSubject,
+      html: emailBody,
+    })
+
+    console.log("[ROI Email] Email send result:", JSON.stringify(emailResult, null, 2))
+
+    if (!emailResult.success) {
+      console.error("[ROI Email] Failed to send email:", emailResult.error)
+      return NextResponse.json({ error: emailResult.error || "Failed to send email" }, { status: 500 })
+    }
+
+    console.log("[ROI Email] Email sent successfully")
+    return NextResponse.json({ success: true, message: "Email sent successfully" })
   } catch (error) {
-    console.error("[sendROIEmail] Error sending ROI email:", error)
+    console.error("[ROI Email] Error in route handler:", error)
     return NextResponse.json(
-      {
-        error: "Failed to send ROI email",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 },
     )
   }

@@ -98,6 +98,15 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
       // Bad debt reduction assumption (50% improvement)
       const badDebtReductionPercent = 50
 
+      // Calculate chart data
+      const investmentAmount = totalFirstYearCost
+      const savingsAmount = results.totalAnnualBenefit || 0
+      const maxAmount = Math.max(investmentAmount, savingsAmount)
+
+      const year1Net = savingsAmount - implementationCost
+      const year2Net = savingsAmount * 2 - totalFirstYearCost
+      const year3Net = savingsAmount * 3 - totalFirstYearCost - annualCost * 2
+
       const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -381,22 +390,196 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               color: #059669;
             }
             
-            .chart-placeholder {
+            .chart-container {
               background: white;
               border: 2px solid #e5e7eb;
               border-radius: 8px;
               padding: 30px;
               margin: 15px 0;
-              text-align: center;
-              min-height: 200px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
             }
             
-            .chart-placeholder p {
-              color: #9ca3af;
+            .chart-title {
               font-size: 14px;
+              font-weight: 600;
+              color: #374151;
+              margin-bottom: 20px;
+              text-align: center;
+            }
+            
+            .bar-chart {
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-around;
+              height: 200px;
+              margin: 20px 0;
+              padding: 0 20px;
+            }
+            
+            .bar-group {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              margin: 0 10px;
+            }
+            
+            .bar {
+              width: 80px;
+              background: linear-gradient(to top, #0891b2, #06b6d4);
+              border-radius: 4px 4px 0 0;
+              display: flex;
+              align-items: flex-start;
+              justify-content: center;
+              padding-top: 8px;
+              position: relative;
+            }
+            
+            .bar.negative {
+              background: linear-gradient(to top, #dc2626, #ef4444);
+            }
+            
+            .bar.positive {
+              background: linear-gradient(to top, #16a34a, #22c55e);
+            }
+            
+            .bar-value {
+              font-size: 11px;
+              font-weight: 600;
+              color: white;
+            }
+            
+            .bar-label {
+              margin-top: 10px;
+              font-size: 12px;
+              font-weight: 600;
+              color: #6b7280;
+              text-align: center;
+            }
+            
+            .line-chart {
+              position: relative;
+              height: 200px;
+              margin: 30px 0;
+            }
+            
+            .line-chart-grid {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+            
+            .grid-line {
+              border-top: 1px dashed #e5e7eb;
+              position: relative;
+            }
+            
+            .grid-label {
+              position: absolute;
+              left: -60px;
+              top: -8px;
+              font-size: 10px;
+              color: #6b7280;
+            }
+            
+            .line-chart-path {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: flex-end;
+              padding: 0 40px;
+            }
+            
+            .line-point {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              position: relative;
+            }
+            
+            .line-dot {
+              width: 12px;
+              height: 12px;
+              background: #0891b2;
+              border: 3px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              position: absolute;
+            }
+            
+            .line-value {
+              position: absolute;
+              top: -25px;
+              font-size: 11px;
+              font-weight: 600;
+              color: #0891b2;
+              white-space: nowrap;
+            }
+            
+            .line-year {
+              position: absolute;
+              bottom: -30px;
+              font-size: 12px;
+              color: #6b7280;
+              font-weight: 600;
+            }
+            
+            .dso-comparison-chart {
+              display: flex;
+              justify-content: center;
+              align-items: flex-end;
+              height: 200px;
+              margin: 20px 0;
+              gap: 40px;
+            }
+            
+            .dso-bar-group {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              width: 120px;
+            }
+            
+            .dso-bar {
+              width: 100%;
+              background: linear-gradient(to top, #0891b2, #06b6d4);
+              border-radius: 4px 4px 0 0;
+              display: flex;
+              align-items: flex-start;
+              justify-content: center;
+              padding-top: 12px;
+              position: relative;
+            }
+            
+            .dso-bar.current {
+              background: linear-gradient(to top, #dc2626, #ef4444);
+            }
+            
+            .dso-bar.improved {
+              background: linear-gradient(to top, #16a34a, #22c55e);
+            }
+            
+            .dso-bar-value {
+              font-size: 18px;
+              font-weight: 700;
+              color: white;
+            }
+            
+            .dso-bar-label {
+              margin-top: 12px;
+              font-size: 13px;
+              font-weight: 600;
+              color: #6b7280;
+            }
+            
+            .dso-bar-days {
+              font-size: 11px;
+              color: #9ca3af;
+              margin-top: 4px;
             }
             
             .savings-cards {
@@ -694,23 +877,63 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             
             <div class="section">
               <div class="section-title">Investment vs Annual Savings</div>
-              <div class="chart-placeholder">
-                <div>
-                  <p style="margin-bottom: 15px;"><strong>First Year Investment:</strong> $${totalFirstYearCost.toLocaleString()}</p>
-                  <p style="margin-bottom: 15px;"><strong>Annual Savings:</strong> $${(results.totalAnnualBenefit || 0).toLocaleString()}</p>
-                  <p style="color: #16a34a; font-weight: 600;"><strong>Net Benefit (First Year):</strong> $${((results.totalAnnualBenefit || 0) - totalFirstYearCost).toLocaleString()}</p>
+              <div class="chart-container">
+                <div class="chart-title">First Year Comparison</div>
+                <div class="bar-chart">
+                  <div class="bar-group">
+                    <div class="bar negative" style="height: ${(investmentAmount / maxAmount) * 180}px;">
+                      <div class="bar-value">$${(investmentAmount / 1000).toFixed(0)}k</div>
+                    </div>
+                    <div class="bar-label">Investment</div>
+                  </div>
+                  <div class="bar-group">
+                    <div class="bar positive" style="height: ${(savingsAmount / maxAmount) * 180}px;">
+                      <div class="bar-value">$${(savingsAmount / 1000).toFixed(0)}k</div>
+                    </div>
+                    <div class="bar-label">Annual Savings</div>
+                  </div>
+                  <div class="bar-group">
+                    <div class="bar positive" style="height: ${Math.max(0, (year1Net / maxAmount) * 180)}px;">
+                      <div class="bar-value">$${(year1Net / 1000).toFixed(0)}k</div>
+                    </div>
+                    <div class="bar-label">Year 1 Net</div>
+                  </div>
                 </div>
               </div>
             </div>
             
             <div class="section">
               <div class="section-title">Cumulative Savings Over Time (3 Years)</div>
-              <div class="chart-placeholder">
-                <div style="text-align: left; padding: 0 40px;">
-                  <p style="margin-bottom: 10px;"><strong>Year 1:</strong> $${((results.totalAnnualBenefit || 0) - implementationCost).toLocaleString()} (after implementation cost)</p>
-                  <p style="margin-bottom: 10px;"><strong>Year 2:</strong> $${((results.totalAnnualBenefit || 0) * 2 - totalFirstYearCost).toLocaleString()} (cumulative)</p>
-                  <p style="margin-bottom: 10px;"><strong>Year 3:</strong> $${((results.totalAnnualBenefit || 0) * 3 - totalFirstYearCost - annualCost * 2).toLocaleString()} (cumulative)</p>
-                  <p style="margin-top: 20px; color: #16a34a; font-weight: 600;"><strong>3-Year Total Savings:</strong> $${(results.threeYearValue || 0).toLocaleString()}</p>
+              <div class="chart-container">
+                <div class="line-chart">
+                  <div class="line-chart-grid">
+                    <div class="grid-line">
+                      <span class="grid-label">$${Math.round(year3Net / 1000)}k</span>
+                    </div>
+                    <div class="grid-line">
+                      <span class="grid-label">$${Math.round(year3Net / 2000)}k</span>
+                    </div>
+                    <div class="grid-line">
+                      <span class="grid-label">$0</span>
+                    </div>
+                  </div>
+                  <div class="line-chart-path">
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: ${(year1Net / year3Net) * 160}px;"></div>
+                      <div class="line-value" style="bottom: ${(year1Net / year3Net) * 160 + 15}px;">$${(year1Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 1</div>
+                    </div>
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: ${(year2Net / year3Net) * 160}px;"></div>
+                      <div class="line-value" style="bottom: ${(year2Net / year3Net) * 160 + 15}px;">$${(year2Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 2</div>
+                    </div>
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: 160px;"></div>
+                      <div class="line-value" style="bottom: 175px;">$${(year3Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 3</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -722,11 +945,27 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             
             <div class="section">
               <div class="section-title">DSO Comparison</div>
-              <div class="chart-placeholder">
-                <div>
-                  <p style="margin-bottom: 15px;"><strong>Current DSO:</strong> ${results.currentDSO?.toFixed(0) || currentDSODays} days</p>
-                  <p style="margin-bottom: 15px; color: #16a34a;"><strong>Improved DSO:</strong> ${results.newDSO?.toFixed(0) || currentDSODays} days</p>
-                  <p style="margin-top: 20px; font-weight: 600;"><strong>Improvement:</strong> ${results.dsoReductionDays?.toFixed(0) || "0"} days faster (${dsoImprovement}% reduction)</p>
+              <div class="chart-container">
+                <div class="dso-comparison-chart">
+                  <div class="dso-bar-group">
+                    <div class="dso-bar current" style="height: ${((results.currentDSO || currentDSODays) / 90) * 160}px;">
+                      <div class="dso-bar-value">${results.currentDSO?.toFixed(0) || currentDSODays}</div>
+                    </div>
+                    <div class="dso-bar-label">Current DSO</div>
+                    <div class="dso-bar-days">${results.currentDSO?.toFixed(0) || currentDSODays} days</div>
+                  </div>
+                  <div class="dso-bar-group">
+                    <div class="dso-bar improved" style="height: ${((results.newDSO || currentDSODays) / 90) * 160}px;">
+                      <div class="dso-bar-value">${results.newDSO?.toFixed(0) || currentDSODays}</div>
+                    </div>
+                    <div class="dso-bar-label">Improved DSO</div>
+                    <div class="dso-bar-days">${results.newDSO?.toFixed(0) || currentDSODays} days</div>
+                  </div>
+                </div>
+                <div style="text-align: center; margin-top: 30px; padding: 16px; background: #f0f9ff; border-radius: 8px;">
+                  <p style="font-size: 14px; font-weight: 600; color: #0891b2;">
+                    <strong>${results.dsoReductionDays?.toFixed(0) || "0"} days faster</strong> (${dsoImprovement}% reduction)
+                  </p>
                 </div>
               </div>
             </div>
