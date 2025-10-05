@@ -40,34 +40,29 @@ export default function HomePage() {
                 debt recovery, and improve cash flow.
               </p>
 
-              <div className="space-y-4 mb-8">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/demo">
-                    <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white w-full sm:w-auto">
-                      Schedule a Demo →
-                    </Button>
-                  </Link>
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <Link href="/demo">
+                  <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white w-full sm:w-auto">
+                    Schedule a Demo →
+                  </Button>
+                </Link>
+                <Button
+                  size="lg"
+                  onClick={() => setIsROIModalOpen(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto"
+                >
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Calculate Your ROI
+                </Button>
+                <Link href="https://youtu.be/iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
                   <Button
                     size="lg"
-                    onClick={() => setIsROIModalOpen(true)}
-                    className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto"
+                    className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 shadow-md w-full sm:w-auto"
                   >
-                    <Calculator className="w-4 h-4 mr-2" />
-                    Calculate Your ROI
+                    <Play className="w-4 h-4 mr-2" />
+                    Watch Product Tour
                   </Button>
-                </div>
-
-                <div>
-                  <Link href="https://youtu.be/iVmvBRzQZDA" target="_blank" rel="noopener noreferrer">
-                    <Button
-                      size="lg"
-                      className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 shadow-md w-full sm:w-auto"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Watch Product Tour
-                    </Button>
-                  </Link>
-                </div>
+                </Link>
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-600">
