@@ -972,7 +972,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         </div>
       </div>
 
-      <div className="flex gap-2 sticky bottom-0 bg-background pt-3 md:pt-4 border-t">
+      <div className="flex gap-2 bg-background pt-3 md:pt-4 pb-2 border-t mt-4">
         <Button type="button" variant="outline" onClick={() => setStep("calculator-type")} className="flex-1">
           Back
         </Button>
@@ -984,101 +984,107 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   )
 
   const renderContactForm = () => (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        handleSubmitContact()
-      }}
-      className="space-y-4 md:space-y-6"
-    >
-      <div className="text-center space-y-2">
-        <h3 className="text-xl md:text-2xl font-bold">Almost There!</h3>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Enter your details to receive your personalized ROI report
-        </p>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto pr-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSubmitContact()
+          }}
+          className="space-y-4 md:space-y-6"
+        >
+          <div className="text-center space-y-2">
+            <h3 className="text-xl md:text-2xl font-bold">Almost There!</h3>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Enter your details to receive your personalized ROI report
+            </p>
+          </div>
+
+          <div className="space-y-3 md:space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm md:text-base">
+                Full Name *
+              </Label>
+              <Input
+                id="name"
+                value={contactInfo.name}
+                onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
+                placeholder="John Smith"
+                className="text-base md:text-sm"
+              />
+              {validationErrors.name && <p className="text-xs md:text-sm text-red-500">{validationErrors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm md:text-base">
+                Email Address *
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                inputMode="email"
+                value={contactInfo.email}
+                onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
+                placeholder="john@company.com"
+                className="text-base md:text-sm"
+              />
+              {validationErrors.email && <p className="text-xs md:text-sm text-red-500">{validationErrors.email}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company" className="text-sm md:text-base">
+                Company Name (Optional)
+              </Label>
+              <Input
+                id="company"
+                value={contactInfo.company}
+                onChange={(e) => setContactInfo({ ...contactInfo, company: e.target.value })}
+                placeholder="Company Ltd"
+                className="text-base md:text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm md:text-base">
+                Phone Number *
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                value={contactInfo.phone}
+                onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                onKeyPress={(e) => handleKeyPress(e, handleSubmitContact)}
+                placeholder="+1 (555) 123-4567"
+                className="text-base md:text-sm"
+              />
+              {validationErrors.phone && <p className="text-xs md:text-sm text-red-500">{validationErrors.phone}</p>}
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-muted p-3 md:p-4 text-xs md:text-sm">
+            <p className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>
+                We'll send a verification code to your email. Your information will be kept confidential and used only
+                to provide your ROI report.
+              </span>
+            </p>
+          </div>
+
+          <div className="pb-20 md:pb-4" />
+        </form>
       </div>
 
-      <div className="space-y-3 md:space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm md:text-base">
-            Full Name *
-          </Label>
-          <Input
-            id="name"
-            value={contactInfo.name}
-            onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
-            placeholder="John Smith"
-            className="text-base md:text-sm"
-          />
-          {validationErrors.name && <p className="text-xs md:text-sm text-red-500">{validationErrors.name}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm md:text-base">
-            Email Address *
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            inputMode="email"
-            value={contactInfo.email}
-            onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-            placeholder="john@company.com"
-            className="text-base md:text-sm"
-          />
-          {validationErrors.email && <p className="text-xs md:text-sm text-red-500">{validationErrors.email}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="company" className="text-sm md:text-base">
-            Company Name (Optional)
-          </Label>
-          <Input
-            id="company"
-            value={contactInfo.company}
-            onChange={(e) => setContactInfo({ ...contactInfo, company: e.target.value })}
-            placeholder="Company Ltd"
-            className="text-base md:text-sm"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm md:text-base">
-            Phone Number *
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            value={contactInfo.phone}
-            onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-            onKeyPress={(e) => handleKeyPress(e, handleSubmitContact)}
-            placeholder="+1 (555) 123-4567"
-            className="text-base md:text-sm"
-          />
-          {validationErrors.phone && <p className="text-xs md:text-sm text-red-500">{validationErrors.phone}</p>}
-        </div>
-      </div>
-
-      <div className="rounded-lg bg-muted p-3 md:p-4 text-xs md:text-sm">
-        <p className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <span>
-            We'll send a verification code to your email. Your information will be kept confidential and used only to
-            provide your ROI report.
-          </span>
-        </p>
-      </div>
-
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-2 bg-background pt-4 pb-2 border-t mt-auto sticky bottom-0">
         <Button type="button" variant="outline" onClick={() => setStep("calculator-inputs")} className="flex-1">
           Back
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="flex-1">
+        <Button onClick={handleSubmitContact} disabled={isSubmitting} className="flex-1">
           {isSubmitting ? "Sending Code..." : "Send Verification Code"}
         </Button>
       </div>
-    </form>
+    </div>
   )
 
   const renderVerificationStep = () => (
