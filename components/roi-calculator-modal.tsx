@@ -1175,6 +1175,47 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               </p>
             </div>
           </div>
+
+          {/* Simple DSO Comparison Chart */}
+          <div className="rounded-lg border bg-card p-4 md:p-6">
+            <h4 className="text-sm font-semibold mb-4 text-center">DSO Comparison</h4>
+            <div className="flex items-end justify-center gap-8 h-48">
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="w-20 bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg flex items-start justify-center pt-3"
+                  style={{
+                    height: `${(simpleResults.currentDSO / Math.max(simpleResults.currentDSO, simpleResults.newDSO)) * 160}px`,
+                  }}
+                >
+                  <span className="text-white font-bold text-lg">{simpleResults.currentDSO.toFixed(0)}</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-semibold">Current DSO</p>
+                  <p className="text-xs text-muted-foreground">{simpleResults.currentDSO.toFixed(0)} days</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="w-20 bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg flex items-start justify-center pt-3"
+                  style={{
+                    height: `${(simpleResults.newDSO / Math.max(simpleResults.currentDSO, simpleResults.newDSO)) * 160}px`,
+                  }}
+                >
+                  <span className="text-white font-bold text-lg">{simpleResults.newDSO.toFixed(0)}</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-semibold">Improved DSO</p>
+                  <p className="text-xs text-muted-foreground">{simpleResults.newDSO.toFixed(0)} days</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-sm font-semibold text-primary">
+                {(simpleResults.currentDSO - simpleResults.newDSO).toFixed(0)} days faster (
+                {simpleResults.dsoImprovement.toFixed(0)}% reduction)
+              </p>
+            </div>
+          </div>
         </div>
 
         <ROIReportPDF calculatorType="simple" results={simpleResults} inputs={simpleInputs} />
@@ -1202,6 +1243,14 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
   const renderDetailedResults = () => {
     if (!detailedResults) return null
+
+    const investmentAmount = detailedResults.totalFirstYearCost
+    const savingsAmount = detailedResults.totalAnnualBenefit
+    const maxAmount = Math.max(investmentAmount, savingsAmount)
+
+    const year1Net = savingsAmount - detailedResults.implementationCost
+    const year2Net = savingsAmount * 2 - detailedResults.totalFirstYearCost
+    const year3Net = savingsAmount * 3 - detailedResults.totalFirstYearCost - detailedResults.annualCost * 2
 
     return (
       <div className="space-y-4 md:space-y-6 max-h-[60vh] md:max-h-[70vh] overflow-y-auto pr-2">
@@ -1249,6 +1298,108 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             <div className="text-xs text-muted-foreground mt-2">
               Note: Actual DSO in typically 30-45 days. Values may vary based on payment terms and collection
               efficiency.
+            </div>
+          </div>
+        </div>
+
+        {/* Investment vs Savings Chart */}
+        <div className="rounded-lg border bg-card p-4 md:p-6">
+          <h4 className="text-sm font-semibold mb-4 text-center">Investment vs Annual Savings</h4>
+          <div className="flex items-end justify-center gap-6 h-48">
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-16 bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg flex items-start justify-center pt-2"
+                style={{ height: `${(investmentAmount / maxAmount) * 160}px` }}
+              >
+                <span className="text-white font-bold text-xs">${(investmentAmount / 1000).toFixed(0)}k</span>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold">Investment</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-16 bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg flex items-start justify-center pt-2"
+                style={{ height: `${(savingsAmount / maxAmount) * 160}px` }}
+              >
+                <span className="text-white font-bold text-xs">${(savingsAmount / 1000).toFixed(0)}k</span>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold">Annual Savings</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-16 bg-gradient-to-t from-cyan-500 to-cyan-400 rounded-t-lg flex items-start justify-center pt-2"
+                style={{ height: `${Math.max(0, (year1Net / maxAmount) * 160)}px` }}
+              >
+                <span className="text-white font-bold text-xs">${(year1Net / 1000).toFixed(0)}k</span>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-semibold">Year 1 Net</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Year Cumulative Savings Chart */}
+        <div className="rounded-lg border bg-card p-4 md:p-6">
+          <h4 className="text-sm font-semibold mb-4 text-center">Cumulative Savings Over Time (3 Years)</h4>
+          <div className="relative h-48 mt-8">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between">
+              <div className="border-t border-dashed border-gray-300 relative">
+                <span className="absolute -left-16 -top-2 text-xs text-muted-foreground">
+                  ${(year3Net / 1000).toFixed(0)}k
+                </span>
+              </div>
+              <div className="border-t border-dashed border-gray-300 relative">
+                <span className="absolute -left-16 -top-2 text-xs text-muted-foreground">
+                  ${(year3Net / 2000).toFixed(0)}k
+                </span>
+              </div>
+              <div className="border-t border-dashed border-gray-300 relative">
+                <span className="absolute -left-16 -top-2 text-xs text-muted-foreground">$0</span>
+              </div>
+            </div>
+            {/* Data points */}
+            <div className="absolute inset-0 flex items-end justify-around px-8">
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-3 h-3 bg-cyan-500 rounded-full border-2 border-white shadow-lg"
+                  style={{ marginBottom: `${(year1Net / year3Net) * 140}px` }}
+                />
+                <span
+                  className="text-xs font-semibold text-cyan-600 absolute"
+                  style={{ bottom: `${(year1Net / year3Net) * 140 + 20}px` }}
+                >
+                  ${(year1Net / 1000).toFixed(0)}k
+                </span>
+                <span className="text-xs font-semibold mt-2">Year 1</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-3 h-3 bg-cyan-500 rounded-full border-2 border-white shadow-lg"
+                  style={{ marginBottom: `${(year2Net / year3Net) * 140}px` }}
+                />
+                <span
+                  className="text-xs font-semibold text-cyan-600 absolute"
+                  style={{ bottom: `${(year2Net / year3Net) * 140 + 20}px` }}
+                >
+                  ${(year2Net / 1000).toFixed(0)}k
+                </span>
+                <span className="text-xs font-semibold mt-2">Year 2</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-3 h-3 bg-cyan-500 rounded-full border-2 border-white shadow-lg"
+                  style={{ marginBottom: "140px" }}
+                />
+                <span className="text-xs font-semibold text-cyan-600 absolute" style={{ bottom: "160px" }}>
+                  ${(year3Net / 1000).toFixed(0)}k
+                </span>
+                <span className="text-xs font-semibold mt-2">Year 3</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1417,11 +1568,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <p className="text-xs text-cyan-700 mt-1">days</p>
             </div>
             <div className="rounded-lg border-2 border-green-500 bg-green-50 p-3 md:p-4 text-center">
-              <p className="text-xs text-green-700 mb-1">Improvement</p>
+              <p className="text-xs text-green-700 mb-1">Reduction</p>
               <p className="text-2xl md:text-3xl font-bold text-green-600">
                 {detailedResults.dsoReductionDays.toFixed(0)}
               </p>
-              <p className="text-xs text-green-700 mt-1">days</p>
+              <p className="text-xs text-green-700 mt-1">days faster</p>
             </div>
           </div>
         </div>
