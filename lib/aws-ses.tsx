@@ -1,9 +1,4 @@
-import {
-  SESClient,
-  SendEmailCommand,
-  VerifyEmailIdentityCommand,
-  ListVerifiedEmailAddressesCommand,
-} from "@aws-sdk/client-ses"
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
 const sesClient = new SESClient({
   region: process.env.AWS_SES_REGION || "us-east-1",
@@ -17,16 +12,15 @@ interface EmailParams {
   to: string | string[]
   subject: string
   html: string
-  from?: string
-  replyTo?: string
+  text?: string
 }
 
-export async function sendEmail({ to, subject, html, from, replyTo }: EmailParams) {
-  const fromAddress = from || process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
+export async function sendEmail({ to, subject, html, text }: EmailParams) {
   const toAddresses = Array.isArray(to) ? to : [to]
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
 
   const params = {
-    Source: fromAddress,
+    Source: fromEmail,
     Destination: {
       ToAddresses: toAddresses,
     },
@@ -40,11 +34,14 @@ export async function sendEmail({ to, subject, html, from, replyTo }: EmailParam
           Data: html,
           Charset: "UTF-8",
         },
+        ...(text && {
+          Text: {
+            Data: text,
+            Charset: "UTF-8",
+          },
+        }),
       },
     },
-    ...(replyTo && {
-      ReplyToAddresses: [replyTo],
-    }),
   }
 
   try {
@@ -58,25 +55,24 @@ export async function sendEmail({ to, subject, html, from, replyTo }: EmailParam
   }
 }
 
-// Alias for backward compatibility
-export async function sendEmailWithSES(params: EmailParams) {
-  return sendEmail(params)
+export async function sendEmailWithSES({ to, subject, html, text }: EmailParams) {
+  return sendEmail({ to, subject, html, text })
 }
 
 export async function testAWSSESConnection() {
   try {
-    const command = new ListVerifiedEmailAddressesCommand({})
-    const response = await sesClient.send(command)
-    return {
-      success: true,
-      verifiedEmails: response.VerifiedEmailAddresses || [],
+    const testEmail = {
+      to: process.env.ADMIN_EMAIL || "test@example.com",
+      subject: "AWS SES Connection Test",
+      html: "<p>This is a test email to verify AWS SES configuration.</p>",
+      text: "This is a test email to verify AWS SES configuration.",
     }
+
+    await sendEmail(testEmail)
+    return { success: true, message: "AWS SES connection successful" }
   } catch (error) {
     console.error("AWS SES connection test failed:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    return { success: false, message: "AWS SES connection failed", error }
   }
 }
 
@@ -88,26 +84,13 @@ export async function validateSESConfiguration() {
   if (missingVars.length > 0) {
     return {
       valid: false,
-      error: `Missing required environment variables: ${missingVars.join(", ")}`,
+      message: `Missing required environment variables: ${missingVars.join(", ")}`,
+      missingVars,
     }
   }
 
-  const connectionTest = await testAWSSESConnection()
-
   return {
-    valid: connectionTest.success,
-    error: connectionTest.success ? null : connectionTest.error,
-    verifiedEmails: connectionTest.verifiedEmails || [],
-  }
-}
-
-export async function verifyEmailAddress(email: string) {
-  try {
-    const command = new VerifyEmailIdentityCommand({ EmailAddress: email })
-    await sesClient.send(command)
-    return { success: true, message: `Verification email sent to ${email}` }
-  } catch (error) {
-    console.error("Error verifying email address:", error)
-    throw error
+    valid: true,
+    message: "All required AWS SES environment variables are configured",
   }
 }
