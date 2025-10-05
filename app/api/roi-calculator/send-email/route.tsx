@@ -6,6 +6,11 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
   const fromEmail = process.env.CLICKSEND_FROM_EMAIL
 
   if (!username || !apiKey || !fromEmail) {
+    console.error("[ClickSend] Missing credentials:", {
+      username: !!username,
+      apiKey: !!apiKey,
+      fromEmail: !!fromEmail,
+    })
     throw new Error("ClickSend credentials not configured")
   }
 
@@ -35,6 +40,7 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
   )
 
   if (!emailAddress) {
+    console.error("[ClickSend] Email address not found or not verified:", fromEmail)
     throw new Error(`Email address ${fromEmail} not found or not verified in ClickSend`)
   }
 
@@ -76,15 +82,28 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, company, calculatorType, results, inputs } = await request.json()
+    const body = await request.json()
+    const { name, email, company, phone, calculatorType, results, inputs } = body
 
-    console.log("[sendROIEmail] Sending ROI report to:", email)
+    console.log("[sendROIEmail] Request received")
     console.log("[sendROIEmail] Calculator type:", calculatorType)
+    console.log("[sendROIEmail] Email:", email)
     console.log("[sendROIEmail] Results:", JSON.stringify(results, null, 2))
+
+    if (!email || !name || !calculatorType || !results) {
+      console.error("[sendROIEmail] Missing required fields:", {
+        email: !!email,
+        name: !!name,
+        calculatorType: !!calculatorType,
+        results: !!results,
+      })
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
 
     let emailBody = ""
 
     if (calculatorType === "simple") {
+      console.log("[sendROIEmail] Building simple calculator email")
       emailBody = `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -121,6 +140,7 @@ export async function POST(request: NextRequest) {
               </table>
 
               ${company ? `<p>Company: ${company}</p>` : ""}
+              ${phone ? `<p>Phone: ${phone}</p>` : ""}
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
@@ -135,7 +155,8 @@ export async function POST(request: NextRequest) {
           </body>
         </html>
       `
-    } else {
+    } else if (calculatorType === "detailed") {
+      console.log("[sendROIEmail] Building detailed calculator email")
       emailBody = `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -196,6 +217,7 @@ export async function POST(request: NextRequest) {
               </table>
 
               ${company ? `<p>Company: ${company}</p>` : ""}
+              ${phone ? `<p>Phone: ${phone}</p>` : ""}
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
@@ -210,14 +232,24 @@ export async function POST(request: NextRequest) {
           </body>
         </html>
       `
+    } else {
+      console.error("[sendROIEmail] Invalid calculator type:", calculatorType)
+      return NextResponse.json({ error: "Invalid calculator type" }, { status: 400 })
     }
 
+    console.log("[sendROIEmail] Sending email to:", email)
     await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
     console.log("[sendROIEmail] Email sent successfully")
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[sendROIEmail] Error sending ROI email:", error)
-    return NextResponse.json({ error: "Failed to send ROI email" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to send ROI email",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
