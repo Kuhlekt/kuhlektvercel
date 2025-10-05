@@ -1263,9 +1263,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           <div className="rounded-lg border-2 border-cyan-500 bg-gradient-to-br from-cyan-50 to-cyan-100 p-5 md:p-6 text-center">
             <p className="text-xs md:text-sm font-medium text-cyan-700 mb-2">ROI</p>
             <p className="text-3xl md:text-4xl font-bold text-cyan-600">{detailedResults.roi.toFixed(1)}%</p>
-            <Button size="sm" className="mt-3 bg-cyan-600 hover:bg-cyan-700 text-xs md:text-sm">
-              Excellent
-            </Button>
+            <div className="mt-3 px-3 py-1 bg-cyan-600 text-white text-xs rounded-full inline-block">Excellent</div>
           </div>
           <div className="rounded-lg border-2 border-rose-300 bg-gradient-to-br from-rose-50 to-rose-100 p-5 md:p-6 text-center">
             <p className="text-xs md:text-sm font-medium text-rose-700 mb-2 flex items-center justify-center gap-1">
