@@ -1307,7 +1307,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </ul>
         </div>
 
-        {/* Add the new disclaimer section here */}
+        {/* Add the disclaimer section */}
         <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2">
           <p className="font-semibold text-sm md:text-base flex items-center gap-2 text-amber-900">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -1716,7 +1716,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </ul>
         </div>
 
-        {/* Add the new disclaimer section here */}
+        {/* Add the disclaimer section */}
         <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2">
           <p className="font-semibold text-sm md:text-base flex items-center gap-2 text-amber-900">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
