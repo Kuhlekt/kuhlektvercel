@@ -3,29 +3,61 @@ import { sendEmail } from "@/lib/email-service"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== ROI Calculator Email Route ===")
-    console.log("Request received at:", new Date().toISOString())
+    console.log("=== ROI Calculator Email Route START ===")
+    console.log("Timestamp:", new Date().toISOString())
 
-    const body = await request.json()
-    console.log("Request body received")
+    let body
+    try {
+      body = await request.json()
+      console.log("✓ Request body parsed successfully")
+    } catch (parseError) {
+      console.error("✗ Failed to parse request body:", parseError)
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+    }
+
+    console.log("Request body keys:", Object.keys(body))
     console.log("Calculator Type:", body.calculatorType)
-    console.log("Email Address:", body.email)
+    console.log("Has email:", !!body.email)
+    console.log("Has name:", !!body.name)
+    console.log("Has inputs:", !!body.inputs)
+    console.log("Has results:", !!body.results)
 
     const { name, email, company, phone, calculatorType, inputs, results } = body
 
-    if (!name || !email || !calculatorType || !inputs || !results) {
-      console.error("Missing required fields")
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    // Validate required fields
+    if (!name) {
+      console.error("✗ Missing name")
+      return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
+    if (!email) {
+      console.error("✗ Missing email")
+      return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
+    if (!calculatorType) {
+      console.error("✗ Missing calculatorType")
+      return NextResponse.json({ error: "Calculator type is required" }, { status: 400 })
+    }
+    if (!inputs) {
+      console.error("✗ Missing inputs")
+      return NextResponse.json({ error: "Inputs are required" }, { status: 400 })
+    }
+    if (!results) {
+      console.error("✗ Missing results")
+      return NextResponse.json({ error: "Results are required" }, { status: 400 })
+    }
+
+    console.log("✓ All required fields present")
 
     // Format results based on calculator type
     let emailBody = ""
     let textBody = ""
 
-    if (calculatorType === "simple") {
-      console.log("Processing SIMPLE calculator email")
+    try {
+      if (calculatorType === "simple") {
+        console.log("Processing SIMPLE calculator email")
+        console.log("Simple results:", JSON.stringify(results, null, 2))
 
-      textBody = `
+        textBody = `
 Your ROI Calculator Results
 
 Dear ${name},
@@ -61,7 +93,7 @@ Kuhlekt - Transforming Invoice-to-Cash
 Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
       `
 
-      emailBody = `
+        emailBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0891b2;">Your ROI Calculator Results</h2>
           
@@ -98,7 +130,7 @@ Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
             <li>Review detailed case studies from similar organizations</li>
           </ul>
           
-          <p>Our team will be in touch shortly to discuss how Kuhlekt can help transform your invoice-to-cash process.</p>
+          <p>Our team will be in touch shortly to discuss how Kuhlekt can transform your invoice-to-cash process.</p>
           
           <p>Best regards,<br>The Kuhlekt Team</p>
           
@@ -108,10 +140,11 @@ Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
           </div>
         </div>
       `
-    } else {
-      console.log("Processing DETAILED calculator email")
+      } else {
+        console.log("Processing DETAILED calculator email")
+        console.log("Detailed results keys:", Object.keys(results))
 
-      textBody = `
+        textBody = `
 Your Detailed ROI Analysis
 
 Dear ${name},
@@ -165,7 +198,7 @@ Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
 ${company ? `This report was generated for ${company}` : ""}
       `
 
-      emailBody = `
+        emailBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0891b2;">Your Detailed ROI Analysis</h2>
           
@@ -242,35 +275,56 @@ ${company ? `This report was generated for ${company}` : ""}
           </div>
         </div>
       `
+      }
+
+      console.log("✓ Email content generated")
+      console.log("Text body length:", textBody.length)
+      console.log("HTML body length:", emailBody.length)
+    } catch (contentError) {
+      console.error("✗ Error generating email content:", contentError)
+      return NextResponse.json({ error: "Failed to generate email content" }, { status: 500 })
     }
 
-    console.log("Email content prepared")
-    console.log("Text body length:", textBody.length)
-    console.log("HTML body length:", emailBody.length)
-
     const emailSubject = `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results - Kuhlekt`
+    console.log("Email subject:", emailSubject)
+    console.log("Recipient:", email)
 
-    console.log("Calling sendEmail function...")
-    const result = await sendEmail({
-      to: email,
-      subject: emailSubject,
-      html: emailBody,
-      text: textBody,
-    })
-
-    console.log("Email function returned:", result)
+    console.log("=== Calling sendEmail function ===")
+    let result
+    try {
+      result = await sendEmail({
+        to: email,
+        subject: emailSubject,
+        html: emailBody,
+        text: textBody,
+      })
+      console.log("✓ sendEmail function completed")
+      console.log("Result:", JSON.stringify(result, null, 2))
+    } catch (sendError) {
+      console.error("✗ sendEmail threw error:", sendError)
+      console.error("Error stack:", sendError instanceof Error ? sendError.stack : "No stack")
+      return NextResponse.json(
+        { error: sendError instanceof Error ? sendError.message : "Failed to send email" },
+        { status: 500 },
+      )
+    }
 
     if (result.success) {
-      console.log("✓ Email sent successfully")
+      console.log("✓✓✓ Email sent successfully!")
+      console.log("Message ID:", result.messageId)
       return NextResponse.json({ success: true, message: "Report sent successfully" })
     } else {
-      console.error("✗ Email sending failed:", result.error)
+      console.error("✗✗✗ Email sending failed")
+      console.error("Error:", result.error)
       return NextResponse.json({ error: result.error || "Failed to send email" }, { status: 500 })
     }
   } catch (error) {
-    console.error("=== ROI Calculator Email Route Error ===")
+    console.error("=== FATAL ERROR in ROI Calculator Email Route ===")
+    console.error("Error type:", typeof error)
     console.error("Error:", error)
-    console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
+    console.error("Error name:", error instanceof Error ? error.name : "Unknown")
+    console.error("Error message:", error instanceof Error ? error.message : String(error))
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
