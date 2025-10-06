@@ -67,6 +67,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   box-sizing: border-box;
                 }
                 
+                @media print {
+                  * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+                }
+
                 body {
                   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
                   line-height: 1.5;
@@ -544,6 +551,13 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               box-sizing: border-box;
             }
             
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+            }
+
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
               line-height: 1.5;
@@ -1052,7 +1066,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             }
             
             .financial-item {
-              background: white;
               border: 2px solid #e5e7eb;
               border-radius: 8px;
               padding: 16px;
@@ -1303,24 +1316,24 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="section-title">Investment vs Annual Savings</div>
               <div class="chart-container">
                 <div class="chart-title">First Year Comparison</div>
-                <div class="bar-chart">
-                  <div class="bar-group">
-                    <div class="bar negative" style="height: ${(investmentAmount / maxAmount) * 180}px;">
-                      <div class="bar-value">$${(investmentAmount / 1000).toFixed(0)}k</div>
+                <div style="display: flex; align-items: flex-end; justify-content: center; gap: 40px; height: 200px; margin: 20px 0; page-break-inside: avoid;">
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #dc2626, #ef4444); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(investmentAmount / maxAmount) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(investmentAmount / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="bar-label">Investment</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Investment</div>
                   </div>
-                  <div class="bar-group">
-                    <div class="bar positive" style="height: ${(savingsAmount / maxAmount) * 180}px;">
-                      <div class="bar-value">$${(savingsAmount / 1000).toFixed(0)}k</div>
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #16a34a, #22c55e); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(savingsAmount / maxAmount) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(savingsAmount / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="bar-label">Annual Savings</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Annual Savings</div>
                   </div>
-                  <div class="bar-group">
-                    <div class="bar positive" style="height: ${Math.max(0, (year1Net / maxAmount) * 180)}px;">
-                      <div class="bar-value">$${(year1Net / 1000).toFixed(0)}k</div>
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${Math.max(0, (year1Net / maxAmount) * 160)}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year1Net / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="bar-label">Year 1 Net</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 1 Net</div>
                   </div>
                 </div>
               </div>
@@ -1329,34 +1342,24 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             <div class="section">
               <div class="section-title">Cumulative Savings Over Time (3 Years)</div>
               <div class="chart-container">
-                <div class="line-chart">
-                  <div class="line-chart-grid">
-                    <div class="grid-line">
-                      <span class="grid-label">$${Math.round(year3Net / 1000)}k</span>
+                <div style="display: flex; align-items: flex-end; justify-content: center; gap: 40px; height: 200px; margin: 40px 0; page-break-inside: avoid;">
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(year1Net / year3Net) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year1Net / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="grid-line">
-                      <span class="grid-label">$${Math.round(year3Net / 2000)}k</span>
-                    </div>
-                    <div class="grid-line">
-                      <span class="grid-label">$0</span>
-                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 1</div>
                   </div>
-                  <div class="line-chart-path">
-                    <div class="line-point">
-                      <div class="line-dot" style="bottom: ${(year1Net / year3Net) * 160}px;"></div>
-                      <div class="line-value" style="bottom: ${(year1Net / year3Net) * 160 + 15}px;">$${(year1Net / 1000).toFixed(0)}k</div>
-                      <div class="line-year">Year 1</div>
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(year2Net / year3Net) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year2Net / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="line-point">
-                      <div class="line-dot" style="bottom: ${(year2Net / year3Net) * 160}px;"></div>
-                      <div class="line-value" style="bottom: ${(year2Net / year3Net) * 160 + 15}px;">$${(year2Net / 1000).toFixed(0)}k</div>
-                      <div class="line-year">Year 2</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 2</div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: 160px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year3Net / 1000).toFixed(0)}k</span>
                     </div>
-                    <div class="line-point">
-                      <div class="line-dot" style="bottom: 160px;"></div>
-                      <div class="line-value" style="bottom: 175px;">$${(year3Net / 1000).toFixed(0)}k</div>
-                      <div class="line-year">Year 3</div>
-                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 3</div>
                   </div>
                 </div>
               </div>
