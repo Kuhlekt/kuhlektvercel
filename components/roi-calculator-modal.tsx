@@ -427,16 +427,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       })
 
       console.log("Verify response status:", verifyResponse.status)
+      console.log("Verify response ok:", verifyResponse.ok)
 
       if (!verifyResponse.ok) {
         const errorText = await verifyResponse.text()
-        console.error("Verification failed. Response:", errorText)
+        console.error("Verification failed. Response text:", errorText)
 
         let errorData
         try {
           errorData = JSON.parse(errorText)
         } catch {
-          errorData = { error: errorText }
+          errorData = { error: errorText || "Verification failed" }
         }
 
         throw new Error(errorData.error || "Invalid verification code")
@@ -446,6 +447,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       console.log("✓ Verification successful:", verifyData)
 
       console.log("Step 2: Sending email with results")
+      console.log("Calculator type:", calculatorType)
+      console.log("Has results:", calculatorType === "simple" ? !!simpleResults : !!detailedResults)
 
       // Step 2: Send the email with results
       const emailData = {
@@ -458,9 +461,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         results: calculatorType === "simple" ? simpleResults : detailedResults,
       }
 
-      console.log("Email data prepared")
-      console.log("Calculator type:", calculatorType)
-      console.log("Has results:", calculatorType === "simple" ? !!simpleResults : !!detailedResults)
+      console.log("Sending email request...")
+      console.log("Email endpoint: /api/roi-calculator/send-email")
 
       const emailResponse = await fetch("/api/roi-calculator/send-email", {
         method: "POST",
@@ -470,24 +472,35 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
 
       console.log("Email response status:", emailResponse.status)
       console.log("Email response ok:", emailResponse.ok)
+      console.log("Email response headers:", Object.fromEntries(emailResponse.headers.entries()))
+
+      // Get response as text first to see what we're dealing with
+      const responseText = await emailResponse.text()
+      console.log("Email response text:", responseText)
 
       if (!emailResponse.ok) {
-        const errorText = await emailResponse.text()
-        console.error("Email send failed. Response:", errorText)
+        console.error("Email send failed. Response text:", responseText)
 
         let errorData
         try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { error: errorText || "Failed to send email" }
+          errorData = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error("Failed to parse error response as JSON:", parseError)
+          errorData = { error: responseText || "Failed to send email" }
         }
 
-        throw new Error(errorData.error || "Failed to send results email")
+        throw new Error(errorData.error || `Email send failed. Response: ${responseText}`)
       }
 
-      const emailResult = await emailResponse.json()
-      console.log("✓ Email sent successfully:", emailResult)
+      let emailResult
+      try {
+        emailResult = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error("Failed to parse success response as JSON:", parseError)
+        emailResult = { success: true }
+      }
 
+      console.log("✓ Email sent successfully:", emailResult)
       console.log("=== Verification Process Complete ===")
       setStep("results")
     } catch (error) {
