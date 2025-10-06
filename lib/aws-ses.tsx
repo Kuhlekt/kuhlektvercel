@@ -16,8 +16,28 @@ interface EmailParams {
 }
 
 export async function sendEmail({ to, subject, html, text }: EmailParams) {
-  const toAddresses = Array.isArray(to) ? to : [to]
+  console.log("=== AWS SES sendEmail ===")
+  console.log("Checking environment variables...")
+
   const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
+  const region = process.env.AWS_SES_REGION || "us-east-1"
+  const hasAccessKey = !!process.env.AWS_SES_ACCESS_KEY_ID
+  const hasSecretKey = !!process.env.AWS_SES_SECRET_ACCESS_KEY
+
+  console.log("From email:", fromEmail)
+  console.log("Region:", region)
+  console.log("Has access key:", hasAccessKey)
+  console.log("Has secret key:", hasSecretKey)
+
+  if (!hasAccessKey || !hasSecretKey) {
+    console.error("✗ Missing AWS credentials!")
+    return {
+      success: false,
+      message: "Missing AWS SES credentials",
+    }
+  }
+
+  const toAddresses = Array.isArray(to) ? to : [to]
 
   const params = {
     Source: fromEmail,
@@ -45,13 +65,35 @@ export async function sendEmail({ to, subject, html, text }: EmailParams) {
   }
 
   try {
+    console.log("Creating SES command...")
     const command = new SendEmailCommand(params)
+
+    console.log("Sending email via AWS SES...")
     const response = await sesClient.send(command)
-    console.log("Email sent successfully:", response.MessageId)
-    return { success: true, messageId: response.MessageId }
+
+    console.log("✓ Email sent successfully!")
+    console.log("Message ID:", response.MessageId)
+
+    return {
+      success: true,
+      messageId: response.MessageId,
+      message: "Email sent successfully",
+    }
   } catch (error) {
+    console.error("=== AWS SES Error ===")
     console.error("Error sending email:", error)
-    throw error
+
+    if (error instanceof Error) {
+      console.error("Error name:", error.name)
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
+
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error occurred",
+      error: error,
+    }
   }
 }
 
@@ -68,11 +110,15 @@ export async function testAWSSESConnection() {
       text: "This is a test email to verify AWS SES configuration.",
     }
 
-    await sendEmail(testEmail)
-    return { success: true, message: "AWS SES connection successful" }
+    const result = await sendEmail(testEmail)
+    return result
   } catch (error) {
     console.error("AWS SES connection test failed:", error)
-    return { success: false, message: "AWS SES connection failed", error }
+    return {
+      success: false,
+      message: "AWS SES connection failed",
+      error,
+    }
   }
 }
 

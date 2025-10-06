@@ -7,24 +7,60 @@ export async function POST(request: NextRequest) {
     console.log("Request received at:", new Date().toISOString())
 
     const body = await request.json()
-    console.log("Request body:", JSON.stringify(body, null, 2))
+    console.log("Request body received")
+    console.log("Calculator Type:", body.calculatorType)
+    console.log("Email Address:", body.email)
 
     const { name, email, company, phone, calculatorType, inputs, results } = body
 
-    console.log("Calculator Type:", calculatorType)
-    console.log("Email Address:", email)
-    console.log("Results:", JSON.stringify(results, null, 2))
-
     if (!name || !email || !calculatorType || !inputs || !results) {
-      console.error("Missing required fields:", { name, email, calculatorType, inputs, results })
+      console.error("Missing required fields")
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     // Format results based on calculator type
     let emailBody = ""
+    let textBody = ""
 
     if (calculatorType === "simple") {
       console.log("Processing SIMPLE calculator email")
+
+      textBody = `
+Your ROI Calculator Results
+
+Dear ${name},
+
+Thank you for using the Kuhlekt ROI Calculator. Based on your inputs, here are your estimated savings:
+
+KEY RESULTS:
+- Estimated Annual Savings: $${results.annualSavings?.toLocaleString() || "0"}
+- Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days
+- Projected DSO: ${results.newDSO?.toFixed(0) || "0"} days
+- DSO Improvement: ${results.dsoImprovement?.toFixed(0) || "0"}%
+- Cash Released: $${results.cashReleased?.toLocaleString() || "0"}
+
+YOUR INPUTS:
+- Current DSO: ${inputs.currentDSO} days
+- Average Invoice Value: $${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}
+- Monthly Invoices: ${inputs.monthlyInvoices}
+- Expected DSO Improvement: ${inputs.simpleDSOImprovement}%
+- Cost of Capital: ${inputs.simpleCostOfCapital}%
+
+What's Next?
+- Schedule a personalized demo to see Kuhlekt in action
+- Speak with our team about your specific needs
+- Review detailed case studies from similar organizations
+
+Our team will be in touch shortly to discuss how Kuhlekt can help transform your invoice-to-cash process.
+
+Best regards,
+The Kuhlekt Team
+
+---
+Kuhlekt - Transforming Invoice-to-Cash
+Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
+      `
+
       emailBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0891b2;">Your ROI Calculator Results</h2>
@@ -74,6 +110,61 @@ export async function POST(request: NextRequest) {
       `
     } else {
       console.log("Processing DETAILED calculator email")
+
+      textBody = `
+Your Detailed ROI Analysis
+
+Dear ${name},
+
+Thank you for using the Kuhlekt Detailed ROI Calculator. Based on your comprehensive inputs, here is your projected return on investment:
+
+EXECUTIVE SUMMARY:
+- ROI: ${results.roi?.toFixed(1) || "0"}%
+- Payback Period: ${results.paybackMonths?.toFixed(1) || "0"} months
+- Total Annual Benefit: $${results.totalAnnualBenefit?.toLocaleString() || "0"}
+- Working Capital Released: $${results.workingCapitalReleased?.toLocaleString() || "0"}
+
+DETAILED BREAKDOWN:
+
+Annual Savings:
+- Interest Savings: $${results.interestSavings?.toLocaleString() || "0"}
+- Labour Cost Savings: $${results.labourCostSavings?.toLocaleString() || "0"}
+- Bad Debt Reduction: $${results.badDebtReduction?.toLocaleString() || "0"}
+
+DSO Improvement:
+- Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days
+- Improved DSO: ${results.newDSO?.toFixed(0) || "0"} days
+- Reduction: ${results.dsoReductionDays?.toFixed(0) || "0"} days
+
+Capacity Improvement:
+- Current Capacity: ${results.currentCapacity?.toFixed(0) || "0"} customers per collector
+- Additional Capacity: +${results.additionalCapacity?.toFixed(0) || "0"} customers
+
+INVESTMENT REQUIRED:
+- Implementation Cost: $${results.implementationCost?.toLocaleString() || "0"}
+- Annual Subscription: $${results.annualCost?.toLocaleString() || "0"}
+- Total First Year: $${results.totalFirstYearCost?.toLocaleString() || "0"}
+
+3-YEAR VALUE: $${results.threeYearValue?.toLocaleString() || "0"}
+(Cumulative net benefit over 3 years)
+
+What's Next?
+- Schedule a personalized demo with our team
+- Discuss implementation timelines and pricing
+- Review case studies from similar organizations
+- Get answers to your specific questions
+
+Our team will reach out shortly to schedule a detailed consultation and demonstrate how Kuhlekt can deliver these results for your organization.
+
+Best regards,
+The Kuhlekt Team
+
+---
+Kuhlekt - Transforming Invoice-to-Cash
+Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
+${company ? `This report was generated for ${company}` : ""}
+      `
+
       emailBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0891b2;">Your Detailed ROI Analysis</h2>
@@ -153,34 +244,37 @@ export async function POST(request: NextRequest) {
       `
     }
 
-    console.log("Attempting to send email via ClickSend...")
-    console.log("Email details:", {
-      to: email,
-      subject: `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results`,
-      bodyLength: emailBody.length,
-    })
+    console.log("Email content prepared")
+    console.log("Text body length:", textBody.length)
+    console.log("HTML body length:", emailBody.length)
 
-    // Send email using ClickSend
+    const emailSubject = `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results - Kuhlekt`
+
+    console.log("Calling sendEmail function...")
     const result = await sendEmail({
       to: email,
-      subject: `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results - Kuhlekt`,
+      subject: emailSubject,
       html: emailBody,
-      text: `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results from Kuhlekt. Please view this email in an HTML-compatible email client.`,
+      text: textBody,
     })
 
-    console.log("Email send result:", result)
+    console.log("Email function returned:", result)
 
     if (result.success) {
-      console.log("✓ Email sent successfully to:", email)
+      console.log("✓ Email sent successfully")
       return NextResponse.json({ success: true, message: "Report sent successfully" })
     } else {
-      console.error("✗ Failed to send email:", result.error)
+      console.error("✗ Email sending failed:", result.error)
       return NextResponse.json({ error: result.error || "Failed to send email" }, { status: 500 })
     }
   } catch (error) {
-    console.error("=== ROI Calculator Email Error ===")
-    console.error("Error details:", error)
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
-    return NextResponse.json({ error: "Failed to send report" }, { status: 500 })
+    console.error("=== ROI Calculator Email Route Error ===")
+    console.error("Error:", error)
+    console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    )
   }
 }

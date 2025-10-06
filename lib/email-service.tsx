@@ -5,7 +5,7 @@ import { sendEmailWithSES } from "./aws-ses"
 interface EmailOptions {
   to: string | string[]
   subject: string
-  text: string // Made required to match EmailParams
+  text: string
   html?: string
 }
 
@@ -52,6 +52,9 @@ export async function sendEmail(options: EmailOptions) {
     throw new Error("Email service can only be used on the server")
   }
 
+  console.log("=== Email Service ===")
+  console.log("Validating email options...")
+
   const validation = validateEmailInput(options)
   if (!validation.valid) {
     console.error("Email validation failed:", validation.errors)
@@ -61,8 +64,15 @@ export async function sendEmail(options: EmailOptions) {
     }
   }
 
+  console.log("✓ Validation passed")
+
   try {
     const recipient = Array.isArray(options.to) ? options.to[0] : options.to
+
+    console.log("Sending email to:", recipient)
+    console.log("Subject:", options.subject)
+    console.log("Has HTML:", !!options.html)
+    console.log("Text length:", options.text.length)
 
     // Use AWS SES to send the email
     const result = await sendEmailWithSES({
@@ -72,21 +82,25 @@ export async function sendEmail(options: EmailOptions) {
       html: options.html,
     })
 
+    console.log("SES result:", result)
+
     if (result.success) {
-      console.log("Email sent successfully:", result.messageId)
+      console.log("✓ Email sent successfully:", result.messageId)
       return {
         success: true,
         messageId: result.messageId,
       }
     } else {
-      console.error("Email sending failed:", result.message)
+      console.error("✗ Email sending failed:", result.message)
       return {
         success: false,
-        error: result.message,
+        error: result.message || "Failed to send email",
       }
     }
   } catch (error) {
-    console.error("Email service error:", error)
+    console.error("=== Email service error ===")
+    console.error("Error:", error)
+    console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
