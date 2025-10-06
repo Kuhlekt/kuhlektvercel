@@ -1,12 +1,37 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
 
-const sesClient = new SESClient({
-  region: process.env.AWS_SES_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
-  },
-})
+let sesClient: SESClient | null = null
+
+function getSESClient() {
+  if (!sesClient) {
+    console.log("=== Initializing SES Client ===")
+
+    const region = process.env.AWS_SES_REGION || "us-east-1"
+    const hasAccessKey = !!process.env.AWS_SES_ACCESS_KEY_ID
+    const hasSecretKey = !!process.env.AWS_SES_SECRET_ACCESS_KEY
+
+    console.log("Region:", region)
+    console.log("Has access key:", hasAccessKey)
+    console.log("Has secret key:", hasSecretKey)
+
+    if (!hasAccessKey || !hasSecretKey) {
+      console.error("✗ Missing AWS credentials!")
+      throw new Error("Missing AWS SES credentials")
+    }
+
+    sesClient = new SESClient({
+      region,
+      credentials: {
+        accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY || "",
+      },
+    })
+
+    console.log("✓ SES Client initialized")
+  }
+
+  return sesClient
+}
 
 interface EmailParams {
   to: string | string[]
@@ -16,63 +41,56 @@ interface EmailParams {
 }
 
 export async function sendEmail({ to, subject, html, text }: EmailParams) {
-  console.log("=== AWS SES sendEmail ===")
-  console.log("Checking environment variables...")
-
-  const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
-  const region = process.env.AWS_SES_REGION || "us-east-1"
-  const hasAccessKey = !!process.env.AWS_SES_ACCESS_KEY_ID
-  const hasSecretKey = !!process.env.AWS_SES_SECRET_ACCESS_KEY
-
-  console.log("From email:", fromEmail)
-  console.log("Region:", region)
-  console.log("Has access key:", hasAccessKey)
-  console.log("Has secret key:", hasSecretKey)
-
-  if (!hasAccessKey || !hasSecretKey) {
-    console.error("✗ Missing AWS credentials!")
-    return {
-      success: false,
-      message: "Missing AWS SES credentials",
-    }
-  }
-
-  const toAddresses = Array.isArray(to) ? to : [to]
-
-  const params = {
-    Source: fromEmail,
-    Destination: {
-      ToAddresses: toAddresses,
-    },
-    Message: {
-      Subject: {
-        Data: subject,
-        Charset: "UTF-8",
-      },
-      Body: {
-        Html: {
-          Data: html,
-          Charset: "UTF-8",
-        },
-        ...(text && {
-          Text: {
-            Data: text,
-            Charset: "UTF-8",
-          },
-        }),
-      },
-    },
-  }
+  console.log("=== AWS SES sendEmail START ===")
+  console.log("Timestamp:", new Date().toISOString())
 
   try {
-    console.log("Creating SES command...")
+    const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
+    console.log("From email:", fromEmail)
+
+    const client = getSESClient()
+    console.log("✓ Got SES client")
+
+    const toAddresses = Array.isArray(to) ? to : [to]
+    console.log("To addresses:", toAddresses)
+    console.log("Subject:", subject)
+    console.log("Has HTML:", !!html)
+    console.log("Has text:", !!text)
+
+    const params = {
+      Source: fromEmail,
+      Destination: {
+        ToAddresses: toAddresses,
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: html,
+            Charset: "UTF-8",
+          },
+          ...(text && {
+            Text: {
+              Data: text,
+              Charset: "UTF-8",
+            },
+          }),
+        },
+      },
+    }
+
+    console.log("Creating SendEmailCommand...")
     const command = new SendEmailCommand(params)
 
     console.log("Sending email via AWS SES...")
-    const response = await sesClient.send(command)
+    const response = await client.send(command)
 
-    console.log("✓ Email sent successfully!")
+    console.log("✓✓ Email sent successfully!")
     console.log("Message ID:", response.MessageId)
+    console.log("Response metadata:", response.$metadata)
 
     return {
       success: true,
@@ -81,7 +99,8 @@ export async function sendEmail({ to, subject, html, text }: EmailParams) {
     }
   } catch (error) {
     console.error("=== AWS SES Error ===")
-    console.error("Error sending email:", error)
+    console.error("Error type:", typeof error)
+    console.error("Error:", error)
 
     if (error instanceof Error) {
       console.error("Error name:", error.name)
