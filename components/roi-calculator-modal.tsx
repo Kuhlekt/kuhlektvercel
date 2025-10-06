@@ -40,7 +40,7 @@ interface DetailedInputs {
   dsoImprovement: string
   currentDSODays: string
   debtorsBalance: string
-  averagePaymentTerms: string
+  averagePaymentTerms: "net0" | "net30" | "net60" | "net90"
   numberOfDebtors: string
   numberOfCollectors: string
   projectedCustomerGrowth: string
@@ -307,15 +307,16 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     const workingCapitalReleased = dailyRevenue * dsoReductionDays
     const interestSavings = workingCapitalReleased * interestRate
     const labourCostSavings = labourCosts * labourSavings
-    const badDebtReduction = currentBadDebts * 0.5
+    const badDebtReduction = currentBadDebts * 0.5 // Assuming 50% reduction for simplicity
     const totalAnnualBenefit = interestSavings + labourCostSavings + badDebtReduction
     const annualCost = monthlyCost * 12
     const totalFirstYearCost = implementationCost + annualCost
     const netBenefit = totalAnnualBenefit - annualCost
-    const roi = (netBenefit / implementationCost) * 100
-    const paybackMonths = implementationCost / (totalAnnualBenefit / 12)
+    const roi = implementationCost > 0 ? (netBenefit / implementationCost) * 100 : 0
+    const paybackMonths =
+      totalAnnualBenefit > 0 ? implementationCost / (totalAnnualBenefit / 12) : Number.POSITIVE_INFINITY
     const threeYearValue = totalAnnualBenefit * 3 - implementationCost - annualCost * 3
-    const currentCapacity = numberOfDebtors / numberOfCollectors
+    const currentCapacity = numberOfCollectors > 0 ? numberOfDebtors / numberOfCollectors : 0
     const additionalCapacity = currentCapacity * 0.3
     const projectedGrowthValue = numberOfDebtors * projectedGrowth
 
@@ -920,7 +921,12 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
                 </Label>
                 <Select
                   value={detailedInputs.averagePaymentTerms}
-                  onValueChange={(value) => setDetailedInputs({ ...detailedInputs, averagePaymentTerms: value })}
+                  onValueChange={(value) =>
+                    setDetailedInputs({
+                      ...detailedInputs,
+                      averagePaymentTerms: value as "net0" | "net30" | "net60" | "net90",
+                    })
+                  }
                 >
                   <SelectTrigger id="averagePaymentTerms" className="text-base md:text-sm">
                     <SelectValue />
@@ -1299,6 +1305,22 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             <li>Schedule a demo to see Kuhlekt in action</li>
             <li>Speak with our team about your specific needs</li>
           </ul>
+        </div>
+
+        {/* Add the new disclaimer section here */}
+        <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2">
+          <p className="font-semibold text-sm md:text-base flex items-center gap-2 text-amber-900">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            Important Disclaimer
+          </p>
+          <p className="text-xs md:text-sm text-amber-900">
+            The results shown are estimates based on the information you provided and industry averages. Actual results
+            may vary significantly depending on your specific business circumstances, industry conditions,
+            implementation quality, and various other factors. These calculations are intended for informational
+            purposes only and should not be considered as guaranteed outcomes or financial advice. We recommend
+            consulting with your financial advisors and conducting a thorough analysis before making any business
+            decisions.
+          </p>
         </div>
 
         <div className="flex gap-2 pt-2">
@@ -1692,6 +1714,25 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             <li>Discuss implementation timelines and pricing</li>
             <li>Review case studies from similar organizations</li>
           </ul>
+        </div>
+
+        {/* Add the new disclaimer section here */}
+        <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2">
+          <p className="font-semibold text-sm md:text-base flex items-center gap-2 text-amber-900">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            Important Disclaimer
+          </p>
+          <p className="text-xs md:text-sm text-amber-900">
+            The detailed ROI analysis and projections shown are estimates based on the information you provided,
+            industry benchmarks, and standard financial modeling practices. Actual results may vary significantly
+            depending on numerous factors including but not limited to: your specific business operations, market
+            conditions, customer payment behaviors, implementation effectiveness, team adoption, system integration
+            complexity, and economic factors. Historical performance and projected savings are not guarantees of future
+            results. These calculations are intended for informational and planning purposes only and should not be
+            considered as guaranteed outcomes, promises of specific results, or professional financial advice. We
+            strongly recommend conducting thorough due diligence, consulting with your financial and legal advisors, and
+            performing a comprehensive analysis specific to your organization before making any investment decisions.
+          </p>
         </div>
 
         <div className="flex gap-2 sticky bottom-0 bg-background pt-3 md:pt-4">
