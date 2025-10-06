@@ -371,20 +371,28 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setIsSubmitting(true)
 
     try {
+      console.log("=== Submitting Contact Form ===")
+      console.log("Email:", contactInfo.email)
+
       const response = await fetch("/api/verification-code/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: contactInfo.email }),
       })
 
+      console.log("Response status:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("Error response:", errorData)
         throw new Error(errorData.error || "Failed to send verification code")
       }
 
+      console.log("✓ Verification code sent successfully")
       setStep("verification")
     } catch (error) {
-      console.error("Error sending verification code:", error)
+      console.error("=== Contact Form Error ===")
+      console.error("Error:", error)
       setValidationErrors({
         email: error instanceof Error ? error.message : "Failed to send verification code. Please try again.",
       })
@@ -403,7 +411,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setVerificationError("")
 
     try {
-      console.log("=== Starting verification process ===")
+      console.log("=== Starting Verification Process ===")
+      console.log("Step 1: Verifying code")
       console.log("Email:", contactInfo.email)
       console.log("Code:", verificationCode)
 
@@ -420,12 +429,23 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       console.log("Verify response status:", verifyResponse.status)
 
       if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json()
-        console.error("Verification failed:", errorData)
+        const errorText = await verifyResponse.text()
+        console.error("Verification failed. Response:", errorText)
+
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText }
+        }
+
         throw new Error(errorData.error || "Invalid verification code")
       }
 
-      console.log("✓ Verification successful")
+      const verifyData = await verifyResponse.json()
+      console.log("✓ Verification successful:", verifyData)
+
+      console.log("Step 2: Sending email with results")
 
       // Step 2: Send the email with results
       const emailData = {
@@ -438,8 +458,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         results: calculatorType === "simple" ? simpleResults : detailedResults,
       }
 
-      console.log("=== Sending email ===")
-      console.log("Email data:", JSON.stringify(emailData, null, 2))
+      console.log("Email data prepared")
+      console.log("Calculator type:", calculatorType)
+      console.log("Has results:", calculatorType === "simple" ? !!simpleResults : !!detailedResults)
 
       const emailResponse = await fetch("/api/roi-calculator/send-email", {
         method: "POST",
@@ -448,26 +469,34 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       })
 
       console.log("Email response status:", emailResponse.status)
+      console.log("Email response ok:", emailResponse.ok)
 
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text()
-        console.error("Email send failed:", errorText)
+        console.error("Email send failed. Response:", errorText)
+
         let errorData
         try {
           errorData = JSON.parse(errorText)
         } catch {
-          errorData = { error: errorText }
+          errorData = { error: errorText || "Failed to send email" }
         }
-        throw new Error(errorData.error || "Failed to send results")
+
+        throw new Error(errorData.error || "Failed to send results email")
       }
 
       const emailResult = await emailResponse.json()
       console.log("✓ Email sent successfully:", emailResult)
 
+      console.log("=== Verification Process Complete ===")
       setStep("results")
     } catch (error) {
-      console.error("=== Verification error ===")
+      console.error("=== Verification Process Error ===")
       console.error("Error:", error)
+      console.error("Error type:", error instanceof Error ? "Error" : typeof error)
+      console.error("Error message:", error instanceof Error ? error.message : String(error))
+      console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
+
       setVerificationError(error instanceof Error ? error.message : "An error occurred. Please try again.")
     } finally {
       setIsVerifying(false)
