@@ -11,15 +11,22 @@ const sesClient = new SESClient({
 interface EmailParams {
   to: string | string[]
   subject: string
-  html: string
-  text?: string
+  html?: string
+  text: string
 }
 
-export async function sendEmail({ to, subject, html, text }: EmailParams) {
+interface EmailResult {
+  success: boolean
+  messageId?: string
+  message?: string
+  error?: any
+}
+
+export async function sendEmail({ to, subject, html, text }: EmailParams): Promise<EmailResult> {
   console.log("=== AWS SES sendEmail ===")
   console.log("Checking environment variables...")
 
-  const fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@kuhlekt.com"
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL
   const region = process.env.AWS_SES_REGION || "us-east-1"
   const hasAccessKey = !!process.env.AWS_SES_ACCESS_KEY_ID
   const hasSecretKey = !!process.env.AWS_SES_SECRET_ACCESS_KEY
@@ -29,15 +36,27 @@ export async function sendEmail({ to, subject, html, text }: EmailParams) {
   console.log("Has access key:", hasAccessKey)
   console.log("Has secret key:", hasSecretKey)
 
+  if (!fromEmail) {
+    console.error("✗ Missing AWS_SES_FROM_EMAIL!")
+    return {
+      success: false,
+      message: "Missing AWS_SES_FROM_EMAIL environment variable",
+    }
+  }
+
   if (!hasAccessKey || !hasSecretKey) {
     console.error("✗ Missing AWS credentials!")
     return {
       success: false,
-      message: "Missing AWS SES credentials",
+      message: "Missing AWS SES credentials (AWS_SES_ACCESS_KEY_ID or AWS_SES_SECRET_ACCESS_KEY)",
     }
   }
 
   const toAddresses = Array.isArray(to) ? to : [to]
+  console.log("Sending to:", toAddresses)
+  console.log("Subject:", subject)
+  console.log("Has HTML:", !!html)
+  console.log("Has text:", !!text)
 
   const params = {
     Source: fromEmail,
@@ -50,16 +69,16 @@ export async function sendEmail({ to, subject, html, text }: EmailParams) {
         Charset: "UTF-8",
       },
       Body: {
-        Html: {
-          Data: html,
-          Charset: "UTF-8",
-        },
-        ...(text && {
-          Text: {
-            Data: text,
+        ...(html && {
+          Html: {
+            Data: html,
             Charset: "UTF-8",
           },
         }),
+        Text: {
+          Data: text,
+          Charset: "UTF-8",
+        },
       },
     },
   }
@@ -97,11 +116,11 @@ export async function sendEmail({ to, subject, html, text }: EmailParams) {
   }
 }
 
-export async function sendEmailWithSES({ to, subject, html, text }: EmailParams) {
+export async function sendEmailWithSES({ to, subject, html, text }: EmailParams): Promise<EmailResult> {
   return sendEmail({ to, subject, html, text })
 }
 
-export async function testAWSSESConnection() {
+export async function testAWSSESConnection(): Promise<EmailResult> {
   try {
     const testEmail = {
       to: process.env.ADMIN_EMAIL || "test@example.com",
