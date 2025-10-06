@@ -378,14 +378,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       })
 
       if (!response.ok) {
-        throw new Error("Failed to send verification code")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to send verification code")
       }
 
       setStep("verification")
     } catch (error) {
       console.error("Error sending verification code:", error)
       setValidationErrors({
-        email: "Failed to send verification code. Please try again.",
+        email: error instanceof Error ? error.message : "Failed to send verification code. Please try again.",
       })
     } finally {
       setIsSubmitting(false)
@@ -402,6 +403,11 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     setVerificationError("")
 
     try {
+      console.log("=== Starting verification process ===")
+      console.log("Email:", contactInfo.email)
+      console.log("Code:", verificationCode)
+
+      // Step 1: Verify the code
       const verifyResponse = await fetch("/api/verification-code/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -411,10 +417,17 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         }),
       })
 
+      console.log("Verify response status:", verifyResponse.status)
+
       if (!verifyResponse.ok) {
-        throw new Error("Invalid verification code")
+        const errorData = await verifyResponse.json()
+        console.error("Verification failed:", errorData)
+        throw new Error(errorData.error || "Invalid verification code")
       }
 
+      console.log("✓ Verification successful")
+
+      // Step 2: Send the email with results
       const emailData = {
         name: contactInfo.name,
         email: contactInfo.email,
@@ -425,20 +438,37 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         results: calculatorType === "simple" ? simpleResults : detailedResults,
       }
 
+      console.log("=== Sending email ===")
+      console.log("Email data:", JSON.stringify(emailData, null, 2))
+
       const emailResponse = await fetch("/api/roi-calculator/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(emailData),
       })
 
+      console.log("Email response status:", emailResponse.status)
+
       if (!emailResponse.ok) {
-        throw new Error("Failed to send results")
+        const errorText = await emailResponse.text()
+        console.error("Email send failed:", errorText)
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText }
+        }
+        throw new Error(errorData.error || "Failed to send results")
       }
+
+      const emailResult = await emailResponse.json()
+      console.log("✓ Email sent successfully:", emailResult)
 
       setStep("results")
     } catch (error) {
-      console.error("Verification error:", error)
-      setVerificationError("Invalid verification code. Please try again.")
+      console.error("=== Verification error ===")
+      console.error("Error:", error)
+      setVerificationError(error instanceof Error ? error.message : "An error occurred. Please try again.")
     } finally {
       setIsVerifying(false)
     }

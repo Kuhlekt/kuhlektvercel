@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, code } = await request.json()
 
@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and code are required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = createClient()
 
-    // Look up the verification code
+    // Query for valid verification codes
     const { data, error } = await supabase
       .from("verification_codes")
       .select("*")
@@ -23,34 +23,24 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (error) {
-      console.error("Database error looking up verification code:", error)
+      console.error("Database error:", error)
       return NextResponse.json({ error: "Failed to verify code" }, { status: 500 })
     }
 
-    // Check if we found a matching code
     if (!data || data.length === 0) {
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 })
     }
 
-    const verificationCode = data[0]
-
     // Mark the code as used
-    const { error: updateError } = await supabase
-      .from("verification_codes")
-      .update({ used: true })
-      .eq("id", verificationCode.id)
+    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data[0].id)
 
     if (updateError) {
       console.error("Error marking code as used:", updateError)
-      return NextResponse.json({ error: "Failed to process verification" }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Verification code is valid",
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error in verification code verify route:", error)
+    console.error("Verification error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
