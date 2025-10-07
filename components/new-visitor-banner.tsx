@@ -13,15 +13,13 @@ export default function NewVisitorBanner() {
     const checkBannerVisibility = () => {
       const now = new Date()
       const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() // 0-based (0 = January, 8 = September)
+      const currentMonth = now.getMonth()
 
-      // Only show during September 2025
       if (currentYear !== 2025 || currentMonth !== 8) {
         setIsLoading(false)
         return
       }
 
-      // Check if banner was dismissed today
       const today = now.toDateString()
       const dismissedDate = localStorage.getItem("banner-dismissed-date")
 
@@ -74,7 +72,6 @@ export default function NewVisitorBanner() {
         </div>
       </div>
 
-      {/* Mobile layout */}
       <div className="md:hidden mt-2 text-center">
         <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">SEPTEMBER ONLY</span>
       </div>
