@@ -592,12 +592,13 @@ export function ROICalculatorHelpModal({
                 <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mt-4">
                   <h4 className="font-semibold text-cyan-900 mb-2">Need Help?</h4>
                   <p className="text-sm text-cyan-800 mb-3">
-                    Our team is here to help you get accurate results and understand your potential ROI.
+                    Our team is here to help you get accurate results and understand your potential ROI. Schedule a
+                    personalized demo to discuss your specific needs.
                   </p>
                   <ul className="text-sm text-cyan-800 space-y-1">
                     <li>📧 Email: enquiries@kuhlekt.com</li>
                     <li>🌐 Website: kuhlekt.com</li>
-                    <li>📞 Schedule a personalized consultation</li>
+                    <li>📅 Schedule a personalized demo at kuhlekt.com/demo</li>
                   </ul>
                 </div>
               </AccordionContent>

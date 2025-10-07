@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle, TrendingUp, Calendar, FileText } from "lucide-react"
+import { AlertCircle, TrendingUp, Calendar, FileText, HelpCircle } from "lucide-react"
 import { calculateSimpleROI, calculateDetailedROI } from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
+import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 
 interface ROICalculatorModalProps {
   isOpen: boolean
@@ -21,6 +22,7 @@ type Step = "type" | "form" | "contact" | "verify" | "results"
 export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
   const [step, setStep] = useState<Step>("type")
   const [calculatorType, setCalculatorType] = useState<CalculatorType>("simple")
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
@@ -245,7 +247,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderTypeSelection = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Calculator</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Choose Your Calculator</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help with the ROI calculator"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">Select the calculator that best fits your needs</p>
       </div>
 
@@ -314,7 +327,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderSimpleForm = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Simple ROI Calculator</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Simple ROI Calculator</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help with the ROI calculator"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">Enter your current metrics to estimate potential savings</p>
       </div>
 
@@ -389,7 +413,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderDetailedForm = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Detailed ROI Calculator</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Detailed ROI Calculator</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help with the ROI calculator"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">Complete analysis of your AR automation ROI</p>
       </div>
 
@@ -592,7 +627,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderContactForm = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Get Your Results</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Get Your Results</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help with the ROI calculator"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">Enter your details to receive your personalized ROI report</p>
       </div>
 
@@ -661,7 +707,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderVerification = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Verify Your Email</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help with the ROI calculator"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">We've sent a 6-digit code to {contactInfo.email}</p>
       </div>
 
@@ -726,7 +783,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Projected ROI</h3>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900">Your Projected ROI</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsHelpOpen(true)}
+              className="text-cyan-600 hover:text-cyan-700"
+              title="Get help understanding your results"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          </div>
           <p className="text-gray-600">Comprehensive breakdown of your investment returns</p>
         </div>
 
@@ -1039,8 +1107,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         <div className="text-center pt-4 border-t">
           <h4 className="font-semibold mb-2">What's Next?</h4>
           <p className="text-sm text-gray-600 mb-4">
-            Ready to turn these projections into reality? Our team can show you exactly how Kuhlekt delivers these
-            results.
+            Ready to turn these projections into reality? Schedule a personalized demo to see how Kuhlekt can deliver
+            these results for your business.
           </p>
           <Button asChild variant="outline">
             <a href="/demo">Schedule a Demo</a>
@@ -1053,7 +1121,18 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const renderDetailedResults = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Projected ROI</h3>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">Your Projected ROI</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsHelpOpen(true)}
+            className="text-cyan-600 hover:text-cyan-700"
+            title="Get help understanding your results"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </div>
         <p className="text-gray-600">Comprehensive breakdown of your investment returns</p>
       </div>
 
@@ -1391,8 +1470,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       <div className="text-center pt-4 border-t">
         <h4 className="font-semibold mb-2">What's Next?</h4>
         <p className="text-sm text-gray-600 mb-4">
-          Ready to turn these projections into reality? Our team can show you exactly how Kuhlekt delivers these
-          results.
+          Ready to turn these projections into reality? Schedule a personalized demo to see how Kuhlekt can deliver
+          these results for your business.
         </p>
         <Button asChild variant="outline">
           <a href="/demo">Schedule a Demo</a>
@@ -1404,30 +1483,39 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">ROI Calculator</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                resetModal()
-                onClose()
-              }}
-            >
-              ✕
-            </Button>
-          </div>
+    <>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">ROI Calculator</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  resetModal()
+                  onClose()
+                }}
+              >
+                ✕
+              </Button>
+            </div>
 
-          {step === "type" && renderTypeSelection()}
-          {step === "form" && (calculatorType === "simple" ? renderSimpleForm() : renderDetailedForm())}
-          {step === "contact" && renderContactForm()}
-          {step === "verify" && renderVerification()}
-          {step === "results" && (calculatorType === "simple" ? renderSimpleResults() : renderDetailedResults())}
+            {step === "type" && renderTypeSelection()}
+            {step === "form" && (calculatorType === "simple" ? renderSimpleForm() : renderDetailedForm())}
+            {step === "contact" && renderContactForm()}
+            {step === "verify" && renderVerification()}
+            {step === "results" && (calculatorType === "simple" ? renderSimpleResults() : renderDetailedResults())}
+          </div>
         </div>
       </div>
-    </div>
+
+      <ROICalculatorHelpModal
+        open={isHelpOpen}
+        onOpenChange={setIsHelpOpen}
+        calculatorType={calculatorType}
+        currentStep={step}
+      />
+    </>
   )
 }
