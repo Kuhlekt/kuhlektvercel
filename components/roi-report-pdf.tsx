@@ -467,6 +467,25 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   </p>
                 </div>
                 
+                <div class="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2" style="border: 2px solid #fcd34d; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <p style="font-size: 13px; font-weight: 600; color: #78350f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <svg style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    Important Disclaimer
+                  </p>
+                  <p style="font-size: 12px; color: #78350f; line-height: 1.6;">
+                    The results shown are estimates based on the information you provided and industry averages. Actual results
+                    may vary significantly depending on your specific business circumstances, industry conditions,
+                    implementation quality, and various other factors. These calculations are intended for informational
+                    purposes only and should not be considered as guaranteed outcomes or financial advice. We recommend
+                    consulting with your financial advisors and conducting a thorough analysis before making any business
+                    decisions.
+                  </p>
+                </div>
+                
                 <div class="footer">
                   <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
                   <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
