@@ -266,9 +266,36 @@ export async function POST(request: NextRequest) {
     console.log("✓ Email body built")
     console.log("Email body length:", emailBody.length)
 
-    console.log("Calling sendClickSendEmail...")
+    console.log("Sending email to user...")
     await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
-    console.log("✓ Email sent successfully")
+    console.log("✓ User email sent successfully")
+
+    // Send notification to admin
+    console.log("Sending notification to admin...")
+    try {
+      const adminNotifyResponse = await fetch(`${request.nextUrl.origin}/api/roi-calculator/notify-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          company,
+          phone,
+          calculatorType,
+          inputs,
+          results,
+        }),
+      })
+
+      if (adminNotifyResponse.ok) {
+        console.log("✓ Admin notification sent successfully")
+      } else {
+        console.error("✗ Admin notification failed:", await adminNotifyResponse.text())
+      }
+    } catch (adminError) {
+      console.error("✗ Error sending admin notification:", adminError)
+      // Don't fail the user request if admin notification fails
+    }
 
     console.log("=== ROI Calculator Send Email Route SUCCESS ===")
     return NextResponse.json({ success: true })
