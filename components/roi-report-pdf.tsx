@@ -311,6 +311,30 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   font-weight: 700;
                 }
                 
+                .disclaimer-box {
+                  border: 2px solid #fcd34d;
+                  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                  border-radius: 8px;
+                  padding: 20px;
+                  margin: 20px 0;
+                }
+                
+                .disclaimer-box .disclaimer-title {
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #78350f;
+                  margin-bottom: 8px;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                }
+                
+                .disclaimer-box p {
+                  font-size: 12px;
+                  color: #78350f;
+                  line-height: 1.6;
+                }
+                
                 .footer {
                   margin-top: 30px;
                   padding-top: 20px;
@@ -467,8 +491,8 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   </p>
                 </div>
                 
-                <div class="rounded-lg border-2 border-amber-200 bg-amber-50 p-3 md:p-4 space-y-2" style="border: 2px solid #fcd34d; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 20px; margin: 20px 0;">
-                  <p style="font-size: 13px; font-weight: 600; color: #78350f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <div class="disclaimer-box">
+                  <p class="disclaimer-title">
                     <svg style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -476,7 +500,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                     </svg>
                     Important Disclaimer
                   </p>
-                  <p style="font-size: 12px; color: #78350f; line-height: 1.6;">
+                  <p>
                     The results shown are estimates based on the information you provided and industry averages. Actual results
                     may vary significantly depending on your specific business circumstances, industry conditions,
                     implementation quality, and various other factors. These calculations are intended for informational
@@ -497,7 +521,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
           </html>
         `
       } else {
-        // Detailed calculator PDF (existing code)
+        // Detailed calculator PDF (existing code with disclaimer added)
         const numberOfDebtors = Number.parseFloat(inputs.numberOfDebtors) || 0
         const numberOfCollectors = Number.parseFloat(inputs.numberOfCollectors) || 1
         const dsoImprovement = Number.parseFloat(inputs.dsoImprovement) || 25
@@ -1180,6 +1204,30 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               font-weight: 700;
             }
             
+            .disclaimer-box {
+              border: 2px solid #fcd34d;
+              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            
+            .disclaimer-box .disclaimer-title {
+              font-size: 13px;
+              font-weight: 600;
+              color: #78350f;
+              margin-bottom: 8px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            
+            .disclaimer-box p {
+              font-size: 12px;
+              color: #78350f;
+              line-height: 1.6;
+            }
+            
             .footer {
               margin-top: 30px;
               padding-top: 20px;
@@ -1507,6 +1555,25 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 Additionally, your team of ${numberOfCollectors} collectors can handle <strong>${Math.round((additionalCapacity / currentCapacity) * 100)}%</strong> 
                 more customers (${additionalCapacity.toLocaleString()} additional accounts) without hiring, while delivering superior customer 
                 experience through 24/7 portal access and automated communications.
+              </p>
+            </div>
+            
+            <div class="disclaimer-box">
+              <p class="disclaimer-title">
+                <svg style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Important Disclaimer
+              </p>
+              <p>
+                The results shown are estimates based on the information you provided and industry averages. Actual results
+                may vary significantly depending on your specific business circumstances, industry conditions,
+                implementation quality, and various other factors. These calculations are intended for informational
+                purposes only and should not be considered as guaranteed outcomes or financial advice. We recommend
+                consulting with your financial advisors and conducting a thorough analysis before making any business
+                decisions.
               </p>
             </div>
             
