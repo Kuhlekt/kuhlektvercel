@@ -106,16 +106,30 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
   const handleCalculate = async () => {
     setIsCalculating(true)
     try {
+      console.log("[v0] Starting ROI calculation")
+      console.log("[v0] Calculator type:", calculatorType)
+      console.log("[v0] Inputs:", calculatorType === "simple" ? simpleInputs : detailedInputs)
+
       let calculatedResults
       if (calculatorType === "simple") {
+        console.log("[v0] Calling calculateSimpleROI")
         calculatedResults = await calculateSimpleROI(simpleInputs)
       } else {
+        console.log("[v0] Calling calculateDetailedROI")
         calculatedResults = await calculateDetailedROI(detailedInputs)
       }
+
+      console.log("[v0] Calculation results:", calculatedResults)
       setResults(calculatedResults)
       setStep("contact")
     } catch (error) {
-      console.error("Error calculating ROI:", error)
+      console.error("[v0] Error calculating ROI:", error)
+      console.error("[v0] Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        calculatorType,
+        inputs: calculatorType === "simple" ? simpleInputs : detailedInputs,
+      })
       alert("Failed to calculate ROI. Please check your inputs and try again.")
     } finally {
       setIsCalculating(false)
