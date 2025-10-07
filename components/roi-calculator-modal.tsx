@@ -1296,7 +1296,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        <ROIReportPDF calculatorType="simple" results={simpleResults} inputs={simpleInputs} />
+        <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 md:p-5">
+          <ROIReportPDF calculatorType="simple" results={simpleResults} inputs={simpleInputs} />
+        </div>
 
         <div className="rounded-lg bg-muted p-3 md:p-4 space-y-2">
           <p className="font-semibold text-sm md:text-base">What's Next?</p>
@@ -1375,8 +1377,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             <h4 className="font-semibold text-sm md:text-base">Cash Flow Boost Waiting</h4>
           </div>
           <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
-            To calculate Monthly Cash Flow improvements, please include projected revenue growth and existing cash flow
-            details.
+            Monthly Cash Flow improvements: $$
+            {Math.round((detailedResults.totalAnnualBenefit || 0) / 12).toLocaleString()} per month. This includes
+            interest savings, labour cost reductions, and bad debt improvements.
           </p>
           <div className="space-y-2">
             <div className="flex justify-between items-center text-xs md:text-sm">
@@ -1388,7 +1391,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <span className="font-bold">{detailedResults.newDSO.toFixed(0)} days</span>
             </div>
             <div className="text-xs text-muted-foreground mt-2">
-              Note: Actual DSO in typically 30-45 days. Values may vary based on payment terms and collection
+              Note: Actual DSO is typically 30-45 days. Values may vary based on payment terms and collection
               efficiency.
             </div>
           </div>
@@ -1535,7 +1538,7 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             </table>
           </div>
           <p className="text-xs text-muted-foreground">
-            Note: Actual DSO in typically 30-45 days. Days assumes 30-day payment terms.
+            Note: Actual DSO is typically 30-45 days. Days assumes 30-day payment terms.
           </p>
         </div>
 
@@ -1704,7 +1707,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
           </div>
         </div>
 
-        <ROIReportPDF calculatorType="detailed" results={detailedResults} inputs={detailedInputs} />
+        <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 md:p-5">
+          <ROIReportPDF calculatorType="detailed" results={detailedResults} inputs={detailedInputs} />
+        </div>
 
         <div className="rounded-lg bg-muted p-3 md:p-4 space-y-2">
           <p className="font-semibold text-sm md:text-base">What's Next?</p>
@@ -1712,7 +1717,6 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
             <li>Check your email for the comprehensive report</li>
             <li>Schedule a personalized demo with our team</li>
             <li>Discuss implementation timelines and pricing</li>
-            <li>Review case studies from similar organizations</li>
           </ul>
         </div>
 
