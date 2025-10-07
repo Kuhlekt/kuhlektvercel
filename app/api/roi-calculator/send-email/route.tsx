@@ -1,310 +1,268 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-async function sendClickSendEmail(to: string, subject: string, body: string) {
-  console.log("=== sendClickSendEmail START ===")
-  console.log("To:", to)
-  console.log("Subject:", subject)
-
-  const username = process.env.CLICKSEND_USERNAME
-  const apiKey = process.env.CLICKSEND_API_KEY
-  const fromEmail = process.env.CLICKSEND_FROM_EMAIL
-
-  if (!username || !apiKey || !fromEmail) {
-    console.error("✗ ClickSend credentials missing")
-    console.log("Has username:", !!username)
-    console.log("Has apiKey:", !!apiKey)
-    console.log("Has fromEmail:", !!fromEmail)
-    throw new Error("ClickSend credentials not configured")
-  }
-
-  console.log("✓ ClickSend credentials present")
-
-  const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
-
-  // First, fetch verified email addresses to get the email_address_id
-  console.log("Fetching verified email addresses...")
-  const addressesResponse = await fetch("https://rest.clicksend.com/v3/email/addresses", {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  console.log("Addresses response status:", addressesResponse.status)
-
-  if (!addressesResponse.ok) {
-    const errorText = await addressesResponse.text()
-    console.error("✗ Failed to fetch email addresses:", errorText)
-    throw new Error(`Failed to fetch email addresses: ${addressesResponse.status}`)
-  }
-
-  const addressesData = await addressesResponse.json()
-  console.log("✓ Email addresses fetched")
-  console.log("Number of addresses:", addressesData.data?.data?.length)
-
-  // Find the email address that matches our from email
-  const emailAddress = addressesData.data?.data?.find(
-    (addr: any) => addr.email_address === fromEmail && addr.verified === 1,
-  )
-
-  if (!emailAddress) {
-    console.error("✗ Email address not found or not verified")
-    console.log("Looking for:", fromEmail)
-    console.log(
-      "Available addresses:",
-      addressesData.data?.data?.map((a: any) => ({
-        email: a.email_address,
-        verified: a.verified,
-      })),
-    )
-    throw new Error(`Email address ${fromEmail} not found or not verified in ClickSend`)
-  }
-
-  const emailAddressId = emailAddress.email_address_id
-  console.log("✓ Using email_address_id:", emailAddressId)
-
-  const payload = {
-    to: [{ email: to, name: to.split("@")[0] }],
-    from: {
-      email_address_id: emailAddressId,
-      name: "Kuhlekt",
-    },
-    subject,
-    body,
-  }
-
-  console.log("Sending email...")
-
-  const response = await fetch("https://rest.clicksend.com/v3/email/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-
-  console.log("Send response status:", response.status)
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error("✗ ClickSend send error:", errorBody)
-    throw new Error(`Failed to send email: ${response.status} - ${errorBody}`)
-  }
-
-  const result = await response.json()
-  console.log("✓ Email sent successfully")
-  console.log("=== sendClickSendEmail END ===")
-  return result
-}
+import { sendEmailWithSES } from "@/lib/aws-ses"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== ROI Calculator Send Email Route START ===")
-    console.log("Timestamp:", new Date().toISOString())
+    console.log("=== ROI Calculator Email Route ===")
+    console.log("Request received at:", new Date().toISOString())
 
-    let body
-    try {
-      body = await request.json()
-      console.log("✓ Request body parsed")
-    } catch (parseError) {
-      console.error("✗ Failed to parse request body:", parseError)
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
-    }
-
-    console.log("Body keys:", Object.keys(body))
+    const body = await request.json()
+    console.log("Request body received")
+    console.log("Calculator Type:", body.calculatorType)
+    console.log("Email Address:", body.email)
 
     const { name, email, company, phone, calculatorType, inputs, results } = body
 
-    // Validate required fields
-    if (!name || !email || !calculatorType || !results) {
-      console.error("✗ Missing required fields")
-      console.log("Has name:", !!name)
-      console.log("Has email:", !!email)
-      console.log("Has calculatorType:", !!calculatorType)
-      console.log("Has results:", !!results)
+    if (!name || !email || !calculatorType || !inputs || !results) {
+      console.error("Missing required fields")
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    console.log("✓ All required fields present")
-    console.log("Calculator type:", calculatorType)
-    console.log("Email:", email)
-
+    // Format results based on calculator type
     let emailBody = ""
+    let textBody = ""
 
     if (calculatorType === "simple") {
-      console.log("Building simple calculator email...")
-      emailBody = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0891b2;">Your ROI Analysis Results</h2>
-              <p>Dear ${name},</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your results:</p>
-              
-              <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0891b2;">Estimated Annual Savings</h3>
-                <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </p>
-              </div>
+      console.log("Processing SIMPLE calculator email")
 
-              <h3>Key Metrics:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Current DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.currentDSO?.toFixed(0)} days</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">New DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #0891b2;">${results.newDSO?.toFixed(0)} days</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Current Cash Tied Up</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Cash Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+      textBody = `Your ROI Calculator Results
 
-              ${company ? `<p>Company: ${company}</p>` : ""}
-              
-              <p style="margin-top: 30px;">
-                Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
-              </p>
+Dear ${name},
 
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-              <p style="font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-              </p>
-            </div>
-          </body>
-        </html>
-      `
+Thank you for using the Kuhlekt ROI Calculator. Based on your inputs, here are your estimated savings:
+
+KEY RESULTS:
+- Estimated Annual Savings: $${results.annualSavings?.toLocaleString() || "0"}
+- Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days
+- Projected DSO: ${results.newDSO?.toFixed(0) || "0"} days
+- DSO Improvement: ${results.dsoImprovement?.toFixed(0) || "0"}%
+- Cash Released: $${results.cashReleased?.toLocaleString() || "0"}
+
+YOUR INPUTS:
+- Current DSO: ${inputs.currentDSO} days
+- Average Invoice Value: $${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}
+- Monthly Invoices: ${inputs.monthlyInvoices}
+- Expected DSO Improvement: ${inputs.simpleDSOImprovement}%
+- Cost of Capital: ${inputs.simpleCostOfCapital}%
+
+What's Next?
+- Schedule a personalized demo to see Kuhlekt in action
+- Speak with our team about your specific needs
+- Review detailed case studies from similar organizations
+
+Our team will be in touch shortly to discuss how Kuhlekt can help transform your invoice-to-cash process.
+
+Best regards,
+The Kuhlekt Team
+
+---
+Kuhlekt - Transforming Invoice-to-Cash
+Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com`
+
+      emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #0891b2;">Your ROI Calculator Results</h2>
+  
+  <p>Dear ${name},</p>
+  
+  <p>Thank you for using the Kuhlekt ROI Calculator. Based on your inputs, here are your estimated savings:</p>
+  
+  <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #0891b2; margin-top: 0;">Key Results</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 10px 0;"><strong>Estimated Annual Savings:</strong> $${results.annualSavings?.toLocaleString() || "0"}</li>
+      <li style="margin: 10px 0;"><strong>Current DSO:</strong> ${results.currentDSO?.toFixed(0) || "0"} days</li>
+      <li style="margin: 10px 0;"><strong>Projected DSO:</strong> ${results.newDSO?.toFixed(0) || "0"} days</li>
+      <li style="margin: 10px 0;"><strong>DSO Improvement:</strong> ${results.dsoImprovement?.toFixed(0) || "0"}%</li>
+      <li style="margin: 10px 0;"><strong>Cash Released:</strong> $${results.cashReleased?.toLocaleString() || "0"}</li>
+    </ul>
+  </div>
+  
+  <div style="background: #ecfeff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #0891b2; margin-top: 0;">Your Inputs</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 8px 0;">Current DSO: ${inputs.currentDSO} days</li>
+      <li style="margin: 8px 0;">Average Invoice Value: $${Number.parseFloat(inputs.averageInvoiceValue).toLocaleString()}</li>
+      <li style="margin: 8px 0;">Monthly Invoices: ${inputs.monthlyInvoices}</li>
+      <li style="margin: 8px 0;">Expected DSO Improvement: ${inputs.simpleDSOImprovement}%</li>
+      <li style="margin: 8px 0;">Cost of Capital: ${inputs.simpleCostOfCapital}%</li>
+    </ul>
+  </div>
+  
+  <p><strong>What's Next?</strong></p>
+  <ul>
+    <li>Schedule a personalized demo to see Kuhlekt in action</li>
+    <li>Speak with our team about your specific needs</li>
+    <li>Review detailed case studies from similar organizations</li>
+  </ul>
+  
+  <p>Our team will be in touch shortly to discuss how Kuhlekt can help transform your invoice-to-cash process.</p>
+  
+  <p>Best regards,<br>The Kuhlekt Team</p>
+  
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+    <p>Kuhlekt - Transforming Invoice-to-Cash</p>
+    <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
+  </div>
+</div>`
     } else {
-      console.log("Building detailed calculator email...")
-      emailBody = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0891b2;">Your Comprehensive ROI Analysis</h2>
-              <p>Dear ${name},</p>
-              <p>Thank you for using the Kuhlekt ROI Calculator. Here are your detailed results:</p>
-              
-              <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0891b2;">Total Annual Benefit</h3>
-                <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </p>
-                <p style="margin: 0;">
-                  <strong>ROI:</strong> ${results.roi?.toFixed(0)}% | 
-                  <strong>Payback:</strong> ${results.paybackMonths?.toFixed(1)} months
-                </p>
-              </div>
+      console.log("Processing DETAILED calculator email")
 
-              <h3>Key Benefits:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">DSO Improvement</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.dsoReductionDays?.toFixed(0)} days</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Working Capital Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Interest Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Labour Cost Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Bad Debt Reduction</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+      textBody = `Your Detailed ROI Analysis
 
-              <h3>Investment:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Implementation Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.implementationCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Annual Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.annualCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-                <tr style="background-color: #f9fafb;">
-                  <td style="padding: 12px; border: 1px solid #e5e7eb;">Total First Year Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.totalFirstYearCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                </tr>
-              </table>
+Dear ${name},
 
-              ${company ? `<p>Company: ${company}</p>` : ""}
-              
-              <p style="margin-top: 30px;">
-                Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
-              </p>
+Thank you for using the Kuhlekt Detailed ROI Calculator. Based on your comprehensive inputs, here is your projected return on investment:
 
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-              <p style="font-size: 12px; color: #6b7280;">
-                © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-              </p>
-            </div>
-          </body>
-        </html>
-      `
+EXECUTIVE SUMMARY:
+- ROI: ${results.roi?.toFixed(1) || "0"}%
+- Payback Period: ${results.paybackMonths?.toFixed(1) || "0"} months
+- Total Annual Benefit: $${results.totalAnnualBenefit?.toLocaleString() || "0"}
+- Working Capital Released: $${results.workingCapitalReleased?.toLocaleString() || "0"}
+
+DETAILED BREAKDOWN:
+
+Annual Savings:
+- Interest Savings: $${results.interestSavings?.toLocaleString() || "0"}
+- Labour Cost Savings: $${results.labourCostSavings?.toLocaleString() || "0"}
+- Bad Debt Reduction: $${results.badDebtReduction?.toLocaleString() || "0"}
+
+DSO Improvement:
+- Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days
+- Improved DSO: ${results.newDSO?.toFixed(0) || "0"} days
+- Reduction: ${results.dsoReductionDays?.toFixed(0) || "0"} days
+
+Capacity Improvement:
+- Current Capacity: ${results.currentCapacity?.toFixed(0) || "0"} customers per collector
+- Additional Capacity: +${results.additionalCapacity?.toFixed(0) || "0"} customers
+
+INVESTMENT REQUIRED:
+- Implementation Cost: $${results.implementationCost?.toLocaleString() || "0"}
+- Annual Subscription: $${results.annualCost?.toLocaleString() || "0"}
+- Total First Year: $${results.totalFirstYearCost?.toLocaleString() || "0"}
+
+3-YEAR VALUE: $${results.threeYearValue?.toLocaleString() || "0"}
+(Cumulative net benefit over 3 years)
+
+What's Next?
+- Schedule a personalized demo with our team
+- Discuss implementation timelines and pricing
+- Review case studies from similar organizations
+- Get answers to your specific questions
+
+Our team will reach out shortly to schedule a detailed consultation and demonstrate how Kuhlekt can deliver these results for your organization.
+
+Best regards,
+The Kuhlekt Team
+
+---
+Kuhlekt - Transforming Invoice-to-Cash
+Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com
+${company ? `This report was generated for ${company}` : ""}`
+
+      emailBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #0891b2;">Your Detailed ROI Analysis</h2>
+  
+  <p>Dear ${name},</p>
+  
+  <p>Thank you for using the Kuhlekt Detailed ROI Calculator. Based on your comprehensive inputs, here is your projected return on investment:</p>
+  
+  <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #0891b2; margin-top: 0;">Executive Summary</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 10px 0;"><strong>ROI:</strong> ${results.roi?.toFixed(1) || "0"}%</li>
+      <li style="margin: 10px 0;"><strong>Payback Period:</strong> ${results.paybackMonths?.toFixed(1) || "0"} months</li>
+      <li style="margin: 10px 0;"><strong>Total Annual Benefit:</strong> $${results.totalAnnualBenefit?.toLocaleString() || "0"}</li>
+      <li style="margin: 10px 0;"><strong>Working Capital Released:</strong> $${results.workingCapitalReleased?.toLocaleString() || "0"}</li>
+    </ul>
+  </div>
+  
+  <div style="background: #ecfeff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #0891b2; margin-top: 0;">Detailed Breakdown</h3>
+    <h4 style="margin-bottom: 10px;">Annual Savings:</h4>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 8px 0;">Interest Savings: $${results.interestSavings?.toLocaleString() || "0"}</li>
+      <li style="margin: 8px 0;">Labour Cost Savings: $${results.labourCostSavings?.toLocaleString() || "0"}</li>
+      <li style="margin: 8px 0;">Bad Debt Reduction: $${results.badDebtReduction?.toLocaleString() || "0"}</li>
+    </ul>
+    
+    <h4 style="margin-top: 20px; margin-bottom: 10px;">DSO Improvement:</h4>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 8px 0;">Current DSO: ${results.currentDSO?.toFixed(0) || "0"} days</li>
+      <li style="margin: 8px 0;">Improved DSO: ${results.newDSO?.toFixed(0) || "0"} days</li>
+      <li style="margin: 8px 0;">Reduction: ${results.dsoReductionDays?.toFixed(0) || "0"} days</li>
+    </ul>
+    
+    <h4 style="margin-top: 20px; margin-bottom: 10px;">Capacity Improvement:</h4>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 8px 0;">Current Capacity: ${results.currentCapacity?.toFixed(0) || "0"} customers per collector</li>
+      <li style="margin: 8px 0;">Additional Capacity: +${results.additionalCapacity?.toFixed(0) || "0"} customers</li>
+    </ul>
+  </div>
+  
+  <div style="background: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #ea580c; margin-top: 0;">Investment Required</h3>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 8px 0;">Implementation Cost: $${results.implementationCost?.toLocaleString() || "0"}</li>
+      <li style="margin: 8px 0;">Annual Subscription: $${results.annualCost?.toLocaleString() || "0"}</li>
+      <li style="margin: 8px 0;"><strong>Total First Year:</strong> $${results.totalFirstYearCost?.toLocaleString() || "0"}</li>
+    </ul>
+  </div>
+  
+  <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h3 style="color: #16a34a; margin-top: 0;">3-Year Value</h3>
+    <p style="font-size: 24px; font-weight: bold; color: #16a34a; margin: 10px 0;">
+      $${results.threeYearValue?.toLocaleString() || "0"}
+    </p>
+    <p style="margin: 0; color: #6b7280;">Cumulative net benefit over 3 years</p>
+  </div>
+  
+  <p><strong>What's Next?</strong></p>
+  <ul>
+    <li>Schedule a personalized demo with our team</li>
+    <li>Discuss implementation timelines and pricing</li>
+    <li>Review case studies from similar organizations</li>
+    <li>Get answers to your specific questions</li>
+  </ul>
+  
+  <p>Our team will reach out shortly to schedule a detailed consultation and demonstrate how Kuhlekt can deliver these results for your organization.</p>
+  
+  <p>Best regards,<br>The Kuhlekt Team</p>
+  
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+    <p>Kuhlekt - Transforming Invoice-to-Cash</p>
+    <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
+    ${company ? `<p>This report was generated for ${company}</p>` : ""}
+  </div>
+</div>`
     }
 
-    console.log("✓ Email body built")
-    console.log("Email body length:", emailBody.length)
+    console.log("Email content prepared")
+    console.log("Text body length:", textBody.length)
+    console.log("HTML body length:", emailBody.length)
 
-    console.log("Sending email to user...")
-    await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
-    console.log("✓ User email sent successfully")
+    const emailSubject = `Your ${calculatorType === "simple" ? "ROI" : "Detailed ROI"} Calculator Results - Kuhlekt`
 
-    // Send notification to admin
-    console.log("Sending notification to admin...")
-    try {
-      const adminNotifyResponse = await fetch(`${request.nextUrl.origin}/api/roi-calculator/notify-admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          company,
-          phone,
-          calculatorType,
-          inputs,
-          results,
-        }),
-      })
+    console.log("Calling sendEmailWithSES function...")
+    const result = await sendEmailWithSES({
+      to: email,
+      subject: emailSubject,
+      html: emailBody,
+      text: textBody,
+    })
 
-      if (adminNotifyResponse.ok) {
-        console.log("✓ Admin notification sent successfully")
-      } else {
-        console.error("✗ Admin notification failed:", await adminNotifyResponse.text())
-      }
-    } catch (adminError) {
-      console.error("✗ Error sending admin notification:", adminError)
-      // Don't fail the user request if admin notification fails
+    console.log("Email function returned:", JSON.stringify(result, null, 2))
+
+    if (result.success) {
+      console.log("✓ Email sent successfully")
+      return NextResponse.json({ success: true, message: "Report sent successfully" })
+    } else {
+      console.error("✗ Email sending failed:", result.message)
+      return NextResponse.json({ error: result.message || "Failed to send email" }, { status: 500 })
     }
-
-    console.log("=== ROI Calculator Send Email Route SUCCESS ===")
-    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("=== FATAL: ROI Calculator Send Email Route Error ===")
-    console.error("Error type:", typeof error)
+    console.error("=== ROI Calculator Email Route Error ===")
     console.error("Error:", error)
-    console.error("Error message:", error instanceof Error ? error.message : "Unknown error")
-    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace")
+    console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },

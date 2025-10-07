@@ -67,13 +67,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   box-sizing: border-box;
                 }
                 
-                @media print {
-                  * {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                  }
-                }
-
                 body {
                   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
                   line-height: 1.5;
@@ -311,30 +304,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   font-weight: 700;
                 }
                 
-                .disclaimer-box {
-                  border: 2px solid #fcd34d;
-                  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-                  border-radius: 8px;
-                  padding: 20px;
-                  margin: 20px 0;
-                }
-                
-                .disclaimer-box .disclaimer-title {
-                  font-size: 13px;
-                  font-weight: 600;
-                  color: #78350f;
-                  margin-bottom: 8px;
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                }
-                
-                .disclaimer-box p {
-                  font-size: 12px;
-                  color: #78350f;
-                  line-height: 1.6;
-                }
-                
                 .footer {
                   margin-top: 30px;
                   padding-top: 20px;
@@ -491,25 +460,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                   </p>
                 </div>
                 
-                <div class="disclaimer-box">
-                  <p class="disclaimer-title">
-                    <svg style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    Important Disclaimer
-                  </p>
-                  <p>
-                    The results shown are estimates based on the information you provided and industry averages. Actual results
-                    may vary significantly depending on your specific business circumstances, industry conditions,
-                    implementation quality, and various other factors. These calculations are intended for informational
-                    purposes only and should not be considered as guaranteed outcomes or financial advice. We recommend
-                    consulting with your financial advisors and conducting a thorough analysis before making any business
-                    decisions.
-                  </p>
-                </div>
-                
                 <div class="footer">
                   <p><strong>Kuhlekt®</strong> - Transforming Invoice-to-Cash</p>
                   <p>Visit us at kuhlekt.com | Email: enquiries@kuhlekt.com</p>
@@ -521,7 +471,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
           </html>
         `
       } else {
-        // Detailed calculator PDF (existing code with disclaimer added)
+        // Detailed calculator PDF (existing code)
         const numberOfDebtors = Number.parseFloat(inputs.numberOfDebtors) || 0
         const numberOfCollectors = Number.parseFloat(inputs.numberOfCollectors) || 1
         const dsoImprovement = Number.parseFloat(inputs.dsoImprovement) || 25
@@ -594,13 +544,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               box-sizing: border-box;
             }
             
-            @media print {
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-            }
-
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
               line-height: 1.5;
@@ -1109,6 +1052,7 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             }
             
             .financial-item {
+              background: white;
               border: 2px solid #e5e7eb;
               border-radius: 8px;
               padding: 16px;
@@ -1202,30 +1146,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             .summary-box strong {
               color: #0891b2;
               font-weight: 700;
-            }
-            
-            .disclaimer-box {
-              border: 2px solid #fcd34d;
-              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-              border-radius: 8px;
-              padding: 20px;
-              margin: 20px 0;
-            }
-            
-            .disclaimer-box .disclaimer-title {
-              font-size: 13px;
-              font-weight: 600;
-              color: #78350f;
-              margin-bottom: 8px;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            }
-            
-            .disclaimer-box p {
-              font-size: 12px;
-              color: #78350f;
-              line-height: 1.6;
             }
             
             .footer {
@@ -1383,24 +1303,24 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
               <div class="section-title">Investment vs Annual Savings</div>
               <div class="chart-container">
                 <div class="chart-title">First Year Comparison</div>
-                <div style="display: flex; align-items: flex-end; justify-content: center; gap: 40px; height: 200px; margin: 20px 0; page-break-inside: avoid;">
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #dc2626, #ef4444); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(investmentAmount / maxAmount) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(investmentAmount / 1000).toFixed(0)}k</span>
+                <div class="bar-chart">
+                  <div class="bar-group">
+                    <div class="bar negative" style="height: ${(investmentAmount / maxAmount) * 180}px;">
+                      <div class="bar-value">$${(investmentAmount / 1000).toFixed(0)}k</div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Investment</div>
+                    <div class="bar-label">Investment</div>
                   </div>
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #16a34a, #22c55e); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(savingsAmount / maxAmount) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(savingsAmount / 1000).toFixed(0)}k</span>
+                  <div class="bar-group">
+                    <div class="bar positive" style="height: ${(savingsAmount / maxAmount) * 180}px;">
+                      <div class="bar-value">$${(savingsAmount / 1000).toFixed(0)}k</div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Annual Savings</div>
+                    <div class="bar-label">Annual Savings</div>
                   </div>
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${Math.max(0, (year1Net / maxAmount) * 160)}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year1Net / 1000).toFixed(0)}k</span>
+                  <div class="bar-group">
+                    <div class="bar positive" style="height: ${Math.max(0, (year1Net / maxAmount) * 180)}px;">
+                      <div class="bar-value">$${(year1Net / 1000).toFixed(0)}k</div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 1 Net</div>
+                    <div class="bar-label">Year 1 Net</div>
                   </div>
                 </div>
               </div>
@@ -1409,24 +1329,34 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
             <div class="section">
               <div class="section-title">Cumulative Savings Over Time (3 Years)</div>
               <div class="chart-container">
-                <div style="display: flex; align-items: flex-end; justify-content: center; gap: 40px; height: 200px; margin: 40px 0; page-break-inside: avoid;">
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(year1Net / year3Net) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year1Net / 1000).toFixed(0)}k</span>
+                <div class="line-chart">
+                  <div class="line-chart-grid">
+                    <div class="grid-line">
+                      <span class="grid-label">$${Math.round(year3Net / 1000)}k</span>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 1</div>
+                    <div class="grid-line">
+                      <span class="grid-label">$${Math.round(year3Net / 2000)}k</span>
+                    </div>
+                    <div class="grid-line">
+                      <span class="grid-label">$0</span>
+                    </div>
                   </div>
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: ${(year2Net / year3Net) * 160}px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year2Net / 1000).toFixed(0)}k</span>
+                  <div class="line-chart-path">
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: ${(year1Net / year3Net) * 160}px;"></div>
+                      <div class="line-value" style="bottom: ${(year1Net / year3Net) * 160 + 15}px;">$${(year1Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 1</div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 2</div>
-                  </div>
-                  <div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
-                    <div style="width: 100%; background: linear-gradient(to top, #0891b2, #06b6d4); border-radius: 4px 4px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; height: 160px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                      <span style="font-size: 14px; font-weight: 700; color: white;">$${(year3Net / 1000).toFixed(0)}k</span>
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: ${(year2Net / year3Net) * 160}px;"></div>
+                      <div class="line-value" style="bottom: ${(year2Net / year3Net) * 160 + 15}px;">$${(year2Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 2</div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-align: center;">Year 3</div>
+                    <div class="line-point">
+                      <div class="line-dot" style="bottom: 160px;"></div>
+                      <div class="line-value" style="bottom: 175px;">$${(year3Net / 1000).toFixed(0)}k</div>
+                      <div class="line-year">Year 3</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1555,25 +1485,6 @@ export function ROIReportPDF({ calculatorType, results, inputs }: ROIReportPDFPr
                 Additionally, your team of ${numberOfCollectors} collectors can handle <strong>${Math.round((additionalCapacity / currentCapacity) * 100)}%</strong> 
                 more customers (${additionalCapacity.toLocaleString()} additional accounts) without hiring, while delivering superior customer 
                 experience through 24/7 portal access and automated communications.
-              </p>
-            </div>
-            
-            <div class="disclaimer-box">
-              <p class="disclaimer-title">
-                <svg style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                Important Disclaimer
-              </p>
-              <p>
-                The results shown are estimates based on the information you provided and industry averages. Actual results
-                may vary significantly depending on your specific business circumstances, industry conditions,
-                implementation quality, and various other factors. These calculations are intended for informational
-                purposes only and should not be considered as guaranteed outcomes or financial advice. We recommend
-                consulting with your financial advisors and conducting a thorough analysis before making any business
-                decisions.
               </p>
             </div>
             

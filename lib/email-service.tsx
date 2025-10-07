@@ -10,14 +10,12 @@ interface EmailOptions {
 }
 
 function validateEmailInput(options: EmailOptions): { valid: boolean; errors: string[] } {
-  console.log("=== Validating Email Input ===")
   const errors: string[] = []
 
   // Validate recipients
   const recipients = Array.isArray(options.to) ? options.to : [options.to]
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  console.log("Validating recipients:", recipients)
   for (const email of recipients) {
     if (!email || typeof email !== "string" || !emailRegex.test(email)) {
       errors.push(`Invalid email address: ${email}`)
@@ -25,13 +23,11 @@ function validateEmailInput(options: EmailOptions): { valid: boolean; errors: st
   }
 
   // Validate subject
-  console.log("Validating subject:", options.subject?.substring(0, 50))
   if (!options.subject || typeof options.subject !== "string" || options.subject.length > 998) {
     errors.push("Invalid subject line")
   }
 
   // Validate content
-  console.log("Validating content - text length:", options.text?.length)
   if (!options.text) {
     errors.push("Email must have text content")
   }
@@ -47,30 +43,21 @@ function validateEmailInput(options: EmailOptions): { valid: boolean; errors: st
     }
   }
 
-  console.log("Validation result:", errors.length === 0 ? "PASSED" : "FAILED")
-  if (errors.length > 0) {
-    console.error("Validation errors:", errors)
-  }
-
   return { valid: errors.length === 0, errors }
 }
 
 export async function sendEmail(options: EmailOptions) {
-  console.log("=== Email Service: sendEmail START ===")
-
   // Check if we're on the server
   if (typeof window !== "undefined") {
-    console.error("✗ Email service called from client side")
     throw new Error("Email service can only be used on the server")
   }
 
-  console.log("✓ Running on server")
-  console.log("Recipient:", Array.isArray(options.to) ? options.to[0] : options.to)
-  console.log("Subject:", options.subject)
+  console.log("=== Email Service ===")
+  console.log("Validating email options...")
 
   const validation = validateEmailInput(options)
   if (!validation.valid) {
-    console.error("✗ Email validation failed:", validation.errors)
+    console.error("Email validation failed:", validation.errors)
     return {
       success: false,
       error: "Invalid email parameters: " + validation.errors.join(", "),
@@ -82,8 +69,7 @@ export async function sendEmail(options: EmailOptions) {
   try {
     const recipient = Array.isArray(options.to) ? options.to[0] : options.to
 
-    console.log("Calling sendEmailWithSES...")
-    console.log("Recipient:", recipient)
+    console.log("Sending email to:", recipient)
     console.log("Subject:", options.subject)
     console.log("Has HTML:", !!options.html)
     console.log("Text length:", options.text.length)
@@ -96,31 +82,25 @@ export async function sendEmail(options: EmailOptions) {
       html: options.html,
     })
 
-    console.log("sendEmailWithSES returned:", JSON.stringify(result, null, 2))
+    console.log("SES result:", result)
 
     if (result.success) {
-      console.log("✓✓ Email sent successfully")
-      console.log("Message ID:", result.messageId)
+      console.log("✓ Email sent successfully:", result.messageId)
       return {
         success: true,
         messageId: result.messageId,
       }
     } else {
-      console.error("✗✗ Email sending failed")
-      console.error("Error:", result.message)
+      console.error("✗ Email sending failed:", result.message)
       return {
         success: false,
         error: result.message || "Failed to send email",
       }
     }
   } catch (error) {
-    console.error("=== Email Service Error ===")
-    console.error("Error type:", typeof error)
+    console.error("=== Email service error ===")
     console.error("Error:", error)
-    console.error("Error name:", error instanceof Error ? error.name : "Unknown")
-    console.error("Error message:", error instanceof Error ? error.message : String(error))
     console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
-
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

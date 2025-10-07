@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database connection failed" }, { status: 500 })
     }
 
-    // Query for the verification code
     console.log("Querying verification_codes table...")
     console.log("Query parameters:")
     console.log("  - email:", email)
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
     if (!data || data.length === 0) {
       console.error("✗ No valid verification code found")
 
-      // Let's do a diagnostic query to see what codes exist for this email
       console.log("Running diagnostic query...")
       const { data: allCodes, error: diagError } = await supabase
         .from("verification_codes")
@@ -117,7 +115,6 @@ export async function POST(request: NextRequest) {
       created_at: verificationRecord.created_at,
     })
 
-    // Mark the code as used
     console.log("Marking code as used...")
     let updateResult
     try {

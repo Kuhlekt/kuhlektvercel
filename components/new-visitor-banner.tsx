@@ -102,7 +102,7 @@ export default function NewVisitorBanner() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
-            <span className="font-semibold">{bannerContent.title} - Valuable Incentives Apply</span>
+            <span className="font-semibold">{bannerContent.title}</span>
           </div>
           <div className="hidden md:block">
             <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">{bannerContent.badge}</span>
