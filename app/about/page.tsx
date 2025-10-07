@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { CheckCircle } from "lucide-react"
-import VisitorTracker from "@/components/visitor-tracker"
+import { VisitorTracker } from "@/components/visitor-tracker"
 import Image from "next/image"
 
 export default function AboutPage() {

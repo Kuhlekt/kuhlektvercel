@@ -255,11 +255,7 @@ function VisitorTrackerWithSuspense() {
 }
 
 export function VisitorTracker() {
-  return (
-    <div className="visitor-tracker">
-      <VisitorTrackerWithSuspense />
-    </div>
-  )
+  return <VisitorTrackerWithSuspense />
 }
 
 export default VisitorTracker
