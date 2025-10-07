@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
   serverExternalPackages: [
     '@aws-sdk/client-ses',
     '@aws-sdk/credential-providers',

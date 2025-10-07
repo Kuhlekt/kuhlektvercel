@@ -1,9 +1,8 @@
 "use client"
-import { Suspense, useEffect } from "react"
+import { useEffect } from "react"
 import type React from "react"
 
 import DemoFormComponent from "./demo-form-component"
-import VisitorTracker from "@/components/visitor-tracker"
 
 // Error boundary wrapper component
 function ErrorBoundaryWrapper({ children, componentName }: { children: React.ReactNode; componentName: string }) {
@@ -62,11 +61,6 @@ export default function DemoPage() {
 
   return (
     <>
-      <ErrorBoundaryWrapper componentName="VisitorTracker">
-        <Suspense fallback={null}>
-          <VisitorTracker />
-        </Suspense>
-      </ErrorBoundaryWrapper>
       <ErrorBoundaryWrapper componentName="DemoFormComponent">
         <DemoFormComponent />
       </ErrorBoundaryWrapper>

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Star, Play, Calculator } from "lucide-react"
-import { VisitorTracker } from "@/components/visitor-tracker"
-import { Suspense, useState } from "react"
+import { useState } from "react"
 import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
 export default function HomePage() {
@@ -15,10 +14,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Suspense fallback={null}>
-        <VisitorTracker />
-      </Suspense>
-
       <ROICalculatorModal isOpen={isROIModalOpen} onClose={() => setIsROIModalOpen(false)} />
 
       {/* Hero Section */}

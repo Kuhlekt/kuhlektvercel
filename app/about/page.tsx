@@ -1,15 +1,9 @@
-import { Suspense } from "react"
-import { CheckCircle } from "lucide-react"
-import { VisitorTracker } from "@/components/visitor-tracker"
+"use client"
 import Image from "next/image"
 
 export default function AboutPage() {
   return (
     <>
-      <Suspense fallback={null}>
-        <VisitorTracker />
-      </Suspense>
-
       <div className="min-h-screen bg-white">
         {/* Hero Section */}
         <div className="container mx-auto px-4 py-16">
@@ -43,15 +37,15 @@ export default function AboutPage() {
                   <h2 className="text-3xl font-bold text-gray-900 mb-6">What We Believe</h2>
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <div className="h-6 w-6 text-green-500 mt-1 flex-shrink-0">✓</div>
                       <p className="text-lg text-gray-600">Finance teams shouldn't waste time on manual collections</p>
                     </div>
                     <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <div className="h-6 w-6 text-green-500 mt-1 flex-shrink-0">✓</div>
                       <p className="text-lg text-gray-600">Credit management should be data-driven and proactive</p>
                     </div>
                     <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <div className="h-6 w-6 text-green-500 mt-1 flex-shrink-0">✓</div>
                       <p className="text-lg text-gray-600">Customers deserve a transparent, self-service experience</p>
                     </div>
                   </div>

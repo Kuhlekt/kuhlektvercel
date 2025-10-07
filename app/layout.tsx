@@ -5,7 +5,6 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
-import VisitorTracker from "@/components/visitor-tracker"
 import NewVisitorBanner from "@/components/new-visitor-banner"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -44,7 +43,6 @@ export default function RootLayout({
 
           <main>{children}</main>
           <Footer />
-          <VisitorTracker />
 
           {/* Tidio Chat Script */}
           <script src="//code.tidio.co/cqpecqjlg18crvtdezszocsiflmpnp9k.js" async />
