@@ -246,7 +246,6 @@ export async function verifyCode(email: string, code: string) {
       .select("*")
       .eq("email", email)
       .eq("code", code)
-      .eq("used", false)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
@@ -259,14 +258,14 @@ export async function verifyCode(email: string, code: string) {
 
     console.log("[verifyCode] Valid code found:", data)
 
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
+    const { error: deleteError } = await supabase.from("verification_codes").delete().eq("id", data.id)
 
-    if (updateError) {
-      console.error("[verifyCode] Error marking code as used:", updateError)
+    if (deleteError) {
+      console.error("[verifyCode] Error deleting code:", deleteError)
       return { success: false, error: "Failed to verify code" }
     }
 
-    console.log("[verifyCode] Code marked as used")
+    console.log("[verifyCode] Code deleted successfully")
     return { success: true }
   } catch (error) {
     console.error("[verifyCode] Error:", error)
