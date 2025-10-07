@@ -14,9 +14,8 @@ export default function NewVisitorBanner() {
     const checkBannerVisibility = () => {
       const now = new Date()
       const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() // 0-based (0 = January, 9 = October)
+      const currentMonth = now.getMonth()
 
-      // Define banner content for each month
       const monthlyBanners: Record<string, { title: string; badge: string; offer: string }> = {
         "2025-9": {
           title: "Springboard into the final 3 months of '25",
@@ -73,7 +72,6 @@ export default function NewVisitorBanner() {
         return
       }
 
-      // Check if banner was dismissed today
       const today = now.toDateString()
       const dismissedDate = localStorage.getItem("banner-dismissed-date")
 
@@ -104,7 +102,7 @@ export default function NewVisitorBanner() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
-            <span className="font-semibold">{bannerContent.title}</span>
+            <span className="font-semibold">{bannerContent.title} - Valuable Incentives Apply</span>
           </div>
           <div className="hidden md:block">
             <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">{bannerContent.badge}</span>
@@ -127,7 +125,6 @@ export default function NewVisitorBanner() {
         </div>
       </div>
 
-      {/* Mobile layout */}
       <div className="md:hidden mt-2 text-center">
         <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">{bannerContent.badge}</span>
       </div>
