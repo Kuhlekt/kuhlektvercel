@@ -130,7 +130,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
         calculatorType,
         inputs: calculatorType === "simple" ? simpleInputs : detailedInputs,
       })
-      alert("Failed to calculate ROI. Please check your inputs and try again.")
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to calculate ROI. Please check your inputs and try again."
+      alert(errorMessage)
     } finally {
       setIsCalculating(false)
     }
