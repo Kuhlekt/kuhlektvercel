@@ -1,4 +1,3 @@
-import { Suspense } from "react"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle } from "lucide-react"
 import { VisitorTracker } from "@/components/visitor-tracker"
@@ -6,9 +5,7 @@ import { VisitorTracker } from "@/components/visitor-tracker"
 export default function SolutionsPage() {
   return (
     <>
-      <Suspense fallback={null}>
-        <VisitorTracker />
-      </Suspense>
+      <VisitorTracker />
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-16">
           {/* Hero Section */}
