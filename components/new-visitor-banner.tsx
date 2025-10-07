@@ -19,7 +19,7 @@ export default function NewVisitorBanner() {
       // Define banner content for each month
       const monthlyBanners: Record<string, { title: string; badge: string; offer: string }> = {
         "2025-9": {
-          title: "Springboard into the new half-year",
+          title: "Springboard into the final 3 months of '25",
           badge: "OCTOBER ONLY",
           offer: "30-day risk-free pilot + waived onboarding fee",
         },
