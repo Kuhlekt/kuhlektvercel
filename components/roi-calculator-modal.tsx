@@ -1,63 +1,52 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import {
-  Calculator,
-  TrendingUp,
-  DollarSign,
-  Clock,
-  Users,
-  HelpCircle,
-  ArrowLeft,
-  ArrowRight,
-  Mail,
-  Shield,
-  X,
-  RotateCcw,
-} from "lucide-react"
-import { calculateSimpleROI, calculateDetailedROI, sendROIEmail } from "@/app/roi-calculator/actions"
+import { Card, CardContent } from "@/components/ui/card"
+import { AlertCircle, TrendingUp, Calendar, FileText } from "lucide-react"
+import { calculateSimpleROI, calculateDetailedROI } from "@/app/roi-calculator/actions"
 import { ROIReportPDF } from "./roi-report-pdf"
-import { ROICalculatorHelpModal } from "./roi-calculator-help-modal"
 
 interface ROICalculatorModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+type CalculatorType = "simple" | "detailed"
+type Step = "type" | "form" | "contact" | "verify" | "results"
+
 export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps) {
-  const [step, setStep] = useState<
-    "select" | "simple" | "detailed" | "contact" | "verify-email" | "simple-results" | "detailed-results"
-  >("select")
+  const [step, setStep] = useState<Step>("type")
+  const [calculatorType, setCalculatorType] = useState<CalculatorType>("simple")
   const [isCalculating, setIsCalculating] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
-  const [calculatorType, setCalculatorType] = useState<"simple" | "detailed">("simple")
-
-  // Verification state
-  const [verificationCode, setVerificationCode] = useState("")
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationError, setVerificationError] = useState("")
   const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isSendingReport, setIsSendingReport] = useState(false)
+  const [verificationCode, setVerificationCode] = useState("")
+  const [isVerified, setIsVerified] = useState(false)
 
-  // Simple calculator state
-  const [simpleData, setSimpleData] = useState({
+  // Contact information
+  const [contactInfo, setContactInfo] = useState({
+    name: "",
+    email: "",
+    company: "",
+    phone: "",
+  })
+
+  // Simple calculator inputs
+  const [simpleInputs, setSimpleInputs] = useState({
     currentDSO: "",
     averageInvoiceValue: "",
     monthlyInvoices: "",
-    simpleDSOImprovement: "20",
+    simpleDSOImprovement: "15",
     simpleCostOfCapital: "8",
   })
-  const [simpleResults, setSimpleResults] = useState<any>(null)
 
-  // Detailed calculator state
-  const [detailedData, setDetailedData] = useState({
+  // Detailed calculator inputs
+  const [detailedInputs, setDetailedInputs] = useState({
     implementationCost: "",
     monthlyCost: "",
     perAnnumDirectLabourCosts: "",
@@ -65,8 +54,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     interestRate: "",
     averageBadDebt: "",
     currentBadDebts: "",
-    labourSavings: "",
-    dsoImprovement: "",
+    labourSavings: "30",
+    dsoImprovement: "20",
     currentDSODays: "",
     debtorsBalance: "",
     averagePaymentTerms: "net30" as "net30" | "net60" | "net90",
@@ -74,90 +63,27 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
     numberOfCollectors: "",
     projectedCustomerGrowth: "",
   })
-  const [detailedResults, setDetailedResults] = useState<any>(null)
 
-  // Contact info
-  const [contactData, setContactData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-  })
-  const [emailSent, setEmailSent] = useState(false)
+  const [results, setResults] = useState<any>(null)
 
-  const dsoImprovementInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (step === "simple" && dsoImprovementInputRef.current) {
-      // Small delay to ensure the dialog animation completes
-      setTimeout(() => {
-        dsoImprovementInputRef.current?.focus()
-      }, 100)
-    }
-  }, [step])
-
-  useEffect(() => {
-    setVerificationError("")
-  }, [step])
-
-  useEffect(() => {
-    if (isOpen) {
-      setVerificationError("")
-    }
-  }, [isOpen])
-
-  const resetAll = () => {
-    setStep("select")
-    setSimpleData({
-      currentDSO: "",
-      averageInvoiceValue: "",
-      monthlyInvoices: "",
-      simpleDSOImprovement: "20",
-      simpleCostOfCapital: "8",
-    })
-    setDetailedData({
-      implementationCost: "",
-      monthlyCost: "",
-      perAnnumDirectLabourCosts: "",
-      interestType: "loan",
-      interestRate: "",
-      averageBadDebt: "",
-      currentBadDebts: "",
-      labourSavings: "",
-      dsoImprovement: "",
-      currentDSODays: "",
-      debtorsBalance: "",
-      averagePaymentTerms: "net30",
-      numberOfDebtors: "",
-      numberOfCollectors: "",
-      projectedCustomerGrowth: "",
-    })
-    setSimpleResults(null)
-    setDetailedResults(null)
-    setContactData({ name: "", email: "", phone: "", company: "" })
-    setEmailSent(false)
+  const resetModal = () => {
+    setStep("type")
     setCalculatorType("simple")
+    setIsCalculating(false)
+    setIsSendingCode(false)
+    setIsVerifying(false)
+    setIsSendingReport(false)
     setVerificationCode("")
-    setVerificationError("")
-  }
-
-  const handlePDFDownloadComplete = () => {
-    resetAll()
-    onClose()
-  }
-
-  const clearSimpleCalculator = () => {
-    setSimpleData({
+    setIsVerified(false)
+    setContactInfo({ name: "", email: "", company: "", phone: "" })
+    setSimpleInputs({
       currentDSO: "",
       averageInvoiceValue: "",
       monthlyInvoices: "",
-      simpleDSOImprovement: "20",
+      simpleDSOImprovement: "15",
       simpleCostOfCapital: "8",
     })
-  }
-
-  const clearDetailedCalculator = () => {
-    setDetailedData({
+    setDetailedInputs({
       implementationCost: "",
       monthlyCost: "",
       perAnnumDirectLabourCosts: "",
@@ -165,8 +91,8 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       interestRate: "",
       averageBadDebt: "",
       currentBadDebts: "",
-      labourSavings: "",
-      dsoImprovement: "",
+      labourSavings: "30",
+      dsoImprovement: "20",
       currentDSODays: "",
       debtorsBalance: "",
       averagePaymentTerms: "net30",
@@ -174,1120 +100,1318 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       numberOfCollectors: "",
       projectedCustomerGrowth: "",
     })
+    setResults(null)
   }
 
-  const handleSimpleSubmit = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-
-    console.log("Simple form submitted!")
-    console.log("Simple data:", simpleData)
-
-    if (!simpleData.currentDSO || !simpleData.averageInvoiceValue || !simpleData.monthlyInvoices) {
-      alert("Please fill in all required fields")
-      return
-    }
-
-    setCalculatorType("simple")
-    setStep("contact")
-  }
-
-  const handleDetailedSubmit = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-
-    console.log("Detailed form submitted!")
-    console.log("Detailed data:", detailedData)
-
-    // Check all required fields
-    const requiredFields = [
-      "implementationCost",
-      "monthlyCost",
-      "perAnnumDirectLabourCosts",
-      "interestRate",
-      "averageBadDebt",
-      "currentBadDebts",
-      "labourSavings",
-      "dsoImprovement",
-      "currentDSODays",
-      "debtorsBalance",
-      "numberOfDebtors",
-      "numberOfCollectors",
-      "projectedCustomerGrowth",
-    ]
-
-    const missingFields = requiredFields.filter((field) => !detailedData[field as keyof typeof detailedData])
-
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields. Missing: ${missingFields.join(", ")}`)
-      return
-    }
-
-    setCalculatorType("detailed")
-    setStep("contact")
-  }
-
-  const handleContactSubmit = async () => {
-    console.log("[v0] handleContactSubmit called")
-    console.log("[v0] Contact data:", contactData)
-
-    if (!contactData.name || !contactData.email || !contactData.phone) {
-      console.log("[v0] Missing required contact fields")
-      alert("Please fill in all contact fields")
-      return
-    }
-
-    console.log("[v0] Setting isSendingCode to true")
-    setIsSendingCode(true)
-    setVerificationError("")
-
+  const handleCalculate = async () => {
+    setIsCalculating(true)
     try {
-      console.log("[v0] Preparing to call send-verification API")
-      console.log("[v0] Calculator type:", calculatorType)
-      console.log("[v0] Input data:", calculatorType === "simple" ? simpleData : detailedData)
-
-      const requestBody = {
-        name: contactData.name,
-        email: contactData.email,
-        company: contactData.company,
-        phone: contactData.phone,
-        calculatorType,
-        inputs: calculatorType === "simple" ? simpleData : detailedData,
+      let calculatedResults
+      if (calculatorType === "simple") {
+        calculatedResults = await calculateSimpleROI(simpleInputs)
+      } else {
+        calculatedResults = await calculateDetailedROI(detailedInputs)
       }
+      setResults(calculatedResults)
+      setStep("contact")
+    } catch (error) {
+      console.error("Error calculating ROI:", error)
+      alert("Failed to calculate ROI. Please check your inputs and try again.")
+    } finally {
+      setIsCalculating(false)
+    }
+  }
 
-      console.log("[v0] Request body:", JSON.stringify(requestBody, null, 2))
+  const handleSendVerificationCode = async () => {
+    if (!contactInfo.email) {
+      alert("Please enter your email address")
+      return
+    }
 
-      const response = await fetch("/api/send-verification", {
+    setIsSendingCode(true)
+    try {
+      const response = await fetch("/api/verification-code/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: contactInfo.email }),
       })
 
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response status text:", response.statusText)
+      const data = await response.json()
 
-      const contentType = response.headers.get("content-type")
-      console.log("[v0] Response content-type:", contentType)
-
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
-        const text = await response.text()
-        console.error("[v0] Response text:", text)
-        alert("Server error occurred. Please try again or contact support.")
-        return
-      }
-
-      const result = await response.json()
-      console.log("[v0] API result:", result)
-
-      if (result.success) {
-        console.log("[v0] Verification code sent successfully, moving to verify-email step")
-        setStep("verify-email")
+      if (data.success) {
+        alert("Verification code sent! Please check your email.")
+        setStep("verify")
       } else {
-        console.error("[v0] API returned error:", result.error)
-        alert(result.error || "Failed to send verification code. Please try again.")
+        alert(data.error || "Failed to send verification code")
       }
     } catch (error) {
-      console.error("[v0] Error in handleContactSubmit:", error)
-      console.error("[v0] Error type:", typeof error)
-      if (error instanceof Error) {
-        console.error("[v0] Error name:", error.name)
-        console.error("[v0] Error message:", error.message)
-        console.error("[v0] Error stack:", error.stack)
-      }
-      alert("An error occurred. Please try again.")
+      console.error("Error sending verification code:", error)
+      alert("Failed to send verification code. Please try again.")
     } finally {
-      console.log("[v0] Setting isSendingCode to false")
       setIsSendingCode(false)
     }
   }
 
   const handleVerifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
-      setVerificationError("Please enter a valid 6-digit code")
+      alert("Please enter the 6-digit verification code")
       return
     }
 
     setIsVerifying(true)
-    setVerificationError("")
-    console.log("[v0] Starting verification process...")
-
     try {
-      console.log("[v0] Calling verify-code API...")
-      const response = await fetch("/api/verify-code", {
+      const response = await fetch("/api/verification-code/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: contactData.email,
+          email: contactInfo.email,
           code: verificationCode,
         }),
       })
 
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
-        const text = await response.text()
-        console.error("[v0] Response text:", text)
-        setVerificationError("Server error occurred. Please try again.")
-        setIsVerifying(false)
-        return
-      }
+      const data = await response.json()
 
-      const result = await response.json()
-      console.log("[v0] Verification API result:", result)
-
-      if (result.success) {
-        console.log("[v0] Verification successful, starting ROI calculation...")
-        // Email verified successfully, now calculate ROI and send results
-        setIsCalculating(true)
-
-        let results
-        try {
-          if (calculatorType === "simple") {
-            console.log("[v0] Calculating simple ROI with data:", simpleData)
-            try {
-              results = await calculateSimpleROI(simpleData)
-              console.log("[v0] Simple results:", results)
-            } catch (simpleError) {
-              console.error("[v0] Error in calculateSimpleROI:", simpleError)
-              console.error("[v0] Error name:", simpleError instanceof Error ? simpleError.name : typeof simpleError)
-              console.error(
-                "[v0] Error message:",
-                simpleError instanceof Error ? simpleError.message : String(simpleError),
-              )
-              console.error("[v0] Error stack:", simpleError instanceof Error ? simpleError.stack : "No stack trace")
-              throw simpleError
-            }
-            setSimpleResults(results)
-          } else {
-            console.log("[v0] Calculating detailed ROI with data:", detailedData)
-            try {
-              results = await calculateDetailedROI(detailedData)
-              console.log("[v0] Detailed results:", results)
-            } catch (detailedError) {
-              console.error("[v0] Error in calculateDetailedROI:", detailedError)
-              console.error(
-                "[v0] Error name:",
-                detailedError instanceof Error ? detailedError.name : typeof detailedError,
-              )
-              console.error(
-                "[v0] Error message:",
-                detailedError instanceof Error ? detailedError.message : String(detailedError),
-              )
-              console.error(
-                "[v0] Error stack:",
-                detailedError instanceof Error ? detailedError.stack : "No stack trace",
-              )
-              throw detailedError
-            }
-            setDetailedResults(results)
-          }
-
-          console.log("[v0] ROI calculation complete, sending email to admin...")
-          try {
-            const emailResult = await sendROIEmail({
-              name: contactData.name,
-              email: contactData.email,
-              company: contactData.company || "",
-              calculatorType,
-              results,
-              inputs: calculatorType === "simple" ? simpleData : detailedData,
-            })
-
-            console.log("[v0] Email result:", emailResult)
-
-            if (emailResult.success) {
-              setEmailSent(true)
-              console.log("[v0] Email sent successfully to admin")
-            } else {
-              // Type guard ensures TypeScript knows 'error' property exists
-              const errorMessage = "error" in emailResult ? emailResult.error : "Unknown error"
-              console.error("[v0] Failed to send email:", errorMessage)
-              // Don't block the user from seeing results if email fails
-              setEmailSent(false)
-            }
-          } catch (emailError) {
-            console.error("[v0] Error in sendROIEmail:", emailError)
-            console.error("[v0] Email error name:", emailError instanceof Error ? emailError.name : typeof emailError)
-            console.error(
-              "[v0] Email error message:",
-              emailError instanceof Error ? emailError.message : String(emailError),
-            )
-            console.error("[v0] Email error stack:", emailError instanceof Error ? emailError.stack : "No stack trace")
-            // Don't throw - allow user to see results even if email fails
-            setEmailSent(false)
-          }
-
-          console.log("[v0] Setting step to results...")
-          setStep(calculatorType === "simple" ? "simple-results" : "detailed-results")
-          console.log("[v0] Verification process complete!")
-        } catch (calcError) {
-          console.error("[v0] Error during calculation or email:", calcError)
-          console.error("[v0] Error type:", typeof calcError)
-          console.error("[v0] Error instanceof Error:", calcError instanceof Error)
-          if (calcError instanceof Error) {
-            console.error("[v0] Error name:", calcError.name)
-            console.error("[v0] Error message:", calcError.message)
-            console.error("[v0] Error stack:", calcError.stack)
-          } else {
-            console.error("[v0] Error value:", String(calcError))
-          }
-          console.error("[v0] Calculator type:", calculatorType)
-          console.error("[v0] Input data:", calculatorType === "simple" ? simpleData : detailedData)
-          setVerificationError("Failed to calculate results. Please try again.")
-          setIsCalculating(false)
-          setIsVerifying(false)
-          return
-        }
-
-        setIsCalculating(false)
+      if (data.success) {
+        setIsVerified(true)
+        setStep("results")
       } else {
-        console.log("[v0] Verification failed:", result.error)
-        setVerificationError(result.error || "Invalid verification code")
+        alert(data.error || "Invalid verification code")
       }
     } catch (error) {
-      console.error("[v0] Error verifying code:", error)
-      console.error("[v0] Verification error type:", typeof error)
-      if (error instanceof Error) {
-        console.error("[v0] Verification error name:", error.name)
-        console.error("[v0] Verification error message:", error.message)
-        console.error("[v0] Verification error stack:", error.stack)
-      }
-      setVerificationError("An error occurred. Please try again.")
+      console.error("Error verifying code:", error)
+      alert("Failed to verify code. Please try again.")
     } finally {
       setIsVerifying(false)
     }
   }
 
-  const handleResendCode = async () => {
-    setIsSendingCode(true)
-    setVerificationError("")
-    setVerificationCode("")
-
+  const handleSendReport = async () => {
+    setIsSendingReport(true)
     try {
-      const response = await fetch("/api/send-verification", {
+      console.log("=== Sending ROI Report ===")
+      console.log("Contact Info:", contactInfo)
+      console.log("Calculator Type:", calculatorType)
+      console.log("Results:", results)
+
+      const inputs = calculatorType === "simple" ? simpleInputs : detailedInputs
+
+      const response = await fetch("/api/roi-calculator/send-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: contactData.name,
-          email: contactData.email,
-          company: contactData.company,
-          phone: contactData.phone,
+          name: contactInfo.name,
+          email: contactInfo.email,
+          company: contactInfo.company,
+          phone: contactInfo.phone,
           calculatorType,
-          inputs: calculatorType === "simple" ? simpleData : detailedData,
+          inputs,
+          results,
         }),
       })
 
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[v0] Non-JSON response received:", response.status, response.statusText)
-        const text = await response.text()
-        console.error("[v0] Response text:", text)
-        setVerificationError("Server error occurred. Please try again.")
-        return
-      }
+      console.log("Response status:", response.status)
+      const data = await response.json()
+      console.log("Response data:", data)
 
-      const result = await response.json()
-
-      if (result.success) {
-        alert("A new verification code has been sent to your email")
+      if (data.success) {
+        alert("Report sent successfully! Check your email.")
       } else {
-        setVerificationError(result.error || "Failed to resend code")
+        alert(data.error || "Failed to send report")
       }
     } catch (error) {
-      console.error("Error resending code:", error)
-      setVerificationError("An error occurred. Please try again.")
+      console.error("Error sending report:", error)
+      alert("Failed to send report. Please try again.")
     } finally {
-      setIsSendingCode(false)
+      setIsSendingReport(false)
     }
   }
 
-  return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-center mb-6">
-            <img
-              src="/images/design-mode/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20175%20Pxls%20-%20Copy.png"
-              alt="Kuhlekt Logo"
-              className="h-15"
+  const renderTypeSelection = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Calculator</h3>
+        <p className="text-gray-600">Select the calculator that best fits your needs</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card
+          className={`cursor-pointer transition-all hover:shadow-lg ${
+            calculatorType === "simple" ? "ring-2 ring-cyan-600" : ""
+          }`}
+          onClick={() => setCalculatorType("simple")}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-cyan-100 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-lg mb-2">Simple Calculator</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Quick estimate of potential savings based on DSO improvement
+                </p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• 5 simple inputs</li>
+                  <li>• Focus on cash flow</li>
+                  <li>• 2-minute completion</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`cursor-pointer transition-all hover:shadow-lg ${
+            calculatorType === "detailed" ? "ring-2 ring-cyan-600" : ""
+          }`}
+          onClick={() => setCalculatorType("detailed")}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-cyan-100 rounded-lg">
+                <FileText className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-lg mb-2">Detailed Calculator</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Comprehensive ROI analysis including implementation costs and multiple benefit streams
+                </p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Complete financial analysis</li>
+                  <li>• ROI & payback period</li>
+                  <li>• 5-minute completion</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={() => setStep("form")} size="lg">
+          Continue
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderSimpleForm = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Simple ROI Calculator</h3>
+        <p className="text-gray-600">Enter your current metrics to estimate potential savings</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="currentDSO">Current DSO (Days Sales Outstanding)</Label>
+          <Input
+            id="currentDSO"
+            type="number"
+            placeholder="e.g., 45"
+            value={simpleInputs.currentDSO}
+            onChange={(e) => setSimpleInputs({ ...simpleInputs, currentDSO: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="averageInvoiceValue">Average Invoice Value ($)</Label>
+          <Input
+            id="averageInvoiceValue"
+            type="number"
+            placeholder="e.g., 5000"
+            value={simpleInputs.averageInvoiceValue}
+            onChange={(e) => setSimpleInputs({ ...simpleInputs, averageInvoiceValue: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="monthlyInvoices">Number of Monthly Invoices</Label>
+          <Input
+            id="monthlyInvoices"
+            type="number"
+            placeholder="e.g., 100"
+            value={simpleInputs.monthlyInvoices}
+            onChange={(e) => setSimpleInputs({ ...simpleInputs, monthlyInvoices: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="simpleDSOImprovement">Expected DSO Improvement (%)</Label>
+          <Input
+            id="simpleDSOImprovement"
+            type="number"
+            placeholder="e.g., 15"
+            value={simpleInputs.simpleDSOImprovement}
+            onChange={(e) => setSimpleInputs({ ...simpleInputs, simpleDSOImprovement: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="simpleCostOfCapital">Cost of Capital (%)</Label>
+          <Input
+            id="simpleCostOfCapital"
+            type="number"
+            placeholder="e.g., 8"
+            value={simpleInputs.simpleCostOfCapital}
+            onChange={(e) => setSimpleInputs({ ...simpleInputs, simpleCostOfCapital: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep("type")}>
+          Back
+        </Button>
+        <Button onClick={handleCalculate} disabled={isCalculating}>
+          {isCalculating ? "Calculating..." : "Calculate ROI"}
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderDetailedForm = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Detailed ROI Calculator</h3>
+        <p className="text-gray-600">Complete analysis of your AR automation ROI</p>
+      </div>
+
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Implementation Details</h4>
+          <div>
+            <Label htmlFor="implementationCost">Implementation Cost ($)</Label>
+            <Input
+              id="implementationCost"
+              type="number"
+              placeholder="e.g., 10000"
+              value={detailedInputs.implementationCost}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, implementationCost: e.target.value })}
             />
           </div>
+          <div>
+            <Label htmlFor="monthlyCost">Monthly Subscription Cost ($)</Label>
+            <Input
+              id="monthlyCost"
+              type="number"
+              placeholder="e.g., 500"
+              value={detailedInputs.monthlyCost}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, monthlyCost: e.target.value })}
+            />
+          </div>
+        </div>
 
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <Calculator className="h-6 w-6 text-cyan-600" />
-                ROI Calculator
-              </DialogTitle>
-              <div className="flex items-center gap-2">
-                {step !== "select" && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => setShowHelp(true)}
-                    className="bg-cyan-50 hover:bg-cyan-100 border-2 border-cyan-300 hover:border-cyan-400 transition-all"
-                  >
-                    <HelpCircle className="h-7 w-7 text-cyan-600 mr-2" />
-                    <span className="font-semibold text-cyan-700">Help</span>
-                  </Button>
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Current Operations</h4>
+          <div>
+            <Label htmlFor="currentDSODays">Current DSO (Days)</Label>
+            <Input
+              id="currentDSODays"
+              type="number"
+              placeholder="e.g., 45"
+              value={detailedInputs.currentDSODays}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, currentDSODays: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="debtorsBalance">Current Debtors Balance ($)</Label>
+            <Input
+              id="debtorsBalance"
+              type="number"
+              placeholder="e.g., 500000"
+              value={detailedInputs.debtorsBalance}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, debtorsBalance: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="numberOfDebtors">Number of Debtors</Label>
+            <Input
+              id="numberOfDebtors"
+              type="number"
+              placeholder="e.g., 150"
+              value={detailedInputs.numberOfDebtors}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfDebtors: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="numberOfCollectors">Number of Collectors</Label>
+            <Input
+              id="numberOfCollectors"
+              type="number"
+              placeholder="e.g., 3"
+              value={detailedInputs.numberOfCollectors}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, numberOfCollectors: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="perAnnumDirectLabourCosts">Annual Direct Labour Costs ($)</Label>
+            <Input
+              id="perAnnumDirectLabourCosts"
+              type="number"
+              placeholder="e.g., 150000"
+              value={detailedInputs.perAnnumDirectLabourCosts}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, perAnnumDirectLabourCosts: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Financial Details</h4>
+          <div>
+            <Label htmlFor="interestType">Interest Type</Label>
+            <Select
+              value={detailedInputs.interestType}
+              onValueChange={(value: "loan" | "deposit") =>
+                setDetailedInputs({ ...detailedInputs, interestType: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="loan">Loan Interest</SelectItem>
+                <SelectItem value="deposit">Deposit Interest</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="interestRate">Interest Rate (%)</Label>
+            <Input
+              id="interestRate"
+              type="number"
+              step="0.1"
+              placeholder="e.g., 6.5"
+              value={detailedInputs.interestRate}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, interestRate: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="currentBadDebts">Current Bad Debts (Annual $)</Label>
+            <Input
+              id="currentBadDebts"
+              type="number"
+              placeholder="e.g., 25000"
+              value={detailedInputs.currentBadDebts}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, currentBadDebts: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="averageBadDebt">Average Bad Debt Rate (%)</Label>
+            <Input
+              id="averageBadDebt"
+              type="number"
+              step="0.1"
+              placeholder="e.g., 2.5"
+              value={detailedInputs.averageBadDebt}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, averageBadDebt: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Expected Improvements</h4>
+          <div>
+            <Label htmlFor="dsoImprovement">DSO Improvement (%)</Label>
+            <Input
+              id="dsoImprovement"
+              type="number"
+              placeholder="e.g., 20"
+              value={detailedInputs.dsoImprovement}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, dsoImprovement: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="labourSavings">Labour Savings (%)</Label>
+            <Input
+              id="labourSavings"
+              type="number"
+              placeholder="e.g., 30"
+              value={detailedInputs.labourSavings}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, labourSavings: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="projectedCustomerGrowth">Projected Customer Growth (%)</Label>
+            <Input
+              id="projectedCustomerGrowth"
+              type="number"
+              placeholder="e.g., 15"
+              value={detailedInputs.projectedCustomerGrowth}
+              onChange={(e) => setDetailedInputs({ ...detailedInputs, projectedCustomerGrowth: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="averagePaymentTerms">Average Payment Terms</Label>
+            <Select
+              value={detailedInputs.averagePaymentTerms}
+              onValueChange={(value: "net30" | "net60" | "net90") =>
+                setDetailedInputs({ ...detailedInputs, averagePaymentTerms: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="net30">Net 30</SelectItem>
+                <SelectItem value="net60">Net 60</SelectItem>
+                <SelectItem value="net90">Net 90</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-between pt-4">
+        <Button variant="outline" onClick={() => setStep("form")}>
+          Back
+        </Button>
+        <Button onClick={handleCalculate} disabled={isCalculating}>
+          {isCalculating ? "Calculating..." : "Calculate ROI"}
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderContactForm = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Get Your Results</h3>
+        <p className="text-gray-600">Enter your details to receive your personalized ROI report</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Full Name *</Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="John Smith"
+            value={contactInfo.name}
+            onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="email">Email Address *</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="john@company.com"
+            value={contactInfo.email}
+            onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="company">Company Name</Label>
+          <Input
+            id="company"
+            type="text"
+            placeholder="Your Company Ltd"
+            value={contactInfo.company}
+            onChange={(e) => setContactInfo({ ...contactInfo, company: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="+1 (555) 123-4567"
+            value={contactInfo.phone}
+            onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep("form")}>
+          Back
+        </Button>
+        <Button
+          onClick={handleSendVerificationCode}
+          disabled={isSendingCode || !contactInfo.name || !contactInfo.email}
+        >
+          {isSendingCode ? "Sending..." : "Continue"}
+        </Button>
+      </div>
+    </div>
+  )
+
+  const renderVerification = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h3>
+        <p className="text-gray-600">We've sent a 6-digit code to {contactInfo.email}</p>
+      </div>
+
+      <div>
+        <Label htmlFor="verificationCode">Verification Code</Label>
+        <Input
+          id="verificationCode"
+          type="text"
+          placeholder="000000"
+          maxLength={6}
+          value={verificationCode}
+          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+          className="text-center text-2xl tracking-widest"
+        />
+      </div>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep("contact")}>
+          Back
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleSendVerificationCode} disabled={isSendingCode}>
+            {isSendingCode ? "Resending..." : "Resend Code"}
+          </Button>
+          <Button onClick={handleVerifyCode} disabled={isVerifying || verificationCode.length !== 6}>
+            {isVerifying ? "Verifying..." : "Verify"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderSimpleResults = () => {
+    const currentDSO = Number.parseFloat(simpleInputs.currentDSO) || 45
+    const averageInvoiceValue = Number.parseFloat(simpleInputs.averageInvoiceValue) || 5000
+    const monthlyInvoices = Number.parseFloat(simpleInputs.monthlyInvoices) || 100
+    const dsoImprovement = Number.parseFloat(simpleInputs.simpleDSOImprovement) || 15
+    const costOfCapital = Number.parseFloat(simpleInputs.simpleCostOfCapital) || 8
+
+    const annualRevenue = averageInvoiceValue * monthlyInvoices * 12
+    const debtorsBalance = (annualRevenue / 365) * currentDSO
+    const newDSO = currentDSO * (1 - dsoImprovement / 100)
+    const dailyRevenue = annualRevenue / 365
+    const workingCapitalReleased = (currentDSO - newDSO) * dailyRevenue
+    const interestSavings = workingCapitalReleased * (costOfCapital / 100)
+
+    // Estimate labour savings (30% of typical AR staff cost)
+    const estimatedLabourCost = annualRevenue * 0.02 // 2% of revenue for AR operations
+    const labourSavings = estimatedLabourCost * 0.3
+
+    // Estimate bad debt reduction (50% reduction of typical 2% bad debt rate)
+    const estimatedBadDebt = annualRevenue * 0.02
+    const badDebtReduction = estimatedBadDebt * 0.5
+
+    const totalAnnualBenefit = interestSavings + labourSavings + badDebtReduction
+    const estimatedImplementationCost = 10000
+    const estimatedMonthlyCost = 500
+    const totalFirstYearInvestment = estimatedImplementationCost + estimatedMonthlyCost * 12
+    const roi = ((totalAnnualBenefit - estimatedMonthlyCost * 12) / totalFirstYearInvestment) * 100
+    const paybackMonths = totalFirstYearInvestment / (totalAnnualBenefit / 12)
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Projected ROI</h3>
+          <p className="text-gray-600">Comprehensive breakdown of your investment returns</p>
+        </div>
+
+        {/* ROI and Payback Period */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="h-5 w-5 text-green-600 mt-1" />
+                <div>
+                  <p className="text-sm text-gray-600">ROI</p>
+                  <p className="text-3xl font-bold text-green-600">{roi.toFixed(1)}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Return on Investment</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-red-600 mt-1" />
+                <div>
+                  <p className="text-sm text-gray-600">Payback Period</p>
+                  <p className="text-3xl font-bold text-red-600">{paybackMonths.toFixed(1)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Months</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Cash Flow Info */}
+        <Card className="bg-cyan-50 border-cyan-200">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-semibold text-cyan-900 mb-2">💰 Cash Flow Cost Savings</h4>
+            <p className="text-sm text-cyan-800">
+              Monthly Cash Flow improvements: ${Math.round(totalAnnualBenefit / 12).toLocaleString()} per month. This
+              includes interest savings, labour cost reductions, and bad debt improvements.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Current DSO Info */}
+        <Card className="bg-cyan-50 border-cyan-200">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-semibold text-cyan-900 mb-2">📊 Current DSO</h4>
+            <p className="text-sm text-cyan-800">
+              Your current DSO of {currentDSO} days is the baseline metric. By improving DSO to {newDSO.toFixed(0)}{" "}
+              days, you'll release ${workingCapitalReleased.toLocaleString(undefined, { maximumFractionDigits: 0 })} in
+              working capital.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Payment Terms Impact Analysis */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-lg text-cyan-600">📋 Payment Terms Impact Analysis</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Payment Terms</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Current DSO</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Improved DSO</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Working Capital Released</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { term: "Net 30", multiplier: 1.0 },
+                  { term: "Net 60", multiplier: 1.5 },
+                  { term: "Net 90", multiplier: 2.0 },
+                ].map((item, idx) => {
+                  const termCurrentDSO = Math.round(currentDSO * item.multiplier)
+                  const termImprovedDSO = Math.round(currentDSO * item.multiplier * (1 - dsoImprovement / 100))
+                  const released = Math.round((termCurrentDSO - termImprovedDSO) * dailyRevenue)
+
+                  return (
+                    <tr key={idx} className={idx === 0 ? "bg-cyan-50" : ""}>
+                      <td className="border border-gray-300 px-3 py-2 font-medium">
+                        {item.term} {idx === 0 ? "(Typical)" : ""}
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">{termCurrentDSO} days</td>
+                      <td className="border border-gray-300 px-3 py-2 text-green-600 font-semibold">
+                        {termImprovedDSO} days
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2 text-cyan-600 font-semibold">
+                        ${released.toLocaleString()}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Actual DSO is typically 50% higher than normal payment terms. e.g., 30-day payment terms often
+              results in 45-day DSO.
+            </p>
+          </div>
+        </div>
+
+        {/* Business Growth Without Additional Headcount */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-lg text-cyan-600">📈 Business Growth Without Additional Headcount</h4>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Current Capacity</p>
+                <p className="text-3xl font-bold text-gray-900">{monthlyInvoices}</p>
+                <p className="text-xs text-gray-600 mt-1">invoices per month</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">With Automation</p>
+                <p className="text-3xl font-bold text-gray-900">{Math.round(monthlyInvoices * 1.3)}</p>
+                <p className="text-xs text-gray-600 mt-1">invoices per month</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Additional Capacity", value: `+${Math.round(monthlyInvoices * 0.3)}` },
+              { label: "Growth Enabled", value: "30%" },
+              { label: "Efficiency Gain", value: "30%" },
+            ].map((metric, idx) => (
+              <Card key={idx} className="bg-cyan-50 border-cyan-200">
+                <CardContent className="p-3 text-center">
+                  <p className="text-xs font-semibold text-cyan-900 uppercase mb-1">{metric.label}</p>
+                  <p className="text-2xl font-bold text-cyan-600">{metric.value}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
+            <CardContent className="p-4">
+              <h5 className="text-sm font-semibold text-green-900 mb-3">✓ Growth Scenario: 50% Customer Increase</h5>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded p-3 text-center">
+                  <p className="text-xs text-gray-600 mb-1">New Invoices</p>
+                  <p className="text-2xl font-bold text-green-600">{Math.round(monthlyInvoices * 0.5)}</p>
+                </div>
+                <div className="bg-white rounded p-3 text-center">
+                  <p className="text-xs text-gray-600 mb-1">Handled Without Hiring</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {Math.min(Math.round(monthlyInvoices * 0.5), Math.round(monthlyInvoices * 0.3))}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Savings Assumptions */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-lg text-cyan-600">💡 Savings Assumptions</h4>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">DSO Improvement</p>
+                <p className="text-4xl font-bold text-gray-900">{dsoImprovement}%</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Bad Debt Reduction</p>
+                <p className="text-4xl font-bold text-gray-900">50%</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Financial Impact */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-lg text-cyan-600">💰 Financial Impact</h4>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="border-green-300">
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-600 mb-1">Annual Recurring Savings</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${totalAnnualBenefit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Interest + Labour + Bad Debt</p>
+              </CardContent>
+            </Card>
+            <Card className="border-green-300">
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-600 mb-1">One-Time Cash Flow Boost</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${workingCapitalReleased.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Working capital released</p>
+              </CardContent>
+            </Card>
+            <Card className="border-green-300">
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-600 mb-1">Monthly Operational Savings</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${Math.round(totalAnnualBenefit / 12).toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Reduced labour costs</p>
+              </CardContent>
+            </Card>
+            <Card className="border-red-300">
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-600 mb-1">Total First Year Investment</p>
+                <p className="text-2xl font-bold text-red-600">-${totalFirstYearInvestment.toLocaleString()}</p>
+                <p className="text-xs text-gray-500 mt-1">Implementation + Annual cost</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* DSO Improvement */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-lg text-cyan-600">📊 DSO Improvement</h4>
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Current</p>
+                <p className="text-3xl font-bold text-gray-900">{currentDSO}</p>
+                <p className="text-xs text-gray-600 mt-1">days</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Improved</p>
+                <p className="text-3xl font-bold text-gray-900">{newDSO.toFixed(0)}</p>
+                <p className="text-xs text-gray-600 mt-1">days</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-300">
+              <CardContent className="p-4 text-center">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Reduction</p>
+                <p className="text-3xl font-bold text-gray-900">{(currentDSO - newDSO).toFixed(0)}</p>
+                <p className="text-xs text-gray-600 mt-1">days faster</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-300">
+          <CardContent className="p-6">
+            <h4 className="font-semibold text-lg text-cyan-900 mb-3">📝 Summary</h4>
+            <div className="space-y-3 text-sm text-cyan-900">
+              <p>
+                By implementing the Kuhlekt invoice-to-cash platform with automated collection workflows and customer
+                self-service, your organization can achieve a{" "}
+                <strong className="text-cyan-600">{roi.toFixed(0)}% ROI</strong> within{" "}
+                <strong className="text-cyan-600">{paybackMonths.toFixed(1)} months</strong>.
+              </p>
+              <p>
+                You should expect to improve DSO by <strong className="text-cyan-600">{dsoImprovement}%</strong> (from{" "}
+                {currentDSO} to {newDSO.toFixed(0)} days), freeing up{" "}
+                <strong className="text-cyan-600">
+                  ${workingCapitalReleased.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </strong>{" "}
+                in working capital without adding headcount.
+              </p>
+              <p>
+                The total annual benefit of{" "}
+                <strong className="text-cyan-600">
+                  ${totalAnnualBenefit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </strong>{" "}
+                includes <strong>${interestSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> in
+                interest savings,{" "}
+                <strong>${labourSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> in labour cost
+                reductions, and{" "}
+                <strong>${badDebtReduction.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> in bad debt
+                improvements.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Disclaimer */}
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-900">
+                <p className="font-semibold mb-1">Important Disclaimer</p>
+                <p>
+                  These calculations are estimates based on industry averages and the information you provided. Actual
+                  results may vary depending on your specific business circumstances, implementation approach, and
+                  market conditions. This calculator is for informational purposes only and should not be considered
+                  financial advice. We recommend consulting with your financial advisor for detailed analysis.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <div className="p-4 bg-cyan-50 rounded-lg border-2 border-cyan-200">
+            <ROIReportPDF calculatorType={calculatorType} inputs={simpleInputs} results={results} />
+          </div>
+
+          <Button onClick={handleSendReport} disabled={isSendingReport} className="w-full" size="lg">
+            {isSendingReport ? "Sending..." : "Email Me This Report"}
+          </Button>
+        </div>
+
+        {/* What's Next */}
+        <div className="text-center pt-4 border-t">
+          <h4 className="font-semibold mb-2">What's Next?</h4>
+          <p className="text-sm text-gray-600 mb-4">
+            Ready to turn these projections into reality? Our team can show you exactly how Kuhlekt delivers these
+            results.
+          </p>
+          <Button asChild variant="outline">
+            <a href="/demo">Schedule a Demo</a>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderDetailedResults = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Projected ROI</h3>
+        <p className="text-gray-600">Comprehensive breakdown of your investment returns</p>
+      </div>
+
+      {/* ROI and Payback Period */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-green-600 mt-1" />
+              <div>
+                <p className="text-sm text-gray-600">ROI</p>
+                <p className="text-3xl font-bold text-green-600">{results?.roi?.toFixed(1)}%</p>
+                <p className="text-xs text-gray-500 mt-1">Return on Investment</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-red-600 mt-1" />
+              <div>
+                <p className="text-sm text-gray-600">Payback Period</p>
+                <p className="text-3xl font-bold text-red-600">{results?.paybackMonths?.toFixed(1)}</p>
+                <p className="text-xs text-gray-500 mt-1">Months</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cash Flow Info */}
+      <Card className="bg-cyan-50 border-cyan-200">
+        <CardContent className="p-4">
+          <h4 className="text-sm font-semibold text-cyan-900 mb-2">💰 Cash Flow Cost Savings</h4>
+          <p className="text-sm text-cyan-800">
+            Monthly Cash Flow improvements: ${Math.round((results?.totalAnnualBenefit || 0) / 12).toLocaleString()} per
+            month. This includes interest savings, labour cost reductions, and bad debt improvements.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Current DSO Info */}
+      <Card className="bg-cyan-50 border-cyan-200">
+        <CardContent className="p-4">
+          <h4 className="text-sm font-semibold text-cyan-900 mb-2">📊 Current DSO</h4>
+          <p className="text-sm text-cyan-800">
+            Your current DSO of {Number.parseFloat(detailedInputs.currentDSODays)} days is the baseline metric. By
+            improving DSO to {results?.newDSO?.toFixed(0)} days, you'll release $
+            {results?.workingCapitalReleased?.toLocaleString()} in working capital.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Payment Terms Impact Analysis */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-lg text-cyan-600">📋 Payment Terms Impact Analysis</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Payment Terms</th>
+                <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Current DSO</th>
+                <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Improved DSO</th>
+                <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Working Capital Released</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { term: "Net 30", multiplier: 1.0 },
+                { term: "Net 60", multiplier: 1.5 },
+                { term: "Net 90", multiplier: 2.0 },
+              ].map((item, idx) => {
+                const currentDSO = Number.parseFloat(detailedInputs.currentDSODays) || 45
+                const dsoImprovement = Number.parseFloat(detailedInputs.dsoImprovement) || 20
+                const debtorsBalance = Number.parseFloat(detailedInputs.debtorsBalance) || 0
+                const dailyRevenue = debtorsBalance / currentDSO
+                const termCurrentDSO = Math.round(currentDSO * item.multiplier)
+                const termImprovedDSO = Math.round(currentDSO * item.multiplier * (1 - dsoImprovement / 100))
+                const released = Math.round((termCurrentDSO - termImprovedDSO) * dailyRevenue)
+
+                return (
+                  <tr key={idx} className={idx === 0 ? "bg-cyan-50" : ""}>
+                    <td className="border border-gray-300 px-3 py-2 font-medium">
+                      {item.term} {idx === 0 ? "(Current)" : ""}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2">{termCurrentDSO} days</td>
+                    <td className="border border-gray-300 px-3 py-2 text-green-600 font-semibold">
+                      {termImprovedDSO} days
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 text-cyan-600 font-semibold">
+                      ${released.toLocaleString()}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-500 mt-2">
+            Note: Actual DSO is typically 50% higher than normal payment terms. e.g., 30-day payment terms often results
+            in 45-day DSO.
+          </p>
+        </div>
+      </div>
+
+      {/* Business Growth Without Additional Headcount */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-lg text-cyan-600">📈 Business Growth Without Additional Headcount</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Current Capacity</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {Math.round(
+                  (Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
+                    (Number.parseFloat(detailedInputs.numberOfCollectors) || 1),
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="hover:bg-red-50 hover:text-red-600"
-                  title="Close calculator"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            <DialogDescription>
-              {step === "select" && "Choose the calculator that best fits your needs"}
-              {step === "simple" && "Quick ROI calculation based on DSO improvement"}
-              {step === "detailed" && "Comprehensive invoice-to-cash analysis"}
-              {step === "contact" && "Your contact information to receive results"}
-              {step === "verify-email" && "Verify your email address to view results"}
-              {(step === "simple-results" || step === "detailed-results") && "Your ROI analysis results"}
-            </DialogDescription>
-          </DialogHeader>
+              </p>
+              <p className="text-xs text-gray-600 mt-1">customers per collector</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">With Implementation</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {Math.round(
+                  ((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
+                    (Number.parseFloat(detailedInputs.numberOfCollectors) || 1)) *
+                    (1 + (Number.parseFloat(detailedInputs.labourSavings) || 30) / 100),
+                )}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">customers per collector</p>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Calculator Selection */}
-          {step === "select" && (
-            <div className="space-y-4 py-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  className="h-auto p-6 flex flex-col items-start gap-3 hover:border-cyan-500 hover:bg-cyan-50 bg-transparent"
-                  onClick={() => setStep("simple")}
-                >
-                  <div className="flex items-center gap-3">
-                    <Calculator className="h-6 w-6 text-cyan-600" />
-                    <h3 className="font-semibold text-lg">Simple Calculator</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 text-left">Quick ROI based on DSO and invoice data</p>
-                </Button>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            {
+              label: "Additional Capacity (No New Hires)",
+              value: Math.round(
+                ((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
+                  (Number.parseFloat(detailedInputs.numberOfCollectors) || 1)) *
+                  ((Number.parseFloat(detailedInputs.labourSavings) || 30) / 100),
+              ),
+            },
+            { label: "Growth Enabled", value: `${Number.parseFloat(detailedInputs.labourSavings) || 30}%` },
+            { label: "Efficiency Gain", value: `${Number.parseFloat(detailedInputs.labourSavings) || 30}%` },
+          ].map((metric, idx) => (
+            <Card key={idx} className="bg-cyan-50 border-cyan-200">
+              <CardContent className="p-3 text-center">
+                <p className="text-xs font-semibold text-cyan-900 uppercase mb-1">{metric.label}</p>
+                <p className="text-2xl font-bold text-cyan-600">
+                  {typeof metric.value === "number" ? `+${metric.value}` : metric.value}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-                <Button
-                  variant="outline"
-                  className="h-auto p-6 flex flex-col items-start gap-3 hover:border-cyan-500 hover:bg-cyan-50 bg-transparent"
-                  onClick={() => setStep("detailed")}
-                >
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="h-6 w-6 text-cyan-600" />
-                    <h3 className="font-semibold text-lg">Detailed Calculator</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 text-left">Comprehensive invoice-to-cash ROI analysis</p>
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Simple Calculator Form */}
-          {step === "simple" && (
-            <div className="space-y-6 py-4">
-              <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Expected DSO Improvement (%)</Label>
-                    <Input
-                      ref={dsoImprovementInputRef}
-                      type="number"
-                      value={simpleData.simpleDSOImprovement}
-                      onChange={(e) => setSimpleData({ ...simpleData, simpleDSOImprovement: e.target.value })}
-                      placeholder="20"
-                    />
-                  </div>
-                  <div>
-                    <Label>Cost of Capital (%)</Label>
-                    <Input
-                      type="number"
-                      value={simpleData.simpleCostOfCapital}
-                      onChange={(e) => setSimpleData({ ...simpleData, simpleCostOfCapital: e.target.value })}
-                      placeholder="8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Current DSO (Days) *</Label>
-                  <Input
-                    type="number"
-                    value={simpleData.currentDSO}
-                    onChange={(e) => setSimpleData({ ...simpleData, currentDSO: e.target.value })}
-                    placeholder="45"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Average Invoice Value ($) *</Label>
-                  <Input
-                    type="number"
-                    value={simpleData.averageInvoiceValue}
-                    onChange={(e) => setSimpleData({ ...simpleData, averageInvoiceValue: e.target.value })}
-                    placeholder="5000"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Monthly Invoices *</Label>
-                  <Input
-                    type="number"
-                    value={simpleData.monthlyInvoices}
-                    onChange={(e) => setSimpleData({ ...simpleData, monthlyInvoices: e.target.value })}
-                    placeholder="100"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={clearSimpleCalculator}
-                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-300 bg-transparent"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-                <Button
-                  onClick={handleSimpleSubmit}
-                  disabled={isCalculating}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Detailed Calculator Form */}
-          {step === "detailed" && (
-            <div className="space-y-6 py-4">
-              <Accordion type="multiple" defaultValue={["cost", "bank", "debt", "savings", "financial", "team"]}>
-                <AccordionItem value="cost">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5 text-cyan-600" />
-                      Cost Structure
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Implementation Cost ($) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.implementationCost}
-                          onChange={(e) => setDetailedData({ ...detailedData, implementationCost: e.target.value })}
-                          placeholder="1500"
-                        />
-                      </div>
-                      <div>
-                        <Label>Monthly Cost ($) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.monthlyCost}
-                          onChange={(e) => setDetailedData({ ...detailedData, monthlyCost: e.target.value })}
-                          placeholder="2000"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Per Annum Direct Labour Costs ($) *</Label>
-                      <Input
-                        type="number"
-                        value={detailedData.perAnnumDirectLabourCosts}
-                        onChange={(e) =>
-                          setDetailedData({ ...detailedData, perAnnumDirectLabourCosts: e.target.value })
-                        }
-                        placeholder="150000"
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="bank">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      Bank Interest
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Interest Type</Label>
-                        <Select
-                          value={detailedData.interestType}
-                          onValueChange={(value: "loan" | "deposit") =>
-                            setDetailedData({ ...detailedData, interestType: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="loan">Loan Interest</SelectItem>
-                            <SelectItem value="deposit">Deposit Interest</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Interest Rate (%) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.interestRate}
-                          onChange={(e) => setDetailedData({ ...detailedData, interestRate: e.target.value })}
-                          placeholder="4.5"
-                        />
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="debt">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-cyan-600" />
-                      Bad Debt
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Current Bad Debts ($) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.currentBadDebts}
-                          onChange={(e) => setDetailedData({ ...detailedData, currentBadDebts: e.target.value })}
-                          placeholder="50000"
-                        />
-                      </div>
-                      <div>
-                        <Label>Average Bad Debt (%) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.averageBadDebt}
-                          onChange={(e) => setDetailedData({ ...detailedData, averageBadDebt: e.target.value })}
-                          placeholder="2.5"
-                        />
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="savings">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-cyan-600" />
-                      Expected Savings
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>DSO Improvement (%) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.dsoImprovement}
-                          onChange={(e) => setDetailedData({ ...detailedData, dsoImprovement: e.target.value })}
-                          placeholder="25"
-                        />
-                      </div>
-                      <div>
-                        <Label>Labour Savings (%) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.labourSavings}
-                          onChange={(e) => setDetailedData({ ...detailedData, labourSavings: e.target.value })}
-                          placeholder="30"
-                        />
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="financial">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-cyan-600" />
-                      Financial Metrics
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Current DSO (Days) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.currentDSODays}
-                          onChange={(e) => setDetailedData({ ...detailedData, currentDSODays: e.target.value })}
-                          placeholder="45"
-                        />
-                      </div>
-                      <div>
-                        <Label>Debtors Balance ($) *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.debtorsBalance}
-                          onChange={(e) => setDetailedData({ ...detailedData, debtorsBalance: e.target.value })}
-                          placeholder="500000"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Average Payment Terms</Label>
-                      <Select
-                        value={detailedData.averagePaymentTerms}
-                        onValueChange={(value: "net30" | "net60" | "net90") =>
-                          setDetailedData({ ...detailedData, averagePaymentTerms: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="net30">Net 30</SelectItem>
-                          <SelectItem value="net60">Net 60</SelectItem>
-                          <SelectItem value="net90">Net 90</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="team">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-cyan-600" />
-                      Team Structure & Growth
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Number of Debtors *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.numberOfDebtors}
-                          onChange={(e) => setDetailedData({ ...detailedData, numberOfDebtors: e.target.value })}
-                          placeholder="500"
-                        />
-                      </div>
-                      <div>
-                        <Label>Number of Collectors *</Label>
-                        <Input
-                          type="number"
-                          value={detailedData.numberOfCollectors}
-                          onChange={(e) => setDetailedData({ ...detailedData, numberOfCollectors: e.target.value })}
-                          placeholder="3"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Projected Customer Growth (%) *</Label>
-                      <Input
-                        type="number"
-                        value={detailedData.projectedCustomerGrowth}
-                        onChange={(e) => setDetailedData({ ...detailedData, projectedCustomerGrowth: e.target.value })}
-                        placeholder="15"
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={clearDetailedCalculator}
-                  className="flex-1 hover:bg-red-50 hover:text-red-600 hover:border-red-300 bg-transparent"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-                <Button
-                  onClick={handleDetailedSubmit}
-                  disabled={isCalculating}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Contact Information Form */}
-          {step === "contact" && (
-            <div className="space-y-6 py-4">
-              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6">
-                <h3 className="font-semibold text-lg mb-2">Almost there!</h3>
-                <p className="text-sm text-gray-700">
-                  Please provide your contact information. We'll send you a verification code to confirm your email
-                  address before showing your personalized ROI results.
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
+          <CardContent className="p-4">
+            <h5 className="text-sm font-semibold text-green-900 mb-3">✓ Growth Scenario: 50% Customer Increase</h5>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded p-3 text-center">
+                <p className="text-xs text-gray-600 mb-1">New Customers</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {Math.round((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) * 0.5)}
                 </p>
               </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label>Full Name *</Label>
-                  <Input
-                    type="text"
-                    value={contactData.name}
-                    onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
-                    placeholder="John Smith"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Email Address *</Label>
-                  <Input
-                    type="email"
-                    value={contactData.email}
-                    onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
-                    placeholder="john.smith@company.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Phone Number *</Label>
-                  <Input
-                    type="tel"
-                    value={contactData.phone}
-                    onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
-                    placeholder="+1 (555) 123-4567"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label>Company Name</Label>
-                  <Input
-                    type="text"
-                    value={contactData.company}
-                    onChange={(e) => setContactData({ ...contactData, company: e.target.value })}
-                    placeholder="Acme Corporation"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(calculatorType === "simple" ? "simple" : "detailed")}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleContactSubmit}
-                  disabled={isSendingCode}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                >
-                  {isSendingCode ? "Sending Code..." : "Send Verification Code"}
-                  {!isSendingCode && <Mail className="ml-2 h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === "verify-email" && (
-            <div className="space-y-6 py-4">
-              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-6 mb-6 text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-cyan-100 rounded-full p-4">
-                    <Shield className="h-8 w-8 text-cyan-600" />
-                  </div>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Check Your Email</h3>
-                <p className="text-sm text-gray-700">
-                  We've sent a 6-digit verification code to <strong>{contactData.email}</strong>
+              <div className="bg-white rounded p-3 text-center">
+                <p className="text-xs text-gray-600 mb-1">Handled Without Hiring</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {Math.min(
+                    Math.round((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) * 0.5),
+                    Math.round(
+                      ((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
+                        (Number.parseFloat(detailedInputs.numberOfCollectors) || 1)) *
+                        ((Number.parseFloat(detailedInputs.labourSavings) || 30) / 100),
+                    ),
+                  )}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">The code will expire in 10 minutes</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label>Verification Code *</Label>
-                  <Input
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 6)
-                      setVerificationCode(value)
-                      setVerificationError("")
-                    }}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="text-center text-2xl tracking-widest font-mono"
-                    required
-                  />
-                  {verificationError && <p className="text-sm text-red-600 mt-2">{verificationError}</p>}
-                </div>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={handleResendCode}
-                    disabled={isSendingCode}
-                    className="text-sm text-cyan-600 hover:text-cyan-700 underline disabled:opacity-50"
-                  >
-                    {isSendingCode ? "Sending..." : "Resend Code"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep("contact")} className="flex-1" disabled={isVerifying}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleVerifyCode}
-                  disabled={isVerifying || isCalculating || verificationCode.length !== 6}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                >
-                  {isVerifying || isCalculating ? "Verifying..." : "Verify & View Results"}
-                  {!isVerifying && !isCalculating && <ArrowRight className="ml-2 h-4 w-4" />}
-                </Button>
               </div>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Simple Results */}
-          {step === "simple-results" && simpleResults && (
-            <div className="space-y-6 py-4">
-              {emailSent && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
-                  ✓ Results sent to {contactData.email}
-                </div>
-              )}
+      {/* Savings Assumptions */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-lg text-cyan-600">💡 Savings Assumptions</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">DSO Improvement</p>
+              <p className="text-4xl font-bold text-gray-900">
+                {Number.parseFloat(detailedInputs.dsoImprovement) || 20}%
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Bad Debt Reduction</p>
+              <p className="text-4xl font-bold text-gray-900">50%</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6 text-center">
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Estimated Annual Savings</h3>
-                <div className="text-5xl font-bold text-cyan-600">
-                  ${simpleResults.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </div>
-              </div>
+      {/* Financial Impact */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-lg text-cyan-600">💰 Financial Impact</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card className="border-green-300">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-600 mb-1">Annual Recurring Savings</p>
+              <p className="text-2xl font-bold text-green-600">${results?.totalAnnualBenefit?.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Interest + Labour + Bad Debt</p>
+            </CardContent>
+          </Card>
+          <Card className="border-green-300">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-600 mb-1">One-Time Cash Flow Boost</p>
+              <p className="text-2xl font-bold text-green-600">${results?.workingCapitalReleased?.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Working capital released</p>
+            </CardContent>
+          </Card>
+          <Card className="border-green-300">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-600 mb-1">Monthly Operational Savings</p>
+              <p className="text-2xl font-bold text-green-600">
+                ${Math.round((results?.totalAnnualBenefit || 0) / 12).toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Reduced labour costs</p>
+            </CardContent>
+          </Card>
+          <Card className="border-red-300">
+            <CardContent className="p-4">
+              <p className="text-xs text-gray-600 mb-1">Total First Year Investment</p>
+              <p className="text-2xl font-bold text-red-600">-${results?.totalFirstYearInvestment?.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Implementation + Annual cost</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Current Cash Tied Up</div>
-                  <div className="text-2xl font-bold">
-                    ${simpleResults.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Cash Released</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    ${simpleResults.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">Current DSO</div>
-                  <div className="text-2xl font-bold">{simpleData.currentDSO} days</div>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <div className="text-sm text-gray-600 mb-2">New DSO</div>
-                  <div className="text-2xl font-bold text-cyan-600">{simpleResults.newDSO?.toFixed(0)} days</div>
-                </div>
-              </div>
+      {/* DSO Improvement */}
+      <div className="space-y-3">
+        <h4 className="font-semibold text-lg text-cyan-600">📊 DSO Improvement</h4>
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Current</p>
+              <p className="text-3xl font-bold text-gray-900">{results?.currentDSO?.toFixed(0)}</p>
+              <p className="text-xs text-gray-600 mt-1">days</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Improved</p>
+              <p className="text-3xl font-bold text-gray-900">{results?.newDSO?.toFixed(0)}</p>
+              <p className="text-xs text-gray-600 mt-1">days</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-300">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Reduction</p>
+              <p className="text-3xl font-bold text-gray-900">{results?.dsoReductionDays?.toFixed(0)}</p>
+              <p className="text-xs text-gray-600 mt-1">days faster</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-              <ROIReportPDF
-                calculatorType="simple"
-                results={simpleResults}
-                inputs={simpleData}
-                onDownloadComplete={handlePDFDownloadComplete}
-              />
+      {/* Summary */}
+      <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-300">
+        <CardContent className="p-6">
+          <h4 className="font-semibold text-lg text-cyan-900 mb-3">📝 Summary</h4>
+          <div className="space-y-3 text-sm text-cyan-900">
+            <p>
+              By implementing the Kuhlekt invoice-to-cash platform with automated collection workflows and customer
+              self-service, your organization can achieve a{" "}
+              <strong className="text-cyan-600">{results?.roi?.toFixed(0)}% ROI</strong> within{" "}
+              <strong className="text-cyan-600">{results?.paybackMonths?.toFixed(1)} months</strong>.
+            </p>
+            <p>
+              You should expect to improve DSO by{" "}
+              <strong className="text-cyan-600">{Number.parseFloat(detailedInputs.dsoImprovement)}%</strong> (from{" "}
+              {results?.currentDSO?.toFixed(0)} to {results?.newDSO?.toFixed(0)} days), freeing up{" "}
+              <strong className="text-cyan-600">${results?.workingCapitalReleased?.toLocaleString()}</strong> in working
+              capital without adding headcount.
+            </p>
+            <p>
+              The total annual benefit of{" "}
+              <strong className="text-cyan-600">${results?.totalAnnualBenefit?.toLocaleString()}</strong> includes{" "}
+              <strong>${results?.interestSavings?.toLocaleString()}</strong> in interest savings,{" "}
+              <strong>${results?.labourCostSavings?.toLocaleString()}</strong> in labour cost reductions, and{" "}
+              <strong>${results?.badDebtReduction?.toLocaleString()}</strong> in bad debt improvements.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-              <Button variant="outline" onClick={resetAll} className="w-full bg-transparent">
-                Start New Calculation
-              </Button>
+      {/* Disclaimer */}
+      <Card className="bg-amber-50 border-amber-200">
+        <CardContent className="p-4">
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-900">
+              <p className="font-semibold mb-1">Important Disclaimer</p>
+              <p>
+                These calculations are estimates based on industry averages and the information you provided. Actual
+                results may vary depending on your specific business circumstances, implementation approach, and market
+                conditions. This calculator is for informational purposes only and should not be considered financial
+                advice. We recommend consulting with your financial advisor for detailed analysis.
+              </p>
             </div>
-          )}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Detailed Results */}
-          {step === "detailed-results" && detailedResults && (
-            <div className="space-y-6 py-4">
-              {emailSent && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center text-green-800">
-                  ✓ Results sent to {contactData.email}
-                </div>
-              )}
+      {/* Action Buttons */}
+      <div className="space-y-3">
+        <div className="p-4 bg-cyan-50 rounded-lg border-2 border-cyan-200">
+          <ROIReportPDF calculatorType={calculatorType} inputs={detailedInputs} results={results} />
+        </div>
 
-              {/* Your Projected ROI Header */}
-              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-xl p-6">
-                <h2 className="text-2xl font-bold text-cyan-600 mb-6 flex items-center gap-2">
-                  <Calculator className="h-6 w-6" />
-                  Your Projected ROI
-                </h2>
+        <Button onClick={handleSendReport} disabled={isSendingReport} className="w-full" size="lg">
+          {isSendingReport ? "Sending..." : "Email Me This Report"}
+        </Button>
+      </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white border border-cyan-200 rounded-lg p-6 text-center">
-                    <div className="text-sm text-gray-600 mb-2">ROI</div>
-                    <div className="text-4xl font-bold text-cyan-600 mb-2">
-                      {detailedResults.roi != null ? detailedResults.roi.toFixed(1) : "0.0"}%
-                    </div>
-                    <div className="text-xs text-gray-500">Return on Investment</div>
-                  </div>
+      {/* What's Next */}
+      <div className="text-center pt-4 border-t">
+        <h4 className="font-semibold mb-2">What's Next?</h4>
+        <p className="text-sm text-gray-600 mb-4">
+          Ready to turn these projections into reality? Our team can show you exactly how Kuhlekt delivers these
+          results.
+        </p>
+        <Button asChild variant="outline">
+          <a href="/demo">Schedule a Demo</a>
+        </Button>
+      </div>
+    </div>
+  )
 
-                  <div className="bg-white border border-red-200 rounded-lg p-6 text-center">
-                    <div className="text-sm text-gray-600 mb-2">Payback Period</div>
-                    <div className="text-4xl font-bold text-red-500 mb-2">
-                      {detailedResults.paybackMonths != null ? detailedResults.paybackMonths.toFixed(1) : "0.0"}
-                    </div>
-                    <div className="text-xs text-gray-500">Months</div>
-                  </div>
-                </div>
-              </div>
+  if (!isOpen) return null
 
-              {/* Financial Benefits Breakdown */}
-              <div className="border rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-cyan-600" />
-                  Financial Benefits Breakdown
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Working Capital Released</span>
-                    <span className="font-semibold text-cyan-600">
-                      ${detailedResults.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Interest Savings</span>
-                    <span className="font-semibold text-cyan-600">
-                      ${detailedResults.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Labour Cost Savings</span>
-                    <span className="font-semibold text-cyan-600">
-                      ${detailedResults.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Bad Debt Reduction</span>
-                    <span className="font-semibold text-cyan-600">
-                      ${detailedResults.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 bg-green-50 -mx-6 px-6 py-3 rounded-b-lg">
-                    <span className="font-bold text-gray-900">Total Annual Benefit</span>
-                    <span className="font-bold text-green-600 text-xl">
-                      ${detailedResults.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                </div>
-              </div>
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">ROI Calculator</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                resetModal()
+                onClose()
+              }}
+            >
+              ✕
+            </Button>
+          </div>
 
-              {/* DSO Improvement */}
-              <div className="border rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-cyan-600" />
-                  DSO Improvement
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="border rounded-lg p-4">
-                    <div className="text-sm text-gray-600 mb-2">Current DSO</div>
-                    <div className="text-2xl font-bold">{detailedResults.currentDSO} days</div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="text-sm text-gray-600 mb-2">New DSO</div>
-                    <div className="text-2xl font-bold text-cyan-600">{detailedResults.newDSO?.toFixed(0)} days</div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="text-sm text-gray-600 mb-2">Days Reduced</div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {detailedResults.dsoReductionDays?.toFixed(0)} days
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="text-sm text-gray-600 mb-2">DSO Improvement</div>
-                    <div className="text-2xl font-bold text-cyan-600">{detailedData.dsoImprovement}%</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cost Analysis */}
-              <div className="border rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-cyan-600" />
-                  Cost Analysis
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Implementation Cost</span>
-                    <span className="font-semibold">
-                      ${Number.parseFloat(detailedData.implementationCost).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Annual Cost</span>
-                    <span className="font-semibold">
-                      ${(Number.parseFloat(detailedData.monthlyCost) * 12).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 bg-gray-50 -mx-6 px-6 py-3 rounded-b-lg">
-                    <span className="font-bold text-gray-900">Total Cost (Year 1)</span>
-                    <span className="font-bold text-gray-900 text-xl">
-                      $
-                      {detailedResults.totalImplementationAndAnnualCost?.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <ROIReportPDF
-                calculatorType="detailed"
-                results={detailedResults}
-                inputs={detailedData}
-                onDownloadComplete={handlePDFDownloadComplete}
-              />
-
-              <Button variant="outline" onClick={resetAll} className="w-full bg-transparent">
-                Start New Calculation
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <ROICalculatorHelpModal
-        open={showHelp}
-        onOpenChange={setShowHelp}
-        calculatorType={calculatorType}
-        currentStep={step}
-      />
-    </>
+          {step === "type" && renderTypeSelection()}
+          {step === "form" && (calculatorType === "simple" ? renderSimpleForm() : renderDetailedForm())}
+          {step === "contact" && renderContactForm()}
+          {step === "verify" && renderVerification()}
+          {step === "results" && (calculatorType === "simple" ? renderSimpleResults() : renderDetailedResults())}
+        </div>
+      </div>
+    </div>
   )
 }

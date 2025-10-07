@@ -49,7 +49,7 @@ export function Footer() {
             <div className="space-y-4">
               <Link href="/" className="inline-block">
                 <Image
-                  src="/images/design-mode/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy.png"
+                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy-NQUjz8mdwGIo3E40fzD7DhXQzE0leS.png"
                   alt="Kuhlekt Logo"
                   width={120}
                   height={40}

@@ -1,160 +1,134 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
+import { sendTestEmail } from "../actions"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, XCircle, AlertCircle } from "lucide-react"
-import { testAWSSES } from "../actions"
 
-interface TestResult {
-  success: boolean
-  message: string
-  details?: {
-    region: boolean
-    accessKey: boolean
-    secretKey: boolean
-    fromEmail: boolean
-  }
-}
+export default function ContactTestPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    phone: "",
+    message: "",
+  })
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ success: boolean; message?: string } | null>(null)
 
-export default function TestAWSPage() {
-  const [testResult, setTestResult] = useState<TestResult | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleTest = async () => {
-    setIsLoading(true)
-    setTestResult(null)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setResult(null)
 
     try {
-      console.log("Starting AWS SES test...")
-      const result = await testAWSSES()
-      console.log("Test result:", result)
-      setTestResult(result)
+      const res = await sendTestEmail(formData)
+      setResult(res)
     } catch (error) {
-      console.error("Test error:", error)
-      setTestResult({
+      setResult({
         success: false,
-        message: `Test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-        details: {
-          region: false,
-          accessKey: false,
-          secretKey: false,
-          fromEmail: false,
-        },
+        message: error instanceof Error ? error.message : "Unknown error",
       })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-2xl mx-auto px-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>AWS SES Configuration Test</CardTitle>
-            <CardDescription>
-              Test the AWS SES configuration to ensure email sending is working properly.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Button onClick={handleTest} disabled={isLoading} className="w-full">
-              {isLoading ? "Testing..." : "Test AWS SES Configuration"}
+    <div className="container mx-auto py-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Contact Form Test</CardTitle>
+          <CardDescription>Test the contact form email functionality</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">
+                  Name
+                </label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="company" className="text-sm font-medium">
+                  Company
+                </label>
+                <Input
+                  id="company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="phone" className="text-sm font-medium">
+                  Phone
+                </label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="message" className="text-sm font-medium">
+                Message
+              </label>
+              <Textarea
+                id="message"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                rows={4}
+                disabled={loading}
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Sending..." : "Send Test Email"}
             </Button>
 
-            {testResult && (
-              <Alert className={testResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                <div className="flex items-start gap-3">
-                  {testResult.success ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <h3 className={`font-semibold mb-2 ${testResult.success ? "text-green-800" : "text-red-800"}`}>
-                      {testResult.success ? "✓ Success" : "✗ Error"}
-                    </h3>
-                    <AlertDescription className={testResult.success ? "text-green-700" : "text-red-700"}>
-                      {testResult.message}
-                    </AlertDescription>
-
-                    {testResult.details && (
-                      <div className="mt-3 text-sm">
-                        <h4 className="font-medium mb-2">Environment Variables Status:</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-2">
-                            {testResult.details.region ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span>AWS_SES_REGION</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {testResult.details.accessKey ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span>AWS_SES_ACCESS_KEY_ID</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {testResult.details.secretKey ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span>AWS_SES_SECRET_ACCESS_KEY</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {testResult.details.fromEmail ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span>AWS_SES_FROM_EMAIL</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {result && (
+              <Alert variant={result.success ? "default" : "destructive"}>
+                <AlertDescription>
+                  {result.success ? "✅ Email sent successfully!" : `❌ ${result.message || "Failed to send email"}`}
+                </AlertDescription>
               </Alert>
             )}
-
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Environment Variables Required:</strong>
-                <ul className="mt-2 space-y-1 text-sm">
-                  <li>
-                    • <code>AWS_SES_REGION</code> (e.g., us-east-1, us-west-2)
-                  </li>
-                  <li>
-                    • <code>AWS_SES_ACCESS_KEY_ID</code> (Your AWS access key)
-                  </li>
-                  <li>
-                    • <code>AWS_SES_SECRET_ACCESS_KEY</code> (Your AWS secret key)
-                  </li>
-                  <li>
-                    • <code>AWS_SES_FROM_EMAIL</code> (Verified sender email address)
-                  </li>
-                </ul>
-              </AlertDescription>
-            </Alert>
-
-            <Alert className="border-yellow-200 bg-yellow-50">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                <strong>Note:</strong> If AWS SES is not configured, the contact forms will still work but will log
-                submissions to the server console instead of sending emails. This allows for manual follow-up of
-                inquiries.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

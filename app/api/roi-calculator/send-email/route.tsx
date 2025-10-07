@@ -1,117 +1,28 @@
-"use server"
-
-import { createClient } from "@/lib/supabase/server"
-
-interface SimpleROIData {
-  currentDSO: string
-  averageInvoiceValue: string
-  monthlyInvoices: string
-  simpleDSOImprovement: string
-  simpleCostOfCapital: string
-}
-
-interface DetailedROIData {
-  implementationCost: string
-  monthlyCost: string
-  perAnnumDirectLabourCosts: string
-  interestType: "loan" | "deposit"
-  interestRate: string
-  averageBadDebt: string
-  currentBadDebts: string
-  labourSavings: string
-  dsoImprovement: string
-  currentDSODays: string
-  debtorsBalance: string
-  averagePaymentTerms: "net30" | "net60" | "net90"
-  numberOfDebtors: string
-  numberOfCollectors: string
-  projectedCustomerGrowth: string
-}
-
-export async function calculateSimpleROI(data: SimpleROIData) {
-  const currentDSO = Number.parseFloat(data.currentDSO)
-  const averageInvoiceValue = Number.parseFloat(data.averageInvoiceValue)
-  const monthlyInvoices = Number.parseFloat(data.monthlyInvoices)
-  const dsoImprovement = Number.parseFloat(data.simpleDSOImprovement) / 100
-  const costOfCapital = Number.parseFloat(data.simpleCostOfCapital) / 100
-
-  const annualRevenue = averageInvoiceValue * monthlyInvoices * 12
-  const currentCashTied = (annualRevenue / 365) * currentDSO
-  const newDSO = currentDSO * (1 - dsoImprovement)
-  const newCashTied = (annualRevenue / 365) * newDSO
-  const cashReleased = currentCashTied - newCashTied
-  const annualSavings = cashReleased * costOfCapital
-
-  return {
-    currentDSO,
-    newDSO,
-    currentCashTied,
-    cashReleased,
-    annualSavings,
-    dsoImprovement: dsoImprovement * 100,
-    costOfCapital: costOfCapital * 100,
-  }
-}
-
-export async function calculateDetailedROI(data: DetailedROIData) {
-  const implementationCost = Number.parseFloat(data.implementationCost)
-  const monthlyCost = Number.parseFloat(data.monthlyCost)
-  const annualCost = monthlyCost * 12
-  const totalFirstYearCost = implementationCost + annualCost
-
-  const labourCosts = Number.parseFloat(data.perAnnumDirectLabourCosts)
-  const labourSavingsPercent = Number.parseFloat(data.labourSavings) / 100
-  const labourCostSavings = labourCosts * labourSavingsPercent
-
-  const interestRate = Number.parseFloat(data.interestRate) / 100
-  const currentDSO = Number.parseFloat(data.currentDSODays)
-  const dsoImprovementPercent = Number.parseFloat(data.dsoImprovement) / 100
-  const debtorsBalance = Number.parseFloat(data.debtorsBalance)
-
-  const dsoReductionDays = currentDSO * dsoImprovementPercent
-  const newDSO = currentDSO - dsoReductionDays
-  const workingCapitalReleased = (debtorsBalance / currentDSO) * dsoReductionDays
-  const interestSavings = workingCapitalReleased * interestRate
-
-  const currentBadDebts = Number.parseFloat(data.currentBadDebts)
-  const averageBadDebtPercent = Number.parseFloat(data.averageBadDebt) / 100
-  const badDebtReduction = currentBadDebts * 0.5
-
-  const totalAnnualBenefit = labourCostSavings + interestSavings + badDebtReduction
-  const netBenefit = totalAnnualBenefit - totalFirstYearCost
-  const roi = (netBenefit / totalFirstYearCost) * 100
-  const paybackMonths = totalFirstYearCost / (totalAnnualBenefit / 12)
-
-  return {
-    implementationCost,
-    annualCost,
-    totalFirstYearCost,
-    labourCostSavings,
-    interestSavings,
-    badDebtReduction,
-    workingCapitalReleased,
-    dsoReductionDays,
-    currentDSO,
-    newDSO,
-    totalAnnualBenefit,
-    netBenefit,
-    roi,
-    paybackMonths,
-  }
-}
+import { type NextRequest, NextResponse } from "next/server"
 
 async function sendClickSendEmail(to: string, subject: string, body: string) {
+  console.log("=== sendClickSendEmail START ===")
+  console.log("To:", to)
+  console.log("Subject:", subject)
+
   const username = process.env.CLICKSEND_USERNAME
   const apiKey = process.env.CLICKSEND_API_KEY
   const fromEmail = process.env.CLICKSEND_FROM_EMAIL
 
   if (!username || !apiKey || !fromEmail) {
+    console.error("✗ ClickSend credentials missing")
+    console.log("Has username:", !!username)
+    console.log("Has apiKey:", !!apiKey)
+    console.log("Has fromEmail:", !!fromEmail)
     throw new Error("ClickSend credentials not configured")
   }
+
+  console.log("✓ ClickSend credentials present")
 
   const auth = Buffer.from(`${username}:${apiKey}`).toString("base64")
 
   // First, fetch verified email addresses to get the email_address_id
+  console.log("Fetching verified email addresses...")
   const addressesResponse = await fetch("https://rest.clicksend.com/v3/email/addresses", {
     method: "GET",
     headers: {
@@ -120,14 +31,17 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
     },
   })
 
+  console.log("Addresses response status:", addressesResponse.status)
+
   if (!addressesResponse.ok) {
     const errorText = await addressesResponse.text()
-    console.error("[ClickSend] Failed to fetch email addresses:", errorText)
+    console.error("✗ Failed to fetch email addresses:", errorText)
     throw new Error(`Failed to fetch email addresses: ${addressesResponse.status}`)
   }
 
   const addressesData = await addressesResponse.json()
-  console.log("[ClickSend] Email addresses response:", JSON.stringify(addressesData, null, 2))
+  console.log("✓ Email addresses fetched")
+  console.log("Number of addresses:", addressesData.data?.data?.length)
 
   // Find the email address that matches our from email
   const emailAddress = addressesData.data?.data?.find(
@@ -135,12 +49,20 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
   )
 
   if (!emailAddress) {
+    console.error("✗ Email address not found or not verified")
+    console.log("Looking for:", fromEmail)
+    console.log(
+      "Available addresses:",
+      addressesData.data?.data?.map((a: any) => ({
+        email: a.email_address,
+        verified: a.verified,
+      })),
+    )
     throw new Error(`Email address ${fromEmail} not found or not verified in ClickSend`)
   }
 
   const emailAddressId = emailAddress.email_address_id
-
-  console.log("[ClickSend] Using email_address_id:", emailAddressId)
+  console.log("✓ Using email_address_id:", emailAddressId)
 
   const payload = {
     to: [{ email: to, name: to.split("@")[0] }],
@@ -152,7 +74,7 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
     body,
   }
 
-  console.log("[ClickSend] Sending email with payload:", JSON.stringify(payload, null, 2))
+  console.log("Sending email...")
 
   const response = await fetch("https://rest.clicksend.com/v3/email/send", {
     method: "POST",
@@ -163,140 +85,56 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
     body: JSON.stringify(payload),
   })
 
+  console.log("Send response status:", response.status)
+
   if (!response.ok) {
     const errorBody = await response.text()
-    console.error("[ClickSend] Error response:", errorBody)
+    console.error("✗ ClickSend send error:", errorBody)
     throw new Error(`Failed to send email: ${response.status} - ${errorBody}`)
   }
 
   const result = await response.json()
-  console.log("[ClickSend] Email sent successfully:", result)
+  console.log("✓ Email sent successfully")
+  console.log("=== sendClickSendEmail END ===")
   return result
 }
 
-export async function generateVerificationCode(email: string) {
+export async function POST(request: NextRequest) {
   try {
-    console.log("[generateVerificationCode] Starting for email:", email)
+    console.log("=== ROI Calculator Send Email Route START ===")
+    console.log("Timestamp:", new Date().toISOString())
 
-    const supabase = await createClient()
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-
-    console.log("[generateVerificationCode] Generated code:", code)
-    console.log("[generateVerificationCode] Expires at:", expiresAt)
-
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .insert({
-        email,
-        code,
-        expires_at: expiresAt.toISOString(),
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error("[generateVerificationCode] Database error:", error)
-      return { success: false, error: "Failed to generate verification code" }
+    let body
+    try {
+      body = await request.json()
+      console.log("✓ Request body parsed")
+    } catch (parseError) {
+      console.error("✗ Failed to parse request body:", parseError)
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
     }
 
-    console.log("[generateVerificationCode] Code saved to database:", data)
+    console.log("Body keys:", Object.keys(body))
 
-    const emailBody = `
-      <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #0891b2;">Your Verification Code</h2>
-            <p>Thank you for using the Kuhlekt ROI Calculator.</p>
-            <p>Your verification code is:</p>
-            <div style="background-color: #f0f9ff; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="font-size: 36px; letter-spacing: 8px; margin: 0; color: #0891b2;">${code}</h1>
-            </div>
-            <p>This code will expire in 15 minutes.</p>
-            <p>If you didn't request this code, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="font-size: 12px; color: #6b7280;">
-              © ${new Date().getFullYear()} Kuhlekt. All rights reserved.
-            </p>
-          </div>
-        </body>
-      </html>
-    `
+    const { name, email, company, phone, calculatorType, inputs, results } = body
 
-    console.log("[generateVerificationCode] Sending email to:", email)
-    await sendClickSendEmail(email, "Your Kuhlekt ROI Calculator Verification Code", emailBody)
-    console.log("[generateVerificationCode] Email sent successfully")
-
-    return { success: true }
-  } catch (error) {
-    console.error("[generateVerificationCode] Error:", error)
-    return { success: false, error: "Failed to send verification code" }
-  }
-}
-
-export async function verifyCode(email: string, code: string) {
-  try {
-    console.log("[verifyCode] Verifying code for email:", email)
-    console.log("[verifyCode] Code to verify:", code)
-
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from("verification_codes")
-      .select("*")
-      .eq("email", email)
-      .eq("code", code)
-      .eq("used", false)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
-
-    if (error || !data) {
-      console.error("[verifyCode] No valid code found:", error)
-      return { success: false, error: "Invalid or expired verification code" }
+    // Validate required fields
+    if (!name || !email || !calculatorType || !results) {
+      console.error("✗ Missing required fields")
+      console.log("Has name:", !!name)
+      console.log("Has email:", !!email)
+      console.log("Has calculatorType:", !!calculatorType)
+      console.log("Has results:", !!results)
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    console.log("[verifyCode] Valid code found:", data)
-
-    const { error: updateError } = await supabase.from("verification_codes").update({ used: true }).eq("id", data.id)
-
-    if (updateError) {
-      console.error("[verifyCode] Error marking code as used:", updateError)
-      return { success: false, error: "Failed to verify code" }
-    }
-
-    console.log("[verifyCode] Code marked as used")
-    return { success: true }
-  } catch (error) {
-    console.error("[verifyCode] Error:", error)
-    return { success: false, error: "Failed to verify code" }
-  }
-}
-
-export async function sendROIEmail({
-  name,
-  email,
-  company,
-  calculatorType,
-  results,
-  inputs,
-}: {
-  name: string
-  email: string
-  company: string
-  calculatorType: "simple" | "detailed"
-  results: any
-  inputs: any
-}) {
-  try {
-    console.log("[sendROIEmail] Sending ROI report to:", email)
-    console.log("[sendROIEmail] Calculator type:", calculatorType)
-    console.log("[sendROIEmail] Results:", JSON.stringify(results, null, 2))
+    console.log("✓ All required fields present")
+    console.log("Calculator type:", calculatorType)
+    console.log("Email:", email)
 
     let emailBody = ""
 
     if (calculatorType === "simple") {
+      console.log("Building simple calculator email...")
       emailBody = `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -332,7 +170,7 @@ export async function sendROIEmail({
                 </tr>
               </table>
 
-              <p>Company: ${company}</p>
+              ${company ? `<p>Company: ${company}</p>` : ""}
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
@@ -348,6 +186,7 @@ export async function sendROIEmail({
         </html>
       `
     } else {
+      console.log("Building detailed calculator email...")
       emailBody = `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -407,7 +246,7 @@ export async function sendROIEmail({
                 </tr>
               </table>
 
-              <p>Company: ${company}</p>
+              ${company ? `<p>Company: ${company}</p>` : ""}
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
@@ -424,12 +263,52 @@ export async function sendROIEmail({
       `
     }
 
-    await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
-    console.log("[sendROIEmail] Email sent successfully")
+    console.log("✓ Email body built")
+    console.log("Email body length:", emailBody.length)
 
-    return { success: true }
+    console.log("Sending email to user...")
+    await sendClickSendEmail(email, "Your Kuhlekt ROI Analysis Results", emailBody)
+    console.log("✓ User email sent successfully")
+
+    // Send notification to admin
+    console.log("Sending notification to admin...")
+    try {
+      const adminNotifyResponse = await fetch(`${request.nextUrl.origin}/api/roi-calculator/notify-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          company,
+          phone,
+          calculatorType,
+          inputs,
+          results,
+        }),
+      })
+
+      if (adminNotifyResponse.ok) {
+        console.log("✓ Admin notification sent successfully")
+      } else {
+        console.error("✗ Admin notification failed:", await adminNotifyResponse.text())
+      }
+    } catch (adminError) {
+      console.error("✗ Error sending admin notification:", adminError)
+      // Don't fail the user request if admin notification fails
+    }
+
+    console.log("=== ROI Calculator Send Email Route SUCCESS ===")
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("[sendROIEmail] Error sending ROI email:", error)
-    throw error
+    console.error("=== FATAL: ROI Calculator Send Email Route Error ===")
+    console.error("Error type:", typeof error)
+    console.error("Error:", error)
+    console.error("Error message:", error instanceof Error ? error.message : "Unknown error")
+    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace")
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    )
   }
 }

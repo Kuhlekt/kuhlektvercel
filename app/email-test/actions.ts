@@ -1,104 +1,59 @@
 "use server"
 
-import { sendEmailWithSES, testAWSSESConnection } from "@/lib/aws-ses"
-
 export async function testEmailSystem() {
   try {
-    console.log("Testing email system configuration...")
-    const result = await testAWSSESConnection()
-    console.log("Email system test result:", result)
-    return result
-  } catch (error) {
-    console.error("Email system test error:", error)
-    return {
-      success: false,
-      message: `System test failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      details: {
-        region: false,
-        accessKey: false,
-        secretKey: false,
-        fromEmail: false,
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/email-test`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    }
-  }
-}
-
-export async function sendTestEmail(testEmailAddress: string) {
-  try {
-    console.log("Sending test email to:", testEmailAddress)
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(testEmailAddress)) {
-      return {
-        success: false,
-        message: "Invalid email address format",
-      }
-    }
-
-    const result = await sendEmailWithSES({
-      to: testEmailAddress,
-      subject: "Kuhlekt Email System Test",
-      text: `Hello!
-
-This is a test email from the Kuhlekt website email system.
-
-If you receive this email, it means:
-✓ AWS SES is properly configured
-✓ Email sending is working correctly
-✓ The contact forms on the website will work properly
-
-Test Details:
-- Sent at: ${new Date().toISOString()}
-- From: Kuhlekt Email System
-- To: ${testEmailAddress}
-
-You can safely delete this email.
-
-Best regards,
-Kuhlekt Team`,
+      body: JSON.stringify({ email: process.env.ADMIN_EMAIL || "test@example.com" }),
     })
 
-    if (result.success) {
-      return {
-        success: true,
-        message: `Test email sent successfully to ${testEmailAddress}!\n\nPlease check your inbox (and spam folder) for the test email.\n\nMessage ID: ${result.messageId}`,
-        messageId: result.messageId,
-      }
-    } else {
-      return {
-        success: false,
-        message: `Failed to send test email: ${result.message}\n\nThe email has been logged for manual follow-up.`,
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
+
+    const result = await response.json()
+    return result
   } catch (error) {
-    console.error("Test email error:", error)
-    return {
-      success: false,
-      message: `Test email failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-    }
+    console.error("Error testing email system:", error)
+    return { success: false, error: "Failed to test email system" }
   }
 }
 
-// Additional helper to check current email configuration status
 export async function getEmailConfigStatus() {
-  const region = process.env.AWS_SES_REGION
-  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID
-  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY
-  const fromEmail = process.env.AWS_SES_FROM_EMAIL
+  const requiredVars = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY", "AWS_SES_REGION", "AWS_SES_FROM_EMAIL"]
+
+  const status = requiredVars.map((varName) => ({
+    name: varName,
+    configured: !!process.env[varName],
+  }))
 
   return {
-    configured: !!(region && accessKeyId && secretAccessKey && fromEmail),
-    details: {
-      region: !!region,
-      accessKey: !!accessKeyId,
-      secretKey: !!secretAccessKey,
-      fromEmail: !!fromEmail,
-    },
-    values: {
-      region: region || "Not set",
-      fromEmail: fromEmail || "Not set",
-      accessKeyId: accessKeyId ? `${accessKeyId.substring(0, 4)}...` : "Not set",
-    },
+    allConfigured: status.every((s) => s.configured),
+    variables: status,
+  }
+}
+
+export async function testEmail(email: string) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/email-test`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error("Error sending test email:", error)
+    return { success: false, error: "Failed to send test email" }
   }
 }

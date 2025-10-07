@@ -62,7 +62,7 @@ export default function AboutPage() {
               <div className="lg:pl-8">
                 <div className="relative">
                   <Image
-                    src="/images/design-mode/image.png"
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-9foiJDmmXjFUffToslbq8LYXs6SzjQ.png"
                     alt="Manual AR Chaos vs Automated with Kuhlekt - From Manual Mayhem to Streamlined Collections"
                     width={600}
                     height={400}

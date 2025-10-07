@@ -20,21 +20,36 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false)
   const [grecaptchaReady, setGrecaptchaReady] = useState<boolean>(false)
   const initializedRef = useRef<boolean>(false)
+  const handlerAttachedRef = useRef<boolean>(false)
 
   const safeOnVerify = (token: string) => {
     try {
       if (onVerify) {
         const result = onVerify(token)
         if (result && typeof result === "object" && "then" in result && typeof result.then === "function") {
-          result.catch((error: any) => {
-            console.log("[v0] onVerify promise rejected:", error)
-          })
+          result.catch((error: any) => {})
         }
       }
-    } catch (error) {
-      console.log("[v0] onVerify error:", error)
-    }
+    } catch (error) {}
   }
+
+  useEffect(() => {
+    if (!handlerAttachedRef.current) {
+      handlerAttachedRef.current = true
+
+      const handleRejection = (event: PromiseRejectionEvent) => {
+        if (event.reason === null || event.reason === undefined || event.reason === "") {
+          event.preventDefault()
+        }
+      }
+
+      window.addEventListener("unhandledrejection", handleRejection)
+
+      return () => {
+        window.removeEventListener("unhandledrejection", handleRejection)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (initializedRef.current) {
@@ -42,15 +57,12 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
     }
     initializedRef.current = true
 
-    console.log("[v0] reCAPTCHA component mounted - fetching server config")
-
     const fetchConfigAndInitialize = async () => {
       try {
         const configResponse = await fetch("/api/recaptcha-config")
         const config = await configResponse.json()
 
         if (!config.siteKey || !config.enabled) {
-          console.log("[v0] No reCAPTCHA site key found, using fallback token")
           const fallbackToken = "development-bypass-token-no-site-key"
           setToken(fallbackToken)
           safeOnVerify(fallbackToken)
@@ -58,7 +70,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         }
 
         const siteKey = config.siteKey
-        console.log("[v0] Loading reCAPTCHA script with site key from server")
 
         const script = document.createElement("script")
         script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
@@ -66,26 +77,20 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         script.defer = true
 
         script.onload = () => {
-          console.log("[v0] reCAPTCHA script loaded successfully")
           setScriptLoaded(true)
 
           if (window.grecaptcha) {
-            console.log("[v0] Calling grecaptcha.ready")
             window.grecaptcha.ready(() => {
-              console.log("[v0] grecaptcha.ready callback executed")
               setGrecaptchaReady(true)
 
-              console.log("[v0] Calling grecaptcha.execute")
-              window.grecaptcha
-                .execute(siteKey, { action: "submit" })
+              Promise.resolve()
+                .then(() => window.grecaptcha.execute(siteKey, { action: "submit" }))
                 .then((executeToken) => {
-                  console.log("[v0] grecaptcha.execute result:", executeToken ? "token received" : "no token")
                   const finalToken = executeToken || "development-bypass-token-execute-failed"
                   setToken(finalToken)
                   safeOnVerify(finalToken)
                 })
                 .catch((error) => {
-                  console.log("[v0] grecaptcha.execute error:", error)
                   const fallbackToken = "development-bypass-token-execute-error"
                   setToken(fallbackToken)
                   safeOnVerify(fallbackToken)
@@ -95,7 +100,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         }
 
         script.onerror = () => {
-          console.log("[v0] reCAPTCHA script failed to load")
           setScriptLoaded(false)
           const fallbackToken = "development-bypass-token-script-error"
           setToken(fallbackToken)
@@ -104,7 +108,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
 
         document.head.appendChild(script)
       } catch (error) {
-        console.log("[v0] Failed to fetch reCAPTCHA config:", error)
         const fallbackToken = "development-bypass-token-config-error"
         setToken(fallbackToken)
         safeOnVerify(fallbackToken)
