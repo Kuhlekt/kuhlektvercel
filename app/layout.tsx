@@ -7,7 +7,6 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import VisitorTracker from "@/components/visitor-tracker"
 import NewVisitorBanner from "@/components/new-visitor-banner"
-import { GlobalErrorHandler } from "@/components/global-error-handler"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,7 +26,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <GlobalErrorHandler />
           <NewVisitorBanner />
           <Header />
 
