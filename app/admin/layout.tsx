@@ -28,16 +28,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <>
-      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, nocache" />
-      <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="slurp" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="duckduckbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="baiduspider" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <meta name="yandexbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-      <div className="admin-layout">{children}</div>
-    </>
-  )
+  return <div className="admin-layout">{children}</div>
 }
