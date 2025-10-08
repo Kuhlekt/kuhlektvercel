@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import Script from "next/script"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
@@ -29,8 +30,10 @@ export default function RootLayout({
           <Header />
 
           {/* Google Analytics */}
-          <script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" />
-          <script
+          <Script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" strategy="afterInteractive" />
+          <Script
+            id="google-analytics"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 window.dataLayer = window.dataLayer || [];
@@ -41,7 +44,7 @@ export default function RootLayout({
             }}
           />
 
-          <script src="https://kuhlekt.com/api/widget" />
+          <Script src="https://kuhlekt.com/api/widget" strategy="afterInteractive" />
 
           <main>{children}</main>
           <Footer />
