@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
+import { ChatbotWidget } from "@/components/chatbot-widget"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -44,10 +45,9 @@ export default function RootLayout({
             }}
           />
 
-          <Script src="https://v0-website-chatbot-dlyj8h1nu-uhlekt.vercel.app/api/widget" strategy="afterInteractive" />
-
           <main>{children}</main>
           <Footer />
+          <ChatbotWidget />
         </ThemeProvider>
       </body>
     </html>
