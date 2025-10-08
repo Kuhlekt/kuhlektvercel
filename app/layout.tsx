@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
+import ChatWindow from "@/components/chat-window"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -46,6 +47,7 @@ export default function RootLayout({
 
           <main>{children}</main>
           <Footer />
+          <ChatWindow />
         </ThemeProvider>
       </body>
     </html>
