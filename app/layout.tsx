@@ -44,7 +44,7 @@ export default function RootLayout({
             }}
           />
 
-          <Script src="https://kuhlekt.com/api/widget" strategy="afterInteractive" />
+          <Script src="https://v0-website-chatbot-dlyj8h1nu-uhlekt.vercel.app/api/widget" strategy="afterInteractive" />
 
           <main>{children}</main>
           <Footer />
