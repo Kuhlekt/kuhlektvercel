@@ -1,240 +1,101 @@
 "use client"
 
-import { X } from "lucide-react"
 import { useState } from "react"
+import { X } from "lucide-react"
 
 export function ChatbotWidget() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isMinimized, setIsMinimized] = useState(false)
+  const [chatWindow, setChatWindow] = useState<Window | null>(null)
 
   const openChat = () => {
-    const width = 350
+    const width = 400
     const height = 600
-    const left = window.screen.width - width - 20
+    const left = window.screen.width - width - 50
     const top = (window.screen.height - height) / 2
 
-    window.open(
-      "https://v0-website-chatbot-dlyj8h1nu-uhlekt.vercel.app",
-      "KuhlektChat",
+    const newWindow = window.open(
+      "https://v0-website-chatbot-dlyj8h1nu-uhlekt.vercel.app/embed-test",
+      "KaliChat",
       `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`,
+    )
+
+    setChatWindow(newWindow)
+  }
+
+  if (isMinimized) {
+    return (
+      <button
+        onClick={() => setIsMinimized(false)}
+        className="fixed bottom-6 right-6 z-[9999] w-16 h-16 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center bg-white border border-gray-200"
+        aria-label="Open chat"
+      >
+        <img
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
+          alt="Kuhlekt"
+          className="w-12 h-auto"
+        />
+      </button>
     )
   }
 
   return (
     <>
-      {isOpen && (
-        <>
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.1)",
-              zIndex: 9998,
-            }}
-            onClick={() => setIsOpen(false)}
-          />
-
-          <div
-            style={{
-              position: "fixed",
-              top: "50%",
-              right: "20px",
-              transform: "translateY(-50%)",
-              width: "380px",
-              maxHeight: "520px",
-              background: "linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)",
-              borderRadius: "24px",
-              boxShadow: "0 10px 40px rgba(59, 130, 246, 0.15)",
-              zIndex: 9999,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              border: "1px solid rgba(59, 130, 246, 0.1)",
-              opacity: 0.8,
-            }}
+      <div
+        className="fixed bottom-6 right-6 z-[9999] w-[400px] rounded-2xl shadow-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+          opacity: 0.95,
+        }}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
+              alt="Kuhlekt"
+              className="h-8 w-auto"
+            />
+          </div>
+          <button
+            onClick={() => setIsMinimized(true)}
+            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+            aria-label="Minimize chat"
           >
-            <div
-              style={{
-                padding: "20px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                background: "linear-gradient(135deg, #dbeafe 0%, #f0f9ff 100%)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <img
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
-                  alt="Kuhlekt"
-                  style={{ height: "32px", objectFit: "contain" }}
-                />
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{
-                  background: "rgba(255, 255, 255, 0.8)",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "12px",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)"
-                  e.currentTarget.style.transform = "scale(1.05)"
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.8)"
-                  e.currentTarget.style.transform = "scale(1)"
-                }}
-                aria-label="Close chat"
-              >
-                <X size={18} color="#6b7280" />
-              </button>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Chat content */}
+        <div className="p-6 space-y-4" style={{ height: "500px" }}>
+          <div className="flex flex-col items-center justify-center h-full space-y-6">
+            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center shadow-md">
+              <img
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
+                alt="Kuhlekt"
+                className="w-20 h-auto"
+              />
             </div>
 
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "40px 32px",
-                textAlign: "center",
-                gap: "24px",
-              }}
-            >
-              <div
-                style={{
-                  width: "100px",
-                  height: "100px",
-                  borderRadius: "50%",
-                  background: "#f5f5f5",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
-                }}
-              >
-                <img
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
-                  alt="Kuhlekt"
-                  style={{ width: "80px", objectFit: "contain" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h3
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: 600,
-                    margin: 0,
-                    color: "#1e40af",
-                    lineHeight: "1.3",
-                  }}
-                >
-                  Hi there! 👋
-                  <br />
-                  How can we help you today?
-                </h3>
-                <p
-                  style={{
-                    fontSize: "15px",
-                    color: "#64748b",
-                    margin: 0,
-                    lineHeight: "1.6",
-                    maxWidth: "280px",
-                  }}
-                >
-                  We're here to answer your questions and help you discover how Kuhlekt can transform your business.
-                </p>
-              </div>
-
-              <button
-                onClick={openChat}
-                style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "16px",
-                  padding: "16px 32px",
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.3s",
-                  width: "100%",
-                  boxShadow: "0 4px 16px rgba(59, 130, 246, 0.3)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)"
-                  e.currentTarget.style.boxShadow = "0 6px 24px rgba(59, 130, 246, 0.4)"
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)"
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(59, 130, 246, 0.3)"
-                }}
-              >
-                Start Chatting
-              </button>
-
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "#94a3b8",
-                  margin: 0,
-                  fontStyle: "italic",
-                }}
-              >
-                Available 24/7 to assist you
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold text-gray-800">Hi there! 👋</h3>
+              <p className="text-gray-600 leading-relaxed max-w-xs">
+                How can we help you today? Our AI assistant is ready to answer your questions.
               </p>
             </div>
-          </div>
-        </>
-      )}
 
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            background: "white",
-            border: "2px solid rgba(59, 130, 246, 0.2)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 8px 24px rgba(59, 130, 246, 0.25)",
-            transition: "all 0.3s",
-            zIndex: 9999,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.1)"
-            e.currentTarget.style.boxShadow = "0 12px 32px rgba(59, 130, 246, 0.35)"
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)"
-            e.currentTarget.style.boxShadow = "0 8px 24px rgba(59, 130, 246, 0.25)"
-          }}
-          aria-label="Open chat"
-        >
-          <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
-            alt="Chat with us"
-            style={{ width: "48px", height: "48px", objectFit: "contain" }}
-          />
-        </button>
-      )}
+            <button
+              onClick={openChat}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-full font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+            >
+              Start Chatting
+            </button>
+
+            <p className="text-xs text-gray-500 text-center max-w-xs">
+              Click to open our AI assistant in a new window for the best chat experience
+            </p>
+          </div>
+        </div>
+      </div>
     </>
   )
 }
