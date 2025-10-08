@@ -41,11 +41,10 @@ export default function RootLayout({
             }}
           />
 
+          <script src="https://kuhlekt.com/api/widget" />
+
           <main>{children}</main>
           <Footer />
-
-          {/* Tidio Chat Script */}
-          <script src="//code.tidio.co/cqpecqjlg18crvtdezszocsiflmpnp9k.js" async />
         </ThemeProvider>
       </body>
     </html>
