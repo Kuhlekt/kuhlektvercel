@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   generateBuildId: async () => {
-    return `build-${Date.now()}`
+    // Force clean rebuild to clear cached chat route error
+    return `build-${Date.now()}-clean`
   },
   serverExternalPackages: [
     '@aws-sdk/client-ses',
