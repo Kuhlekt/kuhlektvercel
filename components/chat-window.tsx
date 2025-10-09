@@ -75,11 +75,13 @@ export default function ChatWindow() {
     const userMessage = input.trim()
     setInput("")
 
+    const isFirstMessage = messages.length === 0
+
     setMessages((prev) => [...prev, { role: "user", content: userMessage }])
     setIsLoading(true)
 
     try {
-      const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current)
+      const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current, isFirstMessage)
 
       if (result.success && result.response) {
         setMessages((prev) => [

@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         company: company || null,
         message: message,
-        form_type: "chat_contact",
+        form_type: "contact", // Changed form_type from "chat_contact" to "contact" to match database constraint
         form_data: {
           conversationId: conversationId,
           source: "chat_widget",
