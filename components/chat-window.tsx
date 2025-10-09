@@ -52,6 +52,8 @@ export default function ChatWindow() {
   const conversationIdRef = useRef(generateId())
   const sessionIdRef = useRef(generateId())
 
+  const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -67,6 +69,21 @@ export default function ChatWindow() {
       scrollToBottom()
     }
   }, [messages, isLoading])
+
+  useEffect(() => {
+    return () => {
+      if (handoffTimeoutRef.current) {
+        clearTimeout(handoffTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen && handoffTimeoutRef.current) {
+      clearTimeout(handoffTimeoutRef.current)
+      handoffTimeoutRef.current = null
+    }
+  }, [isOpen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,6 +168,18 @@ export default function ChatWindow() {
           type: "success",
           message: result.message || "Thank you! A team member will contact you shortly.",
         })
+
+        handoffTimeoutRef.current = setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content:
+                "I apologize for the delay in connecting you with a team member. Rest assured, an agent will contact you shortly using the information you provided. Thank you for your patience!",
+            },
+          ])
+        }, 60000) // 60 seconds = 1 minute
+
         setTimeout(() => {
           setShowContactForm(false)
           setContactFormData({
