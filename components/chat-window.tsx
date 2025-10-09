@@ -1,11 +1,84 @@
 "use client"
 
-import { useState } from "react"
-import { X } from "lucide-react"
+import type React from "react"
+
+import { useState, useRef, useEffect } from "react"
+import { X, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { sendChatMessage } from "@/app/actions/chat"
+
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+interface Message {
+  role: "user" | "assistant"
+  content: string
+  isHtml?: boolean
+}
 
 export default function ChatWindow() {
   const [isOpen, setIsOpen] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const conversationIdRef = useRef(generateId())
+  const sessionIdRef = useRef(generateId())
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage = input.trim()
+    setInput("")
+
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }])
+    setIsLoading(true)
+
+    try {
+      const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current)
+
+      if (result.success && result.response) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: result.response,
+            isHtml: true,
+          },
+        ])
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "I apologize, but I'm having trouble responding right now. Please try again.",
+          },
+        ])
+      }
+    } catch (error) {
+      console.error("[v0] Error in handleSubmit:", error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I apologize, but I'm having trouble responding right now. Please try again.",
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <>
@@ -22,37 +95,85 @@ export default function ChatWindow() {
           />
         </button>
       ) : (
-        <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-2xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <img
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
-                  alt="Kuhlekt"
-                  className="w-8 h-8 object-contain"
-                />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Kali Assistant</h3>
-                <p className="text-xs text-gray-600">
-                  Powered by <span className="text-black font-semibold">Kuhlekt</span>
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="hover:bg-white/50">
-              <X className="w-5 h-5" />
-            </Button>
+        <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen(false)}
+            className="absolute -top-2 -right-2 z-10 bg-white hover:bg-gray-100 shadow-md rounded-full"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100">
+            <h2 className="text-lg font-semibold text-gray-900">Kali, the Kuhlekt AI</h2>
           </div>
 
-          <div className="flex-1 relative">
-            <iframe
-              src="https://v0-website-chatbot-eight.vercel.app/"
-              className="w-full h-full border-0 rounded-b-2xl"
-              title="Kuhlekt Chatbot"
-              allow="clipboard-read; clipboard-write"
-            />
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-gray-500 text-sm mt-8">Ask me anything about Kuhlekt</div>
+            )}
+
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
+                  }`}
+                >
+                  {message.isHtml ? (
+                    <div dangerouslySetInnerHTML={{ __html: message.content }} className="prose prose-sm max-w-none" />
+                  ) : (
+                    <p className="text-sm">{message.content}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-lg px-4 py-2">
+                  <div className="flex gap-1">
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
           </div>
+
+          <form onSubmit={handleSubmit} className="p-4 border-t">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </>
