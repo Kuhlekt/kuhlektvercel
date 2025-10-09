@@ -22,6 +22,7 @@ export default function ChatWindow() {
   ])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "checking">("checking")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -32,38 +33,22 @@ export default function ChatWindow() {
     scrollToBottom()
   }, [messages])
 
-  const getResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase()
-
-    if (lowerMessage.includes("product") || lowerMessage.includes("solution")) {
-      return "Kuhlekt offers comprehensive cloud solutions including data management, analytics, and enterprise integration. Would you like to learn more about a specific product area?"
+  useEffect(() => {
+    if (isOpen && connectionStatus === "checking") {
+      testConnection()
     }
+  }, [isOpen])
 
-    if (lowerMessage.includes("price") || lowerMessage.includes("cost") || lowerMessage.includes("pricing")) {
-      return "Our pricing is tailored to your specific needs and scale. I'd recommend scheduling a consultation with our team to discuss the best plan for you. Would you like me to help you get in touch?"
+  const testConnection = async () => {
+    console.log("[v0] Testing connection...")
+    try {
+      const result = await sendChatMessage([{ role: "user", content: "test" }])
+      console.log("[v0] Connection test result:", result.success)
+      setConnectionStatus(result.success ? "connected" : "disconnected")
+    } catch (error) {
+      console.error("[v0] Connection test failed:", error)
+      setConnectionStatus("disconnected")
     }
-
-    if (lowerMessage.includes("demo") || lowerMessage.includes("trial")) {
-      return "Great! You can request a demo through our contact form. Our team typically responds within 24 hours to schedule a personalized demonstration. Would you like me to guide you to the demo request page?"
-    }
-
-    if (lowerMessage.includes("support") || lowerMessage.includes("help") || lowerMessage.includes("contact")) {
-      return "Our support team is here to help! You can reach us through our contact form, or email us directly. For urgent matters, we also offer priority support for enterprise customers. What kind of assistance do you need?"
-    }
-
-    if (lowerMessage.includes("feature") || lowerMessage.includes("capability")) {
-      return "Kuhlekt provides advanced features including real-time analytics, automated workflows, secure data storage, and seamless integrations. Which specific capabilities are you interested in learning about?"
-    }
-
-    if (lowerMessage.includes("security") || lowerMessage.includes("compliance")) {
-      return "Security is our top priority. Kuhlekt is compliant with industry standards and offers enterprise-grade encryption, access controls, and regular security audits. Would you like more detailed information about our security measures?"
-    }
-
-    if (lowerMessage.includes("thank")) {
-      return "You're welcome! Is there anything else I can help you with today?"
-    }
-
-    return "I'd be happy to help you with that! For detailed information, I recommend exploring our website or contacting our team directly. Is there a specific aspect of Kuhlekt you'd like to know more about?"
   }
 
   const simulateTyping = async (text: string) => {
@@ -96,25 +81,29 @@ export default function ChatWindow() {
     setMessages(newMessages)
     setIsTyping(true)
 
-    // Add placeholder for assistant message
     setMessages((prev) => [...prev, { role: "assistant", content: "" }])
 
     try {
       console.log("[v0] Calling sendChatMessage...")
       const result = await sendChatMessage(newMessages.map((m) => ({ role: m.role, content: m.content })))
-      console.log("[v0] Result:", result.success, result.message?.substring(0, 50))
+      console.log("[v0] Result received:", result.success)
 
       if (result.success && result.message) {
+        console.log("[v0] Simulating typing for message:", result.message.substring(0, 50))
+        setConnectionStatus("connected")
         await simulateTyping(result.message)
       } else {
-        await simulateTyping("I apologize, but I encountered an error. Please try again.")
+        console.log("[v0] Error response:", result.message)
+        setConnectionStatus("disconnected")
+        await simulateTyping(result.message || "I apologize, but I encountered an error. Please try again.")
       }
     } catch (error) {
-      console.error("[v0] Chat error:", error)
+      console.error("[v0] Chat error in component:", error)
+      setConnectionStatus("disconnected")
       await simulateTyping("I apologize, but I encountered an error. Please try again.")
+    } finally {
+      setIsTyping(false)
     }
-
-    setIsTyping(false)
   }
 
   return (
@@ -145,7 +134,22 @@ export default function ChatWindow() {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Kali Assistant</h3>
-                <p className="text-xs text-gray-600">Always here to help</p>
+                <p className="text-xs text-gray-600 flex items-center gap-1">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      connectionStatus === "connected"
+                        ? "bg-green-500"
+                        : connectionStatus === "disconnected"
+                          ? "bg-red-500"
+                          : "bg-yellow-500 animate-pulse"
+                    }`}
+                  />
+                  {connectionStatus === "connected"
+                    ? "Connected to GPT-4o-mini"
+                    : connectionStatus === "disconnected"
+                      ? "Connection error"
+                      : "Connecting..."}
+                </p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="hover:bg-white/50">

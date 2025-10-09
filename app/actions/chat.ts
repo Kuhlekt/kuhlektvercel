@@ -4,6 +4,14 @@ export async function sendChatMessage(messages: { role: string; content: string 
   console.log("[v0] Chat action called with messages:", messages.length)
   console.log("[v0] OpenAI API key exists:", !!process.env.OPENAI_API_KEY)
 
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("[v0] OPENAI_API_KEY is not set")
+    return {
+      success: false,
+      message: "Chat service is not configured. Please contact support.",
+    }
+  }
+
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -22,8 +30,11 @@ export async function sendChatMessage(messages: { role: string; content: string 
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("[v0] OpenAI API error:", response.statusText, errorText)
-      throw new Error(`OpenAI API error: ${response.statusText}`)
+      console.error("[v0] OpenAI API error:", response.status, errorText)
+      return {
+        success: false,
+        message: "I'm having trouble connecting right now. Please try again in a moment.",
+      }
     }
 
     const data = await response.json()
