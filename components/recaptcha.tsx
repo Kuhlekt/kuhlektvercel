@@ -120,9 +120,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   return (
     <div>
       <input type="hidden" name="recaptcha-token" value={token} readOnly />
-      <p className="text-xs text-gray-500 mt-2">
-        reCAPTCHA execute mode - Script: {scriptLoaded ? "Yes" : "No"}, Ready: {grecaptchaReady ? "Yes" : "No"}
-      </p>
     </div>
   )
 }
