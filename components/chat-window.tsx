@@ -23,6 +23,7 @@ export default function ChatWindow() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastAssistantMessageRef = useRef<HTMLDivElement>(null)
 
   const conversationIdRef = useRef(generateId())
   const sessionIdRef = useRef(generateId())
@@ -31,9 +32,17 @@ export default function ChatWindow() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  const scrollToLastAssistantMessage = () => {
+    lastAssistantMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (messages.length > 0 && messages[messages.length - 1].role === "assistant" && !isLoading) {
+      scrollToLastAssistantMessage()
+    } else {
+      scrollToBottom()
+    }
+  }, [messages, isLoading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,11 +120,25 @@ export default function ChatWindow() {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
-              <div className="text-center text-gray-500 text-sm mt-8">Ask me anything about Kuhlekt</div>
+              <div className="text-center text-gray-600 text-sm mt-8 space-y-3">
+                <p className="font-semibold text-base">👋 Hello! I'm Kali, your Kuhlekt AI assistant.</p>
+                <p>I'm here to help you with:</p>
+                <ul className="text-left inline-block space-y-1">
+                  <li>• Product information and features</li>
+                  <li>• Technical support and guidance</li>
+                  <li>• Pricing and service options</li>
+                  <li>• General inquiries about Kuhlekt</li>
+                </ul>
+                <p className="mt-3 text-blue-600 font-medium">How can I assist you today?</p>
+              </div>
             )}
 
             {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                key={index}
+                ref={message.role === "assistant" && index === messages.length - 1 ? lastAssistantMessageRef : null}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`max-w-[80%] rounded-lg px-4 py-2 ${
                     message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
