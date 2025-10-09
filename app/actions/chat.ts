@@ -1,6 +1,9 @@
 "use server"
 
 export async function sendChatMessage(messages: { role: string; content: string }[]) {
+  console.log("[v0] Chat action called with messages:", messages.length)
+  console.log("[v0] OpenAI API key exists:", !!process.env.OPENAI_API_KEY)
+
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -15,11 +18,17 @@ export async function sendChatMessage(messages: { role: string; content: string 
       }),
     })
 
+    console.log("[v0] OpenAI API response status:", response.status)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[v0] OpenAI API error:", response.statusText, errorText)
       throw new Error(`OpenAI API error: ${response.statusText}`)
     }
 
     const data = await response.json()
+    console.log("[v0] OpenAI API success, message length:", data.choices[0].message.content.length)
+
     return {
       success: true,
       message: data.choices[0].message.content,

@@ -89,6 +89,7 @@ export default function ChatWindow() {
     if (!input.trim() || isTyping) return
 
     const userMessage = input.trim()
+    console.log("[v0] User message:", userMessage)
     setInput("")
 
     const newMessages = [...messages, { role: "user" as const, content: userMessage }]
@@ -99,7 +100,9 @@ export default function ChatWindow() {
     setMessages((prev) => [...prev, { role: "assistant", content: "" }])
 
     try {
+      console.log("[v0] Calling sendChatMessage...")
       const result = await sendChatMessage(newMessages.map((m) => ({ role: m.role, content: m.content })))
+      console.log("[v0] Result:", result.success, result.message?.substring(0, 50))
 
       if (result.success && result.message) {
         await simulateTyping(result.message)
