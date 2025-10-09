@@ -11,7 +11,15 @@ const sesClient = new SESClient({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Contact form API called")
     const data = await request.json()
+    console.log("[v0] Request data:", {
+      name: data.name,
+      email: data.email,
+      hasPhone: !!data.phone,
+      hasCompany: !!data.company,
+      hasMessage: !!data.message,
+    })
 
     const emailContent = `
       Contact Form Submission
@@ -25,6 +33,7 @@ export async function POST(request: NextRequest) {
       ${data.message}
     `
 
+    console.log("[v0] Preparing to send email via AWS SES")
     const command = new SendEmailCommand({
       Source: process.env.AWS_SES_FROM_EMAIL || "",
       Destination: {
@@ -42,11 +51,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log("[v0] Sending email command to AWS SES")
     await sesClient.send(command)
+    console.log("[v0] Email sent successfully")
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error sending contact email:", error)
+    console.error("[v0] Error sending contact email:", error)
     return NextResponse.json({ success: false, error: "Failed to send email" }, { status: 500 })
   }
 }

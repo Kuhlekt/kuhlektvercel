@@ -3,6 +3,10 @@
 export async function sendChatMessage(message: string, conversationId: string, sessionId: string) {
   console.log("[v0] Sending message to Kali API:", { message, conversationId, sessionId })
 
+  const instructedMessage = `Please respond in a friendly, conversational tone. Start with a warm greeting like "Hi!", "Hey there!", or "Hello!" when appropriate. Keep your answer brief and succinct, but maintain a warm and helpful demeanor. After your concise answer, offer to provide more specific details if the user would like to know more.
+
+User question: ${message}`
+
   try {
     const response = await fetch("https://v0-website-chatbot-eight.vercel.app/api/chat", {
       method: "POST",
@@ -10,7 +14,7 @@ export async function sendChatMessage(message: string, conversationId: string, s
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message,
+        message: instructedMessage, // Send instructed message instead of raw message
         botId: 1,
         conversationId,
         sessionId,

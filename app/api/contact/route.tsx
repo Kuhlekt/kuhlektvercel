@@ -3,8 +3,10 @@ import { sendEmail } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 
 export async function POST(request: NextRequest) {
+  console.log("[v0] Contact API: Request received")
   try {
     const formData = await request.formData()
+    console.log("[v0] Contact API: FormData parsed successfully")
 
     // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
@@ -77,12 +79,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (Object.keys(errors).length > 0) {
+      console.log("[v0] Contact API: Validation errors:", errors)
       return NextResponse.json({
         success: false,
         message: "Please correct the errors below",
         errors,
       })
     }
+
+    console.log("[v0] Contact API: Validation passed, preparing email")
 
     // Prepare email content
     const emailSubject = `Contact Form Message from ${firstName} ${lastName}`
@@ -110,12 +115,15 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     `
 
     // Send email
+    console.log("[v0] Contact API: Attempting to send email")
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
       html: emailBody,
       text: emailText,
     })
+
+    console.log("[v0] Contact API: Email result:", emailResult)
 
     if (!emailResult.success) {
       console.error("Failed to send contact form email:", emailResult.message)
@@ -134,12 +142,15 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       errors: {},
     })
   } catch (error) {
-    console.error("Contact form submission error:", error)
-    return NextResponse.json({
-      success: false,
-      message: "An unexpected error occurred. Please try again.",
-      shouldClearForm: false,
-      errors: {},
-    })
+    console.error("[v0] Contact form submission error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: "An unexpected error occurred. Please try again.",
+        shouldClearForm: false,
+        errors: {},
+      },
+      { status: 500 },
+    )
   }
 }
