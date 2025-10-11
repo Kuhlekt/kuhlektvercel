@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
 
 interface ContactRequest {
   id: string
@@ -50,6 +51,12 @@ export default async function ContactRequestsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="mb-4">
+          <Link href="/admin" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+            ← Back to Admin Dashboard
+          </Link>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Chat Handoff Requests</h1>
           <p className="text-gray-600 mt-2">Contact requests from the chat widget requiring agent follow-up</p>

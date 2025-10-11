@@ -6,8 +6,6 @@ export async function sendChatMessage(
   sessionId: string,
   isFirstMessage = false,
 ) {
-  console.log("[v0] Sending message to Kali API:", { message, conversationId, sessionId, isFirstMessage })
-
   const instructedMessage = isFirstMessage
     ? `Please respond in a friendly, conversational tone. Start with a warm greeting like "Hi!", "Hey there!", or "Hello!". Keep your answer brief and succinct, but maintain a warm and helpful demeanor. After your concise answer, offer to provide more specific details if the user would like to know more.
 
@@ -17,13 +15,13 @@ User question: ${message}`
 User question: ${message}`
 
   try {
-    const response = await fetch("https://v0-website-chatbot-eight.vercel.app/api/chat", {
+    const response = await fetch("https://v0-website-chatbot-7iu3b2pqu-uhlekt.vercel.app/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: instructedMessage, // Send instructed message instead of raw message
+        message: instructedMessage,
         botId: 1,
         conversationId,
         sessionId,
@@ -31,16 +29,13 @@ User question: ${message}`
       }),
     })
 
-    console.log("[v0] Kali API response status:", response.status)
-
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("[v0] Kali API error:", errorText)
+      console.error("Kali API error:", errorText)
       throw new Error(`API request failed: ${response.status}`)
     }
 
     const data = await response.json()
-    console.log("[v0] Kali API response:", data)
 
     if (!data.success) {
       throw new Error(data.error || "Failed to get response")
@@ -52,7 +47,7 @@ User question: ${message}`
       source: data.source,
     }
   } catch (error) {
-    console.error("[v0] Error calling Kali API:", error)
+    console.error("Error calling Kali API:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

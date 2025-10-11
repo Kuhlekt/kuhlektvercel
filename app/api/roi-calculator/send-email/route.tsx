@@ -287,13 +287,14 @@ export async function POST(request: NextRequest) {
         }),
       })
 
-      if (adminNotifyResponse.ok) {
-        console.log("✓ Admin notification sent successfully")
+      if (!adminNotifyResponse.ok) {
+        const errorText = await adminNotifyResponse.text()
+        console.error("Admin notification failed:", adminNotifyResponse.status, errorText)
       } else {
-        console.error("✗ Admin notification failed:", await adminNotifyResponse.text())
+        console.log("✓ Admin notification sent successfully")
       }
     } catch (adminError) {
-      console.error("✗ Error sending admin notification:", adminError)
+      console.error("Error sending admin notification:", adminError)
       // Don't fail the user request if admin notification fails
     }
 
