@@ -15,7 +15,7 @@ User question: ${message}`
 User question: ${message}`
 
   try {
-    const response = await fetch("https://v0-website-chatbot-7iu3b2pqu-uhlekt.vercel.app/api/chat", {
+    const response = await fetch("https://kali.kuhlekt-info.com/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

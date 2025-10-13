@@ -7,7 +7,7 @@ export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [iframeError, setIframeError] = useState(false)
 
-  const chatbotUrl = "https://v0-website-chatbot-eight.vercel.app"
+  const chatbotUrl = "https://kali.kuhlekt-info.com"
 
   const openInNewWindow = () => {
     window.open(chatbotUrl, "KuhlektChat", "width=450,height=700,left=100,top=100")
