@@ -34,8 +34,7 @@ export default function AdminLogin() {
 
       if (data.success) {
         console.log("[v0] Login successful, redirecting to /admin")
-        router.push("/admin")
-        router.refresh()
+        window.location.href = "/admin"
       } else {
         console.log("[v0] Login failed:", data.error)
         setError(data.error || "Login failed")

@@ -1,193 +1,201 @@
-import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
-async function getStats() {
-  const supabase = createClient()
+export default function AdminDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Get contact requests count
-  const { count: contactCount } = await supabase
-    .from("form_submitters")
-    .select("*", { count: "exact", head: true })
-    .eq("form_type", "contact")
+  useEffect(() => {
+    // Check authentication
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/admin/check-auth")
+        const data = await response.json()
+        setIsAuthenticated(data.authenticated)
+      } catch (error) {
+        console.error("[v0] Auth check failed:", error)
+        setIsAuthenticated(false)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  // Get new contact requests count
-  const { count: newContactCount } = await supabase
-    .from("form_submitters")
-    .select("*", { count: "exact", head: true })
-    .eq("form_type", "contact")
-    .eq("status", "new")
+    checkAuth()
+  }, [])
 
-  // Get chat handoff requests count
-  const { data: chatRequests } = await supabase.from("form_submitters").select("form_data").eq("form_type", "contact")
-
-  const chatHandoffCount = chatRequests?.filter((req: any) => req.form_data?.source === "chat_widget").length || 0
-
-  const { count: totalChats } = await supabase.from("chat_conversations").select("*", { count: "exact", head: true })
-
-  const { count: activeChats } = await supabase
-    .from("chat_conversations")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "active")
-
-  return {
-    totalContacts: contactCount || 0,
-    newContacts: newContactCount || 0,
-    chatHandoffs: chatHandoffCount,
-    totalChats: totalChats || 0,
-    activeChats: activeChats || 0,
-  }
-}
-
-export default async function AdminDashboard() {
-  // Check admin authentication
-  const cookieStore = await cookies()
-  const adminAuth = cookieStore.get("admin-auth")
-
-  if (!adminAuth || adminAuth.value !== "authenticated") {
-    redirect("/admin/login")
-  }
-
-  const stats = await getStats()
-
-  const siteMap = [
-    { name: "Home", path: "/", description: "Main landing page" },
-    { name: "About", path: "/about", description: "Company information" },
-    { name: "Product", path: "/product", description: "Product details and features" },
-    { name: "Solutions", path: "/solutions", description: "Solutions overview" },
-    { name: "Pricing", path: "/pricing-table", description: "Pricing plans and comparison" },
-    { name: "Contact", path: "/contact", description: "Contact form" },
-    { name: "Demo", path: "/demo", description: "Request a demo" },
-    { name: "Help", path: "/help", description: "Help and support" },
-  ]
-
-  const adminFeatures = [
-    {
-      name: "Chat Conversations",
-      path: "/admin/chats",
-      description: "View all chat conversations with the Kali chatbot",
-      count: stats.totalChats,
-      newCount: stats.activeChats,
-      badge: "Active",
-    },
-    {
-      name: "Chat Handoff Requests",
-      path: "/admin/contact-requests",
-      description: "View and manage customer contact requests from chat",
-      count: stats.chatHandoffs,
-      newCount: stats.newContacts,
-      badge: "New",
-    },
-  ]
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Kuhlekt Website Administration</p>
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 text-2xl font-bold">Loading...</div>
         </div>
       </div>
+    )
+  }
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Chats</div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalChats}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Chats</div>
-            <div className="mt-2 text-3xl font-bold text-green-600">{stats.activeChats}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Contacts</div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalContacts}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">New Requests</div>
-            <div className="mt-2 text-3xl font-bold text-orange-600">{stats.newContacts}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Chat Handoffs</div>
-            <div className="mt-2 text-3xl font-bold text-blue-600">{stats.chatHandoffs}</div>
-          </div>
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>Please log in to access the admin dashboard</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/login">
+              <Button className="w-full">Go to Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-2 text-gray-600">Manage your Kuhlekt website</p>
         </div>
 
         {/* Admin Features */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Admin Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {adminFeatures.map((feature) => (
-              <Link
-                key={feature.path}
-                href={feature.path}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-blue-500"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{feature.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{feature.description}</p>
-                  </div>
-                  {feature.newCount > 0 && (
-                    <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                      {feature.newCount} {feature.badge?.toLowerCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 text-sm text-gray-500">
-                  Total: <span className="font-semibold text-gray-900">{feature.count}</span>
-                </div>
-              </Link>
-            ))}
+        <div className="mb-12">
+          <h2 className="mb-4 text-2xl font-semibold text-gray-900">Admin Features</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Link href="/admin/agent-console">
+              <Card className="cursor-pointer transition-shadow hover:shadow-lg">
+                <CardHeader>
+                  <CardTitle>Agent Console</CardTitle>
+                  <CardDescription>Respond to customer chat requests</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link href="/admin/contact-requests">
+              <Card className="cursor-pointer transition-shadow hover:shadow-lg">
+                <CardHeader>
+                  <CardTitle>Chat Handoff Requests</CardTitle>
+                  <CardDescription>View customer handoff requests</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link href="/admin/chats">
+              <Card className="cursor-pointer transition-shadow hover:shadow-lg">
+                <CardHeader>
+                  <CardTitle>All Chat Conversations</CardTitle>
+                  <CardDescription>View complete chat history</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
           </div>
         </div>
 
-        {/* Site Map */}
+        {/* Website Sitemap */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Website Sitemap</h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Page Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Path
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {siteMap.map((page) => (
-                  <tr key={page.path} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{page.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-gray-600">{page.path}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600">{page.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link href={page.path} target="_blank" className="text-blue-600 hover:text-blue-800 font-medium">
-                        View Page →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <h2 className="mb-4 text-2xl font-semibold text-gray-900">Website Sitemap</h2>
+          <Card>
+            <CardContent className="p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="pb-3 text-left font-semibold">Page</th>
+                      <th className="pb-3 text-left font-semibold">URL</th>
+                      <th className="pb-3 text-left font-semibold">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    <tr>
+                      <td className="py-3 font-medium">Home</td>
+                      <td className="py-3">
+                        <a href="/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                          /
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">Main landing page</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-medium">About</td>
+                      <td className="py-3">
+                        <a
+                          href="/about"
+                          className="text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          /about
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">About Kuhlekt</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-medium">Services</td>
+                      <td className="py-3">
+                        <a
+                          href="/services"
+                          className="text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          /services
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">Services offered</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-medium">Contact</td>
+                      <td className="py-3">
+                        <a
+                          href="/contact"
+                          className="text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          /contact
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">Contact form</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-medium">ROI Calculator</td>
+                      <td className="py-3">
+                        <a
+                          href="https://roi.kuhlekt-info.com/"
+                          className="text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          roi.kuhlekt-info.com
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">ROI calculation tool</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 font-medium">Kali Chatbot</td>
+                      <td className="py-3">
+                        <a
+                          href="https://kali.kuhlekt-info.com/"
+                          className="text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          kali.kuhlekt-info.com
+                        </a>
+                      </td>
+                      <td className="py-3 text-gray-600">AI chatbot assistant</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
