@@ -14,6 +14,13 @@ User question: ${message}`
 
 User question: ${message}`
 
+  console.log("[v0] Attempting to connect to Kali chatbot:", {
+    url: "https://kali.kuhlekt-info.com/api/chat",
+    botId: 1,
+    conversationId,
+    sessionId,
+  })
+
   try {
     const response = await fetch("https://kali.kuhlekt-info.com/api/chat", {
       method: "POST",
@@ -29,13 +36,25 @@ User question: ${message}`
       }),
     })
 
+    console.log("[v0] Kali API response status:", response.status)
+    console.log("[v0] Kali API response headers:", Object.fromEntries(response.headers.entries()))
+
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("Kali API error:", errorText)
-      throw new Error(`API request failed: ${response.status}`)
+      console.error("[v0] Kali API error response:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText.substring(0, 500), // First 500 chars to avoid huge logs
+      })
+      throw new Error(`API request failed: ${response.status} - ${response.statusText}`)
     }
 
     const data = await response.json()
+    console.log("[v0] Kali API success response:", {
+      success: data.success,
+      hasResponse: !!data.response,
+      source: data.source,
+    })
 
     if (!data.success) {
       throw new Error(data.error || "Failed to get response")
@@ -47,7 +66,10 @@ User question: ${message}`
       source: data.source,
     }
   } catch (error) {
-    console.error("Error calling Kali API:", error)
+    console.error("[v0] Error calling Kali API:", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
