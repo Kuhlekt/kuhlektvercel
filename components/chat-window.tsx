@@ -18,12 +18,8 @@ interface Message {
 }
 
 interface ContactFormData {
-  firstName: string
-  lastName: string
+  name: string
   email: string
-  company: string
-  phone: string
-  message: string
 }
 
 export default function ChatWindow() {
@@ -33,12 +29,8 @@ export default function ChatWindow() {
   const [isLoading, setIsLoading] = useState(false)
   const [showContactForm, setShowContactForm] = useState(false)
   const [contactFormData, setContactFormData] = useState<ContactFormData>({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
-    company: "",
-    phone: "",
-    message: "",
   })
   const [contactFormStatus, setContactFormStatus] = useState<{
     type: "success" | "error" | null
@@ -150,6 +142,12 @@ export default function ChatWindow() {
     setIsSubmittingContact(true)
     setContactFormStatus({ type: null, message: "" })
 
+    console.log("[v0] Contact form submitting:", {
+      name: contactFormData.name,
+      email: contactFormData.email,
+      conversationId: conversationIdRef.current,
+    })
+
     try {
       const response = await fetch("/api/chat-contact", {
         method: "POST",
@@ -157,26 +155,28 @@ export default function ChatWindow() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: `${contactFormData.firstName} ${contactFormData.lastName}`,
+          name: contactFormData.name,
           email: contactFormData.email,
-          company: contactFormData.company,
-          phone: contactFormData.phone,
-          message: contactFormData.message || "Chat escalation request",
           conversationId: conversationIdRef.current,
         }),
       })
+
+      console.log("[v0] Contact form response status:", response.status)
 
       const contentType = response.headers.get("content-type")
       let result
 
       if (contentType && contentType.includes("application/json")) {
         result = await response.json()
+        console.log("[v0] Contact form result:", result)
       } else {
         const text = await response.text()
+        console.log("[v0] Contact form non-JSON response:", text)
         result = { success: false, message: text }
       }
 
       if (response.ok && result.success) {
+        console.log("[v0] Contact form submitted successfully")
         setContactFormStatus({
           type: "success",
           message: result.message || "Thank you! A team member will contact you shortly.",
@@ -191,21 +191,18 @@ export default function ChatWindow() {
                 "I apologize for the delay in connecting you with a team member. Rest assured, an agent will contact you shortly using the information you provided. Thank you for your patience!",
             },
           ])
-        }, 60000) // 60 seconds = 1 minute
+        }, 60000)
 
         setTimeout(() => {
           setShowContactForm(false)
           setContactFormData({
-            firstName: "",
-            lastName: "",
+            name: "",
             email: "",
-            company: "",
-            phone: "",
-            message: "",
           })
           setContactFormStatus({ type: null, message: "" })
         }, 2000)
       } else {
+        console.log("[v0] Contact form submission failed:", result)
         setContactFormStatus({
           type: "error",
           message: result.error || result.message || "Failed to submit. Please try again.",
@@ -275,31 +272,18 @@ export default function ChatWindow() {
                 </p>
 
                 <form onSubmit={handleContactSubmit} className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        First Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactFormData.firstName}
-                        onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Last Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={contactFormData.lastName}
-                        onChange={(e) => setContactFormData({ ...contactFormData, lastName: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={contactFormData.name}
+                      onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Your full name"
+                    />
                   </div>
 
                   <div>
@@ -312,37 +296,7 @@ export default function ChatWindow() {
                       value={contactFormData.email}
                       onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
                       className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Company</label>
-                    <input
-                      type="text"
-                      value={contactFormData.company}
-                      onChange={(e) => setContactFormData({ ...contactFormData, company: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      value={contactFormData.phone}
-                      onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Message</label>
-                    <textarea
-                      value={contactFormData.message}
-                      onChange={(e) => setContactFormData({ ...contactFormData, message: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Tell us how we can help..."
+                      placeholder="your.email@example.com"
                     />
                   </div>
 
