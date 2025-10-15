@@ -46,6 +46,14 @@ export default function ChatWindow() {
 
   const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  useEffect(() => {
+    console.log("[v0] Chat isOpen state changed to:", isOpen)
+  }, [isOpen])
+
+  useEffect(() => {
+    console.log("[v0] showContactForm state changed to:", showContactForm)
+  }, [showContactForm])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -79,9 +87,12 @@ export default function ChatWindow() {
 
   useEffect(() => {
     const hasAutoOpened = sessionStorage.getItem("chat-auto-opened")
+    console.log("[v0] Auto-open check - hasAutoOpened:", hasAutoOpened)
 
     if (!hasAutoOpened) {
+      console.log("[v0] Setting auto-open timer for 1.5 seconds")
       const timer = setTimeout(() => {
+        console.log("[v0] Auto-opening chat now")
         setIsOpen(true)
         sessionStorage.setItem("chat-auto-opened", "true")
       }, 1500)
@@ -91,8 +102,16 @@ export default function ChatWindow() {
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("[v0] ===== HANDLE SUBMIT CALLED =====")
+    console.log("[v0] Input value:", input)
+    console.log("[v0] isLoading:", isLoading)
+
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+
+    if (!input.trim() || isLoading) {
+      console.log("[v0] Submission blocked - empty input or loading")
+      return
+    }
 
     const userMessage = input.trim()
     setInput("")
@@ -103,7 +122,15 @@ export default function ChatWindow() {
     setIsLoading(true)
 
     try {
+      console.log("[v0] Calling sendChatMessage with:", {
+        message: userMessage,
+        conversationId: conversationIdRef.current,
+        sessionId: sessionIdRef.current,
+        isFirstMessage,
+      })
+
       const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current, isFirstMessage)
+      console.log("[v0] sendChatMessage result:", result)
 
       if (result.success && result.response) {
         setMessages((prev) => [
@@ -124,7 +151,7 @@ export default function ChatWindow() {
         ])
       }
     } catch (error) {
-      console.error("[v0] Error in handleSubmit:", error)
+      console.error("[v0] Chat error:", error)
       setMessages((prev) => [
         ...prev,
         {
@@ -142,12 +169,6 @@ export default function ChatWindow() {
     setIsSubmittingContact(true)
     setContactFormStatus({ type: null, message: "" })
 
-    console.log("[v0] Contact form submitting:", {
-      name: contactFormData.name,
-      email: contactFormData.email,
-      conversationId: conversationIdRef.current,
-    })
-
     try {
       const response = await fetch("/api/chat-contact", {
         method: "POST",
@@ -161,22 +182,17 @@ export default function ChatWindow() {
         }),
       })
 
-      console.log("[v0] Contact form response status:", response.status)
-
       const contentType = response.headers.get("content-type")
       let result
 
       if (contentType && contentType.includes("application/json")) {
         result = await response.json()
-        console.log("[v0] Contact form result:", result)
       } else {
         const text = await response.text()
-        console.log("[v0] Contact form non-JSON response:", text)
         result = { success: false, message: text }
       }
 
       if (response.ok && result.success) {
-        console.log("[v0] Contact form submitted successfully")
         setContactFormStatus({
           type: "success",
           message: result.message || "Thank you! A team member will contact you shortly.",
@@ -202,14 +218,13 @@ export default function ChatWindow() {
           setContactFormStatus({ type: null, message: "" })
         }, 2000)
       } else {
-        console.log("[v0] Contact form submission failed:", result)
         setContactFormStatus({
           type: "error",
           message: result.error || result.message || "Failed to submit. Please try again.",
         })
       }
     } catch (error) {
-      console.error("[v0] Contact form error:", error)
+      console.error("Contact form error:", error)
       setContactFormStatus({
         type: "error",
         message: "An error occurred. Please try again.",
@@ -223,7 +238,10 @@ export default function ChatWindow() {
     <>
       {!isOpen ? (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            console.log("[v0] Chat button clicked - opening chat")
+            setIsOpen(true)
+          }}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50"
           aria-label="Open chat"
         >
@@ -235,35 +253,44 @@ export default function ChatWindow() {
         </button>
       ) : (
         <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-            className="absolute -top-2 -right-2 z-10 bg-white hover:bg-gray-100 shadow-md rounded-full"
+          <button
+            onClick={() => {
+              console.log("[v0] Close button clicked - closing chat")
+              setIsOpen(false)
+            }}
+            className="absolute -top-2 -right-2 z-10 bg-white hover:bg-gray-100 shadow-md rounded-full w-8 h-8 flex items-center justify-center"
+            aria-label="Close chat"
           >
             <X className="w-4 h-4" />
-          </Button>
+          </button>
 
-          <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between">
+          {/* Header */}
+          <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between rounded-t-lg">
             <h2 className="text-lg font-semibold text-gray-900">Kali, the Kuhlekt AI</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowContactForm(true)}
-              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            <button
+              onClick={() => {
+                console.log("[v0] Talk to Human button clicked")
+                setShowContactForm(true)
+              }}
+              className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded flex items-center gap-1"
             >
-              <User className="w-3 h-3 mr-1" />
+              <User className="w-3 h-3" />
               Talk to Human
-            </Button>
+            </button>
           </div>
 
+          {/* Contact Form Modal */}
           {showContactForm && (
             <div className="absolute inset-0 bg-white rounded-lg z-20 flex flex-col">
-              <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between">
+              <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between rounded-t-lg">
                 <h2 className="text-lg font-semibold text-gray-900">Contact Our Team</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowContactForm(false)}>
+                <button
+                  onClick={() => setShowContactForm(false)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded"
+                  aria-label="Close contact form"
+                >
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
@@ -320,6 +347,7 @@ export default function ChatWindow() {
             </div>
           )}
 
+          {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-gray-600 text-sm mt-8 space-y-3">
@@ -349,7 +377,7 @@ export default function ChatWindow() {
                   {message.isHtml ? (
                     <div dangerouslySetInnerHTML={{ __html: message.content }} className="prose prose-sm max-w-none" />
                   ) : (
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   )}
                 </div>
               </div>
@@ -379,24 +407,30 @@ export default function ChatWindow() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 border-t">
+          {/* Input Form */}
+          <form onSubmit={handleSubmit} className="p-4 border-t bg-white rounded-b-lg">
             <div className="flex gap-2">
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  console.log("[v0] Input onChange - value:", e.target.value)
+                  setInput(e.target.value)
+                }}
+                onFocus={() => console.log("[v0] Input focused")}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 disabled={isLoading}
+                autoComplete="off"
               />
-              <Button
+              <button
                 type="submit"
-                size="icon"
                 disabled={isLoading || !input.trim()}
-                className="bg-blue-500 hover:bg-blue-600"
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 flex items-center justify-center transition-colors"
+                aria-label="Send message"
               >
                 <Send className="w-4 h-4" />
-              </Button>
+              </button>
             </div>
           </form>
         </div>

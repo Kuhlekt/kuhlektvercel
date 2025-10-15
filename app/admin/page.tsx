@@ -24,10 +24,19 @@ async function getStats() {
 
   const chatHandoffCount = chatRequests?.filter((req: any) => req.form_data?.source === "chat_widget").length || 0
 
+  const { count: totalChats } = await supabase.from("chat_conversations").select("*", { count: "exact", head: true })
+
+  const { count: activeChats } = await supabase
+    .from("chat_conversations")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active")
+
   return {
     totalContacts: contactCount || 0,
     newContacts: newContactCount || 0,
     chatHandoffs: chatHandoffCount,
+    totalChats: totalChats || 0,
+    activeChats: activeChats || 0,
   }
 }
 
@@ -55,11 +64,20 @@ export default async function AdminDashboard() {
 
   const adminFeatures = [
     {
+      name: "Chat Conversations",
+      path: "/admin/chats",
+      description: "View all chat conversations with the Kali chatbot",
+      count: stats.totalChats,
+      newCount: stats.activeChats,
+      badge: "Active",
+    },
+    {
       name: "Chat Handoff Requests",
       path: "/admin/contact-requests",
       description: "View and manage customer contact requests from chat",
       count: stats.chatHandoffs,
       newCount: stats.newContacts,
+      badge: "New",
     },
   ]
 
@@ -75,14 +93,22 @@ export default async function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-8 py-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Chats</div>
+            <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalChats}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Chats</div>
+            <div className="mt-2 text-3xl font-bold text-green-600">{stats.activeChats}</div>
+          </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Contacts</div>
             <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalContacts}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">New Requests</div>
-            <div className="mt-2 text-3xl font-bold text-green-600">{stats.newContacts}</div>
+            <div className="mt-2 text-3xl font-bold text-orange-600">{stats.newContacts}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">Chat Handoffs</div>
@@ -107,7 +133,7 @@ export default async function AdminDashboard() {
                   </div>
                   {feature.newCount > 0 && (
                     <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                      {feature.newCount} new
+                      {feature.newCount} {feature.badge?.toLowerCase()}
                     </span>
                   )}
                 </div>
