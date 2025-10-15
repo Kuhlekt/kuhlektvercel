@@ -252,7 +252,7 @@ export default function ChatWindow() {
           />
         </button>
       ) : (
-        <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50">
+        <div className="fixed bottom-4 right-4 w-[calc(100vw-2rem)] h-[calc(100vh-2rem)] sm:w-[340px] sm:h-[480px] md:w-[360px] md:h-[520px] lg:w-[400px] lg:h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-50">
           <button
             onClick={() => {
               console.log("[v0] Close button clicked - closing chat")
@@ -266,7 +266,7 @@ export default function ChatWindow() {
 
           {/* Header */}
           <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between rounded-t-lg">
-            <h2 className="text-lg font-semibold text-gray-900">Kali, the Kuhlekt AI</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Kali, the Kuhlekt AI</h2>
             <button
               onClick={() => {
                 console.log("[v0] Talk to Human button clicked")
@@ -275,7 +275,8 @@ export default function ChatWindow() {
               className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded flex items-center gap-1"
             >
               <User className="w-3 h-3" />
-              Talk to Human
+              <span className="hidden sm:inline">Talk to Human</span>
+              <span className="sm:hidden">Human</span>
             </button>
           </div>
 
@@ -283,7 +284,7 @@ export default function ChatWindow() {
           {showContactForm && (
             <div className="absolute inset-0 bg-white rounded-lg z-20 flex flex-col">
               <div className="px-4 py-3 border-b bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-between rounded-t-lg">
-                <h2 className="text-lg font-semibold text-gray-900">Contact Our Team</h2>
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Contact Our Team</h2>
                 <button
                   onClick={() => setShowContactForm(false)}
                   className="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded"
@@ -348,18 +349,18 @@ export default function ChatWindow() {
           )}
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
             {messages.length === 0 && (
-              <div className="text-center text-gray-600 text-sm mt-8 space-y-3">
-                <p className="font-semibold text-base">👋 Hello! I'm Kali, your Kuhlekt AI assistant.</p>
-                <p>I'm here to help you with:</p>
-                <ul className="text-left inline-block space-y-1">
+              <div className="text-center text-gray-600 text-sm mt-4 sm:mt-8 space-y-2 sm:space-y-3">
+                <p className="font-semibold text-sm sm:text-base">👋 Hello! I'm Kali, your Kuhlekt AI assistant.</p>
+                <p className="text-xs sm:text-sm">I'm here to help you with:</p>
+                <ul className="text-left inline-block space-y-1 text-xs sm:text-sm">
                   <li>• Product information and features</li>
                   <li>• Technical support and guidance</li>
                   <li>• Pricing and service options</li>
                   <li>• General inquiries about Kuhlekt</li>
                 </ul>
-                <p className="mt-3 text-blue-600 font-medium">How can I assist you today?</p>
+                <p className="mt-3 text-blue-600 font-medium text-xs sm:text-sm">How can I assist you today?</p>
               </div>
             )}
 
@@ -370,14 +371,17 @@ export default function ChatWindow() {
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 ${
                     message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
                   }`}
                 >
                   {message.isHtml ? (
-                    <div dangerouslySetInnerHTML={{ __html: message.content }} className="prose prose-sm max-w-none" />
+                    <div
+                      dangerouslySetInnerHTML={{ __html: message.content }}
+                      className="prose prose-sm max-w-none text-xs sm:text-sm"
+                    />
                   ) : (
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
                   )}
                 </div>
               </div>
@@ -408,7 +412,7 @@ export default function ChatWindow() {
           </div>
 
           {/* Input Form */}
-          <form onSubmit={handleSubmit} className="p-4 border-t bg-white rounded-b-lg">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t bg-white rounded-b-lg">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -419,14 +423,14 @@ export default function ChatWindow() {
                 }}
                 onFocus={() => console.log("[v0] Input focused")}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                 disabled={isLoading}
                 autoComplete="off"
               />
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 flex items-center justify-center transition-colors"
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-3 sm:px-4 py-2 flex items-center justify-center transition-colors"
                 aria-label="Send message"
               >
                 <Send className="w-4 h-4" />
