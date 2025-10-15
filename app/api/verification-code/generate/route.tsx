@@ -89,7 +89,7 @@ async function sendClickSendEmail(to: string, subject: string, body: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email, name, company, phone, calculatorType, inputs, results } = await request.json()
 
     console.log("[generateVerificationCode] Received email:", email)
 
@@ -155,6 +155,92 @@ export async function POST(request: NextRequest) {
     console.log("[generateVerificationCode] Sending email to:", cleanEmail)
     await sendClickSendEmail(cleanEmail, "Your Kuhlekt ROI Calculator Verification Code", emailBody)
     console.log("[generateVerificationCode] Email sent successfully")
+
+    try {
+      // Format ROI results for display
+      const roiSummary = results
+        ? `
+        <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 15px; margin: 15px 0;">
+          <h3 style="color: #0891b2; margin-top: 0;">ROI Results Summary</h3>
+          <p style="margin: 5px 0;"><strong>ROI:</strong> ${results.roi?.toFixed(1)}%</p>
+          <p style="margin: 5px 0;"><strong>Payback Period:</strong> ${results.paybackMonths?.toFixed(1)} months</p>
+          <p style="margin: 5px 0;"><strong>Annual Benefit:</strong> $${results.totalAnnualBenefit?.toLocaleString()}</p>
+          <p style="margin: 5px 0;"><strong>Working Capital Released:</strong> $${results.workingCapitalReleased?.toLocaleString()}</p>
+          <p style="margin: 5px 0;"><strong>Current DSO:</strong> ${results.currentDSO?.toFixed(0)} days</p>
+          <p style="margin: 5px 0;"><strong>Improved DSO:</strong> ${results.newDSO?.toFixed(0)} days</p>
+        </div>
+      `
+        : ""
+
+      // Format calculator inputs for display
+      const inputsSummary = inputs
+        ? `
+        <div style="background-color: #f9fafb; border-left: 4px solid #6b7280; padding: 15px; margin: 15px 0;">
+          <h3 style="color: #374151; margin-top: 0;">Calculator Inputs (${calculatorType || "Unknown"})</h3>
+          ${Object.entries(inputs)
+            .map(
+              ([key, value]) => `
+            <p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>
+          `,
+            )
+            .join("")}
+        </div>
+      `
+        : ""
+
+      const adminEmailBody = `
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 700px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #0891b2;">🎯 New ROI Calculator Lead</h2>
+              <p style="font-size: 16px; color: #059669; font-weight: bold;">
+                A potential customer has requested their ROI results!
+              </p>
+              
+              <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 15px; margin: 20px 0;">
+                <h3 style="color: #059669; margin-top: 0;">Contact Information</h3>
+                <p style="margin: 5px 0;"><strong>Name:</strong> ${name || "Not provided"}</p>
+                <p style="margin: 5px 0;"><strong>Email:</strong> ${cleanEmail}</p>
+                <p style="margin: 5px 0;"><strong>Company:</strong> ${company || "Not provided"}</p>
+                <p style="margin: 5px 0;"><strong>Phone:</strong> ${phone || "Not provided"}</p>
+              </div>
+
+              ${roiSummary}
+              ${inputsSummary}
+
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 15px 0;">
+                <h3 style="color: #d97706; margin-top: 0;">Verification Details</h3>
+                <p style="margin: 5px 0;"><strong>Code:</strong> ${code}</p>
+                <p style="margin: 5px 0;"><strong>Requested:</strong> ${new Date().toLocaleString()}</p>
+                <p style="margin: 5px 0;"><strong>Expires:</strong> ${expiresAt.toLocaleString()}</p>
+              </div>
+
+              <div style="background-color: #e0f2fe; border: 2px solid #0891b2; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <h3 style="color: #0891b2; margin-top: 0;">📞 Follow-Up Action Required</h3>
+                <p style="margin: 10px 0;">This is a qualified lead showing strong interest in Kuhlekt's ROI benefits.</p>
+                <p style="margin: 10px 0; font-weight: bold;">Recommended: Contact within 24 hours for best conversion rate.</p>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              <p style="font-size: 12px; color: #6b7280;">
+                This is an automated sales notification from the Kuhlekt ROI Calculator.
+              </p>
+            </div>
+          </body>
+        </html>
+      `
+
+      console.log("[generateVerificationCode] Sending admin notification to enquiries@kuhlekt.com")
+      await sendClickSendEmail(
+        "enquiries@kuhlekt.com",
+        `🎯 New ROI Lead: ${name || cleanEmail} - ${company || "Company Not Provided"}`,
+        adminEmailBody,
+      )
+      console.log("[generateVerificationCode] Admin notification sent successfully")
+    } catch (adminEmailError) {
+      // Don't fail the request if admin notification fails
+      console.error("[generateVerificationCode] Failed to send admin notification:", adminEmailError)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

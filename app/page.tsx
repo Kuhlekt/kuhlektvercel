@@ -59,8 +59,8 @@ export default function HomePage() {
                 </div>
                 <Button
                   size="lg"
+                  className="bg-red-500 hover:bg-red-600 text-white h-full w-full"
                   onClick={() => setIsROIModalOpen(true)}
-                  className="bg-red-500 hover:bg-red-600 text-white h-full"
                 >
                   <Calculator className="w-4 h-4 mr-2" />
                   Calculate Your ROI

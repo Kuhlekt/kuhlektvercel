@@ -151,7 +151,15 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
       const response = await fetch("/api/verification-code/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: contactInfo.email }),
+        body: JSON.stringify({
+          email: contactInfo.email,
+          name: contactInfo.name,
+          company: contactInfo.company,
+          phone: contactInfo.phone,
+          calculatorType,
+          inputs: calculatorType === "simple" ? simpleInputs : detailedInputs,
+          results,
+        }),
       })
 
       const data = await response.json()
@@ -1248,8 +1256,9 @@ export function ROICalculatorModal({ isOpen, onClose }: ROICalculatorModalProps)
               <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Current Capacity</p>
               <p className="text-3xl font-bold text-gray-900">
                 {Math.round(
-                  (Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
-                    (Number.parseFloat(detailedInputs.numberOfCollectors) || 1),
+                  ((Number.parseFloat(detailedInputs.numberOfDebtors) || 0) /
+                    (Number.parseFloat(detailedInputs.numberOfCollectors) || 1)) *
+                    (1 - (Number.parseFloat(detailedInputs.labourSavings) || 30) / 100),
                 )}
               </p>
               <p className="text-xs text-gray-600 mt-1">customers per collector</p>

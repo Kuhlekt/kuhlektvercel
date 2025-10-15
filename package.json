@@ -27,6 +27,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@react-pdf/renderer": "latest",
     "@supabase/auth-helpers-nextjs": "latest",
+    "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "ai": "5.0.60",
     "bcryptjs": "latest",

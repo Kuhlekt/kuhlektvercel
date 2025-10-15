@@ -85,6 +85,19 @@ export default function ChatWindow() {
     }
   }, [isOpen])
 
+  useEffect(() => {
+    const hasAutoOpened = sessionStorage.getItem("chat-auto-opened")
+
+    if (!hasAutoOpened) {
+      const timer = setTimeout(() => {
+        setIsOpen(true)
+        sessionStorage.setItem("chat-auto-opened", "true")
+      }, 1500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return

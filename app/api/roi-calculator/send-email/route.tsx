@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
+                <a href="https://roi.kuhlekt-info.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
               </p>
 
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
               
               <p style="margin-top: 30px;">
                 Ready to see these results in your business? 
-                <a href="https://kuhlekt.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
+                <a href="https://roi.kuhlekt-info.com/demo" style="color: #0891b2; text-decoration: none; font-weight: bold;">Schedule a demo</a>
               </p>
 
               <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
