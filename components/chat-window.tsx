@@ -15,6 +15,16 @@ interface Message {
   role: "user" | "assistant"
   content: string
   isHtml?: boolean
+  timestamp: string
+}
+
+function formatTimestamp(timestamp: string): string {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
 }
 
 interface ContactFormData {
@@ -40,13 +50,17 @@ export default function ChatWindow() {
 
   const [isWaitingForAgent, setIsWaitingForAgent] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("chat-waiting-for-agent") === "true"
+      const stored = sessionStorage.getItem("chat-waiting-for-agent")
+      console.log("[v0] Initial isWaitingForAgent from sessionStorage:", stored)
+      return stored === "true"
     }
     return false
   })
   const [handoffId, setHandoffId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("chat-handoff-id")
+      const stored = sessionStorage.getItem("chat-handoff-id")
+      console.log("[v0] Initial handoffId from sessionStorage:", stored)
+      return stored
     }
     return null
   })
@@ -59,6 +73,8 @@ export default function ChatWindow() {
 
   const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const receivedAgentMessageIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (isWaitingForAgent) {
@@ -137,7 +153,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     if (isWaitingForAgent && handoffId) {
-      console.log("[v0] Starting polling for agent responses")
+      console.log("[v0] Starting polling for agent responses with handoffId:", handoffId)
 
       const pollForAgentResponses = async () => {
         try {
@@ -145,20 +161,26 @@ export default function ChatWindow() {
           if (response.ok) {
             const data = await response.json()
             if (data.hasResponse && data.messages && data.messages.length > 0) {
-              console.log("[v0] Received agent responses:", data.messages)
-
-              // Add agent messages to the chat
-              data.messages.forEach((msg: any) => {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    role: "assistant",
-                    content: msg.message,
-                  },
-                ])
+              const newMessages = data.messages.filter((msg: any) => {
+                const msgId = `${msg.message}-${msg.timestamp}`
+                if (receivedAgentMessageIds.current.has(msgId)) {
+                  return false
+                }
+                receivedAgentMessageIds.current.add(msgId)
+                return true
               })
 
-              // The conversation should remain with the human agent
+              if (newMessages.length > 0) {
+                console.log("[v0] Adding new agent messages:", newMessages.length)
+                setMessages((prev) => [
+                  ...prev,
+                  ...newMessages.map((msg: any) => ({
+                    role: "assistant" as const,
+                    content: msg.message,
+                    timestamp: msg.timestamp || new Date().toISOString(),
+                  })),
+                ])
+              }
             }
           }
         } catch (error) {
@@ -167,8 +189,6 @@ export default function ChatWindow() {
       }
 
       pollingIntervalRef.current = setInterval(pollForAgentResponses, 2000)
-
-      // Also check immediately
       pollForAgentResponses()
 
       return () => {
@@ -181,12 +201,13 @@ export default function ChatWindow() {
   }, [isWaitingForAgent, handoffId])
 
   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
     console.log("[v0] ===== HANDLE SUBMIT CALLED =====")
     console.log("[v0] Input value:", input)
-    console.log("[v0] isLoading:", isLoading)
     console.log("[v0] isWaitingForAgent:", isWaitingForAgent)
-
-    e.preventDefault()
+    console.log("[v0] handoffId:", handoffId)
+    console.log("[v0] Will route to:", isWaitingForAgent && handoffId ? "AGENT" : "BOT")
 
     if (!input.trim() || isLoading) {
       console.log("[v0] Submission blocked - empty input or loading")
@@ -197,44 +218,49 @@ export default function ChatWindow() {
     setInput("")
 
     if (isWaitingForAgent && handoffId) {
-      console.log("[v0] Sending message to agent instead of bot")
+      console.log("[v0] ✅ ROUTING TO AGENT - handoff is active")
 
-      setMessages((prev) => [...prev, { role: "user", content: userMessage }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: userMessage,
+          timestamp: new Date().toISOString(),
+        },
+      ])
       setIsLoading(true)
 
       try {
         const result = await sendMessageToAgent(userMessage, handoffId)
 
         if (result.success) {
-          console.log("[v0] Message sent to agent successfully")
-          // Message will appear when agent responds via polling
+          console.log("[v0] ✅ Message sent to agent successfully")
         } else {
-          console.error("[v0] Failed to send message to agent:", result.error)
+          console.error("[v0] ❌ Failed to send message to agent:", result.error)
         }
       } catch (error) {
-        console.error("[v0] Error sending message to agent:", error)
+        console.error("[v0] ❌ Error sending message to agent:", error)
       } finally {
         setIsLoading(false)
       }
       return
     }
 
-    // Normal bot conversation
+    console.log("[v0] ⚠️ ROUTING TO BOT - no active handoff")
     const isFirstMessage = messages.length === 0
 
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }])
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: userMessage,
+        timestamp: new Date().toISOString(),
+      },
+    ])
     setIsLoading(true)
 
     try {
-      console.log("[v0] Calling sendChatMessage with:", {
-        message: userMessage,
-        conversationId: conversationIdRef.current,
-        sessionId: sessionIdRef.current,
-        isFirstMessage,
-      })
-
       const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current, isFirstMessage)
-      console.log("[v0] sendChatMessage result:", result)
 
       if (result.success && result.response) {
         setMessages((prev) => [
@@ -243,10 +269,9 @@ export default function ChatWindow() {
             role: "assistant",
             content: result.response,
             isHtml: true,
+            timestamp: new Date().toISOString(),
           },
         ])
-      } else {
-        console.error("[v0] Bot failed to respond")
       }
     } catch (error) {
       console.error("[v0] Chat error:", error)
@@ -258,15 +283,11 @@ export default function ChatWindow() {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log("[v0] ===== CONTACT FORM SUBMIT STARTED =====")
-    console.log("[v0] Form data:", contactFormData)
-    console.log("[v0] Conversation ID:", conversationIdRef.current)
 
     setIsSubmittingContact(true)
     setContactFormStatus({ type: null, message: "" })
 
     try {
-      console.log("[v0] Sending POST request to /api/chat-contact")
-
       const response = await fetch("/api/chat-contact", {
         method: "POST",
         headers: {
@@ -279,34 +300,17 @@ export default function ChatWindow() {
         }),
       })
 
-      console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response ok:", response.ok)
-
-      const contentType = response.headers.get("content-type")
-      console.log("[v0] Response content-type:", contentType)
-
-      let result
-
-      if (contentType && contentType.includes("application/json")) {
-        result = await response.json()
-        console.log("[v0] Response JSON:", result)
-      } else {
-        const text = await response.text()
-        console.log("[v0] Response text:", text)
-        result = { success: false, message: text }
-      }
+      const result = await response.json()
 
       if (response.ok && result.success) {
-        console.log("[v0] Contact form submission successful!")
         const receivedHandoffId = result.handoffId || conversationIdRef.current
+
+        console.log("[v0] ✅ Handoff created successfully")
         console.log("[v0] Setting handoffId to:", receivedHandoffId)
         console.log("[v0] Setting isWaitingForAgent to: true")
 
         setHandoffId(receivedHandoffId)
         setIsWaitingForAgent(true)
-
-        // Verify state was set
-        console.log("[v0] State update complete - handoffId should now be:", receivedHandoffId)
 
         setContactFormStatus({
           type: "success",
@@ -318,36 +322,28 @@ export default function ChatWindow() {
           {
             role: "assistant",
             content: "Thank you! I've connected you with our team. An agent will respond to you shortly.",
+            timestamp: new Date().toISOString(),
           },
         ])
 
         setTimeout(() => {
           setShowContactForm(false)
-          setContactFormData({
-            name: "",
-            email: "",
-          })
+          setContactFormData({ name: "", email: "" })
           setContactFormStatus({ type: null, message: "" })
         }, 2000)
       } else {
-        console.error("[v0] Contact form submission failed:", result)
         setContactFormStatus({
           type: "error",
-          message: result.error || result.message || "Failed to submit. Please try again.",
+          message: result.error || "Failed to submit. Please try again.",
         })
       }
     } catch (error) {
       console.error("[v0] Contact form error:", error)
-      console.error("[v0] Error details:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      })
       setContactFormStatus({
         type: "error",
         message: "An error occurred. Please try again.",
       })
     } finally {
-      console.log("[v0] ===== CONTACT FORM SUBMIT ENDED =====")
       setIsSubmittingContact(false)
     }
   }
@@ -482,28 +478,33 @@ export default function ChatWindow() {
               </div>
             )}
 
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                ref={message.role === "assistant" && index === messages.length - 1 ? lastAssistantMessageRef : null}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+            {[...messages]
+              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+              .map((message, index) => (
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 ${
-                    message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
-                  }`}
+                  key={index}
+                  ref={message.role === "assistant" && index === messages.length - 1 ? lastAssistantMessageRef : null}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {message.isHtml ? (
-                    <div
-                      dangerouslySetInnerHTML={{ __html: message.content }}
-                      className="prose prose-sm max-w-none text-xs sm:text-sm"
-                    />
-                  ) : (
-                    <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
-                  )}
+                  <div
+                    className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-3 py-2 ${
+                      message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    {message.isHtml ? (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: message.content }}
+                        className="prose prose-sm max-w-none text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    <p className={`text-[10px] mt-1 ${message.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
+                      {formatTimestamp(message.timestamp)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
             {isLoading && (
               <div className="flex justify-start">
