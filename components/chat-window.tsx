@@ -184,23 +184,9 @@ export default function ChatWindow() {
           // Message will appear when agent responds via polling
         } else {
           console.error("[v0] Failed to send message to agent:", result.error)
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "Sorry, I couldn't send your message. Please try again.",
-            },
-          ])
         }
       } catch (error) {
         console.error("[v0] Error sending message to agent:", error)
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Sorry, I couldn't send your message. Please try again.",
-          },
-        ])
       } finally {
         setIsLoading(false)
       }
@@ -234,23 +220,10 @@ export default function ChatWindow() {
           },
         ])
       } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "I apologize, but I'm having trouble responding right now. Please try again.",
-          },
-        ])
+        console.error("[v0] Bot failed to respond")
       }
     } catch (error) {
       console.error("[v0] Chat error:", error)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "I apologize, but I'm having trouble responding right now. Please try again.",
-        },
-      ])
     } finally {
       setIsLoading(false)
     }
@@ -321,17 +294,6 @@ export default function ChatWindow() {
             content: "Thank you! I've connected you with our team. An agent will respond to you shortly.",
           },
         ])
-
-        handoffTimeoutRef.current = setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content:
-                "I apologize for the delay in connecting you with a team member. Rest assured, an agent will contact you shortly using the information you provided. Thank you for your patience!",
-            },
-          ])
-        }, 60000)
 
         setTimeout(() => {
           setShowContactForm(false)
