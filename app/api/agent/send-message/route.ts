@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Save agent message to chat_messages
     const { data: messageData, error: messageError } = await supabase
       .from("chat_messages")
       .insert({
@@ -37,19 +36,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to save message" }, { status: 500 })
     }
 
-    // Update conversation with agent info and status
     const { error: updateError } = await supabase
-      .from("chat_conversations")
+      .from("form_submitters")
       .update({
-        agent_name: agentName,
-        handoff_status: "in_progress",
-        last_message_at: new Date().toISOString(),
-        message_count: supabase.raw("message_count + 1"),
+        status: "in_progress",
+        updated_at: new Date().toISOString(),
+        form_data: supabase.raw(
+          `
+          COALESCE(form_data, '{}'::jsonb) || 
+          jsonb_build_object('agentName', $1, 'lastAgentMessage', $2)
+        `,
+          [agentName, message],
+        ),
       })
-      .eq("conversation_id", conversationId)
+      .eq("id", conversationId)
 
     if (updateError) {
-      console.error("[v0] Error updating conversation:", updateError)
+      console.error("[v0] Error updating handoff request:", updateError)
     }
 
     return NextResponse.json({

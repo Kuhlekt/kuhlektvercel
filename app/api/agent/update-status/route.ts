@@ -22,20 +22,24 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     const updateData: any = {
-      handoff_status: status,
+      status: status,
+      updated_at: new Date().toISOString(),
     }
 
-    if (status === "resolved") {
-      updateData.resolved_at = new Date().toISOString()
-      if (resolutionNotes) {
-        updateData.resolution_notes = resolutionNotes
-      }
+    if (resolutionNotes) {
+      updateData.form_data = supabase.raw(
+        `
+        COALESCE(form_data, '{}'::jsonb) || 
+        jsonb_build_object('resolutionNotes', $1, 'resolvedAt', $2)
+      `,
+        [resolutionNotes, new Date().toISOString()],
+      )
     }
 
-    const { error } = await supabase.from("chat_conversations").update(updateData).eq("conversation_id", conversationId)
+    const { error } = await supabase.from("form_submitters").update(updateData).eq("id", conversationId)
 
     if (error) {
-      console.error("[v0] Error updating conversation status:", error)
+      console.error("[v0] Error updating handoff status:", error)
       return NextResponse.json({ error: "Failed to update status" }, { status: 500 })
     }
 

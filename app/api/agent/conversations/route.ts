@@ -15,17 +15,47 @@ export async function GET() {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from("chat_conversations")
+      .from("form_submitters")
       .select("*")
-      .eq("handoff_requested", true)
-      .order("handoff_at", { ascending: false })
+      .eq("form_type", "contact")
+      .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching conversations:", error)
-      return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 })
+      console.error("[v0] Error fetching handoff requests:", error)
+      return NextResponse.json({ error: "Failed to fetch handoff requests" }, { status: 500 })
     }
 
-    return NextResponse.json({ conversations: data })
+    const conversations = (data || []).map((request: any) => {
+      const formData = request.form_data || {}
+      const conversationId = formData.conversationId || request.id
+
+      // Determine status based on form_data or default to pending
+      let handoffStatus = "pending"
+      if (formData.status === "in_progress" || request.status === "in_progress") {
+        handoffStatus = "in_progress"
+      } else if (formData.status === "resolved" || request.status === "resolved") {
+        handoffStatus = "resolved"
+      }
+
+      return {
+        id: request.id,
+        conversation_id: conversationId,
+        session_id: formData.sessionId || request.id,
+        status: request.status || "active",
+        started_at: request.created_at,
+        last_message_at: request.updated_at || request.created_at,
+        message_count: 1, // Initial handoff request counts as 1 message
+        user_email: request.email || formData.email || null,
+        user_name: `${request.first_name || ""} ${request.last_name || ""}`.trim() || formData.name || "Anonymous",
+        handoff_requested: true,
+        handoff_at: request.created_at,
+        handoff_status: handoffStatus,
+        agent_name: formData.agentName || null,
+        resolution_notes: formData.resolutionNotes || null,
+      }
+    })
+
+    return NextResponse.json({ conversations })
   } catch (error) {
     console.error("[v0] Error in agent conversations:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

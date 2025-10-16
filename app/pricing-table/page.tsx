@@ -1,10 +1,13 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Check, Edit, X } from 'lucide-react'
+import { Check, X, Lock } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface PricingData {
   bronze: {
@@ -39,6 +42,10 @@ export default function PricingTablePage() {
   const [currency, setCurrency] = useState<"USD" | "AUD">("USD")
   const [selectedTab, setSelectedTab] = useState("bronze")
   const [editMode, setEditMode] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [password, setPassword] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+  const [isVerifying, setIsVerifying] = useState(false)
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
@@ -173,6 +180,49 @@ export default function PricingTablePage() {
     { id: "platinum", name: "Platinum", color: "bg-purple-600" },
   ]
 
+  const handleEditModeClick = () => {
+    if (editMode) {
+      setEditMode(false)
+    } else {
+      setShowPasswordDialog(true)
+      setPassword("")
+      setPasswordError("")
+    }
+  }
+
+  const verifyPassword = async () => {
+    setIsVerifying(true)
+    setPasswordError("")
+
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setEditMode(true)
+        setShowPasswordDialog(false)
+        setPassword("")
+      } else {
+        setPasswordError("Incorrect password. Please try again.")
+      }
+    } catch (error) {
+      setPasswordError("An error occurred. Please try again.")
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handlePasswordKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      verifyPassword()
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="pt-20">
@@ -182,12 +232,21 @@ export default function PricingTablePage() {
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-4xl font-bold text-gray-900">Pricing Plans</h1>
               <Button
-                onClick={() => setEditMode(!editMode)}
+                onClick={handleEditModeClick}
                 variant={editMode ? "destructive" : "outline"}
                 className="flex items-center gap-2"
               >
-                {editMode ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                {editMode ? "Cancel Edit" : "Edit Mode"}
+                {editMode ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    Cancel Edit
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Edit Mode
+                  </>
+                )}
               </Button>
             </div>
 
@@ -524,6 +583,49 @@ export default function PricingTablePage() {
           </div>
         </div>
       </main>
+
+      {/* Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Enter Admin Password
+            </DialogTitle>
+            <DialogDescription>
+              Please enter the admin password to enable edit mode for the pricing table.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handlePasswordKeyDown}
+              disabled={isVerifying}
+              autoFocus
+            />
+            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+            <div className="flex gap-2">
+              <Button onClick={verifyPassword} disabled={!password || isVerifying} className="flex-1">
+                {isVerifying ? "Verifying..." : "Unlock Edit Mode"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordDialog(false)
+                  setPassword("")
+                  setPasswordError("")
+                }}
+                disabled={isVerifying}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
