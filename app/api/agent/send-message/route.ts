@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from("form_submitters")
       .update({
-        status: "in_progress",
+        status: "contacted",
         form_data: updatedFormData,
       })
       .eq("id", conversationId)
