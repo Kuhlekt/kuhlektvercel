@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { X, Send, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { sendChatMessage } from "@/app/actions/chat"
+import { sendChatMessage, sendMessageToAgent } from "@/app/actions/chat"
 
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -158,13 +158,9 @@ export default function ChatWindow() {
     console.log("[v0] ===== HANDLE SUBMIT CALLED =====")
     console.log("[v0] Input value:", input)
     console.log("[v0] isLoading:", isLoading)
+    console.log("[v0] isWaitingForAgent:", isWaitingForAgent)
 
     e.preventDefault()
-
-    if (isWaitingForAgent) {
-      console.log("[v0] Submission blocked - waiting for agent response")
-      return
-    }
 
     if (!input.trim() || isLoading) {
       console.log("[v0] Submission blocked - empty input or loading")
@@ -174,6 +170,44 @@ export default function ChatWindow() {
     const userMessage = input.trim()
     setInput("")
 
+    if (isWaitingForAgent && handoffId) {
+      console.log("[v0] Sending message to agent instead of bot")
+
+      setMessages((prev) => [...prev, { role: "user", content: userMessage }])
+      setIsLoading(true)
+
+      try {
+        const result = await sendMessageToAgent(userMessage, handoffId)
+
+        if (result.success) {
+          console.log("[v0] Message sent to agent successfully")
+          // Message will appear when agent responds via polling
+        } else {
+          console.error("[v0] Failed to send message to agent:", result.error)
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "Sorry, I couldn't send your message. Please try again.",
+            },
+          ])
+        }
+      } catch (error) {
+        console.error("[v0] Error sending message to agent:", error)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Sorry, I couldn't send your message. Please try again.",
+          },
+        ])
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
+    // Normal bot conversation
     const isFirstMessage = messages.length === 0
 
     setMessages((prev) => [...prev, { role: "user", content: userMessage }])
@@ -511,7 +545,7 @@ export default function ChatWindow() {
           <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t bg-white rounded-b-lg">
             {isWaitingForAgent && (
               <div className="mb-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
-                🔄 Connected to human agent. Waiting for response...
+                💬 Connected to human agent. Your messages will be sent directly to them.
               </div>
             )}
             <div className="flex gap-2">
@@ -523,14 +557,14 @@ export default function ChatWindow() {
                   setInput(e.target.value)
                 }}
                 onFocus={() => console.log("[v0] Input focused")}
-                placeholder={isWaitingForAgent ? "Waiting for agent..." : "Type your message..."}
+                placeholder={isWaitingForAgent ? "Message the agent..." : "Type your message..."}
                 className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                disabled={isLoading || isWaitingForAgent}
+                disabled={isLoading}
                 autoComplete="off"
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || isWaitingForAgent}
+                disabled={isLoading || !input.trim()}
                 className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-3 sm:px-4 py-2 flex items-center justify-center transition-colors"
                 aria-label="Send message"
               >

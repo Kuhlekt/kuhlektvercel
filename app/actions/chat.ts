@@ -122,3 +122,53 @@ User question: ${message}`
     }
   }
 }
+
+export async function sendMessageToAgent(message: string, handoffId: string) {
+  const supabase = await createClient()
+
+  try {
+    console.log("[v0] Sending message to agent - handoffId:", handoffId, "message:", message)
+
+    // Get the current handoff request
+    const { data: handoff, error: fetchError } = await supabase
+      .from("form_submitters")
+      .select("form_data")
+      .eq("id", handoffId)
+      .single()
+
+    if (fetchError || !handoff) {
+      console.error("[v0] Error fetching handoff:", fetchError)
+      return { success: false, error: "Handoff not found" }
+    }
+
+    // Add customer message to the conversation
+    const formData = (handoff.form_data as any) || {}
+    const customerMessages = formData.customerMessages || []
+    customerMessages.push({
+      message,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Update the handoff request with the new message
+    const { error: updateError } = await supabase
+      .from("form_submitters")
+      .update({
+        form_data: {
+          ...formData,
+          customerMessages,
+        },
+      })
+      .eq("id", handoffId)
+
+    if (updateError) {
+      console.error("[v0] Error updating handoff with customer message:", updateError)
+      return { success: false, error: "Failed to save message" }
+    }
+
+    console.log("[v0] Customer message saved successfully")
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error in sendMessageToAgent:", error)
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+  }
+}

@@ -41,7 +41,20 @@ export async function GET(request: NextRequest) {
         created_at: handoffData.created_at,
       })
 
-      // Add agent responses from form_data.agentResponses array
+      // Add customer messages sent after handoff
+      if (formData.customerMessages && Array.isArray(formData.customerMessages)) {
+        formData.customerMessages.forEach((msg: any, index: number) => {
+          messages.push({
+            id: `${handoffData.id}-customer-${index}`,
+            conversation_id: conversationId,
+            message: msg.message,
+            sender: "user",
+            created_at: msg.timestamp,
+          })
+        })
+      }
+
+      // Add agent responses
       if (formData.agentResponses && Array.isArray(formData.agentResponses)) {
         formData.agentResponses.forEach((response: any, index: number) => {
           messages.push({
@@ -53,6 +66,9 @@ export async function GET(request: NextRequest) {
           })
         })
       }
+
+      // Sort messages chronologically
+      messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     }
 
     return NextResponse.json({ messages })
