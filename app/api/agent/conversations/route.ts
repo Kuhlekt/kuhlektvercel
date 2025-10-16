@@ -29,13 +29,7 @@ export async function GET() {
       const formData = request.form_data || {}
       const conversationId = formData.conversationId || request.id
 
-      // Determine status based on form_data or default to pending
-      let handoffStatus = "pending"
-      if (formData.status === "in_progress" || request.status === "in_progress") {
-        handoffStatus = "in_progress"
-      } else if (formData.status === "resolved" || request.status === "resolved") {
-        handoffStatus = "resolved"
-      }
+      const handoffStatus = formData.handoffStatus || "pending"
 
       return {
         id: request.id,

@@ -19,30 +19,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    console.log("[v0] Updating handoff status:", { conversationId, status, resolutionNotes })
+
     const supabase = await createClient()
 
-    const updateData: any = {
-      status: status,
-      updated_at: new Date().toISOString(),
-    }
+    // Build the JSONB update object
+    const jsonbUpdate: any = { handoffStatus: status }
 
     if (resolutionNotes) {
-      updateData.form_data = supabase.raw(
-        `
-        COALESCE(form_data, '{}'::jsonb) || 
-        jsonb_build_object('resolutionNotes', $1, 'resolvedAt', $2)
-      `,
-        [resolutionNotes, new Date().toISOString()],
-      )
+      jsonbUpdate.resolutionNotes = resolutionNotes
+      jsonbUpdate.resolvedAt = new Date().toISOString()
     }
 
-    const { error } = await supabase.from("form_submitters").update(updateData).eq("id", conversationId)
+    // Update form_data by merging with existing data
+    const { data: currentData, error: fetchError } = await supabase
+      .from("form_submitters")
+      .select("form_data")
+      .eq("id", conversationId)
+      .single()
+
+    if (fetchError) {
+      console.error("[v0] Error fetching current data:", fetchError)
+      return NextResponse.json({ error: "Failed to fetch current data", details: fetchError.message }, { status: 500 })
+    }
+
+    const updatedFormData = {
+      ...(currentData?.form_data || {}),
+      ...jsonbUpdate,
+    }
+
+    const { error } = await supabase
+      .from("form_submitters")
+      .update({ form_data: updatedFormData })
+      .eq("id", conversationId)
 
     if (error) {
       console.error("[v0] Error updating handoff status:", error)
-      return NextResponse.json({ error: "Failed to update status" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to update status", details: error.message }, { status: 500 })
     }
 
+    console.log("[v0] Successfully updated handoff status")
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[v0] Error in agent update-status:", error)
