@@ -261,8 +261,15 @@ export default function ChatWindow() {
 
       if (response.ok && result.success) {
         console.log("[v0] Contact form submission successful!")
-        setHandoffId(result.handoffId || conversationIdRef.current)
+        const receivedHandoffId = result.handoffId || conversationIdRef.current
+        console.log("[v0] Setting handoffId to:", receivedHandoffId)
+        console.log("[v0] Setting isWaitingForAgent to: true")
+
+        setHandoffId(receivedHandoffId)
         setIsWaitingForAgent(true)
+
+        // Verify state was set
+        console.log("[v0] State update complete - handoffId should now be:", receivedHandoffId)
 
         setContactFormStatus({
           type: "success",
