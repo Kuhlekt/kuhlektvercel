@@ -20,7 +20,7 @@ interface ContactRequest {
 }
 
 async function getContactRequests() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from("form_submitters")

@@ -166,10 +166,16 @@ export default function ChatWindow() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] ===== CONTACT FORM SUBMIT STARTED =====")
+    console.log("[v0] Form data:", contactFormData)
+    console.log("[v0] Conversation ID:", conversationIdRef.current)
+
     setIsSubmittingContact(true)
     setContactFormStatus({ type: null, message: "" })
 
     try {
+      console.log("[v0] Sending POST request to /api/chat-contact")
+
       const response = await fetch("/api/chat-contact", {
         method: "POST",
         headers: {
@@ -182,17 +188,25 @@ export default function ChatWindow() {
         }),
       })
 
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response ok:", response.ok)
+
       const contentType = response.headers.get("content-type")
+      console.log("[v0] Response content-type:", contentType)
+
       let result
 
       if (contentType && contentType.includes("application/json")) {
         result = await response.json()
+        console.log("[v0] Response JSON:", result)
       } else {
         const text = await response.text()
+        console.log("[v0] Response text:", text)
         result = { success: false, message: text }
       }
 
       if (response.ok && result.success) {
+        console.log("[v0] Contact form submission successful!")
         setContactFormStatus({
           type: "success",
           message: result.message || "Thank you! A team member will contact you shortly.",
@@ -218,18 +232,24 @@ export default function ChatWindow() {
           setContactFormStatus({ type: null, message: "" })
         }, 2000)
       } else {
+        console.error("[v0] Contact form submission failed:", result)
         setContactFormStatus({
           type: "error",
           message: result.error || result.message || "Failed to submit. Please try again.",
         })
       }
     } catch (error) {
-      console.error("Contact form error:", error)
+      console.error("[v0] Contact form error:", error)
+      console.error("[v0] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      })
       setContactFormStatus({
         type: "error",
         message: "An error occurred. Please try again.",
       })
     } finally {
+      console.log("[v0] ===== CONTACT FORM SUBMIT ENDED =====")
       setIsSubmittingContact(false)
     }
   }
