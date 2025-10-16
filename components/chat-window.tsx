@@ -75,6 +75,17 @@ export default function ChatWindow() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const receivedAgentMessageIds = useRef<Set<string>>(new Set())
+  const agentHasResponded = useRef(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      sessionStorage.setItem("chat-open", "true")
+      console.log("[v0] Saved chat open state to sessionStorage: true")
+    } else {
+      sessionStorage.removeItem("chat-open")
+      console.log("[v0] Removed chat open state from sessionStorage")
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isWaitingForAgent) {
@@ -119,6 +130,39 @@ export default function ChatWindow() {
       scrollToBottom()
     }
   }, [messages, isLoading])
+
+  useEffect(() => {
+    if (isWaitingForAgent && handoffId && !agentHasResponded.current) {
+      console.log("[v0] Starting 90-second agent response timeout")
+
+      handoffTimeoutRef.current = setTimeout(() => {
+        console.log("[v0] 90-second timeout reached - no agent response")
+
+        // Add bot message explaining the situation
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content:
+              "I'm sorry, but our human agents are not currently available to respond. However, they will reach out to you as soon as possible. Would you like to complete a contact form so we can get back to you?",
+            timestamp: new Date().toISOString(),
+          },
+        ])
+
+        // Show contact form after a brief delay
+        setTimeout(() => {
+          setShowContactForm(true)
+        }, 1000)
+      }, 90000) // 90 seconds
+
+      return () => {
+        if (handoffTimeoutRef.current) {
+          clearTimeout(handoffTimeoutRef.current)
+          handoffTimeoutRef.current = null
+        }
+      }
+    }
+  }, [isWaitingForAgent, handoffId])
 
   useEffect(() => {
     return () => {
@@ -172,6 +216,13 @@ export default function ChatWindow() {
 
               if (newMessages.length > 0) {
                 console.log("[v0] Adding new agent messages:", newMessages.length)
+                agentHasResponded.current = true
+                if (handoffTimeoutRef.current) {
+                  clearTimeout(handoffTimeoutRef.current)
+                  handoffTimeoutRef.current = null
+                  console.log("[v0] Cleared 90-second timeout - agent has responded")
+                }
+
                 setMessages((prev) => [
                   ...prev,
                   ...newMessages.map((msg: any) => ({
@@ -321,7 +372,8 @@ export default function ChatWindow() {
           ...prev,
           {
             role: "assistant",
-            content: "Thank you! I've connected you with our team. An agent will respond to you shortly.",
+            content:
+              "Thank you for providing your information! Our team has received your details and will reach out to you as soon as possible.",
             timestamp: new Date().toISOString(),
           },
         ])
