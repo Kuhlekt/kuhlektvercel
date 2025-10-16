@@ -31,22 +31,28 @@ export async function GET(request: NextRequest) {
 
     if (handoffData && !handoffError) {
       const formData = handoffData.form_data || {}
+
+      // Add initial user message
       messages.push({
-        id: handoffData.id,
-        role: "user",
-        content: handoffData.message || formData.message || "User requested to talk to a human",
+        id: `${handoffData.id}-initial`,
+        conversation_id: conversationId,
+        message: handoffData.message || formData.message || "User requested to talk to a human",
+        sender: "user",
         created_at: handoffData.created_at,
       })
-    }
 
-    const { data: chatMessages, error: chatError } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true })
-
-    if (!chatError && chatMessages) {
-      messages.push(...chatMessages)
+      // Add agent responses from form_data.agentResponses array
+      if (formData.agentResponses && Array.isArray(formData.agentResponses)) {
+        formData.agentResponses.forEach((response: any, index: number) => {
+          messages.push({
+            id: `${handoffData.id}-agent-${index}`,
+            conversation_id: conversationId,
+            message: response.message,
+            sender: "agent",
+            created_at: response.timestamp,
+          })
+        })
+      }
     }
 
     return NextResponse.json({ messages })

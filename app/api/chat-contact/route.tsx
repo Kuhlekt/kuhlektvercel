@@ -156,6 +156,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Thank you! We'll be in touch soon.",
+      handoffId: data.id, // Return the handoff ID for polling
     })
   } catch (error) {
     console.error("[v0] Chat contact API error:", error)

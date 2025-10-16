@@ -37,6 +37,8 @@ export default function ChatWindow() {
     message: string
   }>({ type: null, message: "" })
   const [isSubmittingContact, setIsSubmittingContact] = useState(false)
+  const [isWaitingForAgent, setIsWaitingForAgent] = useState(false)
+  const [handoffId, setHandoffId] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastAssistantMessageRef = useRef<HTMLDivElement>(null)
@@ -45,6 +47,7 @@ export default function ChatWindow() {
   const sessionIdRef = useRef(generateId())
 
   const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     console.log("[v0] Chat isOpen state changed to:", isOpen)
@@ -100,6 +103,57 @@ export default function ChatWindow() {
       return () => clearTimeout(timer)
     }
   }, [])
+
+  useEffect(() => {
+    if (isWaitingForAgent && handoffId) {
+      console.log("[v0] Starting polling for agent responses")
+
+      const pollForAgentResponses = async () => {
+        try {
+          const response = await fetch(`/api/chat/check-agent-response?handoffId=${handoffId}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.hasResponse && data.messages && data.messages.length > 0) {
+              console.log("[v0] Received agent responses:", data.messages)
+
+              // Add agent messages to the chat
+              data.messages.forEach((msg: any) => {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    role: "assistant",
+                    content: msg.message,
+                  },
+                ])
+              })
+
+              // Stop polling once we receive responses
+              setIsWaitingForAgent(false)
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current)
+                pollingIntervalRef.current = null
+              }
+            }
+          }
+        } catch (error) {
+          console.error("[v0] Error polling for agent responses:", error)
+        }
+      }
+
+      // Poll every 5 seconds
+      pollingIntervalRef.current = setInterval(pollForAgentResponses, 5000)
+
+      // Also check immediately
+      pollForAgentResponses()
+
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
+        }
+      }
+    }
+  }, [isWaitingForAgent, handoffId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log("[v0] ===== HANDLE SUBMIT CALLED =====")
@@ -207,10 +261,21 @@ export default function ChatWindow() {
 
       if (response.ok && result.success) {
         console.log("[v0] Contact form submission successful!")
+        setHandoffId(result.handoffId || conversationIdRef.current)
+        setIsWaitingForAgent(true)
+
         setContactFormStatus({
           type: "success",
           message: result.message || "Thank you! A team member will contact you shortly.",
         })
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Thank you! I've connected you with our team. An agent will respond to you shortly.",
+          },
+        ])
 
         handoffTimeoutRef.current = setTimeout(() => {
           setMessages((prev) => [
