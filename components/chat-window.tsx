@@ -64,6 +64,7 @@ export default function ChatWindow() {
     }
     return null
   })
+  const [waitingForPhoneNumber, setWaitingForPhoneNumber] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastAssistantMessageRef = useRef<HTMLDivElement>(null)
@@ -138,21 +139,17 @@ export default function ChatWindow() {
       handoffTimeoutRef.current = setTimeout(() => {
         console.log("[v0] 90-second timeout reached - no agent response")
 
-        // Add bot message explaining the situation
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
             content:
-              "I'm sorry, but our human agents are not currently available to respond. However, they will reach out to you as soon as possible. Would you like to complete a contact form so we can get back to you?",
+              "I'm sorry, but our human agents are not currently available to respond right now. However, they will reach out to you as soon as possible. Could you please provide your phone number so we can contact you?",
             timestamp: new Date().toISOString(),
           },
         ])
 
-        // Show contact form after a brief delay
-        setTimeout(() => {
-          setShowContactForm(true)
-        }, 1000)
+        setWaitingForPhoneNumber(true)
       }, 90000) // 90 seconds
 
       return () => {
@@ -258,6 +255,7 @@ export default function ChatWindow() {
     console.log("[v0] Input value:", input)
     console.log("[v0] isWaitingForAgent:", isWaitingForAgent)
     console.log("[v0] handoffId:", handoffId)
+    console.log("[v0] waitingForPhoneNumber:", waitingForPhoneNumber)
     console.log("[v0] Will route to:", isWaitingForAgent && handoffId ? "AGENT" : "BOT")
 
     if (!input.trim() || isLoading) {
@@ -267,6 +265,62 @@ export default function ChatWindow() {
 
     const userMessage = input.trim()
     setInput("")
+
+    if (waitingForPhoneNumber && handoffId) {
+      console.log("[v0] Processing phone number submission:", userMessage)
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: userMessage,
+          timestamp: new Date().toISOString(),
+        },
+      ])
+      setIsLoading(true)
+
+      try {
+        const response = await fetch("/api/agent/save-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            handoffId,
+            phoneNumber: userMessage,
+          }),
+        })
+
+        const result = await response.json()
+
+        if (result.success) {
+          console.log("[v0] ✅ Phone number saved successfully")
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content:
+                "Thank you! We've received your phone number and our team will reach out to you as soon as possible.",
+              timestamp: new Date().toISOString(),
+            },
+          ])
+          setWaitingForPhoneNumber(false)
+        } else {
+          console.error("[v0] ❌ Failed to save phone number:", result.error)
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "There was an issue saving your phone number. Please try again or contact us directly.",
+              timestamp: new Date().toISOString(),
+            },
+          ])
+        }
+      } catch (error) {
+        console.error("[v0] ❌ Error saving phone number:", error)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
 
     if (isWaitingForAgent && handoffId) {
       console.log("[v0] ✅ ROUTING TO AGENT - handoff is active")
@@ -523,8 +577,6 @@ export default function ChatWindow() {
                 <ul className="text-left inline-block space-y-1 text-xs sm:text-sm">
                   <li>• Product information and features</li>
                   <li>• Technical support and guidance</li>
-                  <li>• Pricing and service options</li>
-                  <li>• General inquiries about Kuhlekt</li>
                 </ul>
                 <p className="mt-3 text-blue-600 font-medium text-xs sm:text-sm">How can I assist you today?</p>
               </div>
@@ -584,9 +636,14 @@ export default function ChatWindow() {
 
           {/* Input Form */}
           <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t bg-white rounded-b-lg">
-            {isWaitingForAgent && (
+            {isWaitingForAgent && !waitingForPhoneNumber && (
               <div className="mb-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
                 💬 Connected to human agent. Your messages will be sent directly to them.
+              </div>
+            )}
+            {waitingForPhoneNumber && (
+              <div className="mb-2 text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                📞 Please enter your phone number below
               </div>
             )}
             <div className="flex gap-2">
@@ -598,7 +655,13 @@ export default function ChatWindow() {
                   setInput(e.target.value)
                 }}
                 onFocus={() => console.log("[v0] Input focused")}
-                placeholder={isWaitingForAgent ? "Message the agent..." : "Type your message..."}
+                placeholder={
+                  waitingForPhoneNumber
+                    ? "Enter your phone number..."
+                    : isWaitingForAgent
+                      ? "Message the agent..."
+                      : "Type your message..."
+                }
                 className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                 disabled={isLoading}
                 autoComplete="off"

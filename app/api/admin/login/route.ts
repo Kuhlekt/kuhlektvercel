@@ -5,8 +5,8 @@ export async function POST(request: NextRequest) {
   console.log("[v0] Admin login API called")
 
   try {
-    const formData = await request.formData()
-    const password = formData.get("password") as string
+    const body = await request.json()
+    const password = body.password as string
 
     console.log("[v0] Password received, length:", password?.length || 0)
 
