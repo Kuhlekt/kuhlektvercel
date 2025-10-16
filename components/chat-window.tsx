@@ -158,12 +158,7 @@ export default function ChatWindow() {
                 ])
               })
 
-              // Stop polling once we receive responses
-              setIsWaitingForAgent(false)
-              if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current)
-                pollingIntervalRef.current = null
-              }
+              // The conversation should remain with the human agent
             }
           }
         } catch (error) {
