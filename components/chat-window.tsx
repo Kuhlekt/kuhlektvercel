@@ -37,8 +37,19 @@ export default function ChatWindow() {
     message: string
   }>({ type: null, message: "" })
   const [isSubmittingContact, setIsSubmittingContact] = useState(false)
-  const [isWaitingForAgent, setIsWaitingForAgent] = useState(false)
-  const [handoffId, setHandoffId] = useState<string | null>(null)
+
+  const [isWaitingForAgent, setIsWaitingForAgent] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("chat-waiting-for-agent") === "true"
+    }
+    return false
+  })
+  const [handoffId, setHandoffId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("chat-handoff-id")
+    }
+    return null
+  })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastAssistantMessageRef = useRef<HTMLDivElement>(null)
@@ -48,6 +59,26 @@ export default function ChatWindow() {
 
   const handoffTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (isWaitingForAgent) {
+      sessionStorage.setItem("chat-waiting-for-agent", "true")
+      console.log("[v0] Saved isWaitingForAgent to sessionStorage: true")
+    } else {
+      sessionStorage.removeItem("chat-waiting-for-agent")
+      console.log("[v0] Removed isWaitingForAgent from sessionStorage")
+    }
+  }, [isWaitingForAgent])
+
+  useEffect(() => {
+    if (handoffId) {
+      sessionStorage.setItem("chat-handoff-id", handoffId)
+      console.log("[v0] Saved handoffId to sessionStorage:", handoffId)
+    } else {
+      sessionStorage.removeItem("chat-handoff-id")
+      console.log("[v0] Removed handoffId from sessionStorage")
+    }
+  }, [handoffId])
 
   useEffect(() => {
     console.log("[v0] Chat isOpen state changed to:", isOpen)
