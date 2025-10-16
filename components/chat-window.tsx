@@ -140,8 +140,7 @@ export default function ChatWindow() {
         }
       }
 
-      // Poll every 5 seconds
-      pollingIntervalRef.current = setInterval(pollForAgentResponses, 5000)
+      pollingIntervalRef.current = setInterval(pollForAgentResponses, 2000)
 
       // Also check immediately
       pollForAgentResponses()
@@ -161,6 +160,11 @@ export default function ChatWindow() {
     console.log("[v0] isLoading:", isLoading)
 
     e.preventDefault()
+
+    if (isWaitingForAgent) {
+      console.log("[v0] Submission blocked - waiting for agent response")
+      return
+    }
 
     if (!input.trim() || isLoading) {
       console.log("[v0] Submission blocked - empty input or loading")
@@ -505,6 +509,11 @@ export default function ChatWindow() {
 
           {/* Input Form */}
           <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t bg-white rounded-b-lg">
+            {isWaitingForAgent && (
+              <div className="mb-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                🔄 Connected to human agent. Waiting for response...
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 type="text"
@@ -514,14 +523,14 @@ export default function ChatWindow() {
                   setInput(e.target.value)
                 }}
                 onFocus={() => console.log("[v0] Input focused")}
-                placeholder="Type your message..."
+                placeholder={isWaitingForAgent ? "Waiting for agent..." : "Type your message..."}
                 className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                disabled={isLoading}
+                disabled={isLoading || isWaitingForAgent}
                 autoComplete="off"
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || !input.trim() || isWaitingForAgent}
                 className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-3 sm:px-4 py-2 flex items-center justify-center transition-colors"
                 aria-label="Send message"
               >

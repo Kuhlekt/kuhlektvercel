@@ -8,7 +8,7 @@ export async function sendChatMessage(
   sessionId: string,
   isFirstMessage = false,
 ) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   try {
     // Create or update conversation record
