@@ -122,8 +122,9 @@ export default function AgentConsolePage() {
         setNewMessage("")
         await loadMessages(selectedConversation.id)
       } else {
-        console.error("[v0] Failed to send message:", data.error)
-        alert(`Failed to send message: ${data.error}`)
+        console.error("[v0] Failed to send message:", data.error, data.details)
+        const errorMessage = data.details ? `${data.error}: ${data.details}` : data.error
+        alert(`Failed to send message: ${errorMessage}`)
       }
     } catch (error) {
       console.error("[v0] Error sending message:", error)
