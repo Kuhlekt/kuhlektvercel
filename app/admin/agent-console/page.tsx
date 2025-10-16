@@ -9,7 +9,7 @@ interface ChatConversation {
   user_email: string
   user_name?: string
   handoff_status: "pending" | "in-progress" | "resolved"
-  created_at: string
+  started_at: string
   last_message_at?: string
 }
 
@@ -238,7 +238,7 @@ export default function AgentConsolePage() {
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-gray-600">{conv.user_email}</div>
-                  <div className="mt-1 text-xs text-gray-400">{new Date(conv.created_at).toLocaleString()}</div>
+                  <div className="mt-1 text-xs text-gray-400">{new Date(conv.started_at).toLocaleString()}</div>
                 </button>
               ))}
               {filteredConversations.length === 0 && (
