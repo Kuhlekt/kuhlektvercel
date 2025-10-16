@@ -4,60 +4,83 @@ import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Agent send-message API called")
+
     // Check admin authentication
     const cookieStore = await cookies()
     const adminAuth = cookieStore.get("admin-auth")
 
+    console.log("[v0] Admin auth cookie:", adminAuth?.value)
+
     if (!adminAuth || adminAuth.value !== "authenticated") {
+      console.log("[v0] Unauthorized - no valid admin auth")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
-    const { conversationId, message, agentName } = body
+    console.log("[v0] Request body:", body)
+
+    const { conversationId, message } = body
 
     if (!conversationId || !message) {
+      console.log("[v0] Missing required fields")
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
     const supabase = await createClient()
+    console.log("[v0] Supabase client created")
 
-    const { data: messageData, error: messageError } = await supabase
-      .from("chat_messages")
-      .insert({
-        conversation_id: conversationId,
-        role: "agent",
-        content: message,
-      })
-      .select()
+    const { data: handoffData, error: fetchError } = await supabase
+      .from("form_submitters")
+      .select("*")
+      .eq("id", conversationId)
       .single()
 
-    if (messageError) {
-      console.error("[v0] Error saving agent message:", messageError)
-      return NextResponse.json({ error: "Failed to save message" }, { status: 500 })
+    if (fetchError) {
+      console.error("[v0] Error fetching handoff request:", fetchError)
+      return NextResponse.json({ error: "Handoff request not found" }, { status: 404 })
     }
+
+    console.log("[v0] Found handoff request:", handoffData)
+
+    // Update the handoff request with agent response
+    const currentFormData = (handoffData.form_data as any) || {}
+    const agentResponses = currentFormData.agentResponses || []
+    agentResponses.push({
+      message,
+      timestamp: new Date().toISOString(),
+    })
 
     const { error: updateError } = await supabase
       .from("form_submitters")
       .update({
         status: "in_progress",
         updated_at: new Date().toISOString(),
-        form_data: supabase.raw(
-          `
-          COALESCE(form_data, '{}'::jsonb) || 
-          jsonb_build_object('agentName', $1, 'lastAgentMessage', $2)
-        `,
-          [agentName, message],
-        ),
+        form_data: {
+          ...currentFormData,
+          agentResponses,
+          lastAgentMessage: message,
+          lastAgentMessageAt: new Date().toISOString(),
+        },
       })
       .eq("id", conversationId)
 
     if (updateError) {
       console.error("[v0] Error updating handoff request:", updateError)
+      return NextResponse.json({ error: "Failed to save message" }, { status: 500 })
     }
+
+    console.log("[v0] Successfully saved agent message")
 
     return NextResponse.json({
       success: true,
-      message: messageData,
+      message: {
+        id: Date.now().toString(),
+        conversation_id: conversationId,
+        message,
+        sender: "agent",
+        created_at: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error("[v0] Error in agent send-message:", error)

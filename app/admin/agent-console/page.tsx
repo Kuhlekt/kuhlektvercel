@@ -97,6 +97,11 @@ export default function AgentConsolePage() {
   const sendMessage = async () => {
     if (!selectedConversation || !newMessage.trim()) return
 
+    console.log("[v0] Sending message:", {
+      conversationId: selectedConversation.id,
+      message: newMessage,
+    })
+
     setIsLoading(true)
     try {
       const response = await fetch("/api/agent/send-message", {
@@ -108,12 +113,21 @@ export default function AgentConsolePage() {
         }),
       })
 
+      console.log("[v0] Send message response status:", response.status)
+      const data = await response.json()
+      console.log("[v0] Send message response data:", data)
+
       if (response.ok) {
+        console.log("[v0] Message sent successfully")
         setNewMessage("")
         await loadMessages(selectedConversation.id)
+      } else {
+        console.error("[v0] Failed to send message:", data.error)
+        alert(`Failed to send message: ${data.error}`)
       }
     } catch (error) {
-      console.error("Failed to send message:", error)
+      console.error("[v0] Error sending message:", error)
+      alert("Failed to send message. Please try again.")
     } finally {
       setIsLoading(false)
     }
