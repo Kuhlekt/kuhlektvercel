@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Found handoff request:", handoffData)
 
-    // Update the handoff request with agent response
     const currentFormData = (handoffData.form_data as any) || {}
     const agentResponses = currentFormData.agentResponses || []
     agentResponses.push({
@@ -51,23 +50,26 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
 
+    const updatedFormData = {
+      ...currentFormData,
+      agentResponses,
+      lastAgentMessage: message,
+      lastAgentMessageAt: new Date().toISOString(),
+    }
+
+    console.log("[v0] Updating with form_data:", updatedFormData)
+
     const { error: updateError } = await supabase
       .from("form_submitters")
       .update({
         status: "in_progress",
-        updated_at: new Date().toISOString(),
-        form_data: {
-          ...currentFormData,
-          agentResponses,
-          lastAgentMessage: message,
-          lastAgentMessageAt: new Date().toISOString(),
-        },
+        form_data: updatedFormData,
       })
       .eq("id", conversationId)
 
     if (updateError) {
       console.error("[v0] Error updating handoff request:", updateError)
-      return NextResponse.json({ error: "Failed to save message" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to save message", details: updateError.message }, { status: 500 })
     }
 
     console.log("[v0] Successfully saved agent message")
