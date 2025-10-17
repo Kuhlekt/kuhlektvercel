@@ -17,14 +17,12 @@ export default function AdminLogin() {
     console.log("[v0] Login form submitted")
 
     try {
-      const formData = new FormData()
-      formData.append("password", password)
-
       console.log("[v0] Sending login request to API")
 
       const response = await fetch("/api/admin/login", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       })
 
       console.log("[v0] Login API response status:", response.status)
