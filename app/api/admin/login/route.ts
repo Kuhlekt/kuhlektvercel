@@ -1,49 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { setAdminAuthenticated } from "@/lib/admin-auth"
-import { adminLoginSchema } from "@/lib/validation-schemas"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Login route started")
+
     const body = await request.json()
+    console.log("[v0] Request body parsed")
 
-    const validation = adminLoginSchema.safeParse(body)
+    const { password } = body
 
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validation.error.errors[0].message,
-        },
-        { status: 400 },
-      )
+    if (!password) {
+      console.log("[v0] No password provided")
+      return NextResponse.json({ success: false, error: "Password is required" }, { status: 400 })
     }
 
-    const { password } = validation.data
+    console.log("[v0] Checking password")
 
-    // Validate password length to prevent timing attacks
-    if (password.length < 8 || password.length > 128) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid password",
-        },
-        { status: 400 },
-      )
-    }
-
-    // Check password against environment variable
     if (password !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid password",
-        },
-        { status: 401 },
-      )
+      console.log("[v0] Invalid password")
+      return NextResponse.json({ success: false, error: "Invalid password" }, { status: 401 })
     }
 
-    // Use secure token-based session management
+    console.log("[v0] Password valid, setting auth")
+
     await setAdminAuthenticated()
+
+    console.log("[v0] Auth set successfully")
 
     return NextResponse.json({
       success: true,
@@ -51,13 +34,7 @@ export async function POST(request: NextRequest) {
       redirectTo: "/admin",
     })
   } catch (error) {
-    console.error("Admin login error")
-    return NextResponse.json(
-      {
-        success: false,
-        error: "An error occurred during login. Please try again.",
-      },
-      { status: 500 },
-    )
+    console.error("[v0] Login error:", error)
+    return NextResponse.json({ success: false, error: "Login failed" }, { status: 500 })
   }
 }
