@@ -56,16 +56,24 @@ function verifyTOTP(token: string, secret: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, secret } = await request.json()
+    const { token } = await request.json()
 
-    if (!token || !secret) {
-      return NextResponse.json({ valid: false, error: "Missing token or secret" })
+    if (!token) {
+      return NextResponse.json({ valid: false, error: "Missing token" }, { status: 400 })
+    }
+
+    const secret = process.env.ADMIN_2FA_SECRET
+
+    if (!secret) {
+      console.error("ADMIN_2FA_SECRET not configured")
+      return NextResponse.json({ valid: false, error: "2FA not configured" }, { status: 500 })
     }
 
     const isValid = verifyTOTP(token, secret)
 
     return NextResponse.json({ valid: isValid })
   } catch (error) {
-    return NextResponse.json({ valid: false, error: "Verification failed" })
+    console.error("TOTP verification error:", error)
+    return NextResponse.json({ valid: false, error: "Verification failed" }, { status: 500 })
   }
 }

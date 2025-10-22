@@ -4,16 +4,10 @@ import { NextResponse } from "next/server"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    console.log("[v0] Chat contact request received:", {
-      name: body.name,
-      email: body.email,
-      hasConversationId: !!body.conversationId,
-    })
 
     const { name, email, conversationId } = body
 
     if (!name || !email) {
-      console.log("[v0] Validation failed: missing required fields")
       return NextResponse.json({ success: false, error: "Name and email are required" }, { status: 400 })
     }
 
@@ -40,21 +34,15 @@ export async function POST(request: Request) {
       submitted_at: new Date().toISOString(),
     }
 
-    console.log("[v0] Inserting into database:", { firstName, lastName, email, conversationId })
-
     // Insert into form_submitters table
     const { data, error } = await supabase.from("form_submitters").insert(insertData).select().single()
 
     if (error) {
-      console.error("[v0] Supabase error:", error)
+      console.error("Supabase error during handoff creation")
       return NextResponse.json({ success: false, error: "Failed to save contact request" }, { status: 500 })
     }
 
-    console.log("[v0] Successfully saved contact request:", data.id)
-
     try {
-      console.log("[v0] Sending admin notification email")
-
       const emailHtml = `
         <!DOCTYPE html>
         <html>
@@ -143,13 +131,11 @@ export async function POST(request: Request) {
 
       const emailResult = await emailResponse.json()
 
-      if (emailResponse.ok) {
-        console.log("[v0] Admin notification email sent successfully:", emailResult)
-      } else {
-        console.error("[v0] Failed to send admin notification email:", emailResult)
+      if (!emailResponse.ok) {
+        console.error("Failed to send admin notification email")
       }
     } catch (emailError) {
-      console.error("[v0] Error sending admin notification email:", emailError)
+      console.error("Error sending admin notification email")
       // Don't fail the request if email fails
     }
 
@@ -159,11 +145,11 @@ export async function POST(request: Request) {
       handoffId: data.id, // Return the handoff ID for polling
     })
   } catch (error) {
-    console.error("[v0] Chat contact API error:", error)
+    console.error("Chat contact API error")
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "An error occurred",
+        error: "An error occurred",
       },
       { status: 500 },
     )

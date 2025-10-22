@@ -1,18 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
+import { isAdminAuthenticated } from "@/lib/admin-auth"
 
 export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Agent send-message API called")
 
-    // Check admin authentication
-    const cookieStore = await cookies()
-    const adminAuth = cookieStore.get("admin-auth")
+    const authenticated = await isAdminAuthenticated()
 
-    console.log("[v0] Admin auth cookie:", adminAuth?.value)
-
-    if (!adminAuth || adminAuth.value !== "authenticated") {
+    if (!authenticated) {
       console.log("[v0] Unauthorized - no valid admin auth")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

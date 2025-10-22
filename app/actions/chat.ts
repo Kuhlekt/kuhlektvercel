@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { generateText } from "ai"
 
 export async function sendChatMessage(
   message: string,
@@ -11,87 +12,28 @@ export async function sendChatMessage(
   const supabase = await createClient()
 
   try {
-    // Create or update conversation record
-    const { data: existingConv } = await supabase
-      .from("chat_conversations")
-      .select("id")
-      .eq("conversation_id", conversationId)
-      .single()
-
-    if (!existingConv) {
-      await supabase.from("chat_conversations").insert({
-        conversation_id: conversationId,
-        session_id: sessionId,
-        status: "active",
-        message_count: 0,
-      })
-    }
-
-    // Save user message
-    await supabase.from("chat_messages").insert({
-      conversation_id: conversationId,
-      role: "user",
-      content: message,
-    })
-
-    // Update conversation metadata
-    await supabase
-      .from("chat_conversations")
-      .update({
-        last_message_at: new Date().toISOString(),
-        message_count: supabase.rpc("increment", { row_id: conversationId }),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("conversation_id", conversationId)
-  } catch (dbError) {
-    console.error("[v0] Error saving message to database:", dbError)
-    // Continue even if database save fails
-  }
-
-  const instructedMessage = isFirstMessage
-    ? `Please respond in a friendly, conversational tone. Start with a warm greeting like "Hi!", "Hey there!", or "Hello!". Keep your answer brief and succinct, but maintain a warm and helpful demeanor. After your concise answer, offer to provide more specific details if the user would like to know more.
-
-User question: ${message}`
-    : `Keep your answer brief and succinct, but maintain a warm and helpful demeanor. After your concise answer, offer to provide more specific details if the user would like to know more.
-
-User question: ${message}`
-
-  try {
-    const response = await fetch("https://kali.kuhlekt-info.com/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: instructedMessage,
-        botId: 1,
-        conversationId,
-        sessionId,
-        userId: "anonymous",
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Kali API error response:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText.substring(0, 500),
-      })
-      throw new Error(`API request failed: ${response.status} - ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || "Failed to get response")
-    }
-
+    // Save conversation and user message to database
     try {
+      const { data: existingConv } = await supabase
+        .from("chat_conversations")
+        .select("id")
+        .eq("conversation_id", conversationId)
+        .maybeSingle()
+
+      if (!existingConv) {
+        await supabase.from("chat_conversations").insert({
+          conversation_id: conversationId,
+          session_id: sessionId,
+          status: "active",
+          message_count: 0,
+        })
+      }
+
+      // Save user message
       await supabase.from("chat_messages").insert({
         conversation_id: conversationId,
-        role: "assistant",
-        content: data.response,
+        role: "user",
+        content: message,
       })
 
       // Update conversation metadata
@@ -103,22 +45,64 @@ User question: ${message}`
         })
         .eq("conversation_id", conversationId)
     } catch (dbError) {
-      console.error("[v0] Error saving assistant response to database:", dbError)
+      console.error("Error saving message to database:", dbError)
+      // Continue even if database save fails
+    }
+
+    const systemPrompt = `You are a helpful customer support assistant for Kuhlekt, a company that provides business solutions. 
+Your role is to:
+- Answer questions about Kuhlekt's products and services
+- Provide technical support and guidance
+- Be friendly, professional, and concise
+- If you don't know something, be honest and suggest talking to a human agent
+
+Keep responses brief and to the point (2-3 sentences max), but warm and helpful.
+${isFirstMessage ? "Start with a friendly greeting like 'Hi!', 'Hey there!', or 'Hello!'." : ""}`
+
+    const { text } = await generateText({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      temperature: 0.7,
+      maxTokens: 200,
+    })
+
+    // Save assistant response to database
+    try {
+      await supabase.from("chat_messages").insert({
+        conversation_id: conversationId,
+        role: "assistant",
+        content: text,
+      })
+
+      // Update conversation metadata
+      await supabase
+        .from("chat_conversations")
+        .update({
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("conversation_id", conversationId)
+    } catch (dbError) {
+      console.error("Error saving assistant response to database:", dbError)
+      // Continue even if database save fails
     }
 
     return {
       success: true,
-      response: data.response,
-      source: data.source,
+      response: text,
+      source: "ai-sdk",
     }
   } catch (error) {
-    console.error("[v0] Error calling Kali API:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    })
+    console.error("Error in sendChatMessage:", error)
+
     return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      success: true,
+      response:
+        "I apologize, but I'm having trouble processing your request right now. Please try asking your question again, or click 'Talk to Human' to speak with a team member who can help you immediately.",
+      source: "fallback",
     }
   }
 }

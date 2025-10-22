@@ -43,7 +43,7 @@ async function validateSecureToken(token: string): Promise<{ valid: boolean; exp
 export async function isAdminAuthenticated(): Promise<boolean> {
   try {
     const cookieStore = await cookies()
-    const adminToken = cookieStore.get("admin-token")
+    const adminToken = cookieStore.get("__Host-admin-token")
 
     if (!adminToken) {
       return false
@@ -61,16 +61,16 @@ export async function setAdminAuthenticated(): Promise<void> {
   const cookieStore = await cookies()
   const secureToken = await generateSecureToken("admin")
 
-  cookieStore.set("admin-token", secureToken, {
+  cookieStore.set("__Host-admin-token", secureToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: true, // Always require HTTPS
+    sameSite: "strict", // Prevent CSRF attacks
     maxAge: 60 * 60 * 24, // 24 hours
-    path: "/admin", // Restrict cookie scope to admin paths
+    path: "/", // Required for __Host- prefix
   })
 }
 
 export async function clearAdminAuthentication(): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.delete("admin-token")
+  cookieStore.delete("__Host-admin-token")
 }

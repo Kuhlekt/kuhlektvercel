@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { handoffIdSchema } from "@/lib/validation-schemas"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const handoffId = searchParams.get("handoffId")
 
-    if (!handoffId) {
-      return NextResponse.json({ error: "Missing handoffId" }, { status: 400 })
+    const validation = handoffIdSchema.safeParse({ handoffId })
+    if (!validation.success) {
+      return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ hasResponse: false, messages: [] })
   } catch (error) {
-    console.error("[v0] Error checking agent response:", error)
+    console.error("Error checking agent response")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

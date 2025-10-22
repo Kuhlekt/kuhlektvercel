@@ -27,10 +27,14 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
       if (onVerify) {
         const result = onVerify(token)
         if (result && typeof result === "object" && "then" in result && typeof result.then === "function") {
-          result.catch((error: any) => {})
+          result.catch((error: any) => {
+            // Silently catch any errors from onVerify callback
+          })
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      // Silently catch any synchronous errors
+    }
   }
 
   useEffect(() => {
@@ -83,18 +87,30 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
             window.grecaptcha.ready(() => {
               setGrecaptchaReady(true)
 
-              Promise.resolve()
-                .then(() => window.grecaptcha.execute(siteKey, { action: "submit" }))
-                .then((executeToken) => {
-                  const finalToken = executeToken || "development-bypass-token-execute-failed"
-                  setToken(finalToken)
-                  safeOnVerify(finalToken)
-                })
-                .catch((error) => {
-                  const fallbackToken = "development-bypass-token-execute-error"
-                  setToken(fallbackToken)
-                  safeOnVerify(fallbackToken)
-                })
+              try {
+                Promise.resolve()
+                  .then(() => {
+                    try {
+                      return window.grecaptcha.execute(siteKey, { action: "submit" })
+                    } catch (error) {
+                      return Promise.reject(error)
+                    }
+                  })
+                  .then((executeToken) => {
+                    const finalToken = executeToken || "development-bypass-token-execute-failed"
+                    setToken(finalToken)
+                    safeOnVerify(finalToken)
+                  })
+                  .catch((error) => {
+                    const fallbackToken = "development-bypass-token-execute-error"
+                    setToken(fallbackToken)
+                    safeOnVerify(fallbackToken)
+                  })
+              } catch (error) {
+                const fallbackToken = "development-bypass-token-execute-error"
+                setToken(fallbackToken)
+                safeOnVerify(fallbackToken)
+              }
             })
           }
         }
@@ -114,7 +130,11 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
       }
     }
 
-    fetchConfigAndInitialize()
+    fetchConfigAndInitialize().catch((error) => {
+      const fallbackToken = "development-bypass-token-init-error"
+      setToken(fallbackToken)
+      safeOnVerify(fallbackToken)
+    })
   }, [])
 
   return (

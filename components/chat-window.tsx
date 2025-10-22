@@ -91,20 +91,16 @@ export default function ChatWindow() {
   useEffect(() => {
     if (isWaitingForAgent) {
       sessionStorage.setItem("chat-waiting-for-agent", "true")
-      console.log("[v0] Saved isWaitingForAgent to sessionStorage: true")
     } else {
       sessionStorage.removeItem("chat-waiting-for-agent")
-      console.log("[v0] Removed isWaitingForAgent from sessionStorage")
     }
   }, [isWaitingForAgent])
 
   useEffect(() => {
     if (handoffId) {
       sessionStorage.setItem("chat-handoff-id", handoffId)
-      console.log("[v0] Saved handoffId to sessionStorage:", handoffId)
     } else {
       sessionStorage.removeItem("chat-handoff-id")
-      console.log("[v0] Removed handoffId from sessionStorage")
     }
   }, [handoffId])
 
@@ -251,15 +247,7 @@ export default function ChatWindow() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    console.log("[v0] ===== HANDLE SUBMIT CALLED =====")
-    console.log("[v0] Input value:", input)
-    console.log("[v0] isWaitingForAgent:", isWaitingForAgent)
-    console.log("[v0] handoffId:", handoffId)
-    console.log("[v0] waitingForPhoneNumber:", waitingForPhoneNumber)
-    console.log("[v0] Will route to:", isWaitingForAgent && handoffId ? "AGENT" : "BOT")
-
     if (!input.trim() || isLoading) {
-      console.log("[v0] Submission blocked - empty input or loading")
       return
     }
 
@@ -267,8 +255,6 @@ export default function ChatWindow() {
     setInput("")
 
     if (waitingForPhoneNumber && handoffId) {
-      console.log("[v0] Processing phone number submission:", userMessage)
-
       setMessages((prev) => [
         ...prev,
         {
@@ -292,7 +278,6 @@ export default function ChatWindow() {
         const result = await response.json()
 
         if (result.success) {
-          console.log("[v0] ✅ Phone number saved successfully")
           setMessages((prev) => [
             ...prev,
             {
@@ -304,7 +289,6 @@ export default function ChatWindow() {
           ])
           setWaitingForPhoneNumber(false)
         } else {
-          console.error("[v0] ❌ Failed to save phone number:", result.error)
           setMessages((prev) => [
             ...prev,
             {
@@ -315,7 +299,7 @@ export default function ChatWindow() {
           ])
         }
       } catch (error) {
-        console.error("[v0] ❌ Error saving phone number:", error)
+        console.error("Error saving phone number")
       } finally {
         setIsLoading(false)
       }
@@ -323,8 +307,6 @@ export default function ChatWindow() {
     }
 
     if (isWaitingForAgent && handoffId) {
-      console.log("[v0] ✅ ROUTING TO AGENT - handoff is active")
-
       setMessages((prev) => [
         ...prev,
         {
@@ -338,20 +320,17 @@ export default function ChatWindow() {
       try {
         const result = await sendMessageToAgent(userMessage, handoffId)
 
-        if (result.success) {
-          console.log("[v0] ✅ Message sent to agent successfully")
-        } else {
-          console.error("[v0] ❌ Failed to send message to agent:", result.error)
+        if (!result.success) {
+          console.error("Failed to send message to agent")
         }
       } catch (error) {
-        console.error("[v0] ❌ Error sending message to agent:", error)
+        console.error("Error sending message to agent")
       } finally {
         setIsLoading(false)
       }
       return
     }
 
-    console.log("[v0] ⚠️ ROUTING TO BOT - no active handoff")
     const isFirstMessage = messages.length === 0
 
     setMessages((prev) => [
@@ -365,9 +344,16 @@ export default function ChatWindow() {
     setIsLoading(true)
 
     try {
+      console.log("[v0] Calling sendChatMessage with message:", userMessage)
+
       const result = await sendChatMessage(userMessage, conversationIdRef.current, sessionIdRef.current, isFirstMessage)
 
+      console.log("[v0] sendChatMessage result:", result)
+      console.log("[v0] result.success:", result.success)
+      console.log("[v0] result.response:", result.response?.substring(0, 100))
+
       if (result.success && result.response) {
+        console.log("[v0] Adding assistant message to UI")
         setMessages((prev) => [
           ...prev,
           {
@@ -377,9 +363,17 @@ export default function ChatWindow() {
             timestamp: new Date().toISOString(),
           },
         ])
+      } else {
+        console.log(
+          "[v0] NOT adding assistant message - success:",
+          result.success,
+          "response exists:",
+          !!result.response,
+        )
       }
     } catch (error) {
       console.error("[v0] Chat error:", error)
+      console.error("[v0] Error details:", error instanceof Error ? error.message : "Unknown error")
     } finally {
       setIsLoading(false)
     }
@@ -387,7 +381,6 @@ export default function ChatWindow() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] ===== CONTACT FORM SUBMIT STARTED =====")
 
     setIsSubmittingContact(true)
     setContactFormStatus({ type: null, message: "" })
@@ -409,10 +402,6 @@ export default function ChatWindow() {
 
       if (response.ok && result.success) {
         const receivedHandoffId = result.handoffId || conversationIdRef.current
-
-        console.log("[v0] ✅ Handoff created successfully")
-        console.log("[v0] Setting handoffId to:", receivedHandoffId)
-        console.log("[v0] Setting isWaitingForAgent to: true")
 
         setHandoffId(receivedHandoffId)
         setIsWaitingForAgent(true)
@@ -444,7 +433,7 @@ export default function ChatWindow() {
         })
       }
     } catch (error) {
-      console.error("[v0] Contact form error:", error)
+      console.error("Contact form error")
       setContactFormStatus({
         type: "error",
         message: "An error occurred. Please try again.",

@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
-import ChatWindow from "@/components/chat-window"
+import { GlobalErrorHandler } from "@/components/global-error-handler"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,6 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <GlobalErrorHandler />
           <NewVisitorBanner />
           <Header />
 
@@ -47,7 +48,7 @@ export default function RootLayout({
 
           <main>{children}</main>
           <Footer />
-          <ChatWindow />
+          {/* <ChatWindow /> */}
         </ThemeProvider>
       </body>
     </html>

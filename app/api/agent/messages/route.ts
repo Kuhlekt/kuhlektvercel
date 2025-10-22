@@ -1,22 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
+import { isAdminAuthenticated } from "@/lib/admin-auth"
+import { conversationIdSchema } from "@/lib/validation-schemas"
 
 export async function GET(request: NextRequest) {
   try {
-    // Check admin authentication
-    const cookieStore = await cookies()
-    const adminAuth = cookieStore.get("admin-auth")
-
-    if (!adminAuth || adminAuth.value !== "authenticated") {
+    const isAuthenticated = await isAdminAuthenticated()
+    if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const conversationId = searchParams.get("conversationId")
 
-    if (!conversationId) {
-      return NextResponse.json({ error: "Missing conversationId" }, { status: 400 })
+    const validation = conversationIdSchema.safeParse({ conversationId })
+    if (!validation.success) {
+      return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -27,53 +26,54 @@ export async function GET(request: NextRequest) {
       .eq("id", conversationId)
       .single()
 
-    const messages: any[] = []
-
-    if (handoffData && !handoffError) {
-      const formData = handoffData.form_data || {}
-
-      // Add initial user message
-      messages.push({
-        id: `${handoffData.id}-initial`,
-        conversation_id: conversationId,
-        message: handoffData.message || formData.message || "User requested to talk to a human",
-        sender: "user",
-        created_at: handoffData.created_at,
-      })
-
-      // Add customer messages sent after handoff
-      if (formData.customerMessages && Array.isArray(formData.customerMessages)) {
-        formData.customerMessages.forEach((msg: any, index: number) => {
-          messages.push({
-            id: `${handoffData.id}-customer-${index}`,
-            conversation_id: conversationId,
-            message: msg.message,
-            sender: "user",
-            created_at: msg.timestamp,
-          })
-        })
-      }
-
-      // Add agent responses
-      if (formData.agentResponses && Array.isArray(formData.agentResponses)) {
-        formData.agentResponses.forEach((response: any, index: number) => {
-          messages.push({
-            id: `${handoffData.id}-agent-${index}`,
-            conversation_id: conversationId,
-            message: response.message,
-            sender: "agent",
-            created_at: response.timestamp,
-          })
-        })
-      }
-
-      // Sort messages chronologically
-      messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    if (handoffError || !handoffData) {
+      return NextResponse.json({ error: "Conversation not found or access denied" }, { status: 404 })
     }
+
+    const messages: any[] = []
+    const formData = handoffData.form_data || {}
+
+    // Add initial user message
+    messages.push({
+      id: `${handoffData.id}-initial`,
+      conversation_id: conversationId,
+      message: handoffData.message || formData.message || "User requested to talk to a human",
+      sender: "user",
+      created_at: handoffData.created_at,
+    })
+
+    // Add customer messages sent after handoff
+    if (formData.customerMessages && Array.isArray(formData.customerMessages)) {
+      formData.customerMessages.forEach((msg: any, index: number) => {
+        messages.push({
+          id: `${handoffData.id}-customer-${index}`,
+          conversation_id: conversationId,
+          message: msg.message,
+          sender: "user",
+          created_at: msg.timestamp,
+        })
+      })
+    }
+
+    // Add agent responses
+    if (formData.agentResponses && Array.isArray(formData.agentResponses)) {
+      formData.agentResponses.forEach((response: any, index: number) => {
+        messages.push({
+          id: `${handoffData.id}-agent-${index}`,
+          conversation_id: conversationId,
+          message: response.message,
+          sender: "agent",
+          created_at: response.timestamp,
+        })
+      })
+    }
+
+    // Sort messages chronologically
+    messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
     return NextResponse.json({ messages })
   } catch (error) {
-    console.error("[v0] Error in agent messages:", error)
+    console.error("Error in agent messages")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

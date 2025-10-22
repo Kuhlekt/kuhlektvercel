@@ -1,14 +1,36 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { handoffRequestSchema } from "@/lib/validation-schemas"
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+
+    const validation = handoffRequestSchema.safeParse({
+      conversationId: body.sessionId || body.conversationId,
+      reason: body.reason,
+    })
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validation.error.errors[0].message,
+        },
+        { status: 400 },
+      )
+    }
+
     const { sessionId, userId, userEmail, userName, reason } = body
 
     // Validate required fields
     if (!userEmail || !userName) {
       return NextResponse.json({ success: false, error: "userName and userEmail are required" }, { status: 400 })
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(userEmail)) {
+      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 })
     }
 
     // Split name into first and last name

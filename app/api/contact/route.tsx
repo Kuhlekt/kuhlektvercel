@@ -1,12 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+import { contactFormSchema } from "@/lib/validation-schemas"
 
 export async function POST(request: NextRequest) {
-  console.log("[v0] Contact API: Request received")
   try {
     const formData = await request.formData()
-    console.log("[v0] Contact API: FormData parsed successfully")
 
     // Extract form data with null safety
     const firstName = formData.get("firstName")?.toString()?.trim()
@@ -33,53 +32,26 @@ export async function POST(request: NextRequest) {
       const value = formData.get(field)?.toString()?.trim()
       if (value && value.length > 10) {
         recaptchaToken = value
-        console.log(`Contact form: Found reCAPTCHA token in field '${field}': ${value.substring(0, 20)}...`)
         break
       }
     }
 
-    console.log("[v0] reCAPTCHA token details:")
-    console.log("[v0] - Token exists:", !!recaptchaToken)
-    console.log("[v0] - Token type:", typeof recaptchaToken)
-    console.log("[v0] - Token value:", recaptchaToken)
-    console.log("[v0] - Token length:", recaptchaToken?.length)
+    const validation = contactFormSchema.safeParse({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      company,
+      message,
+      recaptchaToken,
+    })
 
-    console.log("Contact form submission - reCAPTCHA token received:", !!recaptchaToken)
+    if (!validation.success) {
+      const errors: Record<string, string> = {}
+      validation.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          errors[err.path[0].toString()] = err.message
+        }
+      })
 
-    if (recaptchaToken) {
-      console.log("Contact form: Verifying reCAPTCHA token...")
-      const recaptchaResult = await verifyRecaptcha(recaptchaToken)
-      console.log("Contact form: reCAPTCHA result:", recaptchaResult)
-
-      if (!recaptchaResult.success) {
-        console.error("Contact form: reCAPTCHA verification failed:", recaptchaResult.error)
-        return NextResponse.json({
-          success: false,
-          message: `reCAPTCHA verification failed: ${recaptchaResult.error}`,
-          errors: { recaptcha: "Verification failed. Please try again." },
-        })
-      }
-    }
-
-    // Validation
-    const errors: { firstName?: string; lastName?: string; email?: string; message?: string; recaptcha?: string } = {}
-
-    if (!firstName) {
-      errors.firstName = "First name is required"
-    }
-
-    if (!lastName) {
-      errors.lastName = "Last name is required"
-    }
-
-    if (!email) {
-      errors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address"
-    }
-
-    if (Object.keys(errors).length > 0) {
-      console.log("[v0] Contact API: Validation errors:", errors)
       return NextResponse.json({
         success: false,
         message: "Please correct the errors below",
@@ -87,7 +59,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log("[v0] Contact API: Validation passed, preparing email")
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken)
+
+      if (!recaptchaResult.success) {
+        return NextResponse.json({
+          success: false,
+          message: `reCAPTCHA verification failed: ${recaptchaResult.error}`,
+          errors: { recaptcha: "Verification failed. Please try again." },
+        })
+      }
+    }
 
     // Prepare email content
     const emailSubject = `Contact Form Message from ${firstName} ${lastName}`
@@ -115,7 +97,6 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     `
 
     // Send email
-    console.log("[v0] Contact API: Attempting to send email")
     const emailResult = await sendEmail({
       to: process.env.ADMIN_EMAIL || "admin@kuhlekt.com",
       subject: emailSubject,
@@ -123,10 +104,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       text: emailText,
     })
 
-    console.log("[v0] Contact API: Email result:", emailResult)
-
     if (!emailResult.success) {
-      console.error("Failed to send contact form email:", emailResult.message)
       return NextResponse.json({
         success: false,
         message: "There was an error sending your message. Please try again or contact us directly.",
@@ -142,7 +120,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       errors: {},
     })
   } catch (error) {
-    console.error("[v0] Contact form submission error:", error)
+    console.error("Contact form submission error")
     return NextResponse.json(
       {
         success: false,
