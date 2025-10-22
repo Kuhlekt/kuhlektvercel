@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { setAdminAuthenticated } from "@/lib/admin-auth"
+import { setAdminAuthenticated, verifyAdminPassword } from "@/lib/admin-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Checking password")
 
-    if (password !== process.env.ADMIN_PASSWORD) {
+    const isValid = await verifyAdminPassword(password)
+
+    if (!isValid) {
       console.log("[v0] Invalid password")
       return NextResponse.json({ success: false, error: "Invalid password" }, { status: 401 })
     }

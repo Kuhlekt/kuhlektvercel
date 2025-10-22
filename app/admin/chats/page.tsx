@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
+import { isAdminAuthenticated } from "@/lib/admin-auth"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
@@ -63,11 +63,9 @@ export default async function ChatsPage({
 }: {
   searchParams: { conversation?: string }
 }) {
-  // Check admin authentication
-  const cookieStore = await cookies()
-  const adminAuth = cookieStore.get("admin-auth")
+  const isAuthenticated = await isAdminAuthenticated()
 
-  if (!adminAuth || adminAuth.value !== "authenticated") {
+  if (!isAuthenticated) {
     redirect("/admin/login")
   }
 
