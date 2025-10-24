@@ -13,16 +13,34 @@ export async function GET() {
     // Create Supabase client
     const supabase = await createClient()
 
-    // Fetch all contact requests
-    const { data, error } = await supabase.from("form_submitters").select("*").order("created_at", { ascending: false })
+    const { data, error } = await supabase
+      .from("form_submitters")
+      .select(`
+        *,
+        visitors!form_submitters_visitor_id_fkey (
+          country
+        )
+      `)
+      .order("created_at", { ascending: false })
 
     if (error) {
       console.error("[v0] Error fetching contact requests:", error)
       return NextResponse.json({ error: "Failed to fetch contact requests", details: error.message }, { status: 500 })
     }
 
+    const requestsWithRegion = (data || []).map((request: any) => {
+      const country = request.visitors?.country || null
+      const isNorthAmerica = country && ["United States", "Canada", "Mexico", "US", "CA", "MX", "USA"].includes(country)
+
+      return {
+        ...request,
+        country,
+        isNorthAmerica,
+      }
+    })
+
     return NextResponse.json({
-      requests: data || [],
+      requests: requestsWithRegion,
     })
   } catch (error: any) {
     console.error("[v0] Error in contact-requests API:", error)

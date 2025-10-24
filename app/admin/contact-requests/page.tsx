@@ -14,6 +14,8 @@ interface ContactRequest {
   form_data: any
   status: string
   created_at: string
+  country?: string | null
+  isNorthAmerica?: boolean
 }
 
 export default function ContactRequestsPage() {
@@ -156,42 +158,76 @@ export default function ContactRequestsPage() {
                   </tr>
                 ) : (
                   chatRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(request.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {request.first_name} {request.last_name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{request.email}</div>
-                        {request.phone && <div className="text-sm text-gray-500">{request.phone}</div>}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.company || "-"}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                        <div className="line-clamp-2">{request.message || "-"}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
-                        {request.form_data?.conversationId
-                          ? `${request.form_data.conversationId.substring(0, 12)}...`
-                          : "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            request.status === "new"
-                              ? "bg-green-100 text-green-800"
-                              : request.status === "contacted"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {request.status || "unknown"}
-                        </span>
-                      </td>
-                    </tr>
+                    <>
+                      {request.isNorthAmerica && (
+                        <tr key={`${request.id}-banner`} className="bg-gradient-to-r from-green-50 to-emerald-50">
+                          <td colSpan={7} className="px-6 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-shrink-0">
+                                <svg
+                                  className="w-6 h-6 text-green-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-green-900">
+                                  🎉 North America Special Offer - LIMITED TIME
+                                </p>
+                                <p className="text-sm text-green-700">
+                                  This enquiry is from {request.country || "North America"} - Eligible for{" "}
+                                  <span className="font-bold">40% discount for 12 months</span> (Limited time offer)
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      <tr key={request.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(request.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {request.first_name} {request.last_name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">{request.email}</div>
+                          {request.phone && <div className="text-sm text-gray-500">{request.phone}</div>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.company || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                          <div className="line-clamp-2">{request.message || "-"}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                          {request.form_data?.conversationId
+                            ? `${request.form_data.conversationId.substring(0, 12)}...`
+                            : "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              request.status === "new"
+                                ? "bg-green-100 text-green-800"
+                                : request.status === "contacted"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {request.status || "unknown"}
+                          </span>
+                        </td>
+                      </tr>
+                    </>
                   ))
                 )}
               </tbody>
@@ -205,6 +241,10 @@ export default function ContactRequestsPage() {
           </p>
           <p className="mt-1">
             New requests: <span className="font-semibold">{chatRequests.filter((r) => r.status === "new").length}</span>
+          </p>
+          <p className="mt-1">
+            North America enquiries:{" "}
+            <span className="font-semibold text-green-600">{chatRequests.filter((r) => r.isNorthAmerica).length}</span>
           </p>
         </div>
       </div>
