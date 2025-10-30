@@ -1,7 +1,6 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { generateText } from "ai"
 
 export async function sendChatMessage(
   message: string,
@@ -59,15 +58,30 @@ Your role is to:
 Keep responses brief and to the point (2-3 sentences max), but warm and helpful.
 ${isFirstMessage ? "Start with a friendly greeting like 'Hi!', 'Hey there!', or 'Hello!'." : ""}`
 
-    const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-      temperature: 0.7,
-      maxTokens: 200,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message },
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      }),
     })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    const text =
+      data.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again."
 
     // Save assistant response to database
     try {
@@ -93,7 +107,7 @@ ${isFirstMessage ? "Start with a friendly greeting like 'Hi!', 'Hey there!', or 
     return {
       success: true,
       response: text,
-      source: "ai-sdk",
+      source: "openai",
     }
   } catch (error) {
     console.error("Error in sendChatMessage:", error)
