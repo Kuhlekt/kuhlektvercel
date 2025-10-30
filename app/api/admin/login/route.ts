@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 
 function verifyPassword(password: string, storedHash: string): boolean {
@@ -26,10 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!password) {
       console.log("[v0] No password provided")
-      return new Response(JSON.stringify({ success: false, error: "Password is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      })
+      return NextResponse.json({ success: false, error: "Password is required" }, { status: 400 })
     }
 
     console.log("[v0] Checking password")
@@ -47,18 +44,12 @@ export async function POST(request: NextRequest) {
       isValid = password === plainPassword
     } else {
       console.log("[v0] No password configured")
-      return new Response(JSON.stringify({ success: false, error: "Server configuration error" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      })
+      return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500 })
     }
 
     if (!isValid) {
       console.log("[v0] Invalid password")
-      return new Response(JSON.stringify({ success: false, error: "Invalid credentials" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      })
+      return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 })
     }
 
     console.log("[v0] Password valid, creating session")
@@ -66,45 +57,33 @@ export async function POST(request: NextRequest) {
     const sessionToken = generateSessionToken()
     const isProduction = process.env.NODE_ENV === "production"
 
-    const cookieValue = [
-      `admin-token=${sessionToken}`,
-      "HttpOnly",
-      isProduction ? "Secure" : "",
-      "SameSite=Strict",
-      `Max-Age=${60 * 60 * 24}`,
-      "Path=/",
-    ]
-      .filter(Boolean)
-      .join("; ")
-
     console.log("[v0] Returning success response with cookie")
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Login successful",
-        redirectTo: "/admin",
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Set-Cookie": cookieValue,
-        },
-      },
-    )
+    const response = NextResponse.json({
+      success: true,
+      message: "Login successful",
+      redirectTo: "/admin",
+    })
+
+    // Set cookie using NextResponse cookie API
+    response.cookies.set("admin-token", sessionToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: "/",
+    })
+
+    return response
   } catch (error) {
     console.error("[v0] Login error:", error)
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         success: false,
         error: "An error occurred during login",
         details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
       },
+      { status: 500 },
     )
   }
 }

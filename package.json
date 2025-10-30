@@ -43,7 +43,7 @@
     "react": "^19",
     "react-dom": "^19",
     "resend": "6.1.2",
-    "server-only": "0.0.1",
+    "server-only": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"

@@ -108,7 +108,7 @@ importers:
         specifier: 6.1.2
         version: 6.1.2
       server-only:
-        specifier: 0.0.1
+        specifier: latest
         version: 0.0.1
       tailwind-merge:
         specifier: ^2.5.5

@@ -1,4 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createBrowserClient } from "@supabase/ssr"
 
 export const isSupabaseConfigured = (() => {
   try {
@@ -14,11 +14,14 @@ export const isSupabaseConfigured = (() => {
   }
 })()
 
-let supabaseClient: ReturnType<typeof createClientComponentClient> | null = null
+let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
 
 try {
   if (isSupabaseConfigured) {
-    supabaseClient = createClientComponentClient()
+    supabaseClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
   } else {
     console.warn("Supabase not configured, using mock client")
     supabaseClient = {
