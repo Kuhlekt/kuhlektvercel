@@ -76,7 +76,7 @@ importers:
         version: 2.77.0
       ai:
         specifier: latest
-        version: 5.0.82(zod@3.22.4)
+        version: 5.0.82(zod@3.24.1)
       bcryptjs:
         specifier: latest
         version: 3.0.2
@@ -120,8 +120,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
       zod:
-        specifier: ^3.22.4
-        version: 3.22.4
+        specifier: ^3.24.1
+        version: 3.24.1
     devDependencies:
       '@types/bcryptjs':
         specifier: ^2.4.6
@@ -3527,24 +3527,24 @@ packages:
   yoga-layout@3.2.1:
     resolution: {integrity: sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==}
 
-  zod@3.22.4:
-    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+  zod@3.24.1:
+    resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
 
 snapshots:
 
-  '@ai-sdk/gateway@2.0.3(zod@3.22.4)':
+  '@ai-sdk/gateway@2.0.3(zod@3.24.1)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.14(zod@3.22.4)
+      '@ai-sdk/provider-utils': 3.0.14(zod@3.24.1)
       '@vercel/oidc': 3.0.3
-      zod: 3.22.4
+      zod: 3.24.1
 
-  '@ai-sdk/provider-utils@3.0.14(zod@3.22.4)':
+  '@ai-sdk/provider-utils@3.0.14(zod@3.24.1)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
-      zod: 3.22.4
+      zod: 3.24.1
 
   '@ai-sdk/provider@2.0.0':
     dependencies:
@@ -5570,13 +5570,13 @@ snapshots:
 
   acorn@8.15.0: {}
 
-  ai@5.0.82(zod@3.22.4):
+  ai@5.0.82(zod@3.24.1):
     dependencies:
-      '@ai-sdk/gateway': 2.0.3(zod@3.22.4)
+      '@ai-sdk/gateway': 2.0.3(zod@3.24.1)
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.14(zod@3.22.4)
+      '@ai-sdk/provider-utils': 3.0.14(zod@3.24.1)
       '@opentelemetry/api': 1.9.0
-      zod: 3.22.4
+      zod: 3.24.1
 
   ajv@6.12.6:
     dependencies:
@@ -7582,4 +7582,4 @@ snapshots:
 
   yoga-layout@3.2.1: {}
 
-  zod@3.22.4: {}
+  zod@3.24.1: {}
