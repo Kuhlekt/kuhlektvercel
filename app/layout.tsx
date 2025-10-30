@@ -43,18 +43,6 @@ export default function RootLayout({
         />
 
         <Script src="https://kuhlekt.com/widget.js" strategy="afterInteractive" />
-        <Script
-          id="kuhlekt-widget-config"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.kuhlektConfig = {
-                knowledgeBaseUrl: 'https://kuhlekt.com/api/public/knowledge',
-                apiUrl: '${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/chat'
-              };
-            `,
-          }}
-        />
 
         <NewVisitorBanner />
         <Header />
