@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
+import { sanitizeHtml } from "@/lib/html-sanitizer"
 import { useState, useRef, useEffect } from "react"
-import { X, Send, User } from "lucide-react"
+import { X, Send, User } from "@/lib/icons"
 import { Button } from "@/components/ui/button"
 import { sendChatMessage, sendMessageToAgent } from "@/app/actions/chat"
 
@@ -586,7 +586,7 @@ export default function ChatWindow() {
                   >
                     {message.isHtml ? (
                       <div
-                        dangerouslySetInnerHTML={{ __html: message.content }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.content) }}
                         className="prose prose-sm max-w-none text-xs sm:text-sm"
                       />
                     ) : (

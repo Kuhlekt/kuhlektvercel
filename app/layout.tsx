@@ -3,10 +3,11 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import NewVisitorBanner from "@/components/new-visitor-banner"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import NewVisitorBanner from "@/components/new-visitor-banner"
+import ChatWindow from "@/components/chat-window"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,8 +27,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <GlobalErrorHandler />
-        <NewVisitorBanner />
-        <Header />
 
         {/* Google Analytics */}
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" strategy="afterInteractive" />
@@ -44,9 +43,11 @@ export default function RootLayout({
           }}
         />
 
+        <NewVisitorBanner />
+        <Header />
         <main>{children}</main>
         <Footer />
-        {/* <ChatWindow /> */}
+        <ChatWindow />
       </body>
     </html>
   )

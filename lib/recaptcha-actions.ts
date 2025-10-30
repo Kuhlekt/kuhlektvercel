@@ -22,16 +22,15 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
         console.log("Fallback token allowed in development/preview mode")
         return { success: true }
       } else {
-        // In production, allow fallback tokens but log the issue
-        console.warn(`Fallback token in production - allowing submission but logging issue: ${token}`)
-        return { success: true }
+        console.error("Fallback token rejected in production")
+        return { success: false, error: "Invalid reCAPTCHA token" }
       }
     }
 
     console.log("Verifying reCAPTCHA token:", token.substring(0, 20) + "...")
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
 
     try {
       const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
@@ -47,8 +46,7 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
 
       if (!response.ok) {
         console.error("reCAPTCHA API response not ok:", response.status, response.statusText)
-        console.warn("reCAPTCHA API error - allowing submission with warning")
-        return { success: true }
+        return { success: false, error: "reCAPTCHA verification failed" }
       }
 
       const data = await response.json()
@@ -61,32 +59,22 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
         const errorCodes = data["error-codes"] || []
         console.error("reCAPTCHA verification failed:", errorCodes)
 
-        if (errorCodes.includes("invalid-input-response")) {
-          console.warn("Invalid reCAPTCHA response - allowing submission with warning")
-          return { success: true }
-        } else if (errorCodes.includes("timeout-or-duplicate")) {
-          console.warn("reCAPTCHA timeout/duplicate - allowing submission with warning")
-          return { success: true }
-        } else if (errorCodes.includes("invalid-input-secret")) {
+        if (errorCodes.includes("invalid-input-secret")) {
           return { success: false, error: "reCAPTCHA configuration error" }
         }
 
-        console.warn(`reCAPTCHA verification failed but allowing submission: ${errorCodes.join(", ")}`)
-        return { success: true }
+        return { success: false, error: "reCAPTCHA verification failed" }
       }
     } catch (fetchError) {
       clearTimeout(timeoutId)
       if (fetchError instanceof Error && fetchError.name === "AbortError") {
         console.error("reCAPTCHA verification timeout")
-        console.warn("reCAPTCHA timeout - allowing submission with warning")
-        return { success: true }
+        return { success: false, error: "reCAPTCHA verification timeout" }
       }
       throw fetchError
     }
   } catch (error) {
     console.error("reCAPTCHA verification error:", error)
-
-    console.warn("reCAPTCHA verification failed - allowing submission with warning")
-    return { success: true }
+    return { success: false, error: "reCAPTCHA verification failed" }
   }
 }

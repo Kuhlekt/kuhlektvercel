@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 import { contactFormSchema } from "@/lib/validation-schemas"
+// import { checkRateLimit } from "@/lib/rate-limiter"
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,25 @@ export async function POST(request: NextRequest) {
     const company = formData.get("company")?.toString()?.trim()
     const phone = formData.get("phone")?.toString()?.trim()
     const message = formData.get("message")?.toString()?.trim()
+
+    // const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    // const rateLimitResult = await checkRateLimit("contact-form", clientIp)
+
+    // if (!rateLimitResult.allowed) {
+    //   const resetMinutes = rateLimitResult.resetAt
+    //     ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
+    //     : 60
+
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: `Too many submissions. Please try again in ${resetMinutes} minutes.`,
+    //       shouldClearForm: false,
+    //       errors: {},
+    //     },
+    //     { status: 429 },
+    //   )
+    // }
 
     let recaptchaToken = null
 
@@ -107,7 +127,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
     if (!emailResult.success) {
       return NextResponse.json({
         success: false,
-        message: "There was an error sending your message. Please try again or contact us directly.",
+        message: "There was an error sending your message. Please try again later.",
         shouldClearForm: false,
         errors: {},
       })
@@ -120,7 +140,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       errors: {},
     })
   } catch (error) {
-    console.error("Contact form submission error")
+    console.error("Contact form submission error:", error)
     return NextResponse.json(
       {
         success: false,

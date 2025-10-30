@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star, Play, Calculator } from "lucide-react"
+import { CheckCircle, Star, Play, Calculator } from "@/lib/icons"
 import { useState } from "react"
 import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 

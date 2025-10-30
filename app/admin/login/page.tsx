@@ -7,6 +7,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -82,9 +83,51 @@ export default function AdminLogin() {
             >
               {isLoading ? "Logging in..." : "Login"}
             </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </form>
         </div>
       </div>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center px-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Reset Admin Password</h2>
+            <div className="space-y-4 text-gray-700">
+              <p>The admin password is stored in your environment variables. To reset it:</p>
+              <ol className="list-decimal list-inside space-y-2 ml-2">
+                <li>Go to your Vercel project dashboard</li>
+                <li>Navigate to Settings → Environment Variables</li>
+                <li>
+                  Update the <code className="bg-gray-100 px-2 py-1 rounded text-sm">ADMIN_PASSWORD</code> variable
+                </li>
+                <li>Redeploy your application for changes to take effect</li>
+              </ol>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Current password location:</strong> Check the{" "}
+                  <code className="bg-blue-100 px-1 rounded">ADMIN_PASSWORD</code> environment variable in your Vercel
+                  project settings.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowForgotPassword(false)}
+              className="w-full mt-6 bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

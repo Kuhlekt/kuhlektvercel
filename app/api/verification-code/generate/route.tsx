@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+// import { checkRateLimit } from "@/lib/rate-limiter"
 
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -104,6 +105,20 @@ export async function POST(request: NextRequest) {
       console.error("[generateVerificationCode] Invalid email format:", cleanEmail)
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 })
     }
+
+    // const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    // const rateLimitResult = await checkRateLimit("verification-code", `${clientIp}-${cleanEmail}`)
+
+    // if (!rateLimitResult.allowed) {
+    //   const resetMinutes = rateLimitResult.resetAt
+    //     ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
+    //     : 15
+
+    //   return NextResponse.json(
+    //     { error: `Too many verification requests. Please try again in ${resetMinutes} minutes.` },
+    //     { status: 429 },
+    //   )
+    // }
 
     console.log("[generateVerificationCode] Starting for email:", cleanEmail)
 
