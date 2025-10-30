@@ -1,15 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
-
-function verifyPassword(password: string, storedHash: string): boolean {
-  try {
-    const [salt, hash] = storedHash.split(":")
-    const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex")
-    return hash === verifyHash
-  } catch {
-    return false
-  }
-}
+import { verifyAdminPassword } from "@/lib/admin-auth"
 
 function generateSessionToken(): string {
   return crypto.randomBytes(32).toString("hex")
@@ -29,26 +20,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Password is required" }, { status: 400 })
     }
 
-    console.log("[v0] Checking password")
+    console.log("[v0] Checking password against environment variables")
+    console.log("[v0] ADMIN_PASSWORD_HASH exists:", !!process.env.ADMIN_PASSWORD_HASH)
+    console.log("[v0] ADMIN_PASSWORD exists:", !!process.env.ADMIN_PASSWORD)
 
-    const storedHash = process.env.ADMIN_PASSWORD_HASH
-    const plainPassword = process.env.ADMIN_PASSWORD
-
-    let isValid = false
-
-    if (storedHash && storedHash.includes(":")) {
-      console.log("[v0] Using hashed password")
-      isValid = verifyPassword(password, storedHash)
-    } else if (plainPassword) {
-      console.log("[v0] Using plaintext password")
-      isValid = password === plainPassword
-    } else {
-      console.log("[v0] No password configured")
-      return NextResponse.json({ success: false, error: "Server configuration error" }, { status: 500 })
-    }
+    const isValid = await verifyAdminPassword(password)
 
     if (!isValid) {
-      console.log("[v0] Invalid password")
+      console.log("[v0] Invalid password - credentials do not match")
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 })
     }
 

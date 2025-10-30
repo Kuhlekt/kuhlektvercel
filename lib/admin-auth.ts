@@ -35,15 +35,38 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const storedHash = process.env.ADMIN_PASSWORD_HASH
+  console.log("[v0] verifyAdminPassword called")
 
-  if (storedHash && storedHash.includes(":")) {
-    // Hashed password format
-    return verifyPassword(password, storedHash)
-  } else {
-    // Fallback to plaintext comparison (legacy support)
-    return password === process.env.ADMIN_PASSWORD
+  const storedHash = process.env.ADMIN_PASSWORD_HASH
+  const plainPassword = process.env.ADMIN_PASSWORD
+
+  console.log("[v0] ADMIN_PASSWORD_HASH available:", !!storedHash)
+  console.log("[v0] ADMIN_PASSWORD available:", !!plainPassword)
+
+  // Check if neither password is configured
+  if (!storedHash && !plainPassword) {
+    console.error("[v0] ERROR: No admin password configured in environment variables")
+    return false
   }
+
+  // Try hashed password first
+  if (storedHash && storedHash.includes(":")) {
+    console.log("[v0] Using hashed password verification")
+    const result = verifyPassword(password, storedHash)
+    console.log("[v0] Hashed password verification result:", result)
+    return result
+  }
+
+  // Fallback to plaintext comparison
+  if (plainPassword) {
+    console.log("[v0] Using plaintext password verification")
+    const result = password === plainPassword
+    console.log("[v0] Plaintext password verification result:", result)
+    return result
+  }
+
+  console.error("[v0] ERROR: Password validation failed - no valid password format found")
+  return false
 }
 
 export async function setAdminAuthenticated(): Promise<void> {
