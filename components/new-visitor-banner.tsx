@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -101,7 +100,7 @@ export default function NewVisitorBanner() {
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
+            <span className="text-xl">📅</span>
             <span className="font-semibold">{bannerContent.title} - Valuable Incentives Apply</span>
           </div>
           <div className="hidden md:block">
@@ -120,7 +119,7 @@ export default function NewVisitorBanner() {
             className="text-white hover:text-gray-200 transition-colors"
             aria-label="Close banner"
           >
-            <X className="h-5 w-5" />
+            <span className="text-xl">✕</span>
           </button>
         </div>
       </div>

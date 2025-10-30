@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Star, Play, Calculator } from "lucide-react"
 import { useState } from "react"
 import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
@@ -38,7 +37,7 @@ export default function HomePage() {
               <div className="grid sm:grid-cols-2 gap-4 mb-8">
                 <div className="flex flex-col gap-4">
                   <Link href="/demo" className="w-full">
-                    <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white w-full">
+                    <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white w-full">
                       Schedule a Demo →
                     </Button>
                   </Link>
@@ -48,12 +47,8 @@ export default function HomePage() {
                     rel="noopener noreferrer"
                     className="w-full"
                   >
-                    <Button
-                      size="lg"
-                      className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 shadow-md w-full"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Watch Product Tour
+                    <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white w-full">
+                      ▶ Watch Product Tour
                     </Button>
                   </Link>
                 </div>
@@ -62,18 +57,17 @@ export default function HomePage() {
                   className="bg-red-500 hover:bg-red-600 text-white h-full w-full"
                   onClick={() => setIsROIModalOpen(true)}
                 >
-                  <Calculator className="w-4 h-4 mr-2" />
-                  Calculate Your ROI
+                  🧮 Calculate Your ROI
                 </Button>
               </div>
 
               <div className="flex items-center gap-6 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-green-500">✓</span>
                   No credit card required
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-green-500">✓</span>
                   Free 14-day trial
                 </div>
               </div>
@@ -92,7 +86,9 @@ export default function HomePage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-1 mb-3">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span key={i} className="text-yellow-400">
+                        ★
+                      </span>
                     ))}
                   </div>
                   <blockquote className="text-sm text-gray-700 mb-4 italic leading-relaxed">
@@ -146,7 +142,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Automate debt recovery</h3>
                 <p className="text-gray-600">Reduce Days Sales Outstanding (DSO) with intelligent automation</p>
@@ -156,7 +152,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Improve cash flow</h3>
                 <p className="text-gray-600">Get real-time insights into your receivables and cash position</p>
@@ -166,7 +162,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Streamline collections</h3>
                 <p className="text-gray-600">Coordinate collection processes across teams with ease</p>
@@ -176,7 +172,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Enhance credit control</h3>
                 <p className="text-gray-600">Use built-in risk assessment tools to make better credit decisions</p>
@@ -186,7 +182,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Empower customers</h3>
                 <p className="text-gray-600">Provide a branded self-service credit portal for your customers</p>
@@ -196,7 +192,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-sm bg-white">
               <CardContent className="p-8">
                 <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-6 h-6 text-cyan-600" />
+                  <span className="text-2xl text-cyan-600">✓</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Eliminate manual work</h3>
                 <p className="text-gray-600">Achieve end-to-end automation of your collections process</p>
@@ -218,15 +214,15 @@ export default function HomePage() {
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <span className="text-cyan-500 text-xl flex-shrink-0 mt-1">✓</span>
                   <p className="text-lg text-gray-700">Real-time AR performance metrics</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <span className="text-cyan-500 text-xl flex-shrink-0 mt-1">✓</span>
                   <p className="text-lg text-gray-700">Workload management and prioritization</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-cyan-500 flex-shrink-0 mt-1" />
+                  <span className="text-cyan-500 text-xl flex-shrink-0 mt-1">✓</span>
                   <p className="text-lg text-gray-700">Comprehensive analytics and reporting</p>
                 </div>
               </div>
@@ -288,7 +284,9 @@ export default function HomePage() {
               <CardContent className="p-8">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    <span key={i} className="text-yellow-400">
+                      ★
+                    </span>
                   ))}
                 </div>
                 <p className="text-gray-600 mb-6">
@@ -315,7 +313,9 @@ export default function HomePage() {
               <CardContent className="p-8">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    <span key={i} className="text-yellow-400">
+                      ★
+                    </span>
                   ))}
                 </div>
                 <p className="text-gray-600 mb-6">
@@ -342,7 +342,9 @@ export default function HomePage() {
               <CardContent className="p-8">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    <span key={i} className="text-yellow-400">
+                      ★
+                    </span>
                   ))}
                 </div>
                 <p className="text-gray-600 mb-6">

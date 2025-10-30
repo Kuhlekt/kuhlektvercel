@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
 import Image from "next/image"
 import { CareersModal } from "./careers-modal"
 import { PrivacyModal } from "./privacy-modal"
@@ -35,7 +34,7 @@ export function Footer() {
           </p>
           <Link href="/demo#top">
             <Button size="lg" className="bg-white text-cyan-600 hover:bg-gray-100">
-              Schedule a Demo <ArrowRight className="w-4 h-4 ml-2" />
+              Schedule a Demo →
             </Button>
           </Link>
         </div>
