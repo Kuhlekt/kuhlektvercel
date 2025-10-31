@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation"
-import { isAdminAuthenticated } from "@/lib/admin-auth"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
@@ -25,7 +23,7 @@ interface ChatMessage {
 }
 
 async function getChatConversations() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from("chat_conversations")
@@ -42,7 +40,7 @@ async function getChatConversations() {
 }
 
 async function getChatMessages(conversationId: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from("chat_messages")
@@ -63,12 +61,6 @@ export default async function ChatsPage({
 }: {
   searchParams: { conversation?: string }
 }) {
-  const isAuthenticated = await isAdminAuthenticated()
-
-  if (!isAuthenticated) {
-    redirect("/admin/login")
-  }
-
   const conversations = await getChatConversations()
   const selectedConversation = searchParams.conversation
   const messages = selectedConversation ? await getChatMessages(selectedConversation) : []

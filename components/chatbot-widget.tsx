@@ -5,7 +5,6 @@ import { X, ExternalLink } from "lucide-react"
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const [iframeError, setIframeError] = useState(false)
 
   const chatbotUrl = "https://kali.kuhlekt-info.com"
 
@@ -52,38 +51,27 @@ export default function ChatbotWidget() {
             </button>
           </div>
 
-          {/* Chat Content */}
           <div className="flex-1 relative bg-gray-50">
-            {!iframeError ? (
-              <iframe
-                src={chatbotUrl}
-                title="Kali Chat"
-                className="h-full w-full border-none"
-                onError={() => setIframeError(true)}
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-                <div className="mb-4 rounded-full bg-gray-100 p-6">
-                  <img
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
-                    alt="Kuhlekt"
-                    className="h-20 object-contain"
-                  />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-gray-900">Chat in New Window</h3>
-                <p className="mb-6 text-sm text-gray-600">
-                  For the best experience, open the chat in a separate window.
-                </p>
-                <button
-                  onClick={openInNewWindow}
-                  className="flex items-center gap-2 rounded-full bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open Chat
-                </button>
+            <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+              <div className="mb-4 rounded-full bg-gray-100 p-6">
+                <img
+                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20200%20Pxls%20-%20Copy-60iaM5ygzmdd6ULAwb5yMc9bzHJ8J6.png"
+                  alt="Kuhlekt"
+                  className="h-20 object-contain"
+                />
               </div>
-            )}
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Chat with Kali</h3>
+              <p className="mb-6 text-sm text-gray-600">
+                Click below to open the chat in a new window for the best experience.
+              </p>
+              <button
+                onClick={openInNewWindow}
+                className="flex items-center gap-2 rounded-full bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Chat
+              </button>
+            </div>
           </div>
         </div>
       )}
