@@ -44,22 +44,6 @@ export default function RootLayout({
 
         <Script src="https://kuhlekt.com/widget.js" strategy="afterInteractive" />
 
-        <Script
-          id="widget-debug"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              console.log('[v0] Checking for Kuhlekt widget...');
-              
-              // Check if widget script loaded
-              setTimeout(() => {
-                console.log('[v0] Window object keys:', Object.keys(window).filter(k => k.toLowerCase().includes('kuhlekt') || k.toLowerCase().includes('chat') || k.toLowerCase().includes('widget')));
-                console.log('[v0] Widget script loaded, checking for initialization...');
-              }, 2000);
-            `,
-          }}
-        />
-
         <NewVisitorBanner />
         <Header />
         <main>{children}</main>

@@ -41,15 +41,21 @@ export default function ChatWindow() {
         }),
       })
 
+      console.log("[v0] Fetching knowledge from external API...")
+      const knowledgeUrl = `https://kuhlekt.com/api/public/knowledge?query=${encodeURIComponent(content)}&limit=15`
+      console.log("[v0] Knowledge URL:", knowledgeUrl)
+
       // Fetch knowledge from external API
-      const knowledgeResponse = await fetch(
-        `https://kuhlekt.com/api/public/knowledge?query=${encodeURIComponent(content)}&limit=15`,
-      )
+      const knowledgeResponse = await fetch(knowledgeUrl)
+      console.log("[v0] Knowledge response status:", knowledgeResponse.status)
+      console.log("[v0] Knowledge response ok:", knowledgeResponse.ok)
 
       let aiResponse = "I don't have specific information about that in my knowledge base."
 
       if (knowledgeResponse.ok) {
         const knowledgeData = await knowledgeResponse.json()
+        console.log("[v0] Knowledge data received:", knowledgeData)
+        console.log("[v0] Articles count:", knowledgeData?.articles?.length || 0)
 
         // Generate AI response using knowledge base
         const response = await fetch("/api/chat/generate", {
@@ -61,10 +67,19 @@ export default function ChatWindow() {
           }),
         })
 
+        console.log("[v0] Generate response status:", response.status)
+
         if (response.ok) {
           const data = await response.json()
           aiResponse = data.response
+          console.log("[v0] AI response generated successfully")
+        } else {
+          const errorData = await response.text()
+          console.error("[v0] Generate response error:", errorData)
         }
+      } else {
+        const errorText = await knowledgeResponse.text()
+        console.error("[v0] Knowledge API error:", errorText)
       }
 
       const assistantMessage = { role: "assistant", content: aiResponse }
@@ -83,7 +98,7 @@ export default function ChatWindow() {
         }),
       })
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("[v0] Error sending message:", error)
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
