@@ -7,6 +7,7 @@ import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
+import ChatbotWidget from "@/components/chatbot-widget"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -42,12 +43,13 @@ export default function RootLayout({
           }}
         />
 
-        <Script src="https://kuhlekt.com/widget.js" strategy="afterInteractive" />
-
         <NewVisitorBanner />
         <Header />
         <main>{children}</main>
         <Footer />
+
+        {/* Chatbot Widget */}
+        <ChatbotWidget />
       </body>
     </html>
   )
