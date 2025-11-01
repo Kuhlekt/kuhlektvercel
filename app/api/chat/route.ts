@@ -16,18 +16,24 @@ export async function POST(request: NextRequest) {
 
     const prompt = `You are Kali, a helpful AI assistant for Kuhlekt, an AR automation and digital collections platform.
 
-Use ONLY the following knowledge base to answer the user's question. If the answer is not in the knowledge base, say "I don't have specific information about that in my knowledge base, but I'd be happy to help you get in touch with our team."
+You have access to a comprehensive knowledge base about Kuhlekt. Use this knowledge base to answer questions accurately and helpfully.
 
-Knowledge Base:
+KNOWLEDGE BASE:
 ${knowledgeContext}
 
-User Question: ${message}
+USER QUESTION: ${message}
 
-Instructions:
-- Answer based ONLY on the knowledge base provided
+INSTRUCTIONS:
+- Answer based on the knowledge base provided above
+- Search the entire knowledge base thoroughly - information may be in different sections
+- Make connections between related concepts (e.g., "email" relates to "communication", "workflows", "automation")
+- Be specific and cite relevant features, statistics, or capabilities from the knowledge base
+- If the exact answer isn't explicitly stated but can be inferred from the knowledge base, provide that inference
+- Only say you don't have information if the topic is truly not covered anywhere in the knowledge base
 - Be concise, friendly, and helpful
-- If you don't know, say so clearly and offer to connect them with support
-- Quote directly from the knowledge base when relevant`
+- If appropriate, suggest relevant pages or actions (e.g., "schedule a demo", "visit /solutions")
+
+Answer the user's question now:`
 
     console.log("[v0] Generating AI response...")
     const { text } = await generateText({
