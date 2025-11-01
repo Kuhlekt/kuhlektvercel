@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { generateText } from "ai"
+import { getKuhlektContext } from "@/lib/kuhlekt-knowledge-base"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,92 +13,52 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    const { count: totalCount } = await supabase.from("kb_articles").select("*", { count: "exact", head: true })
-
-    console.log("[v0] Total articles in database:", totalCount)
-
-    const { count: publishedCount } = await supabase
+    const { data: articles, error } = await supabase
       .from("kb_articles")
-      .select("*", { count: "exact", head: true })
+      .select("title, content")
       .eq("is_published", true)
 
-    console.log("[v0] Published articles:", publishedCount)
+    console.log("[v0] Database articles found:", articles?.length || 0)
 
-    // Extract keywords from the message for better search
-    const keywords = message
-      .toLowerCase()
-      .split(" ")
-      .filter((word: string) => word.length > 2)
-    console.log("[v0] Search keywords:", keywords)
-
-    let articles = []
-    let error = null
-
-    // Try to get published articles
-    const { data: publishedData, error: publishedError } = await supabase
-      .from("kb_articles")
-      .select("title, content, is_published")
-      .eq("is_published", true)
-      .limit(20)
-
-    console.log("[v0] Published articles query returned:", publishedData?.length || 0, "articles")
-
-    if (publishedError) {
-      console.error("[v0] Published articles query error:", publishedError)
-    }
-
-    if (!publishedData || publishedData.length === 0) {
-      console.log("[v0] No published articles found, trying to get any articles...")
-      const { data: anyData, error: anyError } = await supabase
-        .from("kb_articles")
-        .select("title, content, is_published")
-        .limit(20)
-
-      console.log("[v0] Any articles query returned:", anyData?.length || 0, "articles")
-      if (anyData && anyData.length > 0) {
-        console.log(
-          "[v0] Sample is_published values:",
-          anyData.slice(0, 3).map((a) => a.is_published),
-        )
-      }
-
-      articles = anyData || []
-      error = anyError
-    } else {
-      articles = publishedData
-    }
-
-    if (articles.length > 0 && keywords.length > 0) {
-      const keywordFiltered = articles.filter((article: any) => {
-        const searchText = `${article.title} ${article.content}`.toLowerCase()
-        return keywords.some((keyword) => searchText.includes(keyword))
-      })
-
-      if (keywordFiltered.length > 0) {
-        articles = keywordFiltered
-        console.log("[v0] Filtered to", articles.length, "articles matching keywords")
-      } else {
-        console.log("[v0] No keyword matches, using all articles")
-      }
-    }
-
-    console.log("[v0] Final articles count:", articles?.length || 0)
-
-    // Build knowledge context from articles
     let knowledgeContext = ""
     if (articles && articles.length > 0) {
-      knowledgeContext = articles
+      // Extract keywords for filtering
+      const keywords = message
+        .toLowerCase()
+        .split(" ")
+        .filter((word: string) => word.length > 2)
+
+      let relevantArticles = articles
+      if (keywords.length > 0) {
+        const keywordFiltered = articles.filter((article: any) => {
+          const searchText = `${article.title} ${article.content}`.toLowerCase()
+          return keywords.some((keyword) => searchText.includes(keyword))
+        })
+
+        if (keywordFiltered.length > 0) {
+          relevantArticles = keywordFiltered.slice(0, 30)
+          console.log("[v0] Filtered to", keywordFiltered.length, "articles matching keywords, using top 30")
+        } else {
+          relevantArticles = articles.slice(0, 30)
+          console.log("[v0] No keyword matches, using first 30 articles")
+        }
+      } else {
+        relevantArticles = articles.slice(0, 30)
+        console.log("[v0] No keywords extracted, using first 30 articles")
+      }
+
+      knowledgeContext = relevantArticles
         .map((article: { title: string; content: string }) => `ARTICLE: ${article.title}\n${article.content}\n---`)
         .join("\n\n")
-      console.log("[v0] Using database knowledge base with", articles.length, "articles")
+      console.log("[v0] Using database knowledge base with", relevantArticles.length, "articles")
     } else {
-      knowledgeContext = "No articles found in the knowledge base."
-      console.log("[v0] No articles found at all")
+      knowledgeContext = getKuhlektContext()
+      console.log("[v0] Using static knowledge base (database empty)")
     }
 
     const prompt = `You are Kali, a helpful AI assistant for Kuhlekt, an AR automation and digital collections platform.
 
-You have access to a knowledge base with articles about Kuhlekt. Use this knowledge base to answer questions accurately and helpfully.
+You have access to a comprehensive knowledge base about Kuhlekt. Use this knowledge base to answer questions accurately and helpfully.
 
 KNOWLEDGE BASE:
 ${knowledgeContext}
@@ -105,13 +66,16 @@ ${knowledgeContext}
 USER QUESTION: ${message}
 
 INSTRUCTIONS:
-- Answer based on the knowledge base articles provided above
-- Be specific and cite information from the articles
-- If multiple articles are relevant, synthesize the information
-- If the knowledge base has relevant information, use it to provide a detailed answer
-- If no relevant articles were found, politely say you don't have specific information about that topic and offer to help the user get in touch with the team
+- Answer based on the knowledge base provided above
+- Be specific and reference relevant information from the knowledge base
+- For questions about features, explain what Kuhlekt offers
+- For questions about implementation, reference the timeline and process
+- For questions about results, cite the statistics (80% manual tasks eliminated, 30% DSO reduction, etc.)
+- If the user asks about email, explain that Kuhlekt includes automated email workflows and communication features
+- If the user asks about DOA or DSO (Days Sales Outstanding), explain how Kuhlekt reduces it by 30-35%
 - Be concise, friendly, and helpful
-- If appropriate, suggest relevant actions (e.g., "schedule a demo", "contact our team")
+- If appropriate, suggest relevant actions (e.g., "schedule a demo at /demo", "visit /solutions")
+- Always provide value and demonstrate knowledge of Kuhlekt's capabilities
 
 Answer the user's question now:`
 
