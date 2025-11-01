@@ -1,84 +1,103 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@/lib/supabase/server"
 import { generateText } from "ai"
-
-const sql = neon(process.env.DATABASE_URL!)
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, sessionId, message } = body
+    const { message, sessionId, conversationId } = await request.json()
 
-    if (action === "init") {
-      // Create new chat session
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    console.log("[v0] Chat API called with message:", message)
+    console.log("[v0] Session ID:", sessionId)
+    console.log("[v0] Conversation ID:", conversationId)
 
-      await sql`
-        INSERT INTO chat_sessions (id, created_at, updated_at)
-        VALUES (${newSessionId}, NOW(), NOW())
-      `
+    const supabase = await createClient()
 
-      return NextResponse.json({ sessionId: newSessionId })
+    const { data: knowledgeResults, error: knowledgeError } = await supabase
+      .from("kb_articles")
+      .select("title, content")
+      .eq("is_published", true)
+      .or(`title.ilike.%${message}%,content.ilike.%${message}%`)
+      .limit(5)
+
+    if (knowledgeError) {
+      console.error("[v0] Error fetching knowledge:", knowledgeError)
+      throw knowledgeError
     }
 
-    if (action === "message") {
-      if (!sessionId || !message) {
-        return NextResponse.json({ error: "Missing sessionId or message" }, { status: 400 })
-      }
+    console.log("[v0] Knowledge articles found:", knowledgeResults?.length || 0)
 
+    const knowledgeContext = (knowledgeResults || [])
+      .map((article: any) => `Article: ${article.title}\n${article.content}`)
+      .join("\n\n")
+
+    const prompt = `You are Kali, a helpful AI assistant for Kuhlekt, an AR automation and digital collections platform.
+
+Use ONLY the following knowledge base to answer the user's question. If the answer is not in the knowledge base, say "I don't have specific information about that in my knowledge base, but I'd be happy to help you get in touch with our team."
+
+Knowledge Base:
+${knowledgeContext}
+
+User Question: ${message}
+
+Instructions:
+- Answer based ONLY on the knowledge base provided
+- Be concise, friendly, and helpful
+- If you don't know, say so clearly and offer to connect them with support
+- Quote directly from the knowledge base when relevant`
+
+    console.log("[v0] Generating AI response...")
+    const { text } = await generateText({
+      model: "openai/gpt-4o-mini",
+      prompt,
+      temperature: 0.3,
+      maxTokens: 500,
+    })
+
+    console.log("[v0] AI response generated")
+
+    if (conversationId) {
       // Save user message
-      await sql`
-        INSERT INTO chat_messages (session_id, role, content, created_at)
-        VALUES (${sessionId}, 'user', ${message}, NOW())
-      `
-
-      // Fetch knowledge base context
-      const knowledgeResults = await sql`
-        SELECT title, content, category
-        FROM bot_knowledge
-        WHERE status = 'published'
-        ORDER BY priority DESC, updated_at DESC
-        LIMIT 10
-      `
-
-      const context = knowledgeResults.map((k: any) => `${k.title}\n${k.content}`).join("\n\n")
-
-      // Generate AI response
-      const { text } = await generateText({
-        model: "openai/gpt-4o-mini",
-        system: `You are Kali, a helpful AI assistant for Kuhlekt, an AR automation and digital collections platform.
-
-Use the following knowledge base to answer questions accurately:
-
-${context}
-
-Guidelines:
-- Be friendly, professional, and concise
-- Focus on Kuhlekt's AR automation and digital collections solutions
-- If you don't know something, admit it and offer to connect them with a human agent
-- Use the knowledge base context to provide accurate information`,
-        prompt: message,
+      await supabase.from("chat_messages").insert({
+        conversation_id: conversationId,
+        role: "user",
+        content: message,
       })
 
       // Save assistant response
-      await sql`
-        INSERT INTO chat_messages (session_id, role, content, created_at)
-        VALUES (${sessionId}, 'assistant', ${text}, NOW())
-      `
+      await supabase.from("chat_messages").insert({
+        conversation_id: conversationId,
+        role: "assistant",
+        content: text,
+      })
 
-      // Update session timestamp
-      await sql`
-        UPDATE chat_sessions
-        SET updated_at = NOW()
-        WHERE id = ${sessionId}
-      `
+      // Update conversation last_message_at
+      await supabase
+        .from("chat_conversations")
+        .update({
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("conversation_id", conversationId)
+        .select()
+        .then(async ({ data }) => {
+          if (data && data[0]) {
+            const currentCount = data[0].message_count || 0
+            await supabase
+              .from("chat_conversations")
+              .update({ message_count: currentCount + 2 })
+              .eq("conversation_id", conversationId)
+          }
+        })
 
-      return NextResponse.json({ response: text })
+      console.log("[v0] Messages saved to database")
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    return NextResponse.json({
+      response: text,
+      conversationId: conversationId,
+    })
   } catch (error) {
-    console.error("[v0] Chat API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] Error in chat API:", error)
+    return NextResponse.json({ error: "Failed to process message" }, { status: 500 })
   }
 }

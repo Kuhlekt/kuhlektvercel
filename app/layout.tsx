@@ -42,12 +42,21 @@ export default function RootLayout({
           }}
         />
 
-        {/* <Script src="https://kali.kuhlekt-info.com/widget.js" strategy="afterInteractive" /> */}
-
         <NewVisitorBanner />
         <Header />
         <main>{children}</main>
         <Footer />
+
+        <Script
+          id="kali-config"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.KALI_API_URL = 'https://kali.kuhlekt-info.com';
+            `,
+          }}
+        />
+        <Script src="https://kali.kuhlekt-info.com/widget.js" strategy="afterInteractive" />
       </body>
     </html>
   )

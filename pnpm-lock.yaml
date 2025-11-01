@@ -12,7 +12,7 @@ importers:
         specifier: latest
         version: 3.922.0
       '@neondatabase/serverless':
-        specifier: latest
+        specifier: 1.0.2
         version: 1.0.2
       '@radix-ui/react-accordion':
         specifier: latest
@@ -5466,7 +5466,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 22.0.0
+      '@types/node': 22.18.13
 
   '@typescript-eslint/eslint-plugin@8.39.1(@typescript-eslint/parser@8.39.1(eslint@8.57.0)(typescript@5.0.2))(eslint@8.57.0)(typescript@5.0.2)':
     dependencies:
