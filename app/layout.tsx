@@ -52,7 +52,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = window.location.origin;
+              window.KALI_API_URL = 'https://kali.kuhlekt-info.com';
             `,
           }}
         />
