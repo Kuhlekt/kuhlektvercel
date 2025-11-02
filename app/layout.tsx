@@ -7,6 +7,7 @@ import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
+import { KaliWidgetLoader } from "@/components/kali-widget-loader"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -42,28 +43,7 @@ export default function RootLayout({
           }}
         />
 
-        <Script
-          id="kali-widget-config"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.KALI_API_URL = 'https://kali.kuhlekt-info.com';
-              window.KALI_CONFIG = {
-                apiUrl: 'https://kali.kuhlekt-info.com',
-                chatUrl: 'https://kali.kuhlekt-info.com/api/chat',
-                handoffUrl: 'https://kali.kuhlekt-info.com/api/chat/handoff',
-                knowledgeBaseUrl: 'https://kali.kuhlekt-info.com/api/chat/knowledge',
-                enableKnowledgeBase: true,
-                autoLoadKnowledgeBase: true
-              };
-              console.log('[Kuhlekt] Kali Widget configured to use Kali server directly');
-              console.log('[Kuhlekt] API URL:', window.KALI_API_URL);
-              console.log('[Kuhlekt] Config:', window.KALI_CONFIG);
-            `,
-          }}
-        />
-
-        <Script src="https://kali.kuhlekt-info.com/widget.js?v=2.1" strategy="afterInteractive" />
+        <KaliWidgetLoader />
 
         <NewVisitorBanner />
         <Header />
