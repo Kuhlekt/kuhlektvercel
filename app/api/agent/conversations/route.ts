@@ -13,39 +13,36 @@ export async function GET() {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from("form_submitters")
+      .from("chat_conversations")
       .select("*")
-      .eq("form_type", "contact")
+      .eq("handoff_requested", true)
       .order("created_at", { ascending: false })
 
     if (error) {
       console.error("[v0] Error fetching handoff requests:", error)
-      return NextResponse.json({ error: "Failed to fetch handoff requests" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to fetch handoff requests", details: error.message }, { status: 500 })
     }
 
-    const conversations = (data || []).map((request: any) => {
-      const formData = request.form_data || {}
-      const conversationId = formData.conversationId || request.id
+    console.log("[v0] Found handoff conversations:", data?.length || 0)
 
-      const handoffStatus = formData.handoffStatus || "pending"
-
-      return {
-        id: request.id,
-        conversation_id: conversationId,
-        session_id: formData.sessionId || request.id,
-        status: request.status || "active",
-        started_at: request.created_at,
-        last_message_at: request.updated_at || request.created_at,
-        message_count: 1, // Initial handoff request counts as 1 message
-        user_email: request.email || formData.email || null,
-        user_name: `${request.first_name || ""} ${request.last_name || ""}`.trim() || formData.name || "Anonymous",
-        handoff_requested: true,
-        handoff_at: request.created_at,
-        handoff_status: handoffStatus,
-        agent_name: formData.agentName || null,
-        resolution_notes: formData.resolutionNotes || null,
-      }
-    })
+    const conversations = (data || []).map((conv: any) => ({
+      id: conv.id,
+      conversation_id: conv.conversation_id,
+      session_id: conv.session_id,
+      status: conv.status || "active",
+      started_at: conv.started_at || conv.created_at,
+      last_message_at: conv.last_message_at || conv.updated_at || conv.created_at,
+      message_count: conv.message_count || 0,
+      user_email: conv.user_email,
+      user_name: conv.user_name || "Anonymous",
+      handoff_requested: conv.handoff_requested,
+      handoff_at: conv.handoff_at || conv.created_at,
+      handoff_status: conv.handoff_status || "pending",
+      agent_name: conv.agent_name,
+      agent_id: conv.agent_id,
+      resolution_notes: conv.resolution_notes,
+      resolved_at: conv.resolved_at,
+    }))
 
     return NextResponse.json({ conversations })
   } catch (error) {

@@ -7,7 +7,6 @@ import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
-import ChatbotWidget from "@/components/chatbot-widget"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -43,12 +42,26 @@ export default function RootLayout({
           }}
         />
 
+        {/* External Kali Widget Configuration */}
+        <Script
+          id="kali-widget-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.KALI_CONFIG = {
+                apiUrl: 'https://kali.kuhlekt-info.com'
+              };
+            `,
+          }}
+        />
+
+        {/* External Kali Widget Script */}
+        <Script src="https://kali.kuhlekt-info.com/widget.js" strategy="afterInteractive" />
+
         <NewVisitorBanner />
         <Header />
         <main>{children}</main>
         <Footer />
-
-        <ChatbotWidget />
       </body>
     </html>
   )
