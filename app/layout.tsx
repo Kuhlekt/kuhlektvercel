@@ -7,7 +7,7 @@ import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import NewVisitorBanner from "@/components/new-visitor-banner"
-import { KaliWidgetLoader } from "@/components/kali-widget-loader"
+// import { KaliWidgetLoader } from "@/components/kali-widget-loader"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -43,7 +43,7 @@ export default function RootLayout({
           }}
         />
 
-        <KaliWidgetLoader />
+        {/* <KaliWidgetLoader /> */}
 
         <NewVisitorBanner />
         <Header />
