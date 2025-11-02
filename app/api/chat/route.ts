@@ -50,41 +50,10 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     console.log("[v0] Kali server response:", JSON.stringify(data).substring(0, 200))
 
+    // If agent is active but not responding, provide a helpful message
     if (data.agentActive && (!data.response || data.response.trim() === "")) {
-      console.log("[v0] Agent active but not responding, querying KB...")
-
-      try {
-        // Query the KB for an answer
-        const kbResponse = await fetch("https://kali.kuhlekt-info.com/api/chat/knowledge/search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: parsedBody.message,
-            limit: 3,
-          }),
-        })
-
-        if (kbResponse.ok) {
-          const kbData = await kbResponse.json()
-          console.log("[v0] KB search results:", kbData.results?.length || 0)
-
-          if (kbData.results && kbData.results.length > 0) {
-            // Use the top KB result as the response
-            const topResult = kbData.results[0]
-            data.response =
-              topResult.answer ||
-              topResult.content ||
-              "I found some information in the knowledge base, but couldn't format a response."
-            data.kbUsed = true
-            console.log("[v0] Using KB answer instead of empty agent response")
-          }
-        }
-      } catch (kbError) {
-        console.error("[v0] Error querying KB:", kbError)
-        // Continue with empty response if KB query fails
-      }
+      console.log("[v0] Agent active but not responding, providing wait message")
+      data.response = "An agent has joined the conversation and will respond shortly..."
     }
 
     // Return the response with CORS headers
