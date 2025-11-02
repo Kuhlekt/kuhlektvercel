@@ -8,6 +8,8 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 }
 
+const agentModeCounter = new Map<string, number>()
+
 // OPTIONS handler for CORS preflight
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders })
@@ -21,19 +23,31 @@ export async function POST(request: NextRequest) {
     // Get the request body
     const body = await request.text()
     const parsedBody = JSON.parse(body)
-    console.log("[v0] Request body:", body)
+    console.log("[v0] Request body:", body.substring(0, 200))
+
+    const sessionId = parsedBody.sessionId
+    const agentModeCount = agentModeCounter.get(sessionId) || 0
+
+    // If stuck in agent mode for 2+ messages, force a new session
+    if (agentModeCount >= 2) {
+      console.log("[v0] Session stuck in agent mode, forcing new session")
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+      parsedBody.sessionId = newSessionId
+      parsedBody.history = [] // Clear history for fresh start
+      agentModeCounter.delete(sessionId) // Clear old session counter
+      console.log("[v0] New session ID:", newSessionId)
+    }
 
     const modifiedBody = {
       ...parsedBody,
       useKnowledgeBase: true,
       forceKnowledgeBase: true,
-      resetAgent: true, // Reset agent to allow KB to respond
-      deactivateAgent: true, // Deactivate agent mode
+      resetAgent: true,
+      deactivateAgent: true,
     }
 
     const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat?resetAgent=true&useKB=true"
     console.log("[v0] Proxying to:", kaliServerUrl)
-    console.log("[v0] Modified body with KB flags:", JSON.stringify(modifiedBody).substring(0, 200))
 
     // Forward the request to the Kali server
     const response = await fetch(kaliServerUrl, {
@@ -59,10 +73,13 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     console.log("[v0] Kali server response:", JSON.stringify(data).substring(0, 200))
 
-    // If agent is active but not responding, provide a helpful message
     if (data.agentActive && (!data.response || data.response.trim() === "")) {
-      console.log("[v0] Agent active but not responding, providing wait message")
+      const currentCount = agentModeCounter.get(parsedBody.sessionId) || 0
+      agentModeCounter.set(parsedBody.sessionId, currentCount + 1)
+      console.log("[v0] Agent active but not responding, count:", currentCount + 1)
       data.response = "An agent has joined the conversation and will respond shortly..."
+    } else {
+      agentModeCounter.delete(parsedBody.sessionId)
     }
 
     // Return the response with CORS headers
