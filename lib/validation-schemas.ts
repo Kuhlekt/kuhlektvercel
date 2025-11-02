@@ -58,6 +58,9 @@ export const handoffRequestSchema = z.object({
   reason: z.string().max(500, "Reason too long").optional(),
 })
 
-export const emailSchema = z.object({
-  email: z.string().email("Invalid email address"),
+export const externalHandoffSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(100, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(100, "Last name too long"),
+  email: z.string().email("Invalid email format"),
+  phone: z.string().max(20, "Phone number too long").optional(),
 })

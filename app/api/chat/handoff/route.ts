@@ -1,111 +1,53 @@
-import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
-import { handoffRequestSchema } from "@/lib/validation-schemas"
+import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+import { externalHandoffSchema } from "@/lib/validation-schemas"
 
-export async function POST(request: Request) {
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log("[v0] Handoff request received:", body)
 
-    const validation = handoffRequestSchema.safeParse({
-      conversationId: body.sessionId || body.conversationId,
-      reason: body.reason,
-    })
-
+    // Validate the request data
+    const validation = externalHandoffSchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validation.error.errors[0].message,
-        },
-        { status: 400 },
-      )
+      const firstError = validation.error.errors[0]
+      console.log("[v0] Validation failed:", firstError.message)
+      return NextResponse.json({ success: false, error: firstError.message }, { status: 400 })
     }
 
-    const { sessionId, userId, userEmail, userName, reason } = body
+    const { firstName, lastName, email, phone } = validation.data
 
-    // Validate required fields
-    if (!userEmail || !userName) {
-      return NextResponse.json({ success: false, error: "userName and userEmail are required" }, { status: 400 })
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(userEmail)) {
-      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 })
-    }
-
-    // Split name into first and last name
-    const nameParts = userName.trim().split(" ")
-    const firstName = nameParts[0] || ""
-    const lastName = nameParts.slice(1).join(" ") || ""
-
-    const supabase = await createClient()
-
-    const insertData = {
-      first_name: firstName,
-      last_name: lastName,
-      email: userEmail,
-      phone: null,
-      company: null,
-      message: reason || "User requested to speak with a human agent",
-      form_type: "contact",
-      form_data: {
-        sessionId: sessionId,
-        userId: userId,
-        source: "chatbot_handoff",
-      },
-      status: "new",
-      submitted_at: new Date().toISOString(),
-    }
-
-    // Insert into form_submitters table
-    const { data, error } = await supabase.from("form_submitters").insert(insertData).select().single()
+    // Store handoff request in form_submitters table
+    const { data, error } = await supabase
+      .from("form_submitters")
+      .insert({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone: phone || null,
+        form_type: "contact",
+        status: "pending",
+        submitted_at: new Date().toISOString(),
+      })
+      .select()
 
     if (error) {
-      console.error("[v0] Handoff save error:", error)
+      console.error("[v0] Database error:", error)
       return NextResponse.json({ success: false, error: "Failed to save handoff request" }, { status: 500 })
     }
 
-    try {
-      const notifyResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/notify-admin`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "chat_handoff",
-            data: {
-              name: userName,
-              email: userEmail,
-              reason: reason || "User requested to speak with a human agent",
-              sessionId: sessionId,
-              userId: userId,
-              timestamp: new Date().toISOString(),
-            },
-          }),
-        },
-      )
-
-      if (!notifyResponse.ok) {
-        console.error("[v0] Failed to send admin notification")
-      }
-    } catch (notifyError) {
-      console.error("[v0] Admin notification error:", notifyError)
-      // Don't fail the request if notification fails
-    }
+    const insertedRecord = data?.[0]
+    console.log("[v0] Handoff request saved successfully:", insertedRecord?.id)
 
     return NextResponse.json({
       success: true,
       message: "Handoff request received. An agent will contact you shortly.",
-      handoffId: data.id,
+      handoffId: insertedRecord?.id,
     })
   } catch (error) {
-    console.error("[v0] Chat handoff API error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "An error occurred",
-      },
-      { status: 500 },
-    )
+    console.error("[v0] Error processing handoff:", error)
+    return NextResponse.json({ success: false, error: "Failed to process handoff request" }, { status: 500 })
   }
 }

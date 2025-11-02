@@ -51,12 +51,13 @@ export default function RootLayout({
               window.KALI_CONFIG = {
                 apiUrl: 'https://kali.kuhlekt-info.com'
               };
+              console.log('[Kuhlekt] Requesting Kali Widget v2.1 from:', 'https://kali.kuhlekt-info.com/widget.js?v=2.1&t=' + Date.now());
             `,
           }}
         />
 
-        {/* External Kali Widget Script */}
-        <Script src="https://kali.kuhlekt-info.com/widget.js" strategy="afterInteractive" />
+        {/* External Kali Widget Script - Updated to explicitly request v2.1 with timestamp */}
+        <Script src={`https://kali.kuhlekt-info.com/widget.js?v=2.1&t=${Date.now()}`} strategy="afterInteractive" />
 
         <NewVisitorBanner />
         <Header />
