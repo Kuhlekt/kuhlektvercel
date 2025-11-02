@@ -34,6 +34,29 @@ export async function POST(request: NextRequest) {
     const { firstName, lastName, userEmail, phone } = validation.data
     console.log("[v0] Validated data:", { firstName, lastName, email: userEmail, phone })
 
+    console.log("[v0] Forwarding handoff to Kali server...")
+    try {
+      const kaliResponse = await fetch("https://kali.kuhlekt-info.com/api/chat/handoff", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+
+      console.log("[v0] Kali server handoff response status:", kaliResponse.status)
+
+      if (kaliResponse.ok) {
+        const kaliData = await kaliResponse.json()
+        console.log("[v0] Handoff forwarded to Kali server successfully:", kaliData)
+      } else {
+        console.error("[v0] Failed to forward handoff to Kali server:", kaliResponse.statusText)
+      }
+    } catch (kaliError) {
+      console.error("[v0] Error forwarding to Kali server:", kaliError)
+      // Continue with local save even if Kali forward fails
+    }
+
     console.log("[v0] Attempting database insert...")
     const { data, error } = await supabase
       .from("form_submitters")
