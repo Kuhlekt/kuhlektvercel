@@ -61,6 +61,10 @@ export const handoffRequestSchema = z.object({
 export const externalHandoffSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100, "First name too long"),
   lastName: z.string().min(1, "Last name is required").max(100, "Last name too long"),
-  email: z.string().email("Invalid email format"),
+  userEmail: z.string().email("Invalid email format"), // External widget sends userEmail, not email
   phone: z.string().max(20, "Phone number too long").optional(),
+  sessionId: z.string().optional(),
+  userId: z.string().nullable().optional(),
+  userName: z.string().optional(),
+  reason: z.string().optional(),
 })
