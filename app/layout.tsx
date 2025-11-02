@@ -42,24 +42,28 @@ export default function RootLayout({
           }}
         />
 
-        {/* External Kali Widget Configuration */}
         <Script
           id="kali-widget-config"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = '';
+              window.KALI_API_URL = 'https://kali.kuhlekt-info.com';
               window.KALI_CONFIG = {
-                apiUrl: '',
-                handoffUrl: '/api/chat/handoff'
+                apiUrl: 'https://kali.kuhlekt-info.com',
+                chatUrl: 'https://kali.kuhlekt-info.com/api/chat',
+                handoffUrl: 'https://kali.kuhlekt-info.com/api/chat/handoff',
+                knowledgeBaseUrl: 'https://kali.kuhlekt-info.com/api/chat/knowledge',
+                enableKnowledgeBase: true,
+                autoLoadKnowledgeBase: true
               };
-              console.log('[Kuhlekt] Kali Widget v2.1 configured with local endpoints');
+              console.log('[Kuhlekt] Kali Widget configured to use Kali server directly');
+              console.log('[Kuhlekt] API URL:', window.KALI_API_URL);
+              console.log('[Kuhlekt] Config:', window.KALI_CONFIG);
             `,
           }}
         />
 
-        {/* External Kali Widget Script - Updated to explicitly request v2.1 with timestamp */}
-        <Script src={`https://kali.kuhlekt-info.com/widget.js?v=2.1&t=${Date.now()}`} strategy="afterInteractive" />
+        <Script src="https://kali.kuhlekt-info.com/widget.js?v=2.1" strategy="afterInteractive" />
 
         <NewVisitorBanner />
         <Header />
