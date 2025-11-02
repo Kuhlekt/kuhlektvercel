@@ -23,16 +23,25 @@ export async function POST(request: NextRequest) {
     const parsedBody = JSON.parse(body)
     console.log("[v0] Request body:", body)
 
-    // Forward the request to the Kali server
-    const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat"
-    console.log("[v0] Proxying to:", kaliServerUrl)
+    const modifiedBody = {
+      ...parsedBody,
+      useKnowledgeBase: true,
+      forceKnowledgeBase: true,
+      resetAgent: true, // Reset agent to allow KB to respond
+      deactivateAgent: true, // Deactivate agent mode
+    }
 
+    const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat?resetAgent=true&useKB=true"
+    console.log("[v0] Proxying to:", kaliServerUrl)
+    console.log("[v0] Modified body with KB flags:", JSON.stringify(modifiedBody).substring(0, 200))
+
+    // Forward the request to the Kali server
     const response = await fetch(kaliServerUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: body,
+      body: JSON.stringify(modifiedBody),
     })
 
     console.log("[v0] Kali server response status:", response.status)
