@@ -50,16 +50,10 @@ export default function RootLayout({
             __html: `
               window.KALI_API_URL = '';
               window.KALI_CONFIG = {
-                apiUrl: 'https://kali.kuhlekt-info.com',
-                messageUrl: '/api/chat/message',
-                knowledgeBaseUrl: '/api/chat/knowledge',
+                apiUrl: '',
                 handoffUrl: '/api/chat/handoff'
               };
-              console.log('[Kuhlekt] Kali Widget API URL set to use relative URLs');
-              console.log('[Kuhlekt] Message endpoint:', '/api/chat/message');
-              console.log('[Kuhlekt] Knowledge Base endpoint:', '/api/chat/knowledge');
-              console.log('[Kuhlekt] Handoff endpoint:', '/api/chat/handoff');
-              console.log('[Kuhlekt] Requesting Kali Widget v2.1 from:', 'https://kali.kuhlekt-info.com/widget.js?v=2.1&t=' + Date.now());
+              console.log('[Kuhlekt] Kali Widget v2.1 configured with local endpoints');
             `,
           }}
         />
