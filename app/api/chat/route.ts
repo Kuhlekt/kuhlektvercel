@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     const sessionId = parsedBody.sessionId
     const agentModeCount = agentModeCounter.get(sessionId) || 0
 
-    // If stuck in agent mode for 2+ messages, force a new session
-    if (agentModeCount >= 2) {
+    if (agentModeCount >= 1) {
       console.log("[v0] Session stuck in agent mode, forcing new session")
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
       parsedBody.sessionId = newSessionId
@@ -38,34 +37,67 @@ export async function POST(request: NextRequest) {
       console.log("[v0] New session ID:", newSessionId)
     }
 
-    const modifiedBody = {
-      ...parsedBody,
-      useKnowledgeBase: true,
-      forceKnowledgeBase: true,
-      resetAgent: true,
-      deactivateAgent: true,
-    }
-
-    const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat?resetAgent=true&useKB=true"
+    const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat"
     console.log("[v0] Proxying to:", kaliServerUrl)
 
-    // Forward the request to the Kali server
-    const response = await fetch(kaliServerUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(modifiedBody),
-    })
+    let lastError: any = null
+    let response: Response | null = null
+    const maxRetries = 3
 
-    console.log("[v0] Kali server response status:", response.status)
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[v0] Attempt ${attempt}/${maxRetries}`)
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Kali server error:", errorText)
+        // Forward the request to the Kali server
+        response = await fetch(kaliServerUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(parsedBody),
+        })
+
+        console.log("[v0] Kali server response status:", response.status)
+
+        // If successful, break out of retry loop
+        if (response.ok) {
+          break
+        }
+
+        // If 500 error, try again
+        if (response.status === 500 && attempt < maxRetries) {
+          const errorText = await response.text()
+          console.log(`[v0] Attempt ${attempt} failed with 500, retrying...`)
+          lastError = errorText
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
+          continue
+        }
+
+        // For other errors, don't retry
+        if (!response.ok) {
+          lastError = await response.text()
+          break
+        }
+      } catch (error) {
+        console.error(`[v0] Attempt ${attempt} error:`, error)
+        lastError = error
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
+        }
+      }
+    }
+
+    if (!response || !response.ok) {
+      console.error("[v0] All retry attempts failed, returning fallback response")
+      agentModeCounter.delete(parsedBody.sessionId) // Clear counter for this session
       return NextResponse.json(
-        { error: "Failed to get response from Kali server", details: errorText },
-        { status: response.status, headers: corsHeaders },
+        {
+          success: true,
+          response:
+            "I'm having trouble connecting to my knowledge base right now. Please try asking your question again in a moment, or contact support if the issue persists.",
+          agentActive: false,
+        },
+        { headers: corsHeaders },
       )
     }
 
@@ -73,11 +105,24 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     console.log("[v0] Kali server response:", JSON.stringify(data).substring(0, 200))
 
+    if (!data.success && data.error === "AI failed to generate response") {
+      console.log("[v0] AI generation failed, returning fallback response")
+      agentModeCounter.delete(parsedBody.sessionId) // Clear counter for this session
+      return NextResponse.json(
+        {
+          success: true,
+          response:
+            "I'm having trouble generating a response right now. Please try rephrasing your question or contact support for assistance.",
+          agentActive: false,
+        },
+        { headers: corsHeaders },
+      )
+    }
+
     if (data.agentActive && (!data.response || data.response.trim() === "")) {
       const currentCount = agentModeCounter.get(parsedBody.sessionId) || 0
       agentModeCounter.set(parsedBody.sessionId, currentCount + 1)
       console.log("[v0] Agent active but not responding, count:", currentCount + 1)
-      data.response = "An agent has joined the conversation and will respond shortly..."
     } else {
       agentModeCounter.delete(parsedBody.sessionId)
     }
@@ -94,4 +139,11 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: corsHeaders },
     )
   }
+}
+
+// DELETE handler to clear all sessions
+export async function DELETE() {
+  console.log("[v0] Clearing all chat sessions")
+  agentModeCounter.clear()
+  return NextResponse.json({ success: true, message: "All chat sessions cleared" }, { headers: corsHeaders })
 }
