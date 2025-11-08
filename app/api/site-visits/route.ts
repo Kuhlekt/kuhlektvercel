@@ -1,8 +1,48 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function getRateLimitKey(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now()
+  const limit = rateLimitMap.get(key)
+
+  if (!limit || now > limit.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + 60 * 1000 }) // 1 minute window
+    return false
+  }
+
+  if (limit.count >= 10) {
+    // Max 10 requests per minute
+    return true
+  }
+
+  limit.count++
+  return false
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitKey = getRateLimitKey(request)
+    if (isRateLimited(rateLimitKey)) {
+      return NextResponse.json({ success: false, error: "Rate limit exceeded" }, { status: 429 })
+    }
+
+    const authHeader = request.headers.get("authorization")
+    const sessionCookie = request.cookies.get("site-visits-auth")
+
+    // Check for valid auth (either Bearer token or session cookie)
+    const validToken = process.env.SITE_VISITS_API_KEY || "kuhlekt-analytics-2024"
+    const isAuthenticated = authHeader === `Bearer ${validToken}` || sessionCookie?.value === validToken
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

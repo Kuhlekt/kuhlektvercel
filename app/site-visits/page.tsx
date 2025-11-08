@@ -1,7 +1,11 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface Visit {
   id: number
@@ -27,20 +31,82 @@ interface Visit {
 }
 
 export default function SiteVisitsPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState("")
+  const [authError, setAuthError] = useState("")
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+
   const [visits, setVisits] = useState<Visit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "new" | "returning">("all")
 
   useEffect(() => {
-    loadVisits()
+    // Check if already authenticated
+    checkAuth()
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadVisits()
+    }
+  }, [isAuthenticated])
+
+  async function checkAuth() {
+    try {
+      const response = await fetch("/api/site-visits")
+      if (response.ok) {
+        setIsAuthenticated(true)
+      } else {
+        setIsAuthenticated(false)
+      }
+    } catch {
+      setIsAuthenticated(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setIsAuthenticating(true)
+    setAuthError("")
+
+    try {
+      const response = await fetch("/api/site-visits/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      })
+
+      if (response.ok) {
+        setIsAuthenticated(true)
+        setPassword("")
+      } else {
+        setAuthError("Invalid password")
+      }
+    } catch {
+      setAuthError("Authentication failed")
+    } finally {
+      setIsAuthenticating(false)
+    }
+  }
+
+  async function handleLogout() {
+    await fetch("/api/site-visits/auth", { method: "DELETE" })
+    setIsAuthenticated(false)
+    setVisits([])
+  }
 
   async function loadVisits() {
     try {
       setIsLoading(true)
       const response = await fetch("/api/site-visits")
       if (!response.ok) {
+        if (response.status === 401) {
+          setIsAuthenticated(false)
+          throw new Error("Session expired. Please login again.")
+        }
         throw new Error("Failed to load site visits")
       }
       const data = await response.json()
@@ -50,6 +116,37 @@ export default function SiteVisitsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Site Visits Analytics</CardTitle>
+            <CardDescription>Enter password to view analytics dashboard</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isAuthenticating}
+                  className="w-full"
+                />
+              </div>
+              {authError && <p className="text-sm text-red-600">{authError}</p>}
+              <Button type="submit" disabled={isAuthenticating || !password} className="w-full">
+                {isAuthenticating ? "Authenticating..." : "Login"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const filteredVisits = visits.filter((visit) => {
@@ -77,7 +174,8 @@ export default function SiteVisitsPage() {
       <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Data</h1>
-          <p className="text-gray-700">{error}</p>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <Button onClick={handleLogout}>Back to Login</Button>
         </div>
       </div>
     )
@@ -86,9 +184,14 @@ export default function SiteVisitsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Site Visits Analytics</h1>
-          <p className="text-gray-600 mt-2">Privacy-compliant visitor tracking (no PII collected)</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Site Visits Analytics</h1>
+            <p className="text-gray-600 mt-2">Privacy-compliant visitor tracking (no PII collected)</p>
+          </div>
+          <Button onClick={handleLogout} variant="outline">
+            Logout
+          </Button>
         </div>
 
         {/* Summary Cards */}

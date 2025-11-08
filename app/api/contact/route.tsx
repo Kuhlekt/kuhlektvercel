@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
 import { contactFormSchema } from "@/lib/validation-schemas"
-// import { checkRateLimit } from "@/lib/rate-limiter"
+import { checkRateLimit } from "@/lib/rate-limiter"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,24 +16,24 @@ export async function POST(request: NextRequest) {
     const phone = formData.get("phone")?.toString()?.trim()
     const message = formData.get("message")?.toString()?.trim()
 
-    // const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
-    // const rateLimitResult = await checkRateLimit("contact-form", clientIp)
+    const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    const rateLimitResult = await checkRateLimit("contact-form", clientIp)
 
-    // if (!rateLimitResult.allowed) {
-    //   const resetMinutes = rateLimitResult.resetAt
-    //     ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
-    //     : 60
+    if (!rateLimitResult.allowed) {
+      const resetMinutes = rateLimitResult.resetAt
+        ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
+        : 60
 
-    //   return NextResponse.json(
-    //     {
-    //       success: false,
-    //       message: `Too many submissions. Please try again in ${resetMinutes} minutes.`,
-    //       shouldClearForm: false,
-    //       errors: {},
-    //     },
-    //     { status: 429 },
-    //   )
-    // }
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many submissions. Please try again in ${resetMinutes} minutes.`,
+          shouldClearForm: false,
+          errors: {},
+        },
+        { status: 429 },
+      )
+    }
 
     let recaptchaToken = null
 
