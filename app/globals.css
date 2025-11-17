@@ -246,8 +246,7 @@ button:disabled {
 
 /* Removed all Kali widget CSS overrides - they weren't working with v2.4 */
 
-/* Adding mobile-specific constraints for Kali chatbot to limit it to 2/3 of screen */
-/* Updated to ensure close button remains visible and accessible */
+/* Adjusting chatbot to be wider and shorter on mobile */
 @media (max-width: 768px) {
   /* Target the Kali widget iframe and container */
   iframe[src*="kali"],
@@ -255,15 +254,15 @@ button:disabled {
   div[id*="kali-widget"],
   div[class*="kali-widget"],
   div[class*="chat"] {
-    max-width: 66vw !important;
-    max-height: 66vh !important;
+    max-width: 85vw !important;
+    max-height: 50vh !important;
   }
 
   /* Position the widget in bottom right and constrain size */
   body > div[style*="position: fixed"],
   body > div[style*="position: absolute"] {
-    max-width: 66vw !important;
-    max-height: 66vh !important;
+    max-width: 85vw !important;
+    max-height: 50vh !important;
     right: 1rem !important;
     bottom: 1rem !important;
   }

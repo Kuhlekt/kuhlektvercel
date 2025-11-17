@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
-// Inline SVG icons for Black Friday page
+// Inline SVG icons for Cyber Monday page
 const GiftIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-6 w-6">
     <rect x="3" y="8" width="18" height="4" rx="1" />
@@ -50,7 +50,7 @@ const CopyIcon = () => (
 export default function HomePage() {
   const [isROIModalOpen, setIsROIModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState('')
-  const [showBlackFriday, setShowBlackFriday] = useState(false)
+  const [showCyberMonday, setShowCyberMonday] = useState(false)
   const [promoCode, setPromoCode] = useState<string>('')
   const [isLoadingCode, setIsLoadingCode] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -66,11 +66,11 @@ export default function HomePage() {
     const endDate = new Date('2025-12-02T00:00:00')
     
     if (now < endDate) {
-      setShowBlackFriday(true)
+      setShowCyberMonday(true)
       
       const generatePromoCode = async () => {
         try {
-          const storedCode = localStorage.getItem('blackFridayPromoCode')
+          const storedCode = localStorage.getItem('cyberMondayPromoCode')
           if (storedCode) {
             setPromoCode(storedCode)
             setIsLoadingCode(false)
@@ -84,13 +84,13 @@ export default function HomePage() {
           if (response.ok) {
             const data = await response.json()
             setPromoCode(data.code)
-            localStorage.setItem('blackFridayPromoCode', data.code)
+            localStorage.setItem('cyberMondayPromoCode', data.code)
           } else {
-            setPromoCode('BLACKFRIDAY2024')
+            setPromoCode('CYBERMONDAY2024')
           }
         } catch (error) {
           console.error('Error generating promo code:', error)
-          setPromoCode('BLACKFRIDAY2024')
+          setPromoCode('CYBERMONDAY2024')
         } finally {
           setIsLoadingCode(false)
         }
@@ -104,7 +104,7 @@ export default function HomePage() {
 
         if (diff <= 0) {
           setTimeRemaining('Offer Ended')
-          setShowBlackFriday(false)
+          setShowCyberMonday(false)
           return
         }
 
@@ -122,7 +122,7 @@ export default function HomePage() {
     }
   }, [])
 
-  if (showBlackFriday) {
+  if (showCyberMonday) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-900">
         <div className="container mx-auto px-4 py-16">
@@ -139,8 +139,8 @@ export default function HomePage() {
               Ends Midnight Monday December 1st
             </Badge>
             
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-pulse">
-              BLACK FRIDAY SALE
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-pulse whitespace-nowrap">
+              CYBER MONDAY SALE
             </h1>
             
             <div className="text-4xl md:text-6xl font-bold mb-8">
@@ -175,7 +175,7 @@ export default function HomePage() {
             <Card className="bg-gray-800 border-yellow-500 border-2 shadow-2xl">
               <CardHeader>
                 <CardTitle className="text-3xl text-white text-center">
-                  Black Friday Special Includes:
+                  Cyber Monday Special Includes:
                 </CardTitle>
               </CardHeader>
               <CardContent>
