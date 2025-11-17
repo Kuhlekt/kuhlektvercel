@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock, Gift } from 'lucide-react'
 import ReCAPTCHA from "@/components/recaptcha"
 
 interface DemoFormState {
@@ -20,6 +20,7 @@ interface DemoFormState {
     email?: string
     company?: string
     phone?: string
+    promoCode?: string
     recaptcha?: string
   }
 }
@@ -191,6 +192,22 @@ export default function DemoFormComponent() {
                       disabled={isPending}
                     />
                     {state.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="promoCode" className="flex items-center">
+                      <Gift className="mr-2 h-4 w-4 text-yellow-600" />
+                      Promo Code (Optional)
+                    </Label>
+                    <Input
+                      id="promoCode"
+                      name="promoCode"
+                      type="text"
+                      placeholder="Enter BLACKFRIDAY2024 for 50% off"
+                      className={state.errors?.promoCode ? "border-red-500" : ""}
+                      disabled={isPending}
+                    />
+                    {state.errors?.promoCode && <p className="text-sm text-red-600">{state.errors.promoCode}</p>}
                   </div>
 
                   <ReCAPTCHA />

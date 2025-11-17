@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { sendEmailWithSES } from "@/lib/aws-ses"
 import { verifyRecaptcha } from "@/lib/recaptcha-actions"
+import { createClient } from "@/utils/supabase/server"
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
     const company = formData.get("company") as string
     const phone = formData.get("phone") as string
     const recaptchaToken = formData.get("recaptcha-token") as string
+    const promoCode = formData.get("promoCode") as string
 
     console.log("📝 Form data received:", {
       firstName,
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
       email,
       company,
       phone,
+      promoCode: promoCode || "none",
       recaptchaToken: recaptchaToken ? "✓" : "✗",
     })
 
@@ -48,6 +51,95 @@ export async function POST(request: Request) {
       console.log("✅ reCAPTCHA verification successful")
     }
 
+    let promoDetails = null
+    let promoRedemptionId = null
+    
+    if (promoCode) {
+      console.log("🎁 Validating promo code:", promoCode)
+      const supabase = await createClient()
+      
+      // Check if promo code exists and is valid
+      const { data: codeData, error: codeError } = await supabase
+        .from("promo_codes")
+        .select("*")
+        .eq("code", promoCode.toUpperCase())
+        .eq("is_active", true)
+        .lte("valid_from", new Date().toISOString())
+        .gte("valid_until", new Date().toISOString())
+        .single()
+      
+      if (codeError || !codeData) {
+        console.warn("⚠️ Invalid promo code:", promoCode)
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid or expired promo code. Please check the code and try again.",
+            shouldClearForm: false,
+            errors: { promoCode: "Invalid or expired promo code" },
+          },
+          { status: 400 },
+        )
+      }
+      
+      // Check if max uses reached
+      if (codeData.max_uses && codeData.current_uses >= codeData.max_uses) {
+        console.warn("⚠️ Promo code usage limit reached:", promoCode)
+        return NextResponse.json(
+          {
+            success: false,
+            message: "This promo code has reached its usage limit.",
+            shouldClearForm: false,
+            errors: { promoCode: "Promo code usage limit reached" },
+          },
+          { status: 400 },
+        )
+      }
+      
+      console.log("✅ Promo code valid:", {
+        code: codeData.code,
+        discount: codeData.discount_percent,
+        freeSetup: codeData.free_setup,
+      })
+      
+      promoDetails = {
+        discount: codeData.discount_percent,
+        freeSetup: codeData.free_setup,
+        codeId: codeData.id,
+      }
+      
+      // Record the redemption
+      const { data: redemption, error: redemptionError } = await supabase
+        .from("promo_code_redemptions")
+        .insert({
+          promo_code_id: codeData.id,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          company: company,
+          phone: phone,
+          redeemed_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+      
+      if (!redemptionError && redemption) {
+        promoRedemptionId = redemption.id
+        
+        // Increment usage counter
+        await supabase
+          .from("promo_codes")
+          .update({ 
+            current_uses: codeData.current_uses + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", codeData.id)
+        
+        console.log("✅ Promo code redeemed successfully")
+      } else {
+        console.error("❌ Failed to record redemption:", redemptionError)
+      }
+    }
+
     // Send email notification
     console.log("📧 Sending demo request email...")
 
@@ -65,7 +157,26 @@ export async function POST(request: Request) {
       )
     }
 
-    const emailSubject = `New Demo Request from ${firstName} ${lastName} - ${company}`
+    const promoText = promoDetails 
+      ? `\n\n🎁 PROMO CODE USED: ${promoCode}\n- Discount: ${promoDetails.discount}%\n- Free Setup: ${promoDetails.freeSetup ? 'YES' : 'NO'}`
+      : ''
+    
+    const promoHtml = promoDetails
+      ? `
+<div style="background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+  <h3 style="color: #92400e; margin: 0 0 10px 0;">🎁 Promo Code Applied</h3>
+  <ul style="margin: 0; padding-left: 20px;">
+    <li><strong>Code:</strong> ${promoCode}</li>
+    <li><strong>Discount:</strong> ${promoDetails.discount}%</li>
+    <li><strong>Free Setup:</strong> ${promoDetails.freeSetup ? 'YES ($2,500 value)' : 'NO'}</li>
+  </ul>
+</div>`
+      : ''
+
+    const emailSubject = promoCode 
+      ? `🎁 New Demo Request with ${promoCode} from ${firstName} ${lastName} - ${company}`
+      : `New Demo Request from ${firstName} ${lastName} - ${company}`
+      
     const emailText = `
 New Demo Request Received
 
@@ -73,7 +184,7 @@ Contact Information:
 - Name: ${firstName} ${lastName}
 - Email: ${email}
 - Company: ${company}
-- Phone: ${phone}
+- Phone: ${phone}${promoText}
 
 Submitted at: ${new Date().toLocaleString()}
 
@@ -90,6 +201,8 @@ Please follow up with this demo request within 24 hours.
   <li><strong>Company:</strong> ${company}</li>
   <li><strong>Phone:</strong> <a href="tel:${phone}">${phone}</a></li>
 </ul>
+
+${promoHtml}
 
 <p><strong>Submitted at:</strong> ${new Date().toLocaleString()}</p>
 
@@ -112,6 +225,7 @@ Please follow up with this demo request within 24 hours.
         email,
         company,
         phone,
+        promoCode: promoCode || null,
         timestamp: new Date().toISOString(),
       })
     } else {
@@ -120,9 +234,13 @@ Please follow up with this demo request within 24 hours.
 
     console.log("✅ Demo form submission successful")
 
+    const successMessage = promoDetails
+      ? `Thank you for your demo request! Your ${promoCode} promo code (${promoDetails.discount}% off + ${promoDetails.freeSetup ? 'free setup' : 'regular setup'}) has been applied. We will contact you within 24 hours.`
+      : "Thank you for your demo request! We will contact you within 24 hours."
+
     return NextResponse.json({
       success: true,
-      message: "Thank you for your demo request! We will contact you within 24 hours.",
+      message: successMessage,
       shouldClearForm: true,
       errors: {},
     })
