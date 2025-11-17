@@ -246,23 +246,25 @@ button:disabled {
 
 /* Making Kali chatbot 25% smaller for mobile use */
 /* Kali Widget v2.4 Modal Size Adjustments - Mobile Optimized */
+/* Reduced dimensions by another 25% for better mobile fit */
 [class*="kali"] [role="dialog"],
 [class*="kali"] [class*="modal"],
 [class*="kali"] [class*="popup"],
 div[class*="handoff"],
 div[class*="connect"] {
-  max-height: 52.5vh !important; /* 25% smaller than 70vh */
-  max-width: min(375px, 85vw) !important; /* 25% smaller than 500px */
+  max-height: 40vh !important; /* 25% smaller than previous 52.5vh */
+  max-width: min(280px, 80vw) !important; /* 25% smaller than previous 375px */
   overflow-y: auto !important;
-  padding-bottom: 70px !important; /* Space for buttons at bottom */
+  padding-bottom: 60px !important; /* Space for buttons at bottom */
 }
 
 /* Ensure form content is scrollable */
 [class*="kali"] form,
 [class*="kali"] [role="form"] {
-  max-height: calc(52.5vh - 90px) !important;
+  max-height: calc(40vh - 80px) !important;
   overflow-y: auto !important;
-  padding: 16px !important; /* Reduced padding for mobile */
+  padding: 12px !important; /* Further reduced padding for smaller modal */
+  font-size: 14px !important; /* Smaller text for compact view */
 }
 
 /* Make buttons always visible and sticky at bottom */
@@ -273,15 +275,24 @@ div[class*="connect"] {
   position: sticky !important;
   bottom: 0 !important;
   background: white !important;
-  padding: 12px !important; /* Reduced padding for mobile */
+  padding: 10px !important; /* Reduced padding for compact buttons */
   border-top: 1px solid #e5e7eb !important;
   z-index: 100 !important;
   margin-top: auto !important;
+  font-size: 14px !important; /* Smaller button text */
+}
+
+/* Adjust input fields for compact view */
+[class*="kali"] input,
+[class*="kali"] textarea,
+[class*="kali"] select {
+  font-size: 14px !important;
+  padding: 8px !important;
 }
 
 /* Custom scrollbar for Kali widget */
 [class*="kali"] *::-webkit-scrollbar {
-  width: 6px; /* Thinner scrollbar for mobile */
+  width: 5px; /* Even thinner scrollbar for compact view */
 }
 
 [class*="kali"] *::-webkit-scrollbar-track {
