@@ -40,12 +40,26 @@ const CheckIcon = () => (
   </svg>
 )
 
+const CopyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+)
+
 export default function HomePage() {
   const [isROIModalOpen, setIsROIModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState('')
   const [showBlackFriday, setShowBlackFriday] = useState(false)
   const [promoCode, setPromoCode] = useState<string>('')
   const [isLoadingCode, setIsLoadingCode] = useState(true)
+  const [copied, setCopied] = useState(false)
+
+  const copyPromoCode = () => {
+    navigator.clipboard.writeText(promoCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   useEffect(() => {
     const now = new Date()
@@ -236,9 +250,21 @@ export default function HomePage() {
                   {isLoadingCode ? (
                     <div className="text-2xl text-gray-400">Generating your code...</div>
                   ) : (
-                    <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
-                      {promoCode}
-                    </div>
+                    <>
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
+                          {promoCode}
+                        </div>
+                        <button
+                          onClick={copyPromoCode}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-black p-3 rounded-lg transition-colors flex items-center gap-2"
+                          title="Copy promo code"
+                        >
+                          <CopyIcon />
+                          <span className="text-sm font-medium">{copied ? 'Copied!' : 'Copy'}</span>
+                        </button>
+                      </div>
+                    </>
                   )}
                   <div className="text-sm text-gray-400 mt-2">Valid until midnight Monday December 1st</div>
                   <div className="text-xs text-red-400 mt-2">Limited to one use only</div>

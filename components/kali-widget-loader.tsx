@@ -4,7 +4,7 @@ import { useEffect } from "react"
 
 export function KaliWidgetLoader() {
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !window.sessionStorage.getItem('kali_widget_initialized')) {
       const keysToRemove: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
@@ -16,6 +16,8 @@ export function KaliWidgetLoader() {
         console.log("[v0] Clearing stored session data:", key)
         localStorage.removeItem(key)
       })
+      
+      window.sessionStorage.setItem('kali_widget_initialized', 'true')
     }
 
     window.KALI_API_URL = "https://kali.kuhlekt-info.com"
