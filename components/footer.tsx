@@ -25,15 +25,15 @@ export function Footer() {
   return (
     <footer>
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-20">
+      <section className="bg-gray-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-6">Ready to transform your accounts receivable process?</h2>
-          <p className="text-xl text-cyan-100 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-200 mb-8 max-w-3xl mx-auto">
             Schedule a demo to see how Kuhlekt can help your finance team get paid faster with our advanced AR
             Automation and Digital Collections solutions.
           </p>
           <Link href="/demo#top">
-            <Button size="lg" className="bg-white text-cyan-600 hover:bg-gray-100">
+            <Button size="lg" className="bg-cyan-500 text-white hover:bg-cyan-600">
               Schedule a Demo →
             </Button>
           </Link>
