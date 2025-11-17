@@ -243,3 +243,56 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* Making Kali chatbot modal smaller so dismiss buttons are visible */
+/* Kali Widget v2.4 Modal Size Adjustments */
+[class*="kali"] [role="dialog"],
+[class*="kali"] [class*="modal"],
+[class*="kali"] [class*="popup"],
+div[class*="handoff"],
+div[class*="connect"] {
+  max-height: 70vh !important;
+  max-width: min(500px, 90vw) !important;
+  overflow-y: auto !important;
+  padding-bottom: 80px !important; /* Space for buttons at bottom */
+}
+
+/* Ensure form content is scrollable */
+[class*="kali"] form,
+[class*="kali"] [role="form"] {
+  max-height: calc(70vh - 100px) !important;
+  overflow-y: auto !important;
+  padding: 20px !important;
+}
+
+/* Make buttons always visible and sticky at bottom */
+[class*="kali"] button[type="submit"],
+[class*="kali"] button[class*="submit"],
+[class*="kali"] button[class*="close"],
+[class*="kali"] [class*="button-group"] {
+  position: sticky !important;
+  bottom: 0 !important;
+  background: white !important;
+  padding: 16px !important;
+  border-top: 1px solid #e5e7eb !important;
+  z-index: 100 !important;
+  margin-top: auto !important;
+}
+
+/* Custom scrollbar for Kali widget */
+[class*="kali"] *::-webkit-scrollbar {
+  width: 8px;
+}
+
+[class*="kali"] *::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+[class*="kali"] *::-webkit-scrollbar-thumb {
+  background: #06b6d4;
+  border-radius: 4px;
+}
+
+[class*="kali"] *::-webkit-scrollbar-thumb:hover {
+  background: #0891b2;
+}

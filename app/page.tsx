@@ -44,13 +44,45 @@ export default function HomePage() {
   const [isROIModalOpen, setIsROIModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState('')
   const [showBlackFriday, setShowBlackFriday] = useState(false)
+  const [promoCode, setPromoCode] = useState<string>('')
+  const [isLoadingCode, setIsLoadingCode] = useState(true)
 
   useEffect(() => {
     const now = new Date()
-    const endDate = new Date('2025-12-02T00:00:00') // Midnight Monday Dec 1st (technically start of Dec 2nd)
+    const endDate = new Date('2025-12-02T00:00:00')
     
     if (now < endDate) {
       setShowBlackFriday(true)
+      
+      const generatePromoCode = async () => {
+        try {
+          const storedCode = localStorage.getItem('blackFridayPromoCode')
+          if (storedCode) {
+            setPromoCode(storedCode)
+            setIsLoadingCode(false)
+            return
+          }
+
+          const response = await fetch('/api/promo-codes/generate', {
+            method: 'POST',
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            setPromoCode(data.code)
+            localStorage.setItem('blackFridayPromoCode', data.code)
+          } else {
+            setPromoCode('BLACKFRIDAY2024')
+          }
+        } catch (error) {
+          console.error('Error generating promo code:', error)
+          setPromoCode('BLACKFRIDAY2024')
+        } finally {
+          setIsLoadingCode(false)
+        }
+      }
+
+      generatePromoCode()
       
       const calculateTimeRemaining = () => {
         const currentTime = new Date()
@@ -70,7 +102,7 @@ export default function HomePage() {
       }
 
       calculateTimeRemaining()
-      const interval = setInterval(calculateTimeRemaining, 60000) // Update every minute
+      const interval = setInterval(calculateTimeRemaining, 60000)
 
       return () => clearInterval(interval)
     }
@@ -195,16 +227,21 @@ export default function HomePage() {
                   Your Exclusive Promo Code
                 </CardTitle>
                 <CardDescription className="text-center text-black text-lg">
-                  Use this code when requesting your demo
+                  This unique code is reserved for you - use it when requesting your demo
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-black rounded-lg p-8 text-center">
-                  <div className="text-sm text-gray-400 mb-2">Promo Code</div>
-                  <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
-                    BLACKFRIDAY2024
-                  </div>
+                  <div className="text-sm text-gray-400 mb-2">Your Unique Promo Code</div>
+                  {isLoadingCode ? (
+                    <div className="text-2xl text-gray-400">Generating your code...</div>
+                  ) : (
+                    <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
+                      {promoCode}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-400 mt-2">Valid until midnight Monday December 1st</div>
+                  <div className="text-xs text-red-400 mt-2">Limited to one use only</div>
                 </div>
 
                 <div className="text-center">
@@ -216,7 +253,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="text-center text-black text-sm">
-                  Enter code at checkout to claim your 50% discount + free setup
+                  Enter your unique code at checkout to claim your 50% discount + free setup
                 </div>
               </CardContent>
             </Card>
@@ -226,7 +263,7 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto mt-12 text-center text-gray-400 text-sm">
             <p className="mb-2">
               * Offer valid until midnight Monday December 1st, 2025. 50% discount applies to first year subscription only.
-              Free setup valued at $2,500. Must request demo and mention promo code to qualify.
+              Free setup valued at $2,500. Each promo code is unique and limited to one use per customer.
             </p>
             <p>
               New customers only. Cannot be combined with other offers.

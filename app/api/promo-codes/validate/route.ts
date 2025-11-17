@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (codeData.max_uses && codeData.current_uses >= codeData.max_uses) {
       return NextResponse.json({
         valid: false,
-        error: "Promo code usage limit reached",
+        error: "This promo code has already been used",
       })
     }
 
