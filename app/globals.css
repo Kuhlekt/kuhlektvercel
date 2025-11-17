@@ -248,6 +248,7 @@ button:disabled {
 
 /* Adjusting chatbot to be wider and shorter on mobile */
 @media (max-width: 768px) {
+  /* Added left positioning and transform-origin to keep widget within viewport bounds */
   /* Target the Kali widget iframe and container */
   iframe[src*="kali"],
   div[class*="kali"] > iframe,
@@ -258,13 +259,17 @@ button:disabled {
     max-height: 50vh !important;
   }
 
-  /* Position the widget in bottom right and constrain size */
+  /* Position the widget in bottom right and constrain size - keep within viewport */
   body > div[style*="position: fixed"],
   body > div[style*="position: absolute"] {
     max-width: 85vw !important;
     max-height: 50vh !important;
     right: 1rem !important;
+    left: auto !important;
     bottom: 1rem !important;
+    top: auto !important;
+    transform-origin: bottom right !important;
+    margin: 0 !important;
   }
   
   /* Ensure header and close button areas are visible */
