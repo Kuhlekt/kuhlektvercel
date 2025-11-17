@@ -12,6 +12,13 @@ export default function NewVisitorBanner() {
   useEffect(() => {
     const checkBannerVisibility = () => {
       const now = new Date()
+      
+      const blackFridayEnd = new Date("2025-12-02T00:00:00")
+      if (now < blackFridayEnd) {
+        setIsLoading(false)
+        return
+      }
+      
       const currentYear = now.getFullYear()
       const currentMonth = now.getMonth()
 
