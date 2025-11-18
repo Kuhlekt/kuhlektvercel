@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter } from 'next/font/google'
 import Script from "next/script"
 import "./globals.css"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   description:
     "Transform your accounts receivable process with Kuhlekt's automated collections platform. Reduce DSO by 30% and eliminate 80% of manual tasks.",
   generator: "v0.app",
+  verification: {
+    other: {
+      'google-site-verification': 'SMT2000342327Q08',
+    },
+  },
 }
 
 export default function RootLayout({
