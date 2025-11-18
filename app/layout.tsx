@@ -30,6 +30,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="google-site-verification" content="SMT2000342327Q08" />
+      </head>
       <body className={inter.className}>
         <GlobalErrorHandler />
 
