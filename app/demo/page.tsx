@@ -20,6 +20,16 @@ function ErrorBoundaryWrapper({ children, componentName }: { children: React.Rea
 
 export default function DemoPage() {
   useEffect(() => {
+    // Scroll to top when page loads
+    window.scrollTo({ top: 0, behavior: "smooth" })
+
+    // Also handle hash navigation
+    if (window.location.hash === "#top") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [])
+
+  useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.log("[v0] Unhandled rejection caught:", {
         reason: event.reason,
