@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from 'next/font/google'
+import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   generator: "v0.app",
   verification: {
     other: {
-      'google-site-verification': 'SMT2000342327Q08',
+      "google-site-verification": "SMT2000342327Q08",
     },
   },
 }
@@ -36,8 +36,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <GlobalErrorHandler />
 
-        {/* Google Analytics */}
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-B25J90XFDN" strategy="afterInteractive" />
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128" strategy="afterInteractive" />
         <Script
           id="google-analytics"
           strategy="afterInteractive"
@@ -46,7 +45,7 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-B25J90XFDN');
+              gtag('config', 'AW-942617128');
             `,
           }}
         />
