@@ -564,7 +564,7 @@ export default function HomePage() {
             <div className="container mx-auto px-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4 flex-wrap">
-                  <span className="text-3xl font-bold text-white">🎉 CYBER MONDAY SALE</span>
+                  <span className="text-3xl font-bold text-white">🎉 CYBER SALE</span>
                   <span className="text-xl font-bold text-yellow-300">50% OFF for 12 months + FREE SETUP</span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -624,7 +624,7 @@ export default function HomePage() {
               </Badge>
 
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-pulse whitespace-nowrap">
-                CYBER MONDAY SALE
+                CYBER SALE
               </h1>
 
               <div className="text-4xl md:text-6xl font-bold mb-8">
@@ -659,7 +659,7 @@ export default function HomePage() {
             <div className="max-w-5xl mx-auto mb-16">
               <Card className="bg-gray-800 border-yellow-500 border-2 shadow-2xl">
                 <CardHeader>
-                  <CardTitle className="text-3xl text-white text-center">Cyber Monday Special Includes:</CardTitle>
+                  <CardTitle className="text-3xl text-white text-center">Cyber Sale Special Includes:</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-6">
