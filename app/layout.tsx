@@ -54,19 +54,8 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
-        {/* Hindle Consultants AI Chatbot */}
-        <Script
-          id="hindle-chatbot-config"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.KALI_API_URL = 'ClickSend_001';
-              window.KALI_TENANT_ID = '1';
-              window.KALI_PRIMARY_COLOR = '#3B82F6';
-            `,
-          }}
-        />
-        <Script src="ClickSend_001/widget.js" strategy="lazyOnload" />
+        {/* The script path 'ClickSend_001/widget.js' doesn't exist and returns 404 HTML */}
+        {/* To re-enable: replace 'ClickSend_001/widget.js' with a valid absolute URL like 'https://your-domain.com/widget.js' */}
       </body>
     </html>
   )
