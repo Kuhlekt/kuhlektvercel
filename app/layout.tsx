@@ -54,8 +54,21 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
-        {/* The script path 'ClickSend_001/widget.js' doesn't exist and returns 404 HTML */}
-        {/* To re-enable: replace 'ClickSend_001/widget.js' with a valid absolute URL like 'https://your-domain.com/widget.js' */}
+        <Script
+          id="hindle-chatbot-config"
+          strategy="lazyOnload"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.KALI_API_URL = 'https://preview-website-chatbot-kzmjf7tmsq37a996850u.vusercontent.net';
+              window.KALI_TENANT_ID = '1';
+              window.KALI_PRIMARY_COLOR = '#3B82F6';
+            `,
+          }}
+        />
+        <Script
+          src="https://preview-website-chatbot-kzmjf7tmsq37a996850u.vusercontent.net/widget.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   )
