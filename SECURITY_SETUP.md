@@ -6,7 +6,7 @@ To use hashed passwords instead of plaintext:
 
 1. Generate a password hash by running this in Node.js:
 
-\`\`\`javascript
+```javascript
 const crypto = require('crypto');
 
 function hashPassword(password) {
@@ -16,13 +16,13 @@ function hashPassword(password) {
 }
 
 console.log(hashPassword('your-admin-password'));
-\`\`\`
+```
 
 2. Add the hash to your environment variables:
 
-\`\`\`
+```
 ADMIN_PASSWORD_HASH=<generated-hash>
-\`\`\`
+```
 
 3. Remove the old `ADMIN_PASSWORD` variable (optional, kept for backward compatibility)
 

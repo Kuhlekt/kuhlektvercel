@@ -57,6 +57,21 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
+
+        <Script
+          id="hindle-chatbot-config"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.HINDLE_CHATBOT_CONFIG = {
+                apiUrl: 'ClickSend_001',
+                tenantId: '1',
+                primaryColor: '#3B82F6'
+              };
+            `,
+          }}
+        />
+        <Script src="ClickSend_001/widget.js" strategy="lazyOnload" />
       </body>
     </html>
   )
