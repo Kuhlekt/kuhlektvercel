@@ -59,16 +59,13 @@ export default function RootLayout({
           strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = 'https://preview-website-chatbot-kzmjf7tmsq37a996850u.vusercontent.net';
+              window.KALI_API_URL = 'https://chatbot.hindleconsultants.com';
               window.KALI_TENANT_ID = '1';
               window.KALI_PRIMARY_COLOR = '#3B82F6';
             `,
           }}
         />
-        <Script
-          src="https://preview-website-chatbot-kzmjf7tmsq37a996850u.vusercontent.net/widget.js"
-          strategy="lazyOnload"
-        />
+        <Script src="https://chatbot.hindleconsultants.com/widget.js" strategy="lazyOnload" />
       </body>
     </html>
   )
