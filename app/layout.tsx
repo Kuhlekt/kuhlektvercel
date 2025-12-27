@@ -54,18 +54,12 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
+        <div id="kali-chat-container" style={{ width: "100%", height: "600px" }} />
         <Script
-          id="hindle-chatbot-config"
+          src="https://preview-hc-chatbot-4-kzmgds5sxr4oagqcx46e.vusercontent.net/embed-inline.js"
+          data-container="kali-chat-container"
           strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.KALI_API_URL = 'https://chatbot.hindleconsultants.com';
-              window.KALI_TENANT_ID = '1';
-              window.KALI_PRIMARY_COLOR = '#3B82F6';
-            `,
-          }}
         />
-        <Script src="https://chatbot.hindleconsultants.com/widget.js" strategy="lazyOnload" />
       </body>
     </html>
   )
