@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   generateBuildId: async () => {
-    // Force clean rebuild to clear cached chat route error
-    return `build-${Date.now()}-clean`
+    return `build-${Date.now()}`
   },
   serverExternalPackages: [
     '@aws-sdk/client-ses',
@@ -15,9 +14,6 @@ const nextConfig = {
     '@smithy/util-stream',
     '@smithy/hash-node',
   ],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },

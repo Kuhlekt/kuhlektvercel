@@ -55,25 +55,17 @@ export default function RootLayout({
         <Footer />
 
         <Script
-          id="kali-chatbot-config"
+          id="kali-widget-config"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = 'https://preview-hc-chatbot-4-kzmgds5sxr4oagqcx46e.vusercontent.net';
+              window.KALI_API_URL = 'https://preview-hc-chatbot-4-kzmkmk3xrtd6qht7nscu.vusercontent.net';
             `,
           }}
         />
         <Script
-          src="https://preview-hc-chatbot-4-kzmgds5sxr4oagqcx46e.vusercontent.net/embed-inline.js"
+          src="https://preview-hc-chatbot-4-kzmkmk3xrtd6qht7nscu.vusercontent.net/api/widget"
           strategy="lazyOnload"
-          onLoad={() => {
-            console.log("[v0] Chatbot widget loaded successfully")
-          }}
-          onError={(e) => {
-            console.error(
-              "[v0] Chatbot widget failed to load. Please verify the script URL is correct and the server is accessible.",
-            )
-          }}
         />
       </body>
     </html>
