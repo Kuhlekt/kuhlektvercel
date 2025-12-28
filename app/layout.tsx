@@ -54,19 +54,22 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
+        <div id="kali-chat-container" style={{ width: "100%", height: "600px" }}></div>
+
+        {/* Recommended Approach - Kuhlekt AI Chatbot Widget */}
         <Script
-          id="kali-api-config"
+          id="chatbot-config"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = 'https://preview-hc-chatbot-5-kzmpym5i5luv3k70829i.vusercontent.net';
+              window.chatbotConfig = {
+                tenantSlug: '',
+                apiUrl: 'https://chatbot.hindleconsultants.com'
+              };
             `,
           }}
         />
-        <Script
-          src="https://preview-hc-chatbot-5-kzmpym5i5luv3k70829i.vusercontent.net/api/widget"
-          strategy="lazyOnload"
-        />
+        <Script src="https://chatbot.hindleconsultants.com/embed-inline.js" strategy="lazyOnload" />
       </body>
     </html>
   )
