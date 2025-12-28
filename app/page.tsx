@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
+import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
 // Inline SVG icons for Cyber Monday page
 const GiftIcon = () => (
@@ -132,9 +133,11 @@ const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
                   </Button>
                 </Link>
               </div>
-              <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full">
-                🧮 Calculate Your ROI
-              </Button>
+              <Link href="#" onClick={() => {}} className="block">
+                <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full">
+                  🧮 Calculate Your ROI
+                </Button>
+              </Link>
             </div>
 
             <div className="flex items-center gap-6 text-sm text-gray-600">
@@ -448,15 +451,13 @@ const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
   </div>
 )
 
-export default function HomePage() {
-  const [isROIModalOpen, setIsROIModalOpen] = useState(false)
+export default function Home() {
   const [timeRemaining, setTimeRemaining] = useState<string>("Calculating...")
-  const [showCyberMonday, setShowCyberMonday] = useState(false)
+  const [showCyberMonday, setShowCyberMonday] = useState(true)
   const [promoCode, setPromoCode] = useState<string>("")
   const [isLoadingCode, setIsLoadingCode] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isDismissed, setIsDismissed] = useState(false)
+  const [isROICalculatorModalOpen, setIsROICalculatorModalOpen] = useState(false)
 
   const copyPromoCode = () => {
     navigator.clipboard.writeText(promoCode)
@@ -489,301 +490,243 @@ export default function HomePage() {
     calculateTimeRemaining()
     const interval = setInterval(calculateTimeRemaining, 60000)
 
-    const dismissed = localStorage.getItem("cyberMondayDismissed")
-    if (dismissed === "true") {
-      setIsDismissed(true)
-      setShowCyberMonday(now < endDate) // Show banner if still within sale period
-      return () => clearInterval(interval)
-    }
-
-    if (now < endDate) {
-      setShowCyberMonday(true)
-
-      const collapseTimer = setTimeout(() => {
-        setIsCollapsed(true)
-      }, 20000)
-
-      const generatePromoCode = async () => {
-        try {
-          const storedCode = localStorage.getItem("cyberMondayPromoCode")
-          if (storedCode) {
-            setPromoCode(storedCode)
-            setIsLoadingCode(false)
-            return
-          }
-
-          const response = await fetch("/api/promo-codes/generate", {
-            method: "POST",
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            setPromoCode(data.code)
-            localStorage.setItem("cyberMondayPromoCode", data.code)
-          } else {
-            setPromoCode("CYBERMONDAY2024")
-          }
-        } catch (error) {
-          console.error("Error generating promo code:", error)
-          setPromoCode("CYBERMONDAY2024")
-        } finally {
+    const generatePromoCode = async () => {
+      try {
+        const storedCode = localStorage.getItem("cyberMondayPromoCode")
+        if (storedCode) {
+          setPromoCode(storedCode)
           setIsLoadingCode(false)
+          return
         }
-      }
 
-      generatePromoCode()
+        const response = await fetch("/api/promo-codes/generate", {
+          method: "POST",
+        })
 
-      return () => {
-        clearInterval(interval)
-        clearTimeout(collapseTimer)
+        if (response.ok) {
+          const data = await response.json()
+          setPromoCode(data.code)
+          localStorage.setItem("cyberMondayPromoCode", data.code)
+        } else {
+          setPromoCode("CYBERMONDAY2024")
+        }
+      } catch (error) {
+        console.error("Error generating promo code:", error)
+        setPromoCode("CYBERMONDAY2024")
+      } finally {
+        setIsLoadingCode(false)
       }
     }
+
+    generatePromoCode()
 
     return () => clearInterval(interval)
   }, [])
 
   if (showCyberMonday) {
-    if (isCollapsed || isDismissed) {
-      return (
-        <>
-          <div
-            onClick={() => {
-              if (isDismissed) {
-                localStorage.removeItem("cyberMondayDismissed")
-                setIsDismissed(false)
-                setIsCollapsed(false)
-              } else {
-                setIsCollapsed(false)
-              }
-            }}
-            className="bg-gradient-to-r from-yellow-500 via-red-600 to-orange-600 py-4 cursor-pointer hover:opacity-90 transition-all sticky top-0 z-50 shadow-lg"
-          >
-            <div className="container mx-auto px-6">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <span className="text-3xl font-bold text-white">🎉 CYBER SALE</span>
-                  <span className="text-xl font-bold text-yellow-300">50% OFF for 12 months + FREE SETUP</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-white font-semibold">Ends in: {timeRemaining}</span>
-                  <span className="text-sm text-white/80">Click to view details</span>
-                </div>
-              </div>
-            </div>
+    // Expanded Cyber Monday banner
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-black">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <button
+              onClick={() => setIsROICalculatorModalOpen(true)}
+              className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              ← Access ROI Calculator & Other Tools
+            </button>
+
+            <button
+              onClick={() => setShowCyberMonday(false)}
+              className="text-white hover:text-red-400 transition-colors flex items-center gap-2 text-lg font-medium bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg"
+              aria-label="Close Cyber Monday Sale"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Close Sale Page
+            </button>
           </div>
-          <HomePageContent isCollapsed={true} />
-        </>
-      )
-    } else {
-      // Expanded Cyber Monday banner
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-black">
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-8">
-              <Link
-                href="/home"
-                className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2"
-              >
-                ← Access ROI Calculator & Other Tools
+
+          {/* Hero Section */}
+          <div className="text-center mb-12">
+            <Badge className="mb-4 text-lg px-6 py-2 bg-red-600 hover:bg-red-700">
+              <CalendarIcon />
+              Ends Midnight Monday December 1st
+            </Badge>
+
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-pulse whitespace-nowrap">
+              CYBER SALE
+            </h1>
+
+            <div className="text-4xl md:text-6xl font-bold mb-8">
+              <span className="text-yellow-400">50% OFF</span>
+              <span className="text-white text-2xl md:text-3xl"> for 12 months</span>
+              <span className="text-white"> + </span>
+              <span className="text-cyan-400">FREE SETUP</span>
+            </div>
+
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">
+              Transform your accounts receivable process with Kuhlekt. Get started today with our biggest savings of the
+              year.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="#claim">
+                <Button size="lg" className="text-xl px-8 py-6 bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                  <GiftIcon />
+                  Claim Your Code
+                </Button>
               </Link>
-
-              <button
-                onClick={() => {
-                  localStorage.setItem("cyberMondayDismissed", "true")
-                  setIsDismissed(true)
-                }}
-                className="text-white hover:text-red-400 transition-colors flex items-center gap-2 text-lg font-medium bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg"
-                aria-label="Close Cyber Monday Sale"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-                Close Sale Page
-              </button>
             </div>
 
-            {/* Hero Section */}
-            <div className="text-center mb-12">
-              <Badge className="mb-4 text-lg px-6 py-2 bg-red-600 hover:bg-red-700">
-                <CalendarIcon />
-                Ends Midnight Monday December 1st
-              </Badge>
+            <div className="text-2xl font-bold text-red-400 mb-2">Offer Expires In:</div>
+            <div className="text-lg text-gray-400">{timeRemaining || "Calculating..."}</div>
+          </div>
 
-              <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-pulse whitespace-nowrap">
-                CYBER SALE
-              </h1>
-
-              <div className="text-4xl md:text-6xl font-bold mb-8">
-                <span className="text-yellow-400">50% OFF</span>
-                <span className="text-white text-2xl md:text-3xl"> for 12 months</span>
-                <span className="text-white"> + </span>
-                <span className="text-cyan-400">FREE SETUP</span>
-              </div>
-
-              <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">
-                Transform your accounts receivable process with Kuhlekt. Get started today with our biggest savings of
-                the year.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                <Link href="#claim">
-                  <Button
-                    size="lg"
-                    className="text-xl px-8 py-6 bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
-                  >
-                    <GiftIcon />
-                    Claim Your Code
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="text-2xl font-bold text-red-400 mb-2">Offer Expires In:</div>
-              <div className="text-lg text-gray-400">{timeRemaining || "Calculating..."}</div>
-            </div>
-
-            {/* What's Included */}
-            <div className="max-w-5xl mx-auto mb-16">
-              <Card className="bg-gray-800 border-yellow-500 border-2 shadow-2xl">
-                <CardHeader>
-                  <CardTitle className="text-3xl text-white text-center">Cyber Sale Special Includes:</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
-                      <div className="text-green-400">
-                        <CheckIcon />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">50% Off for 12 Months</h3>
-                        <p className="text-gray-300">
-                          Save thousands on your subscription. Pay half price for your entire first 12 months of
-                          service.
-                        </p>
-                      </div>
+          {/* What's Included */}
+          <div className="max-w-5xl mx-auto mb-16">
+            <Card className="bg-gray-800 border-yellow-500 border-2 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="text-3xl text-white text-center">Cyber Sale Special Includes:</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
+                    <div className="text-green-400">
+                      <CheckIcon />
                     </div>
-
-                    <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
-                      <div className="text-cyan-400">
-                        <CheckIcon />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Free Setup ($2,500 Value)</h3>
-                        <p className="text-gray-300">
-                          Complete implementation, training, and onboarding at no additional cost.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
-                      <div className="text-purple-400">
-                        <CheckIcon />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Priority Implementation</h3>
-                        <p className="text-gray-300">
-                          Jump the queue and go live within 1 week with dedicated support.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
-                      <div className="text-yellow-400">
-                        <CheckIcon />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Full Feature Access</h3>
-                        <p className="text-gray-300">
-                          Automated collections, customer portal, real-time analytics, and more.
-                        </p>
-                      </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2">50% Off for 12 Months</h3>
+                      <p className="text-gray-300">
+                        Save thousands on your subscription. Pay half price for your entire first 12 months of service.
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Promo Code Section */}
-            <div id="claim" className="max-w-2xl mx-auto">
-              <Card className="bg-gradient-to-br from-yellow-500 to-orange-600 border-0 shadow-2xl">
-                <CardHeader>
-                  <CardTitle className="text-3xl text-center text-black">
-                    <ZapIcon />
-                    Your Exclusive Promo Code
-                  </CardTitle>
-                  <CardDescription className="text-center text-black text-lg">
-                    This unique code is reserved for you - use it when requesting your demo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-black rounded-lg p-8 text-center">
-                    <div className="text-sm text-gray-400 mb-2">Your Unique Promo Code</div>
-                    {isLoadingCode ? (
-                      <div className="text-2xl text-gray-400">Generating your code...</div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-center gap-4">
-                          <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
-                            {promoCode}
-                          </div>
-                          <button
-                            onClick={copyPromoCode}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-black p-3 rounded-lg transition-colors flex items-center gap-2"
-                            title="Copy promo code"
-                          >
-                            <CopyIcon />
-                            <span className="text-sm font-medium">{copied ? "Copied!" : "Copy"}</span>
-                          </button>
+                  <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
+                    <div className="text-cyan-400">
+                      <CheckIcon />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2">Free Setup ($2,500 Value)</h3>
+                      <p className="text-gray-300">
+                        Complete implementation, training, and onboarding at no additional cost.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
+                    <div className="text-purple-400">
+                      <CheckIcon />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2">Priority Implementation</h3>
+                      <p className="text-gray-300">Jump the queue and go live within 1 week with dedicated support.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-4 p-4 bg-gray-700 rounded-lg">
+                    <div className="text-yellow-400">
+                      <CheckIcon />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white mb-2">Full Feature Access</h3>
+                      <p className="text-gray-300">
+                        Automated collections, customer portal, real-time analytics, and more.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Promo Code Section */}
+          <div id="claim" className="max-w-2xl mx-auto">
+            <Card className="bg-gradient-to-br from-yellow-500 to-orange-600 border-0 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="text-3xl text-center text-black">
+                  <ZapIcon />
+                  Your Exclusive Promo Code
+                </CardTitle>
+                <CardDescription className="text-center text-black text-lg">
+                  This unique code is reserved for you - use it when requesting your demo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-black rounded-lg p-8 text-center">
+                  <div className="text-sm text-gray-400 mb-2">Your Unique Promo Code</div>
+                  {isLoadingCode ? (
+                    <div className="text-2xl text-gray-400">Generating your code...</div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 tracking-wider">
+                          {promoCode}
                         </div>
-                      </>
-                    )}
-                    <div className="text-sm text-gray-400 mt-2">Valid until midnight Monday December 1st</div>
-                    <div className="text-xs text-red-400 mt-2">Limited to one use only</div>
-                  </div>
+                        <button
+                          onClick={copyPromoCode}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-black p-3 rounded-lg transition-colors flex items-center gap-2"
+                          title="Copy promo code"
+                        >
+                          <CopyIcon />
+                          <span className="text-sm font-medium">{copied ? "Copied!" : "Copy"}</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  <div className="text-sm text-gray-400 mt-2">Valid until midnight Monday December 1st</div>
+                  <div className="text-xs text-red-400 mt-2">Limited to one use only</div>
+                </div>
 
-                  <div className="text-center">
-                    <Link href="/demo">
-                      <Button
-                        size="lg"
-                        className="text-xl px-8 py-6 bg-black hover:bg-gray-900 text-yellow-400 font-bold w-full"
-                      >
-                        Request Demo Now
-                      </Button>
-                    </Link>
-                  </div>
+                <div className="text-center">
+                  <Link href="/demo">
+                    <Button
+                      size="lg"
+                      className="text-xl px-8 py-6 bg-black hover:bg-gray-900 text-yellow-400 font-bold w-full"
+                    >
+                      Request Demo Now
+                    </Button>
+                  </Link>
+                </div>
 
-                  <div className="text-center text-black text-sm">
-                    Enter your unique code at checkout to claim your 50% discount + free setup
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <div className="text-center text-black text-sm">
+                  Enter your unique code at checkout to claim your 50% discount + free setup
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            {/* Terms */}
-            <div className="max-w-3xl mx-auto mt-12 text-center text-gray-400 text-sm">
-              <p className="mb-2">
-                * Offer valid until midnight Monday December 1st, 2025. 50% discount applies to first 12 months of
-                subscription. Free setup valued at $2,500. Each promo code is unique and limited to one use per
-                customer.
-              </p>
-              <p>New customers only. Cannot be combined with other offers.</p>
-            </div>
+          {/* Terms */}
+          <div className="max-w-3xl mx-auto mt-12 text-center text-gray-400 text-sm">
+            <p className="mb-2">
+              * Offer valid until midnight Monday December 1st, 2025. 50% discount applies to first 12 months of
+              subscription. Free setup valued at $2,500. Each promo code is unique and limited to one use per customer.
+            </p>
+            <p>New customers only. Cannot be combined with other offers.</p>
           </div>
         </div>
-      )
-    }
+      </div>
+    )
   }
 
   // Default return if not showing Cyber Monday
-  return <HomePageContent isCollapsed={false} />
+  return (
+    <>
+      <HomePageContent isCollapsed={false} />
+      <ROICalculatorModal isOpen={isROICalculatorModalOpen} onClose={() => setIsROICalculatorModalOpen(false)} />
+    </>
+  )
 }
