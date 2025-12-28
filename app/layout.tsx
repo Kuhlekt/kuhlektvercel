@@ -54,9 +54,7 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
-        <div id="kali-chat-container" style={{ width: "100%", height: "600px" }}></div>
-
-        {/* Recommended Approach - Kuhlekt AI Chatbot Widget */}
+        {/* AI Chatbot Widget - Floating Button */}
         <Script
           id="chatbot-config"
           strategy="beforeInteractive"
@@ -64,12 +62,12 @@ export default function RootLayout({
             __html: `
               window.chatbotConfig = {
                 tenantSlug: '',
-                apiUrl: 'https://chatbot.hindleconsultants.com'
+                apiUrl: 'https://preview-hc-chatbot-5-kzmq8pwyyaoth0hmzmls.vusercontent.net'
               };
             `,
           }}
         />
-        <Script src="https://chatbot.hindleconsultants.com/embed-inline.js" strategy="lazyOnload" />
+        <Script src="https://preview-hc-chatbot-5-kzmq8pwyyaoth0hmzmls.vusercontent.net/embed-floating.js" async />
       </body>
     </html>
   )
