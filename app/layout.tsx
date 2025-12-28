@@ -61,13 +61,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               window.chatbotConfig = {
-                tenantSlug: '',
-                apiUrl: 'https://preview-hc-chatbot-5-kzmq8pwyyaoth0hmzmls.vusercontent.net'
+                tenantSlug: 'kuhlekt',
+                apiUrl: 'https://chatbot.hindleconsultants.com'
               };
             `,
           }}
         />
-        <Script src="https://preview-hc-chatbot-5-kzmq8pwyyaoth0hmzmls.vusercontent.net/embed-floating.js" async />
+        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" async />
       </body>
     </html>
   )
