@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
-import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 
 // Inline SVG icons for Cyber Monday page
 const GiftIcon = () => (
@@ -104,8 +103,6 @@ const CopyIcon = () => (
 
 const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
   <div className="min-h-screen bg-gray-50">
-    <ROICalculatorModal isOpen={false} onClose={() => {}} />
-
     {/* Hero Section */}
     <section className="bg-gray-50 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,7 +120,7 @@ const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4 mb-8">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 sm:grid sm:grid-rows-2">
                 <Link href="/demo" className="w-full">
                   <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white w-full">
                     Schedule a Demo →
@@ -135,7 +132,7 @@ const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
                   </Button>
                 </Link>
               </div>
-              <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full" onClick={() => {}}>
+              <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full">
                 🧮 Calculate Your ROI
               </Button>
             </div>
