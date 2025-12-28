@@ -67,7 +67,7 @@ export default function RootLayout({
             `,
           }}
         />
-        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" async />
+        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" strategy="lazyOnload" />
       </body>
     </html>
   )
