@@ -57,7 +57,6 @@ export default function RootLayout({
         {/* AI Chatbot Widget - Floating Button */}
         <Script
           id="chatbot-config"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               window.chatbotConfig = {
@@ -67,7 +66,7 @@ export default function RootLayout({
             `,
           }}
         />
-        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" strategy="lazyOnload" />
+        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" async />
       </body>
     </html>
   )
