@@ -102,7 +102,10 @@ const CopyIcon = () => (
   </svg>
 )
 
-const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
+const HomePageContent = ({
+  isCollapsed,
+  setIsROICalculatorModalOpen,
+}: { isCollapsed: boolean; setIsROICalculatorModalOpen: any }) => (
   <div className="min-h-screen bg-gray-50">
     {/* Hero Section */}
     <section className="bg-gray-50 py-20">
@@ -133,7 +136,7 @@ const HomePageContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
                   </Button>
                 </Link>
               </div>
-              <Link href="#" onClick={() => {}} className="block">
+              <Link href="#" onClick={() => setIsROICalculatorModalOpen(true)} className="block">
                 <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full">
                   🧮 Calculate Your ROI
                 </Button>
@@ -725,7 +728,7 @@ export default function Home() {
   // Default return if not showing Cyber Monday
   return (
     <>
-      <HomePageContent isCollapsed={false} />
+      <HomePageContent isCollapsed={false} setIsROICalculatorModalOpen={setIsROICalculatorModalOpen} />
       <ROICalculatorModal isOpen={isROICalculatorModalOpen} onClose={() => setIsROICalculatorModalOpen(false)} />
     </>
   )
