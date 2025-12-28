@@ -55,16 +55,16 @@ export default function RootLayout({
         <Footer />
 
         <Script
-          id="kali-chatbot-config"
+          id="kali-chat-config"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_API_URL = 'https://preview-hc-chatbot-5-kzmr08awfckqbwaupqa6.vusercontent.net';
+              window.KALI_API_URL = 'https://preview-hc-chatbot-5-kzml22ifs8fjj7pvdpaf.vusercontent.net';
             `,
           }}
         />
         <Script
-          src="https://preview-hc-chatbot-5-kzmr08awfckqbwaupqa6.vusercontent.net/api/widget"
+          src="https://preview-hc-chatbot-5-kzml22ifs8fjj7pvdpaf.vusercontent.net/api/widget"
           strategy="lazyOnload"
         />
       </body>
