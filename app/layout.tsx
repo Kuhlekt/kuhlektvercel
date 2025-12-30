@@ -55,21 +55,18 @@ export default function RootLayout({
         <Footer />
 
         <Script
-          id="kali-config"
+          id="chatbot-config"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.KALI_CONFIG = {
-                apiUrl: 'https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net',
-                tenantSlug: 'kuhlekt'
+              window.chatbotConfig = {
+                tenantSlug: 'kuhlekt',
+                apiUrl: 'https://chatbot.hindleconsultants.com'
               };
             `,
           }}
         />
-        <Script
-          src="https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net/embed-floating.js"
-          strategy="lazyOnload"
-        />
+        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" strategy="lazyOnload" />
       </body>
     </html>
   )
