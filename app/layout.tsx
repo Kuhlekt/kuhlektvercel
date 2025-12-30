@@ -54,19 +54,22 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
-        {/* AI Chatbot Widget - Floating Button */}
         <Script
-          id="chatbot-config"
+          id="kali-config"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.chatbotConfig = {
-                tenantSlug: 'kuhlekt',
-                apiUrl: 'https://chatbot.hindleconsultants.com'
+              window.KALI_CONFIG = {
+                apiUrl: 'https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net',
+                tenantSlug: 'kuhlekt'
               };
             `,
           }}
         />
-        <Script src="https://chatbot.hindleconsultants.com/embed-floating.js" async />
+        <Script
+          src="https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net/embed-floating.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   )
