@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net https://chatbot.hindleconsultants.com https://www.google.com https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://preview-hc-chatbot-5-kzmljr8tkflyo7nj7gb7.vusercontent.net https://chatbot.hindleconsultants.com https://*.supabase.co; frame-src 'self' https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://preview-hc-chatbot-5-2-kzmh4hio39aaeuizae7o.vusercontent.net https://chatbot.hindleconsultants.com https://www.google.com https://www.gstatic.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://preview-hc-chatbot-5-2-kzmh4hio39aaeuizae7o.vusercontent.net https://chatbot.hindleconsultants.com https://*.supabase.co; frame-src 'self' https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self';",
   )
 
   return response

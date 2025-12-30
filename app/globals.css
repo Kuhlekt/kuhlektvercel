@@ -245,3 +245,41 @@ button:disabled {
 }
 
 /* Removed all Kali widget CSS - now using Hindle Consultants chatbot */
+
+/* Chatbot widget header minimization styles */
+/* Minimize chatbot header to show only name and "Talk to a Human" */
+#chatbot-widget-container .chatbot-header,
+[data-chatbot-widget] .chatbot-header,
+.chatbot-floating-widget .chatbot-header {
+  padding: 0.5rem 1rem !important;
+  min-height: auto !important;
+  height: auto !important;
+}
+
+#chatbot-widget-container .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff),
+[data-chatbot-widget] .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff),
+.chatbot-floating-widget .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff) {
+  display: none !important;
+}
+
+#chatbot-widget-container .chatbot-title,
+[data-chatbot-widget] .chatbot-title,
+.chatbot-floating-widget .chatbot-title {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+#chatbot-widget-container .chatbot-human-handoff,
+[data-chatbot-widget] .chatbot-human-handoff,
+.chatbot-floating-widget .chatbot-human-handoff {
+  font-size: 0.75rem !important;
+  margin-left: auto !important;
+}
+
+/* Ensure chatbot button stays visible */
+#chatbot-widget-button,
+[data-chatbot-button],
+.chatbot-floating-button {
+  z-index: 9999 !important;
+}
