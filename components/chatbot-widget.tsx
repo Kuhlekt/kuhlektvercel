@@ -57,14 +57,14 @@ export function ChatbotWidget() {
         style={{
           position: "fixed",
           bottom: "560px",
-          right: "360px",
+          right: "8px", // moved to extreme right edge with small margin
           zIndex: 10000,
         }}
-        className="bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-1.5 shadow-md transition-all duration-200 hover:shadow-lg"
+        className="bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-1 shadow-md transition-all duration-200 hover:shadow-lg"
         aria-label="Close chatbot"
         title="Close chatbot"
       >
-        <X className="h-5 w-5" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </>
   )
