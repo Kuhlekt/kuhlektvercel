@@ -252,7 +252,8 @@ button:disabled {
 #kali-chat-container {
   display: flex !important;
   flex-direction: column !important;
-  height: 600px !important;
+  /* Updated height to match new smaller size */
+  height: 500px !important;
   overflow: hidden !important;
 }
 
@@ -293,17 +294,35 @@ button:disabled {
 
 /* Hide all header elements from the widget itself */
 /* Fixed CSS syntax - removed invalid pseudo-selectors and backslashes */
+/* Added selectors to hide the blue help panel about speaking with human agent */
 /* Hide "need to speak with" text and related elements */
 *[class*="need-to-speak"],
 *[class*="speak-with"],
 *[class*="handoff"],
 *[class*="escalation"],
+*[class*="help-panel"],
+*[class*="instruction"],
+*[class*="agent-help"],
 [data-testid*="speak"],
 [data-testid*="handoff"],
+[data-testid*="help"],
 .handoff-text,
-.escalation-text {
+.escalation-text,
+.help-panel,
+.instruction-panel,
+.agent-instructions {
   display: none !important;
   visibility: hidden !important;
+}
+
+/* Added specific rules to hide blue background panels with instructions */
+[style*="background"][style*="blue"],
+[class*="bg-blue"],
+.message-help,
+.chat-instructions,
+div[class*="instruction"],
+div[class*="help-text"] {
+  display: none !important;
 }
 
 /* Chat messages area - shows welcome message only */

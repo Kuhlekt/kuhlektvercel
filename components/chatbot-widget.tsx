@@ -20,6 +20,18 @@ export function ChatbotWidget() {
 
     script.onload = () => {
       console.log("[v0] Chatbot widget script loaded successfully")
+      const container = document.getElementById("kali-chat-container")
+      if (container) {
+        container.style.display = "block"
+        container.style.visibility = "visible"
+        container.style.opacity = "1"
+        console.log("[v0] Container forced visible")
+
+        setTimeout(() => {
+          console.log("[v0] Container has children:", container.children.length)
+          console.log("[v0] Container innerHTML length:", container.innerHTML.length)
+        }, 2000)
+      }
     }
 
     script.onerror = (error) => {
@@ -44,23 +56,27 @@ export function ChatbotWidget() {
       <div
         id="kali-chat-container"
         style={{
-          width: "400px",
-          height: "600px",
+          width: "350px",
+          height: "500px",
           position: "fixed",
           bottom: 0,
           right: 0,
           zIndex: 9999,
+          display: "block",
+          visibility: "visible",
+          opacity: 1,
+          backgroundColor: "#f5f5f5",
         }}
       />
       <button
         onClick={() => setIsVisible(false)}
         style={{
           position: "fixed",
-          bottom: "560px",
-          right: "8px", // moved to extreme right edge with small margin
+          bottom: "460px",
+          right: "8px",
           zIndex: 10000,
         }}
-        className="bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 rounded-full p-1 shadow-md transition-all duration-200 hover:shadow-lg"
+        className="rounded-full bg-white/90 p-1 text-gray-700 shadow-md transition-all duration-200 hover:bg-white hover:text-gray-900 hover:shadow-lg"
         aria-label="Close chatbot"
         title="Close chatbot"
       >
