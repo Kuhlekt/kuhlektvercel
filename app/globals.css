@@ -258,8 +258,7 @@ button:disabled {
   overflow: hidden !important;
 }
 
-/* Hide ALL message content except the first welcome message from setup */
-/* Target all messages in the chat */
+/* Completely hide all default messages in chat area */
 #chatbot-widget .chatbot-messages > *,
 [data-chatbot-container] .chatbot-messages > *,
 .chatbot-widget-container .chatbot-messages > *,
@@ -270,7 +269,20 @@ button:disabled {
 .chat-messages > *,
 .messages-container > *,
 [role="log"] > *,
-[data-messages] > * {
+[data-messages] > *,
+/* Added more aggressive selectors to catch all messages */
+  #kali-chat-container
+  div[class*="message"],
+#kali-chat-container div[data-message],
+#kali-chat-container .message,
+#kali-chat-container [role="article"],
+#kali-chat-container [role="listitem"],
+.assistant-message,
+.bot-message,
+.system-message,
+.chat-bubble,
+[data-role="message"],
+[data-type="message"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -469,7 +481,7 @@ button:disabled {
 #kali-chat-container .chatbot-header::before,
 #kali-chat-container header::before,
 .chatbot-header::before {
-  content: "Hi I am Kali your AI assistant..." !important;
+  content: "Kali your AI assistant" !important;
   display: block !important;
   color: white !important;
   font-weight: 600 !important;
