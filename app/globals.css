@@ -246,28 +246,91 @@ button:disabled {
 
 /* Customized chatbot widget layout - simplified header, pinned input footer */
 /* Chatbot widget custom styling */
+/* Updated to support new height and fixed layout with scrollable chat area */
 #chatbot-widget,
 [data-chatbot-container],
 .chatbot-widget-container,
 #kali-chat-container {
   display: flex !important;
   flex-direction: column !important;
-  /* Updated height to match new smaller size */
-  height: 500px !important;
+  /* Updated height to 637px */
+  height: 637px !important;
   overflow: hidden !important;
 }
 
-/* Improved blue header banner with proper header styling */
-/* Removed hardcoded greeting text so chatbot can display its configured name */
-#chatbot-widget::before,
-[data-chatbot-container]::before,
-.chatbot-widget-container::before,
-#kali-chat-container::before {
-  content: "" !important;
+/* Hide ALL message content except the first welcome message from setup */
+/* Target all messages in the chat */
+#chatbot-widget .chatbot-messages > *,
+[data-chatbot-container] .chatbot-messages > *,
+.chatbot-widget-container .chatbot-messages > *,
+#kali-chat-container .chatbot-messages > *,
+.chatbot-messages > *,
+#kali-chat-container > div:nth-child(2) > *,
+[data-chatbot-container] > div:nth-child(2) > *,
+.chat-messages > *,
+.messages-container > *,
+[role="log"] > *,
+[data-messages] > * {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* Allow the chatbot's own header to show through with custom styling */
+/* Only show the first message which should be the welcome message from setup */
+#chatbot-widget .chatbot-messages > *:first-child,
+[data-chatbot-container] .chatbot-messages > *:first-child,
+.chatbot-widget-container .chatbot-messages > *:first-child,
+#kali-chat-container .chatbot-messages > *:first-child,
+.chatbot-messages > *:first-child,
+#kali-chat-container > div:nth-child(2) > *:first-child,
+[data-chatbot-container] > div:nth-child(2) > *:first-child,
+.chat-messages > *:first-child,
+.messages-container > *:first-child,
+[role="log"] > *:first-child,
+[data-messages] > *:first-child {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: revert !important;
+  padding: revert !important;
+}
+
+/* But if the first message contains human handoff instructions, hide it too */
+#chatbot-widget .chatbot-messages > *:first-child:has(*[class*="human"]),
+#chatbot-widget .chatbot-messages > *:first-child:has(*[class*="speak"]),
+#chatbot-widget .chatbot-messages > *:first-child:has(*[class*="Talk to Human"]),
+[data-chatbot-container] .chatbot-messages > *:first-child:has(*[class*="human"]),
+[data-chatbot-container] .chatbot-messages > *:first-child:has(*[class*="speak"]),
+.chatbot-messages > *:first-child:has(*[class*="human"]),
+.chatbot-messages > *:first-child:has(*[class*="speak"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+}
+
+/* If first message is hidden, show second message (which should be the actual welcome) */
+#chatbot-widget .chatbot-messages > *:first-child:has(*[class*="human"]) ~ *:nth-child(2),
+[data-chatbot-container] .chatbot-messages > *:first-child:has(*[class*="human"]) ~ *:nth-child(2),
+.chatbot-messages > *:first-child:has(*[class*="human"]) ~ *:nth-child(2) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Updated chatbot header to show "Hi I am Kali your AI assistant..." instead of original text */
+/* Hide the original header content and replace with custom text */
 #chatbot-widget .chatbot-header,
 #chatbot-widget header,
 [data-chatbot-container] .chatbot-header,
@@ -277,12 +340,14 @@ button:disabled {
 #kali-chat-container .chatbot-header,
 #kali-chat-container header,
 .chatbot-header {
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
   color: white !important;
-  padding: 1.25rem 1.5rem !important;
+  padding: 1.1rem 1.32rem !important;
   font-weight: 600 !important;
-  font-size: 1.125rem !important;
+  font-size: 0.99rem !important;
   text-align: center !important;
   flex-shrink: 0 !important;
   border-bottom: 2px solid #1e40af !important;
@@ -290,12 +355,131 @@ button:disabled {
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
+  pointer-events: auto !important;
+}
+
+/* Allow buttons in header to be visible and clickable, hide only text */
+#chatbot-widget .chatbot-header *:not(button):not(a),
+#chatbot-widget header *:not(button):not(a),
+[data-chatbot-container] .chatbot-header *:not(button):not(a),
+[data-chatbot-container] header *:not(button):not(a),
+.chatbot-widget-container .chatbot-header *:not(button):not(a),
+.chatbot-widget-container header *:not(button):not(a),
+#kali-chat-container .chatbot-header *:not(button):not(a),
+#kali-chat-container header *:not(button):not(a),
+.chatbot-header *:not(button):not(a) {
+  font-size: 0 !important;
+  /* Removed visibility: hidden so it doesn't block button clicks */
+  opacity: 0 !important;
+}
+
+/* Ensure buttons and links in header are visible and clickable */
+#chatbot-widget .chatbot-header button,
+#chatbot-widget header button,
+#chatbot-widget .chatbot-header a,
+#chatbot-widget header a,
+[data-chatbot-container] .chatbot-header button,
+[data-chatbot-container] header button,
+[data-chatbot-container] .chatbot-header a,
+[data-chatbot-container] header a,
+.chatbot-widget-container .chatbot-header button,
+.chatbot-widget-container header button,
+.chatbot-widget-container .chatbot-header a,
+.chatbot-widget-container header a,
+#kali-chat-container .chatbot-header button,
+#kali-chat-container header button,
+#kali-chat-container .chatbot-header a,
+#kali-chat-container header a,
+.chatbot-header button,
+.chatbot-header a {
+  display: inline-flex !important;
+  visibility: visible !important;
+  font-size: 0.875rem !important;
+  padding: 0.375rem 0.75rem !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 0.375rem !important;
+  color: white !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: all 0.2s !important;
+  /* Increased z-index to ensure button is above all other elements */
+  z-index: 999999 !important;
+  position: relative !important;
+  /* Added explicit opacity and transform to ensure visibility */
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Ensure all child elements in button are also clickable */
+#chatbot-widget .chatbot-header button *,
+#chatbot-widget header button *,
+#chatbot-widget .chatbot-header a *,
+#chatbot-widget header a *,
+[data-chatbot-container] .chatbot-header button *,
+[data-chatbot-container] header button *,
+[data-chatbot-container] .chatbot-header a *,
+[data-chatbot-container] header a *,
+.chatbot-widget-container .chatbot-header button *,
+.chatbot-widget-container header button *,
+.chatbot-widget-container .chatbot-header a *,
+.chatbot-widget-container header a *,
+#kali-chat-container .chatbot-header button *,
+#kali-chat-container header button *,
+#kali-chat-container .chatbot-header a *,
+#kali-chat-container header a *,
+.chatbot-header button *,
+.chatbot-header a * {
+  pointer-events: auto !important;
+  visibility: visible !important;
+  font-size: inherit !important;
+  opacity: 1 !important;
+}
+
+#chatbot-widget .chatbot-header button:hover,
+#chatbot-widget header button:hover,
+#chatbot-widget .chatbot-header a:hover,
+#chatbot-widget header a:hover,
+[data-chatbot-container] .chatbot-header button:hover,
+[data-chatbot-container] header button:hover,
+[data-chatbot-container] .chatbot-header a:hover,
+[data-chatbot-container] header a:hover,
+.chatbot-widget-container .chatbot-header button:hover,
+.chatbot-widget-container header button:hover,
+.chatbot-widget-container .chatbot-header a:hover,
+.chatbot-widget-container header a:hover,
+#kali-chat-container .chatbot-header button:hover,
+#kali-chat-container header button:hover,
+#kali-chat-container .chatbot-header a:hover,
+#kali-chat-container header a:hover,
+.chatbot-header button:hover,
+.chatbot-header a:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  /* Added transform scale for better hover feedback */
+  transform: scale(1.05) !important;
+}
+
+/* Add custom header text using ::before pseudo-element */
+#chatbot-widget .chatbot-header::before,
+#chatbot-widget header::before,
+[data-chatbot-container] .chatbot-header::before,
+[data-chatbot-container] header::before,
+.chatbot-widget-container .chatbot-header::before,
+.chatbot-widget-container header::before,
+#kali-chat-container .chatbot-header::before,
+#kali-chat-container header::before,
+.chatbot-header::before {
+  content: "Hi I am Kali your AI assistant..." !important;
+  display: block !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  flex: 1 !important;
 }
 
 /* Hide all header elements from the widget itself */
 /* Fixed CSS syntax - removed invalid pseudo-selectors and backslashes */
-/* Added selectors to hide the blue help panel about speaking with human agent */
-/* Hide "need to speak with" text and related elements */
+/* Added aggressive CSS to completely remove the blue help panel about speaking with human agent */
 *[class*="need-to-speak"],
 *[class*="speak-with"],
 *[class*="handoff"],
@@ -303,37 +487,125 @@ button:disabled {
 *[class*="help-panel"],
 *[class*="instruction"],
 *[class*="agent-help"],
-[data-testid*="speak"],
-[data-testid*="handoff"],
-[data-testid*="help"],
+*[class*="agent-instruction"],
+*[data-type*="help"],
+*[data-type*="instruction"],
+*[data-testid*="speak"],
+*[data-testid*="handoff"],
+*[data-testid*="help"],
+*[data-testid*="instruction"],
 .handoff-text,
 .escalation-text,
 .help-panel,
 .instruction-panel,
-.agent-instructions {
+.agent-instructions,
+.agent-help-text,
+.human-handoff,
+.chat-help-panel,
+div[role="alert"]:has(*[class*="human"]),
+div[role="note"]:has(*[class*="human"]),
+div[role="alert"]:has(*[class*="speak"]),
+div[role="note"]:has(*[class*="speak"]) {
   display: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Target any message/bubble containing the human handoff text */
+.message:has(*[class*="human"]),
+.message:has(*[class*="speak"]),
+.chat-message:has(*[class*="human"]),
+.chat-message:has(*[class*="speak"]),
+[data-message]:has(*[class*="human"]),
+[data-message]:has(*[class*="speak"]),
+[class*="message"]:has(*[class*="Talk to Human"]),
+[class*="message"]:has(*[class*="/human"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Hide any blue background panels with instructions */
+[style*="background"][style*="blue"]:has(*[class*="human"]),
+[style*="background: rgb(59"]:has(*[class*="speak"]),
+[class*="bg-blue"]:has(*[class*="instruction"]),
+[class*="bg-info"]:has(*[class*="help"]),
+.message-help,
+.chat-instructions,
+.info-panel,
+.info-message,
+div[class*="instruction"]:has(*[class*="Talk"]),
+div[class*="help-text"],
+div[class*="info-box"],
+.assistant-message:first-of-type:has(*[class*="speak"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
+}
+
+/* Target the specific message that appears to be a system/bot message with human handoff instructions */
+#kali-chat-container .message:nth-child(1),
+#kali-chat-container .message:nth-child(2),
+[data-chatbot-container] .message:first-child,
+.chatbot-messages > div:first-child:has(*[class*="speak"]),
+.messages-container > div:first-child:has(*[class*="human"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
 }
 
 /* Added specific rules to hide blue background panels with instructions */
 [style*="background"][style*="blue"],
+[style*="background: rgb(59"],
 [class*="bg-blue"],
+[class*="bg-info"],
 .message-help,
 .chat-instructions,
+.info-panel,
+.info-message,
 div[class*="instruction"],
-div[class*="help-text"] {
+div[class*="help-text"],
+div[class*="info-box"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  max-height: 0 !important;
 }
 
 /* Chat messages area - shows welcome message only */
+/* Made chat area scrollable while keeping header and input fixed */
 #chatbot-widget .chatbot-messages,
 [data-chatbot-container] .chatbot-messages,
 .chatbot-widget-container .chatbot-messages,
-.chatbot-messages {
+#kali-chat-container .chatbot-messages,
+.chatbot-messages,
+#kali-chat-container > div:nth-child(2),
+[data-chatbot-container] > div:nth-child(2),
+.chat-messages,
+.messages-container,
+[role="log"],
+[data-messages] {
   flex: 1 !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   padding: 1rem !important;
   background: white !important;
+  /* Updated max-height to accommodate new 637px total height */
+  max-height: calc(637px - 120px) !important;
 }
 
 /* Hide all extra UI elements */
@@ -351,13 +623,19 @@ div[class*="help-text"] {
 #chatbot-widget .chatbot-input-container,
 [data-chatbot-container] .chatbot-input-container,
 .chatbot-widget-container .chatbot-input-container,
-.chatbot-input-container {
+#kali-chat-container .chatbot-input-container,
+.chatbot-input-container,
+#kali-chat-container > div:last-child,
+[data-chatbot-container] > div:last-child,
+.input-container,
+[data-input-container] {
   position: sticky !important;
   bottom: 0 !important;
   background: white !important;
   padding: 1rem !important;
   border-top: 1px solid #e5e7eb !important;
   flex-shrink: 0 !important;
+  z-index: 10 !important;
 }
 
 #chatbot-widget .chatbot-input,
