@@ -244,42 +244,121 @@ button:disabled {
   opacity: 0.6;
 }
 
-/* Removed all Kali widget CSS - now using Hindle Consultants chatbot */
-
-/* Chatbot widget header minimization styles */
-/* Minimize chatbot header to show only name and "Talk to a Human" */
-#chatbot-widget-container .chatbot-header,
-[data-chatbot-widget] .chatbot-header,
-.chatbot-floating-widget .chatbot-header {
-  padding: 0.5rem 1rem !important;
-  min-height: auto !important;
-  height: auto !important;
+/* Customized chatbot widget layout - simplified header, pinned input footer */
+/* Chatbot widget custom styling */
+#chatbot-widget,
+[data-chatbot-container],
+.chatbot-widget-container,
+#kali-chat-container {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 600px !important;
+  overflow: hidden !important;
 }
 
-#chatbot-widget-container .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff),
-[data-chatbot-widget] .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff),
-.chatbot-floating-widget .chatbot-header > *:not(.chatbot-title):not(.chatbot-human-handoff) {
+/* Improved blue header banner with proper header styling */
+/* Removed hardcoded greeting text so chatbot can display its configured name */
+#chatbot-widget::before,
+[data-chatbot-container]::before,
+.chatbot-widget-container::before,
+#kali-chat-container::before {
+  content: "" !important;
   display: none !important;
 }
 
-#chatbot-widget-container .chatbot-title,
-[data-chatbot-widget] .chatbot-title,
-.chatbot-floating-widget .chatbot-title {
-  font-size: 0.875rem !important;
+/* Allow the chatbot's own header to show through with custom styling */
+#chatbot-widget .chatbot-header,
+#chatbot-widget header,
+[data-chatbot-container] .chatbot-header,
+[data-chatbot-container] header,
+.chatbot-widget-container .chatbot-header,
+.chatbot-widget-container header,
+#kali-chat-container .chatbot-header,
+#kali-chat-container header,
+.chatbot-header {
+  display: block !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  padding: 1.25rem 1.5rem !important;
   font-weight: 600 !important;
-  margin: 0 !important;
+  font-size: 1.125rem !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+  border-bottom: 2px solid #1e40af !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
 }
 
-#chatbot-widget-container .chatbot-human-handoff,
-[data-chatbot-widget] .chatbot-human-handoff,
-.chatbot-floating-widget .chatbot-human-handoff {
-  font-size: 0.75rem !important;
-  margin-left: auto !important;
+/* Hide all header elements from the widget itself */
+/* Fixed CSS syntax - removed invalid pseudo-selectors and backslashes */
+/* Hide "need to speak with" text and related elements */
+*[class*="need-to-speak"],
+*[class*="speak-with"],
+*[class*="handoff"],
+*[class*="escalation"],
+[data-testid*="speak"],
+[data-testid*="handoff"],
+.handoff-text,
+.escalation-text {
+  display: none !important;
+  visibility: hidden !important;
 }
 
-/* Ensure chatbot button stays visible */
-#chatbot-widget-button,
-[data-chatbot-button],
-.chatbot-floating-button {
-  z-index: 9999 !important;
+/* Chat messages area - shows welcome message only */
+#chatbot-widget .chatbot-messages,
+[data-chatbot-container] .chatbot-messages,
+.chatbot-widget-container .chatbot-messages,
+.chatbot-messages {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 1rem !important;
+  background: white !important;
+}
+
+/* Hide all extra UI elements */
+#chatbot-widget .chatbot-toolbar,
+[data-chatbot-container] .chatbot-toolbar,
+.chatbot-widget-container .chatbot-toolbar,
+.chatbot-toolbar,
+.chatbot-actions,
+.chatbot-suggestions,
+.chatbot-quick-replies {
+  display: none !important;
+}
+
+/* Pin input to footer */
+#chatbot-widget .chatbot-input-container,
+[data-chatbot-container] .chatbot-input-container,
+.chatbot-widget-container .chatbot-input-container,
+.chatbot-input-container {
+  position: sticky !important;
+  bottom: 0 !important;
+  background: white !important;
+  padding: 1rem !important;
+  border-top: 1px solid #e5e7eb !important;
+  flex-shrink: 0 !important;
+}
+
+#chatbot-widget .chatbot-input,
+[data-chatbot-container] .chatbot-input,
+.chatbot-widget-container .chatbot-input,
+.chatbot-input,
+input[placeholder*="message"],
+textarea[placeholder*="message"] {
+  width: 100% !important;
+  padding: 0.75rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+}
+
+/* Ensure send button stays visible */
+#chatbot-widget .chatbot-send-button,
+[data-chatbot-container] .chatbot-send-button,
+.chatbot-widget-container .chatbot-send-button,
+.chatbot-send-button {
+  display: inline-flex !important;
+  margin-left: 0.5rem !important;
 }
