@@ -14,7 +14,6 @@ export function ChatbotWidget() {
     const script = document.createElement("script")
     script.src = "https://chatbot.hindleconsultants.com/embed-floating.js"
     script.async = true
-
     script.setAttribute("data-tenant", "kuhlekt")
     script.setAttribute("data-api-url", "https://chatbot.hindleconsultants.com")
 
