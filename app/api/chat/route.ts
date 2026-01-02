@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       console.log("[v0] New session ID:", newSessionId)
     }
 
-    const kaliServerUrl = "https://kali.kuhlekt-info.com/api/chat"
+    const kaliServerUrl = "https://chatbot.hindleconsultants.com/api/chat"
     console.log("[v0] Proxying to:", kaliServerUrl)
 
     let lastError: any = null
