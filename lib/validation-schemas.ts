@@ -61,7 +61,10 @@ export const handoffRequestSchema = z.object({
 export const externalHandoffSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100, "First name too long"),
   lastName: z.string().min(1, "Last name is required").max(100, "Last name too long"),
-  userEmail: z.string().email("Invalid email format"), // External widget sends userEmail, not email
+  userEmail: z
+    .string()
+    .min(1, "Email is required")
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email format"), // More lenient pattern that accepts any TLD length
   phone: z.string().max(20, "Phone number too long").optional(),
   sessionId: z.string().optional(),
   userId: z.string().nullable().optional(),
