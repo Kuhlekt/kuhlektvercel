@@ -3,25 +3,19 @@ import { useEffect } from "react"
 
 declare global {
   interface Window {
-    chatbotConfig: {
-      tenantSlug: string
-      apiUrl: string
-    }
+    KALI_API_URL: string
+    TENANT_SLUG: string
   }
 }
 
 export function ChatbotWidget() {
   useEffect(() => {
-    window.chatbotConfig = {
-      tenantSlug: "kuhlekt",
-      apiUrl: "https://chatbot.hindleconsultants.com",
-    }
+    window.KALI_API_URL = "https://hc-chatbot-v4.vercel.app"
+    window.TENANT_SLUG = "kuhlekt"
 
     const script = document.createElement("script")
-    script.src = "https://chatbot.hindleconsultants.com/widget.js?v=2.7"
+    script.src = "https://hc-chatbot-v4.vercel.app/widget.js?v=2.7"
     script.async = true
-    script.setAttribute("data-tenant", "kuhlekt")
-    script.setAttribute("data-api-url", "https://chatbot.hindleconsultants.com")
 
     document.body.appendChild(script)
 
