@@ -4,38 +4,36 @@ import { useEffect } from "react"
 
 export function ChatbotWidget() {
   useEffect(() => {
-    // Set the chatbot configuration
     ;(window as any).chatbotConfig = {
       tenantSlug: "kuhlekt",
       apiUrl: "https://chatbot.hindleconsultants.com",
     }
 
-    // Load the chatbot script
+    console.log("[v0] Chatbot config set:", (window as any).chatbotConfig)
+
     const script = document.createElement("script")
-    script.src = "https://chatbot.hindleconsultants.com/embed-inline.js"
+    script.src = "https://chatbot.hindleconsultants.com/embed-floating.js"
     script.async = true
+
+    script.setAttribute("data-tenant", "kuhlekt")
+    script.setAttribute("data-api-url", "https://chatbot.hindleconsultants.com")
+
+    script.onload = () => {
+      console.log("[v0] Chatbot script loaded successfully")
+    }
+
+    script.onerror = (error) => {
+      console.error("[v0] Failed to load chatbot script:", error)
+    }
+
     document.body.appendChild(script)
 
     return () => {
-      // Cleanup script on unmount
       if (script.parentNode) {
         script.parentNode.removeChild(script)
       }
     }
   }, [])
 
-  // Return the container element that the inline embed expects
-  return (
-    <div
-      id="kali-chat-container"
-      style={{
-        position: "fixed",
-        bottom: "20px",
-        right: "20px",
-        width: "400px",
-        height: "600px",
-        zIndex: 9999,
-      }}
-    />
-  )
+  return null
 }
