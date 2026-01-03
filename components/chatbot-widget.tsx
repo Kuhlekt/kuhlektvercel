@@ -18,6 +18,7 @@ export function ChatbotWidget() {
     script.async = true
 
     console.log("[v0] Loading chatbot widget from:", script.src)
+    console.log("[v0] KALI_API_URL set to:", window.KALI_API_URL)
 
     script.onload = () => {
       console.log("[v0] Chatbot widget loaded successfully")

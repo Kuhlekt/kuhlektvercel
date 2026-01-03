@@ -6,19 +6,17 @@ import Link from "next/link"
 
 export default function NewVisitorBanner() {
   const [isVisible, setIsVisible] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [bannerContent, setBannerContent] = useState({ title: "", badge: "", offer: "" })
 
   useEffect(() => {
     const checkBannerVisibility = () => {
       const now = new Date()
-      
+
       const blackFridayEnd = new Date("2025-12-02T00:00:00")
       if (now < blackFridayEnd) {
-        setIsLoading(false)
         return
       }
-      
+
       const currentYear = now.getFullYear()
       const currentMonth = now.getMonth()
 
@@ -74,7 +72,6 @@ export default function NewVisitorBanner() {
       const content = monthlyBanners[monthKey]
 
       if (!content) {
-        setIsLoading(false)
         return
       }
 
@@ -85,8 +82,6 @@ export default function NewVisitorBanner() {
         setBannerContent(content)
         setIsVisible(true)
       }
-
-      setIsLoading(false)
     }
 
     checkBannerVisibility()
@@ -98,7 +93,7 @@ export default function NewVisitorBanner() {
     setIsVisible(false)
   }
 
-  if (isLoading || !isVisible) {
+  if (!isVisible || !bannerContent.title) {
     return null
   }
 
