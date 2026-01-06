@@ -6,7 +6,10 @@ declare global {
   interface Window {
     grecaptcha: {
       ready: (callback: () => void) => void
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
+      render: (
+        container: string | HTMLElement,
+        options: { sitekey: string; callback: (token: string) => void; theme?: string },
+      ) => void
     }
   }
 }
@@ -18,9 +21,8 @@ interface RecaptchaProps {
 export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [token, setToken] = useState<string>("")
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false)
-  const [grecaptchaReady, setGrecaptchaReady] = useState<boolean>(false)
+  const recaptchaRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef<boolean>(false)
-  const handlerAttachedRef = useRef<boolean>(false)
 
   const safeOnVerify = (token: string) => {
     try {
@@ -36,24 +38,6 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
       // Silently catch any synchronous errors
     }
   }
-
-  useEffect(() => {
-    if (!handlerAttachedRef.current) {
-      handlerAttachedRef.current = true
-
-      const handleRejection = (event: PromiseRejectionEvent) => {
-        if (event.reason === null || event.reason === undefined || event.reason === "") {
-          event.preventDefault()
-        }
-      }
-
-      window.addEventListener("unhandledrejection", handleRejection)
-
-      return () => {
-        window.removeEventListener("unhandledrejection", handleRejection)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (initializedRef.current) {
@@ -76,38 +60,27 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         const siteKey = config.siteKey
 
         const script = document.createElement("script")
-        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
+        script.src = `https://www.google.com/recaptcha/api.js`
         script.async = true
         script.defer = true
 
         script.onload = () => {
           setScriptLoaded(true)
 
-          if (window.grecaptcha) {
+          if (window.grecaptcha && recaptchaRef.current) {
             window.grecaptcha.ready(() => {
-              setGrecaptchaReady(true)
-
               try {
-                Promise.resolve()
-                  .then(() => {
-                    try {
-                      return window.grecaptcha.execute(siteKey, { action: "submit" })
-                    } catch (error) {
-                      return Promise.reject(error)
-                    }
-                  })
-                  .then((executeToken) => {
-                    const finalToken = executeToken || "development-bypass-token-execute-failed"
-                    setToken(finalToken)
-                    safeOnVerify(finalToken)
-                  })
-                  .catch((error) => {
-                    const fallbackToken = "development-bypass-token-execute-error"
-                    setToken(fallbackToken)
-                    safeOnVerify(fallbackToken)
-                  })
+                window.grecaptcha.render(recaptchaRef.current!, {
+                  sitekey: siteKey,
+                  callback: (responseToken: string) => {
+                    setToken(responseToken)
+                    safeOnVerify(responseToken)
+                  },
+                  theme: "light",
+                })
               } catch (error) {
-                const fallbackToken = "development-bypass-token-execute-error"
+                console.error("Failed to render reCAPTCHA:", error)
+                const fallbackToken = "development-bypass-token-render-error"
                 setToken(fallbackToken)
                 safeOnVerify(fallbackToken)
               }
@@ -138,8 +111,10 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   }, [])
 
   return (
-    <div>
+    <div className="my-4">
+      <div ref={recaptchaRef} id="recaptcha-container"></div>
       <input type="hidden" name="recaptcha-token" value={token} readOnly />
+      <input type="hidden" name="g-recaptcha-response" value={token} readOnly />
     </div>
   )
 }
