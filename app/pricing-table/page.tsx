@@ -280,27 +280,33 @@ export default function PricingTablePage() {
           </p>
 
           <div className="flex flex-col items-center gap-4 mt-8">
-            <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
-              <button
-                onClick={() => setBillingPeriod("monthly")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingPeriod("annual")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Annual
-              </button>
+            <div className="relative flex justify-center w-full">
+              <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
+                <button
+                  onClick={() => setBillingPeriod("monthly")}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingPeriod("annual")}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Annual
+                </button>
+              </div>
+              <div className="absolute left-1/2 translate-x-[calc(50%+1rem)] text-base font-semibold text-teal-600 whitespace-nowrap">
+                Go Annual, Get a discount
+              </div>
             </div>
             {billingPeriod === "annual" && (
-              <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
-                💰 15% Discount Available for Annual Pricing - Pre-Paid
+              <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700 font-medium flex items-center gap-2 justify-center">
+                <span className="text-lg">👍</span>
+                <span>15% Discount Available for Annual Pricing - Pre-Paid</span>
               </div>
             )}
           </div>
