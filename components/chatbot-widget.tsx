@@ -10,15 +10,12 @@ declare global {
 
 export function ChatbotWidget() {
   useEffect(() => {
-    window.KALI_API_URL = "https://chatbot.hindleconsultants.com"
+    window.KALI_API_URL = "https://preview-hc-chatbot-v200-3.vercel.app"
     window.TENANT_SLUG = "kuhlekt"
 
     const script = document.createElement("script")
-    script.src = "https://chatbot.hindleconsultants.com/widget.js?v=2.7"
+    script.src = "https://preview-hc-chatbot-v200-3.vercel.app/api/widget?v=048"
     script.async = true
-
-    console.log("[v0] Loading chatbot widget from:", script.src)
-    console.log("[v0] KALI_API_URL set to:", window.KALI_API_URL)
 
     script.onload = () => {
       console.log("[v0] Chatbot widget loaded successfully")

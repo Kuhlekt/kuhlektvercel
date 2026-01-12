@@ -1,9 +1,10 @@
 "use client"
 
+import { useState } from "react"
+
 import type React from "react"
 import Link from "next/link"
-
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -56,9 +57,8 @@ export default function PricingTablePage() {
   const [password, setPassword] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState("")
-
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
@@ -168,25 +168,122 @@ export default function PricingTablePage() {
   ])
 
   useEffect(() => {
-    const savedPricing = localStorage.getItem("pricing-table-data")
-    const savedFeatures = localStorage.getItem("pricing-table-features")
-
-    if (savedPricing) {
-      try {
-        setPricingData(JSON.parse(savedPricing))
-      } catch (e) {
-        console.error("[v0] Failed to load pricing data:", e)
-      }
-    }
-
-    if (savedFeatures) {
-      try {
-        setFeatures(JSON.parse(savedFeatures))
-      } catch (e) {
-        console.error("[v0] Failed to load features data:", e)
-      }
-    }
+    loadPricingData()
   }, [])
+
+  const loadPricingData = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/pricing")
+      const data = await response.json()
+
+      if (data.success && data.tiers && data.features) {
+        const transformedPricingData: PricingData = {
+          bronze: {
+            usd: data.tiers.find((t: any) => t.tier_name === "bronze")?.usd_price || "980",
+            aud: data.tiers.find((t: any) => t.tier_name === "bronze")?.aud_price || "1,140",
+            billing:
+              data.tiers.find((t: any) => t.tier_name === "bronze")?.billing_term || "No contract\\nbilled monthly",
+            setupFeeUsd: data.tiers.find((t: any) => t.tier_name === "bronze")?.usd_setup_fee || "990",
+            setupFeeAud: data.tiers.find((t: any) => t.tier_name === "bronze")?.aud_setup_fee || "1,300",
+          },
+          silver: {
+            usd: data.tiers.find((t: any) => t.tier_name === "silver")?.usd_price || "1,900",
+            aud: data.tiers.find((t: any) => t.tier_name === "silver")?.aud_price || "2,510",
+            billing:
+              data.tiers.find((t: any) => t.tier_name === "silver")?.billing_term || "No contract\\nbilled monthly",
+            setupFeeUsd: data.tiers.find((t: any) => t.tier_name === "silver")?.usd_setup_fee || "1,350",
+            setupFeeAud: data.tiers.find((t: any) => t.tier_name === "silver")?.aud_setup_fee || "1,750",
+          },
+          gold: {
+            usd: data.tiers.find((t: any) => t.tier_name === "gold")?.usd_price || "2,900",
+            aud: data.tiers.find((t: any) => t.tier_name === "gold")?.aud_price || "3,150",
+            billing:
+              data.tiers.find((t: any) => t.tier_name === "gold")?.billing_term ||
+              "on annual contract\\nbilled monthly",
+            setupFeeUsd: data.tiers.find((t: any) => t.tier_name === "gold")?.usd_setup_fee || "1,600",
+            setupFeeAud: data.tiers.find((t: any) => t.tier_name === "gold")?.aud_setup_fee || "1,750",
+          },
+          platinum: {
+            price: data.tiers.find((t: any) => t.tier_name === "platinum")?.usd_price || "Get a quote",
+            billing:
+              data.tiers.find((t: any) => t.tier_name === "platinum")?.billing_term ||
+              "on annual contract\\nbilled monthly",
+            setupFee: data.tiers.find((t: any) => t.tier_name === "platinum")?.usd_setup_fee || "Get a quote",
+          },
+        }
+
+        const tierIds: any = {}
+        data.tiers.forEach((tier: any) => {
+          tierIds[tier.tier_name] = tier.id
+        })
+
+        const transformedFeatures: Feature[] = data.features.map((feature: any) => {
+          const featureObj: Feature = {
+            name: feature.feature_name,
+            bronze: "false",
+            silver: "false",
+            gold: "false",
+            platinum: "false",
+          }
+
+          data.featureValues.forEach((fv: any) => {
+            if (fv.pricing_feature_id === feature.id) {
+              const tier = data.tiers.find((t: any) => t.id === fv.pricing_tier_id)
+              if (tier) {
+                featureObj[tier.tier_name as keyof Feature] = fv.value
+              }
+            }
+          })
+
+          return featureObj
+        })
+
+        setPricingData(transformedPricingData)
+        if (transformedFeatures.length > 0) {
+          setFeatures(transformedFeatures)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load pricing data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const savePricingData = async () => {
+    try {
+      console.log("[v0] Starting save of pricing data")
+      setIsSaving(true)
+      const response = await fetch("/api/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pricingData,
+          features,
+        }),
+      })
+
+      console.log("[v0] API response status:", response.status)
+      const data = await response.json()
+      console.log("[v0] API response data:", data)
+
+      if (response.status !== 200 || !data.success) {
+        const errorMsg = data.message || data.error || "Unknown error"
+        const details = data.details ? `\n\nDetails: ${data.details}` : ""
+        console.error("[v0] Save failed:", errorMsg)
+        alert(`Failed to save: ${errorMsg}${details}`)
+      } else {
+        console.log("[v0] Save successful!")
+        alert("Pricing data saved successfully!")
+      }
+    } catch (error) {
+      console.error("[v0] Failed to save pricing data:", error)
+      alert(`Failed to save pricing data: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const updatePricingData = (tier: keyof PricingData, field: string, value: string) => {
     setPricingData((prev) => ({
@@ -222,7 +319,6 @@ export default function PricingTablePage() {
       )
     }
 
-    // Display logic
     if (value === "true" || value === true) return <Check className="h-5 w-5 text-green-600" />
     if (value === "false" || value === false) return <span className="text-gray-400">—</span>
     return value
@@ -237,6 +333,7 @@ export default function PricingTablePage() {
 
   const handleEditModeClick = () => {
     if (editMode) {
+      savePricingData()
       setEditMode(false)
     } else {
       setShowPasswordDialog(true)
@@ -278,40 +375,27 @@ export default function PricingTablePage() {
     }
   }
 
-  const handleSaveChanges = () => {
-    setIsSaving(true)
-    setSaveMessage("")
-
-    try {
-      localStorage.setItem("pricing-table-data", JSON.stringify(pricingData))
-      localStorage.setItem("pricing-table-features", JSON.stringify(features))
-      setSaveMessage("✓ Changes saved successfully!")
-
-      setTimeout(() => {
-        setSaveMessage("")
-      }, 3000)
-    } catch (e) {
-      console.error("[v0] Failed to save pricing data:", e)
-      setSaveMessage("✗ Failed to save changes")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const getDisplayPrice = (price: string): string => {
     if (billingPeriod === "monthly" || price === "Get a quote") {
       return price
     }
-    // Remove commas and convert to number
     const numPrice = Number.parseFloat(price.replace(/,/g, ""))
     if (isNaN(numPrice)) return price
 
-    // Apply 15% discount
     const discounted = numPrice * 0.85
-    // Round to nearest 10
     const rounded = Math.round(discounted / 10) * 10
-    // Format with commas
     return rounded.toLocaleString()
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-slate-900 mb-2">Loading pricing data...</div>
+          <div className="text-slate-600">Please wait</div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -324,7 +408,7 @@ export default function PricingTablePage() {
           </p>
 
           <div className="flex flex-col items-center gap-4 mt-8">
-            <div className="flex items-center gap-3">
+            <div className="relative flex justify-center w-full">
               <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
                 <button
                   onClick={() => setBillingPeriod("monthly")}
@@ -343,16 +427,18 @@ export default function PricingTablePage() {
                   Annual
                 </button>
               </div>
-              <span className="text-sm text-green-600 font-medium bg-white px-2">and receive a discount</span>
+              <div className="absolute left-1/2 translate-x-[calc(50%+1rem)] text-base font-semibold text-teal-600 whitespace-nowrap">
+                Go Annual, Get a discount
+              </div>
             </div>
             {billingPeriod === "annual" && (
-              <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
-                💰 15% Discount Available for Annual Pricing - Pre-Paid
+              <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700 font-medium flex items-center gap-2 justify-center">
+                <span className="text-lg">👍</span>
+                <span>15% Discount Available for Annual Pricing - Pre-Paid</span>
               </div>
             )}
           </div>
 
-          {/* Currency Selector */}
           <div className="flex justify-center gap-4 mt-6">
             <span className={`font-medium ${currency === "AUD" ? "text-gray-500" : "text-gray-900"}`}>AUD</span>
             <Switch
@@ -363,7 +449,6 @@ export default function PricingTablePage() {
             <span className={`font-medium ${currency === "USD" ? "text-gray-500" : "text-gray-900"}`}>USD</span>
           </div>
 
-          {/* Desktop View */}
           <div className="hidden lg:block">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white rounded-xl border border-slate-300 overflow-hidden">
@@ -420,7 +505,6 @@ export default function PricingTablePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Setup Fees Row */}
                   <tr className="bg-slate-100">
                     <td className="p-4 font-medium text-slate-900">Setup fees</td>
                     {["bronze", "silver", "gold", "platinum"].map((tier) => (
@@ -448,7 +532,6 @@ export default function PricingTablePage() {
                     ))}
                   </tr>
 
-                  {/* Features */}
                   {features.map((feature, index) => (
                     <tr key={index} className="bg-slate-100 border-b border-slate-300">
                       <td
@@ -484,9 +567,7 @@ export default function PricingTablePage() {
             </div>
           </div>
 
-          {/* Mobile View */}
           <div className="lg:hidden space-y-6">
-            {/* Tab Navigation */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {(["bronze", "silver", "gold", "platinum"] as const).map((tier) => (
                 <button
@@ -503,7 +584,6 @@ export default function PricingTablePage() {
               ))}
             </div>
 
-            {/* Selected Plan Card */}
             <div className="bg-white rounded-xl border border-slate-300 overflow-hidden">
               <div className="bg-slate-100 p-6 text-center">
                 <div className="text-slate-900 font-bold text-2xl capitalize mb-3">{selectedTab}</div>
@@ -582,7 +662,6 @@ export default function PricingTablePage() {
             </div>
           </div>
 
-          {/* Footnotes Section */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-2 text-sm text-slate-600">
             <p>
               <strong>**</strong> Copies received via email BCC from ERP alternate options available by quote.
@@ -604,7 +683,6 @@ export default function PricingTablePage() {
             <p>AUD available only in Australia</p>
           </div>
 
-          {/* CTA Section */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 mb-16">
             <div className="bg-slate-50 rounded-lg p-12 text-center">
               <h2 className="text-3xl font-bold text-slate-900 mb-4">Ready to get started?</h2>
@@ -628,7 +706,6 @@ export default function PricingTablePage() {
         </div>
       </div>
 
-      {/* Password Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
         <DialogContent>
           <DialogHeader>
@@ -657,12 +734,12 @@ export default function PricingTablePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Mode Toggle Icon */}
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={handleEditModeClick}
-          className="w-20 h-20 rounded-full shadow-2xl hover:shadow-xl transition-all bg-white p-3 border-4 border-blue-500 hover:border-blue-600 hover:scale-110"
-          title={editMode ? "Exit Edit Mode" : "Edit Mode"}
+          disabled={isSaving}
+          className="w-20 h-20 rounded-full shadow-2xl hover:shadow-xl transition-all bg-white p-3 border-4 border-blue-500 hover:border-blue-600 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isSaving ? "Saving..." : editMode ? "Save & Exit Edit Mode" : "Edit Mode"}
         >
           <img
             src="/images/kuhlekt-20cloud-20transparent-20b-ground-20with-20tm-20medium-2080-20pxls.jpg"
@@ -670,29 +747,12 @@ export default function PricingTablePage() {
             className="w-full h-full object-contain"
           />
         </button>
+        {isSaving && (
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap">
+            Saving changes...
+          </div>
+        )}
       </div>
-
-      {/* Save Changes Button */}
-      {editMode && (
-        <div className="fixed top-20 right-6 z-50 flex flex-col items-end gap-2">
-          <Button
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-2xl"
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-          {saveMessage && (
-            <div
-              className={`text-sm font-medium px-4 py-2 rounded-lg shadow-lg ${
-                saveMessage.includes("✓") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-              }`}
-            >
-              {saveMessage}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
