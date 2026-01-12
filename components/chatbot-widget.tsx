@@ -3,23 +3,23 @@ import { useEffect } from "react"
 
 declare global {
   interface Window {
-    KALI_API_URL: string
-    TENANT_SLUG: string
+    chatbotConfig: {
+      tenantSlug: string
+      apiUrl: string
+    }
   }
 }
 
 export function ChatbotWidget() {
   useEffect(() => {
-    window.KALI_API_URL = "https://preview-hc-chatbot-v200-3.vercel.app"
-    window.TENANT_SLUG = "kuhlekt"
+    window.chatbotConfig = {
+      tenantSlug: "kuhlekt",
+      apiUrl: "https://chatbot.hindleconsultants.com",
+    }
 
     const script = document.createElement("script")
-    script.src = "https://preview-hc-chatbot-v200-3.vercel.app/api/widget?v=048"
+    script.src = "https://chatbot.hindleconsultants.com/api/widget?v=048"
     script.async = true
-
-    script.onload = () => {
-      console.log("[v0] Chatbot widget loaded successfully")
-    }
 
     script.onerror = (error) => {
       console.error("[v0] Failed to load chatbot widget:", error)
