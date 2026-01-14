@@ -291,11 +291,12 @@ export default function PricingTablePage() {
               </button>
               <button
                 onClick={() => setBillingPeriod("annual")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                   billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Annual
+                <span className="text-xs text-green-600 font-normal">and receive a discount</span>
               </button>
             </div>
             {billingPeriod === "annual" && (
