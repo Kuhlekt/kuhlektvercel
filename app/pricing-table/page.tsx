@@ -47,6 +47,15 @@ interface Feature {
   platinum: string | boolean
 }
 
+const USD_TO_AUD_RATE = 1.3 // 30% markup from USD
+const convertUsdToAud = (usdPrice: string): string => {
+  const numPrice = Number.parseFloat(usdPrice.replace(/,/g, ""))
+  if (isNaN(numPrice)) return usdPrice
+  const audPrice = numPrice * USD_TO_AUD_RATE
+  const rounded = Math.round(audPrice / 10) * 10
+  return rounded.toLocaleString()
+}
+
 export default function PricingTablePage() {
   const [currency, setCurrency] = useState<"USD" | "AUD">("USD")
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly")
@@ -62,24 +71,24 @@ export default function PricingTablePage() {
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
-      aud: "1,140",
+      aud: convertUsdToAud("980"), // 1,270
       billing: "No contract\nbilled monthly",
       setupFeeUsd: "990",
-      setupFeeAud: "1,300",
+      setupFeeAud: convertUsdToAud("990"), // 1,290
     },
     silver: {
       usd: "1,900",
-      aud: "2,510",
+      aud: convertUsdToAud("1900"), // 2,470
       billing: "No contract\nbilled monthly",
       setupFeeUsd: "1,350",
-      setupFeeAud: "1,750",
+      setupFeeAud: convertUsdToAud("1350"), // 1,760
     },
     gold: {
       usd: "2,900",
-      aud: "3,150",
+      aud: convertUsdToAud("2900"), // 3,770
       billing: "on annual contract\nbilled monthly",
       setupFeeUsd: "1,600",
-      setupFeeAud: "1,750",
+      setupFeeAud: convertUsdToAud("1600"), // 2,080
     },
     platinum: {
       price: "Get a quote",

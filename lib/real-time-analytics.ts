@@ -6,7 +6,7 @@ const sql = neon(process.env.NEON_DATABASE_URL!)
 
 async function checkNeonConnection(): Promise<boolean> {
   try {
-    const result = await sql(`SELECT 1`)
+    const result = await sql`SELECT 1`
     return !!result
   } catch {
     return false
@@ -21,11 +21,11 @@ export async function getRealTimeAnalytics() {
       return { success: false, error: "Database connection unavailable" }
     }
 
-    const data = await sql(
-      `SELECT * FROM real_time_analytics 
-       ORDER BY hour DESC 
-       LIMIT 24`,
-    )
+    const data = await sql`
+      SELECT * FROM real_time_analytics 
+      ORDER BY hour DESC 
+      LIMIT 24
+    `
 
     const sanitizedData = data?.filter((row) => row.hour && row.total_visitors !== null) || []
 
@@ -43,14 +43,13 @@ export async function getNewUserSignOns() {
       return { success: false, error: "Database connection unavailable" }
     }
 
-    const data = await sql(
-      `SELECT visitor_id, session_id, first_visit, page, referrer, utm_source, utm_campaign, is_new_user
-       FROM visitor_tracking
-       WHERE is_new_user = true AND created_at >= $1
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [new Date(Date.now() - 60 * 60 * 1000).toISOString()],
-    )
+    const data = await sql`
+      SELECT visitor_id, session_id, first_visit, page, referrer, utm_source, utm_campaign, is_new_user
+      FROM visitor_tracking
+      WHERE is_new_user = true AND created_at >= ${new Date(Date.now() - 60 * 60 * 1000).toISOString()}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `
 
     return { success: true, data: data || [] }
   } catch (error) {
@@ -68,14 +67,13 @@ export async function getActiveUsers() {
 
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
 
-    const data = await sql(
-      `SELECT visitor_id, session_id, last_activity, page, session_duration, is_new_user
-       FROM visitor_tracking
-       WHERE last_activity >= $1 AND session_id IS NOT NULL
-       ORDER BY last_activity DESC
-       LIMIT 100`,
-      [thirtyMinutesAgo],
-    )
+    const data = await sql`
+      SELECT visitor_id, session_id, last_activity, page, session_duration, is_new_user
+      FROM visitor_tracking
+      WHERE last_activity >= ${thirtyMinutesAgo} AND session_id IS NOT NULL
+      ORDER BY last_activity DESC
+      LIMIT 100
+    `
 
     const uniqueActiveSessions = new Map()
     const validData =

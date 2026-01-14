@@ -29,11 +29,10 @@ export async function checkRateLimit(
   const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
 
   try {
-    const existingRecords = await sql(
-      `SELECT * FROM rate_limits 
-       WHERE endpoint = $1 AND identifier = $2 AND window_start >= $3`,
-      [endpoint, identifier, windowStart.toISOString()],
-    )
+    const existingRecords = await sql`
+      SELECT * FROM rate_limits 
+      WHERE endpoint = ${endpoint} AND identifier = ${identifier} AND window_start >= ${windowStart.toISOString()}
+    `
 
     const currentCount = existingRecords?.length || 0
 
@@ -50,17 +49,15 @@ export async function checkRateLimit(
       }
     }
 
-    await sql(
-      `INSERT INTO rate_limits (endpoint, identifier, window_start, request_count)
-       VALUES ($1, $2, $3, $4)`,
-      [endpoint, identifier, new Date().toISOString(), 1],
-    )
+    await sql`
+      INSERT INTO rate_limits (endpoint, identifier, window_start, request_count)
+      VALUES (${endpoint}, ${identifier}, ${new Date().toISOString()}, 1)
+    `
 
-    await sql(
-      `DELETE FROM rate_limits 
-       WHERE endpoint = $1 AND identifier = $2 AND window_start < $3`,
-      [endpoint, identifier, windowStart.toISOString()],
-    )
+    await sql`
+      DELETE FROM rate_limits 
+      WHERE endpoint = ${endpoint} AND identifier = ${identifier} AND window_start < ${windowStart.toISOString()}
+    `
 
     return {
       allowed: true,

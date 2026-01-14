@@ -12,13 +12,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ valid: false, error: "Promo code is required" }, { status: 400 })
     }
 
-    const codeData = await sql(
-      `SELECT * FROM promo_codes 
-       WHERE code = $1 AND is_active = true 
-       AND valid_from <= $2 AND valid_until >= $2
-       LIMIT 1`,
-      [code.toUpperCase(), new Date().toISOString()],
-    )
+    const codeData = await sql`
+      SELECT * FROM promo_codes 
+      WHERE code = ${code.toUpperCase()} AND is_active = true 
+      AND valid_from <= ${new Date().toISOString()} AND valid_until >= ${new Date().toISOString()}
+      LIMIT 1
+    `
 
     if (!codeData || codeData.length === 0) {
       // Validate fallback code

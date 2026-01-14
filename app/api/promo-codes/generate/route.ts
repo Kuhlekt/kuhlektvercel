@@ -22,7 +22,7 @@ export async function POST() {
 
     // Ensure the code is unique
     while (!isUnique && attempts < 10) {
-      const existingCode = await sql(`SELECT id FROM promo_codes WHERE code = $1 LIMIT 1`, [code])
+      const existingCode = await sql`SELECT id FROM promo_codes WHERE code = ${code} LIMIT 1`
 
       if (!existingCode || existingCode.length === 0) {
         isUnique = true
@@ -37,12 +37,11 @@ export async function POST() {
     }
 
     // Create the promo code in the database
-    const result = await sql(
-      `INSERT INTO promo_codes (code, discount_percent, free_setup, is_active, valid_from, valid_until, max_uses, current_uses)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING code, discount_percent, free_setup, valid_until`,
-      [code, 50, true, true, new Date().toISOString(), new Date("2025-12-02T00:00:00").toISOString(), 1, 0],
-    )
+    const result = await sql`
+      INSERT INTO promo_codes (code, discount_percent, free_setup, is_active, valid_from, valid_until, max_uses, current_uses)
+      VALUES (${code}, 50, true, true, ${new Date().toISOString()}, ${new Date("2025-12-02T00:00:00").toISOString()}, 1, 0)
+      RETURNING code, discount_percent, free_setup, valid_until
+    `
 
     if (!result || result.length === 0) {
       return NextResponse.json({ error: "Failed to create promo code" }, { status: 500 })

@@ -40,13 +40,12 @@ export async function POST(request: NextRequest) {
 
     let queryResult
     try {
-      queryResult = await sql(
-        `SELECT * FROM verification_codes 
-         WHERE email = $1 AND code = $2 AND expires_at > $3
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [email, code, new Date().toISOString()],
-      )
+      queryResult = await sql`
+        SELECT * FROM verification_codes 
+        WHERE email = ${email} AND code = ${code} AND expires_at > ${new Date().toISOString()}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `
 
       console.log("✓ Query executed")
     } catch (queryError) {
@@ -61,13 +60,12 @@ export async function POST(request: NextRequest) {
       console.error("✗ No valid verification code found")
 
       try {
-        const allCodes = await sql(
-          `SELECT code, expires_at, created_at FROM verification_codes 
-           WHERE email = $1
-           ORDER BY created_at DESC
-           LIMIT 5`,
-          [email],
-        )
+        const allCodes = await sql`
+          SELECT code, expires_at, created_at FROM verification_codes 
+          WHERE email = ${email}
+          ORDER BY created_at DESC
+          LIMIT 5
+        `
 
         if (allCodes && allCodes.length > 0) {
           console.log(
@@ -99,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     console.log("Deleting verification code to prevent reuse...")
     try {
-      await sql(`DELETE FROM verification_codes WHERE id = $1`, [verificationRecord.id])
+      await sql`DELETE FROM verification_codes WHERE id = ${verificationRecord.id}`
 
       console.log("✓ Code deleted successfully")
     } catch (deleteError) {
