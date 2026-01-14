@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
+import Link from "next/link"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -55,6 +56,9 @@ export default function PricingTablePage() {
   const [password, setPassword] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState("")
+
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
@@ -163,6 +167,27 @@ export default function PricingTablePage() {
     { name: "Statement download", bronze: "false", silver: "true", gold: "true", platinum: "true" },
   ])
 
+  useEffect(() => {
+    const savedPricing = localStorage.getItem("pricing-table-data")
+    const savedFeatures = localStorage.getItem("pricing-table-features")
+
+    if (savedPricing) {
+      try {
+        setPricingData(JSON.parse(savedPricing))
+      } catch (e) {
+        console.error("[v0] Failed to load pricing data:", e)
+      }
+    }
+
+    if (savedFeatures) {
+      try {
+        setFeatures(JSON.parse(savedFeatures))
+      } catch (e) {
+        console.error("[v0] Failed to load features data:", e)
+      }
+    }
+  }, [])
+
   const updatePricingData = (tier: keyof PricingData, field: string, value: string) => {
     setPricingData((prev) => ({
       ...prev,
@@ -253,6 +278,26 @@ export default function PricingTablePage() {
     }
   }
 
+  const handleSaveChanges = () => {
+    setIsSaving(true)
+    setSaveMessage("")
+
+    try {
+      localStorage.setItem("pricing-table-data", JSON.stringify(pricingData))
+      localStorage.setItem("pricing-table-features", JSON.stringify(features))
+      setSaveMessage("✓ Changes saved successfully!")
+
+      setTimeout(() => {
+        setSaveMessage("")
+      }, 3000)
+    } catch (e) {
+      console.error("[v0] Failed to save pricing data:", e)
+      setSaveMessage("✗ Failed to save changes")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const getDisplayPrice = (price: string): string => {
     if (billingPeriod === "monthly" || price === "Get a quote") {
       return price
@@ -279,23 +324,26 @@ export default function PricingTablePage() {
           </p>
 
           <div className="flex flex-col items-center gap-4 mt-8">
-            <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
-              <button
-                onClick={() => setBillingPeriod("monthly")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingPeriod("annual")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                  billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Annual
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
+                <button
+                  onClick={() => setBillingPeriod("monthly")}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingPeriod("annual")}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Annual
+                </button>
+              </div>
+              <span className="text-sm text-green-600 font-medium bg-white px-2">and receive a discount</span>
             </div>
             {billingPeriod === "annual" && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
@@ -564,12 +612,16 @@ export default function PricingTablePage() {
                 Contact us to discuss which plan is right for your business.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-6 text-lg">
-                  Schedule a Demo
-                </Button>
-                <Button size="lg" variant="outline" className="px-8 py-6 text-lg bg-transparent">
-                  Contact Sales
-                </Button>
+                <Link href="/demo">
+                  <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-6 text-lg">
+                    Schedule a Demo
+                  </Button>
+                </Link>
+                <Link href="/contact">
+                  <Button size="lg" variant="outline" className="px-8 py-6 text-lg bg-transparent">
+                    Contact Sales
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -606,10 +658,10 @@ export default function PricingTablePage() {
       </Dialog>
 
       {/* Edit Mode Toggle Icon */}
-      <div className="fixed bottom-4 right-4 z-50">
+      <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={handleEditModeClick}
-          className="w-16 h-16 rounded-full shadow-lg hover:shadow-xl transition-shadow bg-white p-2 border-2 border-transparent hover:border-slate-300"
+          className="w-20 h-20 rounded-full shadow-2xl hover:shadow-xl transition-all bg-white p-3 border-4 border-blue-500 hover:border-blue-600 hover:scale-110"
           title={editMode ? "Exit Edit Mode" : "Edit Mode"}
         >
           <img
@@ -619,6 +671,28 @@ export default function PricingTablePage() {
           />
         </button>
       </div>
+
+      {/* Save Changes Button */}
+      {editMode && (
+        <div className="fixed top-20 right-6 z-50 flex flex-col items-end gap-2">
+          <Button
+            onClick={handleSaveChanges}
+            disabled={isSaving}
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-2xl"
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+          {saveMessage && (
+            <div
+              className={`text-sm font-medium px-4 py-2 rounded-lg shadow-lg ${
+                saveMessage.includes("✓") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              }`}
+            >
+              {saveMessage}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
