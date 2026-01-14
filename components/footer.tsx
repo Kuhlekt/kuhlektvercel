@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -12,6 +12,11 @@ export function Footer() {
   const [isCareersModalOpen, setIsCareersModalOpen] = useState(false)
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const openCareersModal = () => setIsCareersModalOpen(true)
   const closeCareersModal = () => setIsCareersModalOpen(false)
@@ -21,6 +26,27 @@ export function Footer() {
 
   const openTermsModal = () => setIsTermsModalOpen(true)
   const closeTermsModal = () => setIsTermsModalOpen(false)
+
+  if (!isMounted) {
+    return (
+      <footer>
+        <section className="bg-gray-800 text-white py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+              Ready to transform your accounts receivable process?
+            </h2>
+            <p className="text-xl text-gray-200 mb-8 max-w-3xl mx-auto">
+              Schedule a demo to see how Kuhlekt can help your finance team get paid faster with our advanced AR
+              Automation and Digital Collections solutions.
+            </p>
+          </div>
+        </section>
+        <div className="bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" />
+        </div>
+      </footer>
+    )
+  }
 
   return (
     <footer>
@@ -172,9 +198,13 @@ export function Footer() {
       </div>
 
       {/* Modals */}
-      <CareersModal isOpen={isCareersModalOpen} onClose={closeCareersModal} />
-      <PrivacyModal isOpen={isPrivacyModalOpen} onClose={closePrivacyModal} />
-      <TermsModal isOpen={isTermsModalOpen} onClose={closeTermsModal} />
+      {isMounted && (
+        <>
+          <CareersModal isOpen={isCareersModalOpen} onClose={closeCareersModal} />
+          <PrivacyModal isOpen={isPrivacyModalOpen} onClose={closePrivacyModal} />
+          <TermsModal isOpen={isTermsModalOpen} onClose={closeTermsModal} />
+        </>
+      )}
     </footer>
   )
 }
