@@ -1,13 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useState, useTransition, useRef, useEffect } from "react"
+import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock, Gift } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Users, TrendingUp, Shield, Clock, Gift } from 'lucide-react'
 import ReCAPTCHA from "@/components/recaptcha"
 
 interface DemoFormState {
@@ -34,44 +34,30 @@ const initialState: DemoFormState = {
 export default function DemoFormComponent() {
   const [state, setState] = useState<DemoFormState>(initialState)
   const [isPending, startTransition] = useTransition()
-  const firstNameRef = useRef<HTMLInputElement>(null)
-  const lastNameRef = useRef<HTMLInputElement>(null)
-  const emailRef = useRef<HTMLInputElement>(null)
-  const companyRef = useRef<HTMLInputElement>(null)
-  const phoneRef = useRef<HTMLInputElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (state.errors) {
-      if (state.errors.firstName && firstNameRef.current) {
-        firstNameRef.current.focus()
-      } else if (state.errors.lastName && lastNameRef.current) {
-        lastNameRef.current.focus()
-      } else if (state.errors.email && emailRef.current) {
-        emailRef.current.focus()
-      } else if (state.errors.company && companyRef.current) {
-        companyRef.current.focus()
-      } else if (state.errors.phone && phoneRef.current) {
-        phoneRef.current.focus()
-      }
-    }
-  }, [state.errors])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
+
+    console.log("[v0] Form submission started")
+    const recaptchaToken = formData.get("recaptcha-token")
+    console.log("[v0] reCAPTCHA token from form:", recaptchaToken ? "present" : "missing")
 
     startTransition(() => {
       setState({ ...initialState, message: "Submitting..." })
     })
 
     try {
+      console.log("[v0] Making fetch request to /api/demo")
       const response = await fetch("/api/demo", {
         method: "POST",
         body: formData,
       }).catch((fetchError) => {
+        console.error("[v0] Fetch error caught:", fetchError)
         throw new Error("Network error occurred")
       })
+
+      console.log("[v0] Fetch response received:", response?.status)
 
       if (!response) {
         throw new Error("No response received")
@@ -81,9 +67,13 @@ export default function DemoFormComponent() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
+      console.log("[v0] Parsing JSON response")
       const result = await response.json().catch((jsonError) => {
+        console.error("[v0] JSON parsing error:", jsonError)
         throw new Error("Invalid response format")
       })
+
+      console.log("[v0] JSON response parsed:", result)
 
       if (!result) {
         throw new Error("Empty response received")
@@ -93,11 +83,15 @@ export default function DemoFormComponent() {
         setState(result)
       })
 
-      // Clear form if successful
-      if (result.success && result.shouldClearForm && formRef.current) {
-        formRef.current.reset()
+      // Clear form if successful and shouldClearForm is true
+      if (result.success && result.shouldClearForm) {
+        const form = event.currentTarget
+        if (form) {
+          form.reset()
+        }
       }
     } catch (error) {
+      console.error("[v0] Form submission error:", error)
       startTransition(() => {
         setState({
           success: false,
@@ -111,9 +105,6 @@ export default function DemoFormComponent() {
       })
     }
   }
-
-  const hasError = (field: keyof DemoFormState["errors"]) => !!state.errors?.[field]
-  const getErrorId = (field: string) => `${field}-error`
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -136,159 +127,97 @@ export default function DemoFormComponent() {
                 <CardDescription>Fill out the form below and we'll contact you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
-                {Object.keys(state.errors || {}).length > 0 && (
-                  <div role="alert" aria-live="polite" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-800 font-medium">Please correct the following errors:</p>
-                    <ul className="list-disc list-inside text-sm text-red-700 mt-1">
-                      {state.errors?.firstName && <li>{state.errors.firstName}</li>}
-                      {state.errors?.lastName && <li>{state.errors.lastName}</li>}
-                      {state.errors?.email && <li>{state.errors.email}</li>}
-                      {state.errors?.company && <li>{state.errors.company}</li>}
-                      {state.errors?.phone && <li>{state.errors.phone}</li>}
-                      {state.errors?.promoCode && <li>{state.errors.promoCode}</li>}
-                    </ul>
-                  </div>
-                )}
-
-                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6" noValidate>
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
-                        ref={firstNameRef}
                         id="firstName"
                         name="firstName"
                         type="text"
                         required
-                        aria-invalid={hasError("firstName")}
-                        aria-describedby={hasError("firstName") ? getErrorId("firstName") : undefined}
-                        className={hasError("firstName") ? "border-red-500" : ""}
+                        className={state.errors?.firstName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state.errors?.firstName && (
-                        <p id={getErrorId("firstName")} className="text-sm text-red-600" role="alert">
-                          {state.errors.firstName}
-                        </p>
-                      )}
+                      {state.errors?.firstName && <p className="text-sm text-red-600">{state.errors.firstName}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name *</Label>
                       <Input
-                        ref={lastNameRef}
                         id="lastName"
                         name="lastName"
                         type="text"
                         required
-                        aria-invalid={hasError("lastName")}
-                        aria-describedby={hasError("lastName") ? getErrorId("lastName") : undefined}
-                        className={hasError("lastName") ? "border-red-500" : ""}
+                        className={state.errors?.lastName ? "border-red-500" : ""}
                         disabled={isPending}
                       />
-                      {state.errors?.lastName && (
-                        <p id={getErrorId("lastName")} className="text-sm text-red-600" role="alert">
-                          {state.errors.lastName}
-                        </p>
-                      )}
+                      {state.errors?.lastName && <p className="text-sm text-red-600">{state.errors.lastName}</p>}
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Business Email *</Label>
                     <Input
-                      ref={emailRef}
                       id="email"
                       name="email"
                       type="email"
                       required
-                      aria-invalid={hasError("email")}
-                      aria-describedby={hasError("email") ? getErrorId("email") : undefined}
-                      className={hasError("email") ? "border-red-500" : ""}
+                      className={state.errors?.email ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.email && (
-                      <p id={getErrorId("email")} className="text-sm text-red-600" role="alert">
-                        {state.errors.email}
-                      </p>
-                    )}
+                    {state.errors?.email && <p className="text-sm text-red-600">{state.errors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="company">Company Name *</Label>
                     <Input
-                      ref={companyRef}
                       id="company"
                       name="company"
                       type="text"
                       required
-                      aria-invalid={hasError("company")}
-                      aria-describedby={hasError("company") ? getErrorId("company") : undefined}
-                      className={hasError("company") ? "border-red-500" : ""}
+                      className={state.errors?.company ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.company && (
-                      <p id={getErrorId("company")} className="text-sm text-red-600" role="alert">
-                        {state.errors.company}
-                      </p>
-                    )}
+                    {state.errors?.company && <p className="text-sm text-red-600">{state.errors.company}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number *</Label>
                     <Input
-                      ref={phoneRef}
                       id="phone"
                       name="phone"
                       type="tel"
                       required
-                      aria-invalid={hasError("phone")}
-                      aria-describedby={hasError("phone") ? `${getErrorId("phone")} phone-hint` : "phone-hint"}
-                      className={hasError("phone") ? "border-red-500" : ""}
+                      className={state.errors?.phone ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    <p id="phone-hint" className="text-xs text-gray-500">
-                      Format: +1-555-123-4567
-                    </p>
-                    {state.errors?.phone && (
-                      <p id={getErrorId("phone")} className="text-sm text-red-600" role="alert">
-                        {state.errors.phone}
-                      </p>
-                    )}
+                    {state.errors?.phone && <p className="text-sm text-red-600">{state.errors.phone}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="promoCode" className="flex items-center">
-                      <Gift className="mr-2 h-4 w-4 text-yellow-600" aria-hidden="true" />
+                      <Gift className="mr-2 h-4 w-4 text-yellow-600" />
                       Promo Code (Optional)
                     </Label>
                     <Input
                       id="promoCode"
                       name="promoCode"
                       type="text"
-                      placeholder="Enter promo code if you have one"
-                      aria-invalid={hasError("promoCode")}
-                      aria-describedby={hasError("promoCode") ? getErrorId("promoCode") : undefined}
-                      className={hasError("promoCode") ? "border-red-500" : ""}
+                      placeholder="Enter BLACKFRIDAY2024 for 50% off"
+                      className={state.errors?.promoCode ? "border-red-500" : ""}
                       disabled={isPending}
                     />
-                    {state.errors?.promoCode && (
-                      <p id={getErrorId("promoCode")} className="text-sm text-red-600" role="alert">
-                        {state.errors.promoCode}
-                      </p>
-                    )}
+                    {state.errors?.promoCode && <p className="text-sm text-red-600">{state.errors.promoCode}</p>}
                   </div>
 
                   <ReCAPTCHA />
-                  {state.errors?.recaptcha && (
-                    <p className="text-sm text-red-600" role="alert">
-                      {state.errors.recaptcha}
-                    </p>
-                  )}
+                  {state.errors?.recaptcha && <p className="text-sm text-red-600">{state.errors.recaptcha}</p>}
 
-                  <Button type="submit" className="w-full" disabled={isPending} aria-busy={isPending}>
+                  <Button type="submit" className="w-full" disabled={isPending}>
                     {isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        <span>Scheduling Demo...</span>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Scheduling Demo...
                       </>
                     ) : (
                       "Schedule Demo"
@@ -296,15 +225,11 @@ export default function DemoFormComponent() {
                   </Button>
 
                   {state.message && (
-                    <Alert
-                      className={state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}
-                      role="status"
-                      aria-live="polite"
-                    >
+                    <Alert className={state.success ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
                       {state.success ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
+                        <AlertCircle className="h-4 w-4 text-red-600" />
                       )}
                       <AlertDescription className={state.success ? "text-green-800" : "text-red-800"}>
                         {state.message}
@@ -324,7 +249,7 @@ export default function DemoFormComponent() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-start space-x-4">
-                    <TrendingUp className="h-6 w-6 text-blue-600 mt-1" aria-hidden="true" />
+                    <TrendingUp className="h-6 w-6 text-blue-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-gray-900">Real-time Dashboard</h3>
                       <p className="text-gray-600">See live AR metrics, aging reports, and cash flow projections</p>
@@ -332,7 +257,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="flex items-start space-x-4">
-                    <Users className="h-6 w-6 text-blue-600 mt-1" aria-hidden="true" />
+                    <Users className="h-6 w-6 text-blue-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-gray-900">Customer Portal</h3>
                       <p className="text-gray-600">Self-service portal for customers to view and pay invoices</p>
@@ -340,7 +265,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="flex items-start space-x-4">
-                    <Shield className="h-6 w-6 text-blue-600 mt-1" aria-hidden="true" />
+                    <Shield className="h-6 w-6 text-blue-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-gray-900">Automated Collections</h3>
                       <p className="text-gray-600">Smart workflows that reduce manual work by 80%</p>
@@ -348,7 +273,7 @@ export default function DemoFormComponent() {
                   </div>
 
                   <div className="flex items-start space-x-4">
-                    <Clock className="h-6 w-6 text-blue-600 mt-1" aria-hidden="true" />
+                    <Clock className="h-6 w-6 text-blue-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-gray-900">Quick Implementation</h3>
                       <p className="text-gray-600">Go live in as little as 1 week with our proven process</p>

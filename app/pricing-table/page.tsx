@@ -3,7 +3,7 @@
 import type React from "react"
 import Link from "next/link"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -56,9 +56,6 @@ export default function PricingTablePage() {
   const [password, setPassword] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState("")
-
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
@@ -167,27 +164,6 @@ export default function PricingTablePage() {
     { name: "Statement download", bronze: "false", silver: "true", gold: "true", platinum: "true" },
   ])
 
-  useEffect(() => {
-    const savedPricing = localStorage.getItem("pricing-table-data")
-    const savedFeatures = localStorage.getItem("pricing-table-features")
-
-    if (savedPricing) {
-      try {
-        setPricingData(JSON.parse(savedPricing))
-      } catch (e) {
-        console.error("[v0] Failed to load pricing data:", e)
-      }
-    }
-
-    if (savedFeatures) {
-      try {
-        setFeatures(JSON.parse(savedFeatures))
-      } catch (e) {
-        console.error("[v0] Failed to load features data:", e)
-      }
-    }
-  }, [])
-
   const updatePricingData = (tier: keyof PricingData, field: string, value: string) => {
     setPricingData((prev) => ({
       ...prev,
@@ -278,26 +254,6 @@ export default function PricingTablePage() {
     }
   }
 
-  const handleSaveChanges = () => {
-    setIsSaving(true)
-    setSaveMessage("")
-
-    try {
-      localStorage.setItem("pricing-table-data", JSON.stringify(pricingData))
-      localStorage.setItem("pricing-table-features", JSON.stringify(features))
-      setSaveMessage("✓ Changes saved successfully!")
-
-      setTimeout(() => {
-        setSaveMessage("")
-      }, 3000)
-    } catch (e) {
-      console.error("[v0] Failed to save pricing data:", e)
-      setSaveMessage("✗ Failed to save changes")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   const getDisplayPrice = (price: string): string => {
     if (billingPeriod === "monthly" || price === "Get a quote") {
       return price
@@ -324,26 +280,23 @@ export default function PricingTablePage() {
           </p>
 
           <div className="flex flex-col items-center gap-4 mt-8">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
-                <button
-                  onClick={() => setBillingPeriod("monthly")}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setBillingPeriod("annual")}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Annual
-                </button>
-              </div>
-              <span className="text-sm text-green-600 font-medium bg-white px-2">and receive a discount</span>
+            <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
+              <button
+                onClick={() => setBillingPeriod("monthly")}
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingPeriod("annual")}
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                  billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Annual
+              </button>
             </div>
             {billingPeriod === "annual" && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
@@ -671,28 +624,6 @@ export default function PricingTablePage() {
           />
         </button>
       </div>
-
-      {/* Save Changes Button */}
-      {editMode && (
-        <div className="fixed top-20 right-6 z-50 flex flex-col items-end gap-2">
-          <Button
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-2xl"
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-          {saveMessage && (
-            <div
-              className={`text-sm font-medium px-4 py-2 rounded-lg shadow-lg ${
-                saveMessage.includes("✓") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-              }`}
-            >
-              {saveMessage}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

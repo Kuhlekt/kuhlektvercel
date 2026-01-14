@@ -1,42 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { Menu, X } from "lucide-react"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
-
-  if (!isMounted) {
-    return (
-      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center flex-shrink-0">
-              <Image
-                src="/images/design-mode/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy.png"
-                alt="Kuhlekt Logo"
-                width={120}
-                height={40}
-                className="h-8 w-auto"
-                priority
-              />
-            </Link>
-            <div className="w-10" />
-          </div>
-        </div>
-      </header>
-    )
-  }
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
@@ -54,7 +26,8 @@ export function Header() {
             />
           </Link>
 
-          <nav className="hidden md:flex space-x-8" aria-label="Main navigation">
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
             <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
               Home
             </Link>
@@ -99,23 +72,19 @@ export function Header() {
             </Link>
           </div>
 
+          {/* Mobile menu button */}
           <button
             onClick={toggleMenu}
             className="md:hidden p-2 rounded-md text-gray-700 hover:text-cyan-600 hover:bg-gray-100 transition-colors duration-200"
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={isMenuOpen}
-            aria-controls="mobile-menu"
+            aria-label="Toggle menu"
           >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isMenuOpen ? <span className="text-2xl">✕</span> : <span className="text-2xl">☰</span>}
           </button>
         </div>
 
+        {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav
-            id="mobile-menu"
-            className="md:hidden py-4 border-t border-gray-200 bg-white"
-            aria-label="Mobile navigation"
-          >
+          <div className="md:hidden py-4 border-t border-gray-200 bg-white">
             <div className="flex flex-col space-y-4">
               <Link
                 href="/"
@@ -165,7 +134,7 @@ export function Header() {
                 </Button>
               </Link>
             </div>
-          </nav>
+          </div>
         )}
       </div>
     </header>
