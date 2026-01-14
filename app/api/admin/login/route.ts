@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limiter"
-import { comparePassword } from "@/lib/server-only-utils"
 
 export async function POST(request: Request) {
   try {
@@ -27,22 +26,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Password is required" }, { status: 400 })
     }
 
-    const passwordHash = process.env.ADMIN_PASSWORD_HASH
+    const correctPassword = process.env.ADMIN_PASSWORD
 
-    if (!passwordHash) {
-      console.error("[v0] Admin password hash not configured")
-      throw new Error("Admin password hash not configured")
+    if (!correctPassword) {
+      console.error("[v0] Admin password not configured")
+      throw new Error("Admin password not configured")
     }
 
-    console.log("[v0] Attempting password verification")
-    console.log("[v0] Hash format:", passwordHash.substring(0, 10))
-    console.log("[v0] Password length:", password.length)
-
-    const isValid = await comparePassword(password, passwordHash)
-
-    console.log("[v0] Password verification result:", isValid)
-
-    if (isValid) {
+    // Simple string comparison for the password
+    if (password === correctPassword) {
       return NextResponse.json({ success: true })
     } else {
       return NextResponse.json({ success: false, message: "Invalid password" }, { status: 401 })
