@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { Menu, X } from "lucide-react"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -26,8 +27,7 @@ export function Header() {
             />
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden md:flex space-x-8" aria-label="Main navigation">
             <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
               Home
             </Link>
@@ -72,19 +72,23 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Mobile menu button */}
           <button
             onClick={toggleMenu}
             className="md:hidden p-2 rounded-md text-gray-700 hover:text-cyan-600 hover:bg-gray-100 transition-colors duration-200"
-            aria-label="Toggle menu"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
           >
-            {isMenuOpen ? <span className="text-2xl">✕</span> : <span className="text-2xl">☰</span>}
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 bg-white">
+          <nav
+            id="mobile-menu"
+            className="md:hidden py-4 border-t border-gray-200 bg-white"
+            aria-label="Mobile navigation"
+          >
             <div className="flex flex-col space-y-4">
               <Link
                 href="/"
@@ -134,7 +138,7 @@ export function Header() {
                 </Button>
               </Link>
             </div>
-          </div>
+          </nav>
         )}
       </div>
     </header>

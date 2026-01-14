@@ -6,7 +6,10 @@ declare global {
   interface Window {
     grecaptcha: {
       ready: (callback: () => void) => void
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
+      render: (
+        container: string | HTMLElement,
+        options: { sitekey: string; callback: (token: string) => void; theme?: string },
+      ) => void
     }
   }
 }
@@ -17,6 +20,8 @@ interface RecaptchaProps {
 
 export default function Recaptcha({ onVerify }: RecaptchaProps) {
   const [token, setToken] = useState<string>("")
+  const [scriptLoaded, setScriptLoaded] = useState<boolean>(false)
+  const recaptchaRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef<boolean>(false)
 
   const safeOnVerify = (token: string) => {
@@ -55,22 +60,27 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         const siteKey = config.siteKey
 
         const script = document.createElement("script")
-        script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`
+        script.src = `https://www.google.com/recaptcha/api.js`
         script.async = true
         script.defer = true
 
         script.onload = () => {
-          if (window.grecaptcha) {
-            window.grecaptcha.ready(async () => {
+          setScriptLoaded(true)
+
+          if (window.grecaptcha && recaptchaRef.current) {
+            window.grecaptcha.ready(() => {
               try {
-                const responseToken = await window.grecaptcha.execute(siteKey, {
-                  action: "submit",
+                window.grecaptcha.render(recaptchaRef.current!, {
+                  sitekey: siteKey,
+                  callback: (responseToken: string) => {
+                    setToken(responseToken)
+                    safeOnVerify(responseToken)
+                  },
+                  theme: "light",
                 })
-                setToken(responseToken)
-                safeOnVerify(responseToken)
               } catch (error) {
-                console.error("Failed to execute reCAPTCHA v3:", error)
-                const fallbackToken = "development-bypass-token-execute-error"
+                console.error("Failed to render reCAPTCHA:", error)
+                const fallbackToken = "development-bypass-token-render-error"
                 setToken(fallbackToken)
                 safeOnVerify(fallbackToken)
               }
@@ -79,6 +89,7 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
         }
 
         script.onerror = () => {
+          setScriptLoaded(false)
           const fallbackToken = "development-bypass-token-script-error"
           setToken(fallbackToken)
           safeOnVerify(fallbackToken)
@@ -100,9 +111,10 @@ export default function Recaptcha({ onVerify }: RecaptchaProps) {
   }, [])
 
   return (
-    <>
+    <div className="my-4">
+      <div ref={recaptchaRef} id="recaptcha-container"></div>
       <input type="hidden" name="recaptcha-token" value={token} readOnly />
       <input type="hidden" name="g-recaptcha-response" value={token} readOnly />
-    </>
+    </div>
   )
 }

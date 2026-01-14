@@ -1,6 +1,6 @@
 "use server"
 
-export async function verifyRecaptcha(token: string): Promise<{ success: boolean; score?: number; error?: string }> {
+export async function verifyRecaptcha(token: string): Promise<{ success: boolean; error?: string }> {
   try {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY
 
@@ -20,14 +20,14 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
 
       if (isDevelopment) {
         console.log("Fallback token allowed in development/preview mode")
-        return { success: true, score: 0.9 }
+        return { success: true }
       } else {
         console.error("Fallback token rejected in production")
         return { success: false, error: "Invalid reCAPTCHA token" }
       }
     }
 
-    console.log("Verifying reCAPTCHA v3 token:", token.substring(0, 20) + "...")
+    console.log("Verifying reCAPTCHA token:", token.substring(0, 20) + "...")
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -50,18 +50,11 @@ export async function verifyRecaptcha(token: string): Promise<{ success: boolean
       }
 
       const data = await response.json()
-      console.log("reCAPTCHA v3 verification response:", { success: data.success, score: data.score })
+      console.log("reCAPTCHA verification response:", data)
 
-      if (data.success && typeof data.score === "number") {
-        const threshold = 0.5 // Adjust this threshold as needed
-
-        if (data.score >= threshold) {
-          console.log(`reCAPTCHA verification successful with score ${data.score}`)
-          return { success: true, score: data.score }
-        } else {
-          console.warn(`reCAPTCHA score ${data.score} below threshold ${threshold}`)
-          return { success: false, score: data.score, error: "reCAPTCHA score too low" }
-        }
+      if (data.success) {
+        console.log("reCAPTCHA verification successful")
+        return { success: true }
       } else {
         const errorCodes = data["error-codes"] || []
         console.error("reCAPTCHA verification failed:", errorCodes)

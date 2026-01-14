@@ -3,23 +3,26 @@ import { useEffect } from "react"
 
 declare global {
   interface Window {
-    chatbotConfig: {
-      tenantSlug: string
-      apiUrl: string
-    }
+    KALI_API_URL: string
+    TENANT_SLUG: string
   }
 }
 
 export function ChatbotWidget() {
   useEffect(() => {
-    window.chatbotConfig = {
-      tenantSlug: "kuhlekt",
-      apiUrl: "https://chatbot.hindleconsultants.com",
-    }
+    window.KALI_API_URL = "https://chatbot.hindleconsultants.com"
+    window.TENANT_SLUG = "kuhlekt"
 
     const script = document.createElement("script")
-    script.src = "https://chatbot.hindleconsultants.com/api/widget?v=048"
+    script.src = "https://chatbot.hindleconsultants.com/widget.js?v=2.7"
     script.async = true
+
+    console.log("[v0] Loading chatbot widget from:", script.src)
+    console.log("[v0] KALI_API_URL set to:", window.KALI_API_URL)
+
+    script.onload = () => {
+      console.log("[v0] Chatbot widget loaded successfully")
+    }
 
     script.onerror = (error) => {
       console.error("[v0] Failed to load chatbot widget:", error)
