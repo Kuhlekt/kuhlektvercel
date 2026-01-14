@@ -1,9 +1,17 @@
 import type React from "react"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
 
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <Header />
+      {children}
+      <Footer />
+    </>
+  )
 }
