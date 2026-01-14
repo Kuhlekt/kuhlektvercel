@@ -1,4 +1,3 @@
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
 export const metadata = {
@@ -10,7 +9,6 @@ export const metadata = {
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col">
-      <Header />
       <div className="flex-1 bg-white">
         <section className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto text-center">
