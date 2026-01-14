@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,63 +32,52 @@ const initialState: ContactFormState = {
 export default function ContactFormComponent() {
   const [state, setState] = useState<ContactFormState>(initialState)
   const [isPending, startTransition] = useTransition()
+  const [csrfToken, setCsrfToken] = useState<string>("")
+
+  useEffect(() => {
+    const generateToken = async () => {
+      try {
+        const response = await fetch("/api/csrf-token")
+        const { token } = await response.json()
+        setCsrfToken(token)
+      } catch (error) {
+        // Silent fail - form will still work but without CSRF protection
+      }
+    }
+    generateToken()
+  }, [])
 
   const handleSubmit = async (formData: FormData) => {
-    console.log("[v0] Form submission started")
     startTransition(() => {
       setState({ ...initialState, message: "Sending..." })
     })
 
     try {
-      console.log("[v0] Making fetch request to /api/contact")
       const response = await fetch("/api/contact", {
         method: "POST",
         body: formData,
-      }).catch((fetchError) => {
-        console.error("[v0] Fetch error caught:", fetchError)
-        throw new Error("Network error occurred")
+        headers: {
+          "x-csrf-token": csrfToken,
+        },
       })
 
-      console.log("[v0] Fetch response received:", response?.status, response?.ok)
-
-      if (!response) {
-        console.error("[v0] No response received")
-        throw new Error("No response received")
+      if (!response?.ok) {
+        throw new Error(`HTTP error! status: ${response?.status}`)
       }
 
-      if (!response.ok) {
-        console.error("[v0] HTTP error:", response.status)
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      const result = await response.json()
 
-      console.log("[v0] Parsing JSON response...")
-      const result = await response.json().catch((jsonError) => {
-        console.error("[v0] JSON parsing error:", jsonError)
-        throw new Error("Invalid response format")
-      })
-
-      console.log("[v0] JSON result:", result)
-
-      if (!result) {
-        console.error("[v0] Empty response received")
-        throw new Error("Empty response received")
-      }
-
-      console.log("[v0] Setting state with result:", result)
       startTransition(() => {
         setState(result)
 
         if (result.success && result.shouldClearForm) {
-          console.log("[v0] Clearing form...")
           const form = document.querySelector("form") as HTMLFormElement
           if (form) {
             form.reset()
           }
         }
       })
-      console.log("[v0] Form submission completed successfully")
     } catch (error) {
-      console.error("[v0] Form submission error:", error)
       startTransition(() => {
         setState({
           success: false,

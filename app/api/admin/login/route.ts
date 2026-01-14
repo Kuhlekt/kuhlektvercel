@@ -1,25 +1,42 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
+import { checkRateLimit } from "@/lib/rate-limiter"
 
 function verifyPassword(password: string): boolean {
   const passwordHash = process.env.ADMIN_PASSWORD_HASH
-  const plainPassword = process.env.ADMIN_PASSWORD
 
-  if (passwordHash && passwordHash.includes(":")) {
-    const [salt, hash] = passwordHash.split(":")
-    const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex")
-    return hash === verifyHash
+  if (!passwordHash) {
+    throw new Error("Admin password hash not configured")
   }
 
-  if (plainPassword) {
-    return password === plainPassword
+  if (!passwordHash.includes(":")) {
+    throw new Error("Invalid password hash format")
   }
 
-  return false
+  const [salt, hash] = passwordHash.split(":")
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex")
+  return hash === verifyHash
 }
 
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    const rateLimitResult = await checkRateLimit("admin-login", clientIp)
+
+    if (!rateLimitResult.allowed) {
+      const resetMinutes = rateLimitResult.resetAt
+        ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
+        : 15
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many login attempts. Please try again in ${resetMinutes} minutes.`,
+        },
+        { status: 429 },
+      )
+    }
+
     const { password } = await request.json()
 
     if (!password) {
@@ -34,7 +51,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Invalid password" }, { status: 401 })
     }
   } catch (error) {
-    console.error("Admin login error:", error)
     return NextResponse.json({ success: false, message: "An error occurred" }, { status: 500 })
   }
 }

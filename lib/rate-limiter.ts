@@ -1,8 +1,8 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { neon } from "@neondatabase/serverless"
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+const sql = neon(process.env.NEON_DATABASE_URL!)
 
 interface RateLimitConfig {
   maxAttempts: number
@@ -29,19 +29,11 @@ export async function checkRateLimit(
   const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
 
   try {
-    // Get current count within window
-    const { data: existingRecords, error: fetchError } = await supabase
-      .from("rate_limits")
-      .select("*")
-      .eq("endpoint", endpoint)
-      .eq("identifier", identifier)
-      .gte("window_start", windowStart.toISOString())
-
-    if (fetchError) {
-      console.error("Rate limit fetch error:", fetchError)
-      // Fail open on database errors to avoid blocking legitimate users
-      return { allowed: true }
-    }
+    const existingRecords = await sql(
+      `SELECT * FROM rate_limits 
+       WHERE endpoint = $1 AND identifier = $2 AND window_start >= $3`,
+      [endpoint, identifier, windowStart.toISOString()],
+    )
 
     const currentCount = existingRecords?.length || 0
 
@@ -58,25 +50,17 @@ export async function checkRateLimit(
       }
     }
 
-    // Record this attempt
-    const { error: insertError } = await supabase.from("rate_limits").insert({
-      endpoint,
-      identifier,
-      window_start: new Date().toISOString(),
-      request_count: 1,
-    })
+    await sql(
+      `INSERT INTO rate_limits (endpoint, identifier, window_start, request_count)
+       VALUES ($1, $2, $3, $4)`,
+      [endpoint, identifier, new Date().toISOString(), 1],
+    )
 
-    if (insertError) {
-      console.error("Rate limit insert error:", insertError)
-    }
-
-    // Clean up old records
-    await supabase
-      .from("rate_limits")
-      .delete()
-      .eq("endpoint", endpoint)
-      .eq("identifier", identifier)
-      .lt("window_start", windowStart.toISOString())
+    await sql(
+      `DELETE FROM rate_limits 
+       WHERE endpoint = $1 AND identifier = $2 AND window_start < $3`,
+      [endpoint, identifier, windowStart.toISOString()],
+    )
 
     return {
       allowed: true,

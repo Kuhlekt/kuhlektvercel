@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.NEON_DATABASE_URL!)
 
 export async function POST(request: Request) {
   try {
@@ -7,38 +9,28 @@ export async function POST(request: Request) {
     const { code } = body
 
     if (!code) {
-      return NextResponse.json(
-        { valid: false, error: "Promo code is required" },
-        { status: 400 }
-      )
+      return NextResponse.json({ valid: false, error: "Promo code is required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const codeData = await sql(
+      `SELECT * FROM promo_codes 
+       WHERE code = $1 AND is_active = true 
+       AND valid_from <= $2 AND valid_until >= $2
+       LIMIT 1`,
+      [code.toUpperCase(), new Date().toISOString()],
+    )
 
-    // Check if promo code exists and is valid
-    const { data: codeData, error: codeError } = await supabase
-      .from("promo_codes")
-      .select("*")
-      .eq("code", code.toUpperCase())
-      .eq("is_active", true)
-      .lte("valid_from", new Date().toISOString())
-      .gte("valid_until", new Date().toISOString())
-      .single()
-
-    // If table doesn't exist, validate the fallback code
-    if (codeError) {
-      if (codeError.code === '42P01' || codeError.code === 'PGRST116') {
-        // Validate fallback code
-        const upperCode = code.toUpperCase()
-        if (upperCode === 'BLACKFRIDAY2024' || upperCode.startsWith('BF25-')) {
-          return NextResponse.json({
-            valid: true,
-            code: upperCode,
-            discount: 50,
-            freeSetup: true,
-            expiresAt: '2025-12-02T00:00:00',
-          })
-        }
+    if (!codeData || codeData.length === 0) {
+      // Validate fallback code
+      const upperCode = code.toUpperCase()
+      if (upperCode === "BLACKFRIDAY2024" || upperCode.startsWith("BF25-")) {
+        return NextResponse.json({
+          valid: true,
+          code: upperCode,
+          discount: 50,
+          freeSetup: true,
+          expiresAt: "2025-12-02T00:00:00",
+        })
       }
       return NextResponse.json({
         valid: false,
@@ -46,15 +38,10 @@ export async function POST(request: Request) {
       })
     }
 
-    if (!codeData) {
-      return NextResponse.json({
-        valid: false,
-        error: "Invalid or expired promo code",
-      })
-    }
+    const code_record = codeData[0]
 
     // Check if max uses reached
-    if (codeData.max_uses && codeData.current_uses >= codeData.max_uses) {
+    if (code_record.max_uses && code_record.current_uses >= code_record.max_uses) {
       return NextResponse.json({
         valid: false,
         error: "This promo code has already been used",
@@ -63,16 +50,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       valid: true,
-      code: codeData.code,
-      discount: codeData.discount_percent,
-      freeSetup: codeData.free_setup,
-      expiresAt: codeData.valid_until,
+      code: code_record.code,
+      discount: code_record.discount_percent,
+      freeSetup: code_record.free_setup,
+      expiresAt: code_record.valid_until,
     })
   } catch (error) {
     console.error("Promo code validation error:", error)
-    return NextResponse.json(
-      { valid: false, error: "Failed to validate promo code" },
-      { status: 500 }
-    )
+    return NextResponse.json({ valid: false, error: "Failed to validate promo code" }, { status: 500 })
   }
 }
