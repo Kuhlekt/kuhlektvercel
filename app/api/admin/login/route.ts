@@ -1,22 +1,6 @@
 import { NextResponse } from "next/server"
-import crypto from "crypto"
 import { checkRateLimit } from "@/lib/rate-limiter"
-
-function verifyPassword(password: string): boolean {
-  const passwordHash = process.env.ADMIN_PASSWORD_HASH
-
-  if (!passwordHash) {
-    throw new Error("Admin password hash not configured")
-  }
-
-  if (!passwordHash.includes(":")) {
-    throw new Error("Invalid password hash format")
-  }
-
-  const [salt, hash] = passwordHash.split(":")
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex")
-  return hash === verifyHash
-}
+import { comparePassword } from "@/lib/server-only-utils"
 
 export async function POST(request: Request) {
   try {
@@ -43,7 +27,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Password is required" }, { status: 400 })
     }
 
-    const isValid = verifyPassword(password)
+    const passwordHash = process.env.ADMIN_PASSWORD_HASH
+
+    if (!passwordHash) {
+      throw new Error("Admin password hash not configured")
+    }
+
+    const isValid = await comparePassword(password, passwordHash)
 
     if (isValid) {
       return NextResponse.json({ success: true })

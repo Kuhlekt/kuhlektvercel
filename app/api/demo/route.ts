@@ -56,14 +56,13 @@ export async function POST(request: Request) {
     if (promoCode) {
       console.log("🎁 Validating promo code:", promoCode)
 
-      const codeQuery = `
+      const now = new Date().toISOString()
+      const codeResult = await neonDb`
         SELECT * FROM promo_codes
-        WHERE code = $1 AND is_active = true
-        AND valid_from <= $2 AND valid_until >= $2
+        WHERE code = ${promoCode.toUpperCase()} AND is_active = true
+        AND valid_from <= ${now} AND valid_until >= ${now}
         LIMIT 1
       `
-      const now = new Date().toISOString()
-      const codeResult = await neonDb(codeQuery, [promoCode.toUpperCase(), now])
 
       if (!codeResult || codeResult.length === 0) {
         console.warn("⚠️ Invalid promo code:", promoCode)
@@ -104,17 +103,13 @@ export async function POST(request: Request) {
       }
 
       // Record the redemption
-      await neonDb(
-        `INSERT INTO promo_code_redemptions (promo_code_id, email, first_name, last_name, company, phone, redeemed_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [codeData.id, email, firstName, lastName, company, phone, now],
-      )
+      await neonDb`
+        INSERT INTO promo_code_redemptions (promo_code_id, email, first_name, last_name, company, phone, redeemed_at)
+        VALUES (${codeData.id}, ${email}, ${firstName}, ${lastName}, ${company}, ${phone}, ${now})
+      `
 
       // Increment usage counter
-      await neonDb(`UPDATE promo_codes SET current_uses = current_uses + 1, updated_at = $1 WHERE id = $2`, [
-        now,
-        codeData.id,
-      ])
+      await neonDb`UPDATE promo_codes SET current_uses = current_uses + 1, updated_at = ${now} WHERE id = ${codeData.id}`
 
       console.log("✅ Promo code redeemed successfully")
     }
