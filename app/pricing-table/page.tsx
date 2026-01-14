@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import Link from "next/link"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -291,12 +290,11 @@ export default function PricingTablePage() {
               </button>
               <button
                 onClick={() => setBillingPeriod("annual")}
-                className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
                   billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Annual
-                <span className="text-xs text-green-600 font-normal">and receive a discount</span>
               </button>
             </div>
             {billingPeriod === "annual" && (
@@ -566,16 +564,12 @@ export default function PricingTablePage() {
                 Contact us to discuss which plan is right for your business.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/demo">
-                  <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-6 text-lg">
-                    Schedule a Demo
-                  </Button>
-                </Link>
-                <Link href="/contact">
-                  <Button size="lg" variant="outline" className="px-8 py-6 text-lg bg-transparent">
-                    Contact Sales
-                  </Button>
-                </Link>
+                <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-6 text-lg">
+                  Schedule a Demo
+                </Button>
+                <Button size="lg" variant="outline" className="px-8 py-6 text-lg bg-transparent">
+                  Contact Sales
+                </Button>
               </div>
             </div>
           </div>
@@ -612,10 +606,10 @@ export default function PricingTablePage() {
       </Dialog>
 
       {/* Edit Mode Toggle Icon */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={handleEditModeClick}
-          className="w-20 h-20 rounded-full shadow-2xl hover:shadow-xl transition-all bg-white p-3 border-4 border-blue-500 hover:border-blue-600 hover:scale-110"
+          className="w-16 h-16 rounded-full shadow-lg hover:shadow-xl transition-shadow bg-white p-2 border-2 border-transparent hover:border-slate-300"
           title={editMode ? "Exit Edit Mode" : "Edit Mode"}
         >
           <img

@@ -50,12 +50,6 @@ export function Header() {
               About
             </Link>
             <Link
-              href="/pricing-table"
-              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
-            >
-              Pricing
-            </Link>
-            <Link
               href="/contact"
               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
             >
@@ -113,13 +107,6 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
-              </Link>
-              <Link
-                href="/pricing-table"
-                className="text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Pricing
               </Link>
               <Link
                 href="/contact"
