@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
@@ -25,8 +25,6 @@ function isRateLimited(key: string): boolean {
   return false
 }
 
-const neonDb = neon(process.env.NEON_DATABASE_URL!)
-
 export async function GET(request: NextRequest) {
   try {
     const rateLimitKey = getRateLimitKey(request)
@@ -36,6 +34,8 @@ export async function GET(request: NextRequest) {
 
     const authHeader = request.headers.get("authorization")
     const sessionCookie = request.cookies.get("site-visits-auth")
+
+    // Check for valid auth (either Bearer token or session cookie)
     const validToken = process.env.SITE_VISITS_API_KEY || "kuhlekt-analytics-2024"
     const isAuthenticated = authHeader === `Bearer ${validToken}` || sessionCookie?.value === validToken
 
@@ -43,61 +43,160 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ success: false, error: "Database configuration error" }, { status: 500 })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
+    // Get query parameters for filtering
     const searchParams = request.nextUrl.searchParams
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const offset = Number.parseInt(searchParams.get("offset") || "0")
 
-    const visitsQuery = `
-      SELECT id, visitor_id, session_id, page, referrer, utm_source, utm_medium,
-             utm_campaign, utm_term, utm_content, affiliate, device_type, browser,
-             os, page_views, session_duration, is_new_user, first_visit, last_visit,
-             created_at
-      FROM visitor_tracking
-      ORDER BY created_at DESC
-      LIMIT $1 OFFSET $2
-    `
-    const visits = await neonDb(visitsQuery, [limit, offset])
+    // Fetch visitor data (anonymized - no IP addresses or PII)
+    const { data: visits, error } = await supabase
+      .from("visitor_tracking")
+      .select(
+        `
+        id,
+        visitor_id,
+        session_id,
+        page,
+        referrer,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_term,
+        utm_content,
+        affiliate,
+        device_type,
+        browser,
+        os,
+        page_views,
+        session_duration,
+        is_new_user,
+        first_visit,
+        last_visit,
+        created_at
+      `,
+      )
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1)
 
-    const totalResult = await neonDb(`SELECT COUNT(*) as count FROM visitor_tracking`)
-    const totalVisits = totalResult[0]?.count || 0
+    if (error) {
+      console.error("Error fetching visitor data:", error)
+      return NextResponse.json({ success: false, error: "Failed to fetch visitor data" }, { status: 500 })
+    }
 
-    const newUsersResult = await neonDb(`SELECT COUNT(*) as count FROM visitor_tracking WHERE is_new_user = true`)
-    const newUsers = newUsersResult[0]?.count || 0
+    // Get total count
+    const { count: totalVisits } = await supabase.from("visitor_tracking").select("*", { count: "exact", head: true })
 
-    const uniqueVisitorsResult = await neonDb(`SELECT COUNT(DISTINCT visitor_id) as count FROM visitor_tracking`)
-    const uniqueVisitors = uniqueVisitorsResult[0]?.count || 0
+    // Get new vs returning users
+    const { count: newUsers } = await supabase
+      .from("visitor_tracking")
+      .select("*", { count: "exact", head: true })
+      .eq("is_new_user", true)
 
-    const sessionDurationResult = await neonDb(
-      `SELECT AVG(session_duration) as avg_duration FROM visitor_tracking WHERE session_duration IS NOT NULL`,
+    // Get unique visitors count
+    const { data: uniqueVisitorsData } = await supabase.from("visitor_tracking").select("visitor_id")
+
+    const uniqueVisitors = new Set(uniqueVisitorsData?.map((v) => v.visitor_id) || []).size
+
+    // Calculate average session duration
+    const { data: sessionData } = await supabase
+      .from("visitor_tracking")
+      .select("session_duration")
+      .not("session_duration", "is", null)
+
+    const avgSessionDuration =
+      sessionData && sessionData.length > 0
+        ? sessionData.reduce((sum, s) => sum + (s.session_duration || 0), 0) / sessionData.length
+        : 0
+
+    // Calculate average page views
+    const { data: pageViewData } = await supabase
+      .from("visitor_tracking")
+      .select("page_views")
+      .not("page_views", "is", null)
+
+    const avgPageViews =
+      pageViewData && pageViewData.length > 0
+        ? pageViewData.reduce((sum, p) => sum + (p.page_views || 0), 0) / pageViewData.length
+        : 0
+
+    // Get top referrers
+    const { data: referrerData } = await supabase
+      .from("visitor_tracking")
+      .select("referrer")
+      .not("referrer", "is", null)
+      .limit(1000)
+
+    const referrerCounts = (referrerData || []).reduce(
+      (acc, r) => {
+        const ref = r.referrer || "Direct"
+        acc[ref] = (acc[ref] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
     )
-    const avgSessionDuration = Math.round(sessionDurationResult[0]?.avg_duration || 0)
 
-    const pageViewsResult = await neonDb(
-      `SELECT AVG(page_views) as avg_views FROM visitor_tracking WHERE page_views IS NOT NULL`,
+    const topReferrers = Object.entries(referrerCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([referrer, count]) => ({ referrer, count }))
+
+    // Get device/browser/OS stats
+    const { data: deviceData } = await supabase.from("visitor_tracking").select("device_type, browser, os").limit(1000)
+
+    const deviceCounts = (deviceData || []).reduce(
+      (acc, d) => {
+        if (d.device_type) acc.devices[d.device_type] = (acc.devices[d.device_type] || 0) + 1
+        if (d.browser) acc.browsers[d.browser] = (acc.browsers[d.browser] || 0) + 1
+        if (d.os) acc.os[d.os] = (acc.os[d.os] || 0) + 1
+        return acc
+      },
+      {
+        devices: {} as Record<string, number>,
+        browsers: {} as Record<string, number>,
+        os: {} as Record<string, number>,
+      },
     )
-    const avgPageViews = Math.round((pageViewsResult[0]?.avg_views || 0) * 10) / 10
-
-    const pageHistoryQuery = `
-      SELECT session_id, page, timestamp FROM page_history
-      ORDER BY timestamp DESC LIMIT 500
-    `
-    const pageHistory = await neonDb(pageHistoryQuery)
 
     const stats = {
-      totalVisits: Number(totalVisits),
-      uniqueVisitors: Number(uniqueVisitors),
-      newUsers: Number(newUsers),
-      returningUsers: Number(totalVisits) - Number(newUsers),
-      avgSessionDuration,
-      avgPageViews,
+      totalVisits: totalVisits || 0,
+      uniqueVisitors,
+      newUsers: newUsers || 0,
+      returningUsers: (totalVisits || 0) - (newUsers || 0),
+      avgSessionDuration: Math.round(avgSessionDuration),
+      avgPageViews: Math.round(avgPageViews * 10) / 10,
+      topReferrers,
+      devices: deviceCounts.devices,
+      browsers: deviceCounts.browsers,
+      os: deviceCounts.os,
     }
+
+    // Get page history for recent sessions
+    const { data: pageHistory } = await supabase
+      .from("page_history")
+      .select("session_id, page, timestamp")
+      .order("timestamp", { ascending: false })
+      .limit(500)
 
     return NextResponse.json({
       success: true,
       visits: visits || [],
       stats,
       pageHistory: pageHistory || [],
-      total: Number(totalVisits),
+      total: totalVisits || 0,
     })
   } catch (error) {
     console.error("Site visits API error:", error)

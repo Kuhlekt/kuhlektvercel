@@ -1,8 +1,8 @@
 "use server"
 
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 
-const sql = neon(process.env.NEON_DATABASE_URL!)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 interface RateLimitConfig {
   maxAttempts: number
@@ -29,10 +29,19 @@ export async function checkRateLimit(
   const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
 
   try {
-    const existingRecords = await sql`
-      SELECT * FROM rate_limits 
-      WHERE endpoint = ${endpoint} AND identifier = ${identifier} AND window_start >= ${windowStart.toISOString()}
-    `
+    // Get current count within window
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from("rate_limits")
+      .select("*")
+      .eq("endpoint", endpoint)
+      .eq("identifier", identifier)
+      .gte("window_start", windowStart.toISOString())
+
+    if (fetchError) {
+      console.error("Rate limit fetch error:", fetchError)
+      // Fail open on database errors to avoid blocking legitimate users
+      return { allowed: true }
+    }
 
     const currentCount = existingRecords?.length || 0
 
@@ -49,15 +58,25 @@ export async function checkRateLimit(
       }
     }
 
-    await sql`
-      INSERT INTO rate_limits (endpoint, identifier, window_start, request_count)
-      VALUES (${endpoint}, ${identifier}, ${new Date().toISOString()}, 1)
-    `
+    // Record this attempt
+    const { error: insertError } = await supabase.from("rate_limits").insert({
+      endpoint,
+      identifier,
+      window_start: new Date().toISOString(),
+      request_count: 1,
+    })
 
-    await sql`
-      DELETE FROM rate_limits 
-      WHERE endpoint = ${endpoint} AND identifier = ${identifier} AND window_start < ${windowStart.toISOString()}
-    `
+    if (insertError) {
+      console.error("Rate limit insert error:", insertError)
+    }
+
+    // Clean up old records
+    await supabase
+      .from("rate_limits")
+      .delete()
+      .eq("endpoint", endpoint)
+      .eq("identifier", identifier)
+      .lt("window_start", windowStart.toISOString())
 
     return {
       allowed: true,

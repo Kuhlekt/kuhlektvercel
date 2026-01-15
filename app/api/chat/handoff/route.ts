@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 import { externalHandoffSchema } from "@/lib/validation-schemas"
 
-const sql = neon(process.env.NEON_DATABASE_URL!)
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,18 +35,33 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Validated data:", { firstName, lastName, email: userEmail, phone })
 
     console.log("[v0] Attempting database insert...")
-    const result = await sql(
-      `INSERT INTO form_submitters (first_name, last_name, email, phone, form_type, status, submitted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id`,
-      [firstName, lastName, userEmail, phone || null, "contact", "new", new Date().toISOString()],
-    )
+    const { data, error } = await supabase
+      .from("form_submitters")
+      .insert({
+        first_name: firstName,
+        last_name: lastName,
+        email: userEmail,
+        phone: phone || null,
+        form_type: "contact",
+        status: "new",
+        submitted_at: new Date().toISOString(),
+      })
+      .select()
 
-    const insertedId = result?.[0]?.id
+    console.log("[v0] Database response:", { data, error })
 
-    console.log("[v0] Database response:", { insertedId })
+    if (error) {
+      console.error("[v0] Database error:", error)
+      return NextResponse.json(
+        { success: false, error: "Failed to save handoff request" },
+        { status: 500, headers: corsHeaders },
+      )
+    }
 
-    if (!insertedId) {
+    const insertedRecord = data && data.length > 0 ? data[0] : null
+    console.log("[v0] Inserted record:", insertedRecord)
+
+    if (!insertedRecord) {
       console.error("[v0] No record returned from insert")
       return NextResponse.json(
         { success: false, error: "Failed to create handoff record" },
@@ -54,13 +69,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[v0] Handoff request saved successfully:", insertedId)
+    console.log("[v0] Handoff request saved successfully:", insertedRecord.id)
 
     return NextResponse.json(
       {
         success: true,
         message: "Handoff request received. An agent will contact you shortly.",
-        handoffId: insertedId,
+        handoffId: insertedRecord.id,
       },
       { headers: corsHeaders },
     )
