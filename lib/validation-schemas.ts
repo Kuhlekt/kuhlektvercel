@@ -37,29 +37,20 @@ export const totpTokenSchema = z.object({
 })
 
 export const adminLoginSchema = z.object({
-  password: z.string().min(1, "Password is required").max(1000, "Password too long"),
+  password: z.string().min(1, "Password is required"),
 })
 
 export const contactFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name too long").trim(),
-  email: z.string().email("Invalid email address").max(255, "Email too long"),
-  company: z
-    .string()
-    .max(100, "Company name too long")
-    .optional()
-    .transform((val) => val?.trim() || undefined),
-  message: z
-    .string()
-    .min(1, "Message is required")
-    .max(5000, "Message too long")
-    .optional()
-    .transform((val) => val?.trim() || undefined),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name too long"),
+  email: z.string().email("Invalid email address"),
+  company: z.string().max(100, "Company name too long").optional(),
+  message: z.string().min(1, "Message is required").max(5000, "Message too long").optional(),
   recaptchaToken: z.string().optional(),
 })
 
 export const chatMessageSchema = z.object({
-  message: z.string().min(1, "Message cannot be empty").max(2000, "Message too long").trim(),
-  conversationId: z.string().min(1, "Conversation ID required").max(100, "Conversation ID too long"),
+  message: z.string().min(1, "Message cannot be empty").max(2000, "Message too long"),
+  conversationId: z.string().min(1, "Conversation ID required"),
 })
 
 export const handoffRequestSchema = z.object({
@@ -68,34 +59,15 @@ export const handoffRequestSchema = z.object({
 })
 
 export const externalHandoffSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100, "First name too long").trim(),
-  lastName: z.string().min(1, "Last name is required").max(100, "Last name too long").trim(),
-  userEmail: z.string().min(1, "Email is required").max(255, "Email too long").email("Invalid email format"),
+  firstName: z.string().min(1, "First name is required").max(100, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(100, "Last name too long"),
+  userEmail: z
+    .string()
+    .min(1, "Email is required")
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email format"), // More lenient pattern that accepts any TLD length
   phone: z.string().max(20, "Phone number too long").optional(),
   sessionId: z.string().optional(),
   userId: z.string().nullable().optional(),
-  userName: z.string().max(100, "Username too long").optional(),
-  reason: z.string().max(500, "Reason too long").optional(),
-})
-
-export const twoFactorSchema = z.object({
-  token: z
-    .string()
-    .length(6, "2FA token must be 6 digits")
-    .regex(/^\d{6}$/, "2FA token must be numeric"),
-  password: z.string().min(1, "Password is required"),
-})
-
-export const demoRequestSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100, "First name too long").trim(),
-  lastName: z.string().min(1, "Last name is required").max(100, "Last name too long").trim(),
-  email: z.string().email("Invalid email").max(255, "Email too long"),
-  phone: z.string().max(20, "Phone too long").optional(),
-  company: z.string().min(1, "Company is required").max(100, "Company name too long").trim(),
-  jobTitle: z.string().max(100, "Job title too long").optional(),
-  companySize: z.string().max(50, "Company size too long").optional(),
-  currentSolution: z.string().max(500, "Current solution description too long").optional(),
-  challenges: z.string().max(2000, "Challenges description too long").optional(),
-  timeline: z.string().max(100, "Timeline too long").optional(),
-  promoCode: z.string().max(50, "Promo code too long").optional(),
+  userName: z.string().optional(),
+  reason: z.string().optional(),
 })

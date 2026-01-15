@@ -140,6 +140,7 @@ reCAPTCHA: ${recaptchaToken ? "Verified ✓" : "Bypassed (Debug Mode)"}
       errors: {},
     })
   } catch (error) {
+    console.error("Contact form submission error:", error)
     return NextResponse.json(
       {
         success: false,

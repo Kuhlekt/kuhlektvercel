@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.NEON_DATABASE_URL!)
+import { createClient } from "@/lib/supabase/server"
+// import { checkRateLimit } from "@/lib/rate-limiter"
 
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -107,27 +106,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 })
     }
 
+    // const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    // const rateLimitResult = await checkRateLimit("verification-code", `${clientIp}-${cleanEmail}`)
+
+    // if (!rateLimitResult.allowed) {
+    //   const resetMinutes = rateLimitResult.resetAt
+    //     ? Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 60000)
+    //     : 15
+
+    //   return NextResponse.json(
+    //     { error: `Too many verification requests. Please try again in ${resetMinutes} minutes.` },
+    //     { status: 429 },
+    //   )
+    // }
+
     console.log("[generateVerificationCode] Starting for email:", cleanEmail)
 
+    const supabase = await createClient()
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
     console.log("[generateVerificationCode] Generated code:", code)
     console.log("[generateVerificationCode] Expires at:", expiresAt)
 
-    const result = await sql(
-      `INSERT INTO verification_codes (email, code, expires_at)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, code, expires_at`,
-      [cleanEmail, code, expiresAt.toISOString()],
-    )
+    const { data, error } = await supabase
+      .from("verification_codes")
+      .insert({
+        email: cleanEmail,
+        code,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single()
 
-    if (!result || result.length === 0) {
-      console.error("[generateVerificationCode] Database error")
+    if (error) {
+      console.error("[generateVerificationCode] Database error:", error)
       return NextResponse.json({ error: "Failed to generate verification code" }, { status: 500 })
     }
 
-    console.log("[generateVerificationCode] Code saved to database:", result[0])
+    console.log("[generateVerificationCode] Code saved to database:", data)
 
     const emailBody = `
       <html>

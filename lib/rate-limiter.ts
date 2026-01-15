@@ -1,8 +1,8 @@
 "use server"
 
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 
-const sql = neon(process.env.NEON_DATABASE_URL!)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 interface RateLimitConfig {
   maxAttempts: number
@@ -27,15 +27,21 @@ export async function checkRateLimit(
   }
 
   const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
-  const now = new Date()
 
   try {
-    const existingRecords = await sql<{ id: bigint; window_start: string; request_count: number }[]>`
-      SELECT id, window_start, request_count FROM rate_limits 
-      WHERE endpoint = ${endpoint} 
-      AND identifier = ${identifier} 
-      AND window_start >= ${windowStart.toISOString()}
-    `
+    // Get current count within window
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from("rate_limits")
+      .select("*")
+      .eq("endpoint", endpoint)
+      .eq("identifier", identifier)
+      .gte("window_start", windowStart.toISOString())
+
+    if (fetchError) {
+      console.error("Rate limit fetch error:", fetchError)
+      // Fail open on database errors to avoid blocking legitimate users
+      return { allowed: true }
+    }
 
     const currentCount = existingRecords?.length || 0
 
@@ -43,7 +49,7 @@ export async function checkRateLimit(
       const oldestRecord = existingRecords?.[0]
       const resetAt = oldestRecord
         ? new Date(new Date(oldestRecord.window_start).getTime() + config.windowMinutes * 60 * 1000)
-        : new Date(now.getTime() + config.windowMinutes * 60 * 1000)
+        : new Date(Date.now() + config.windowMinutes * 60 * 1000)
 
       return {
         allowed: false,
@@ -52,25 +58,33 @@ export async function checkRateLimit(
       }
     }
 
-    await sql`
-      INSERT INTO rate_limits (endpoint, identifier, window_start, request_count, created_at)
-      VALUES (${endpoint}, ${identifier}, ${now.toISOString()}, 1, ${now.toISOString()})
-    `
+    // Record this attempt
+    const { error: insertError } = await supabase.from("rate_limits").insert({
+      endpoint,
+      identifier,
+      window_start: new Date().toISOString(),
+      request_count: 1,
+    })
 
-    await sql`
-      DELETE FROM rate_limits 
-      WHERE endpoint = ${endpoint} 
-      AND identifier = ${identifier} 
-      AND window_start < ${windowStart.toISOString()}
-    `
+    if (insertError) {
+      console.error("Rate limit insert error:", insertError)
+    }
+
+    // Clean up old records
+    await supabase
+      .from("rate_limits")
+      .delete()
+      .eq("endpoint", endpoint)
+      .eq("identifier", identifier)
+      .lt("window_start", windowStart.toISOString())
 
     return {
       allowed: true,
       remainingAttempts: config.maxAttempts - currentCount - 1,
     }
   } catch (error) {
-    console.error("[v0] Rate limit error:", error)
-    console.warn("[v0] Rate limiting disabled due to error - allowing request")
+    console.error("Rate limit error:", error)
+    // Fail open on unexpected errors
     return { allowed: true }
   }
 }

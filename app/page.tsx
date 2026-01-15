@@ -11,8 +11,6 @@ import { ROICalculatorModal } from "@/components/roi-calculator-modal"
 export default function Home() {
   const [isROICalculatorModalOpen, setIsROICalculatorModalOpen] = useState(false)
 
-  console.log("[v0] Home page rendering")
-
   return (
     <>
       <div className="min-h-screen bg-gray-50">
@@ -21,7 +19,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
-                <Badge className="bg-red-500 text-white px-4 py-2 rounded-full mb-6 inline-block">
+                <Badge className="bg-red-500 text-white px-4 py-2 rounded-full mb-6">
                   ★ Trusted by 500+ finance teams
                 </Badge>
 
@@ -43,7 +41,7 @@ export default function Home() {
                       </Button>
                     </Link>
                     <Link
-                      href="https://youtu.be/iVmvBRzQDA"
+                      href="https://youtu.be/iVmvBRzQZDA"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full"
@@ -53,13 +51,11 @@ export default function Home() {
                       </Button>
                     </Link>
                   </div>
-                  <Button
-                    size="lg"
-                    className="bg-red-500 hover:bg-red-600 text-white h-full w-full"
-                    onClick={() => setIsROICalculatorModalOpen(true)}
-                  >
-                    🧮 Calculate Your ROI
-                  </Button>
+                  <Link href="#" onClick={() => setIsROICalculatorModalOpen(true)} className="block">
+                    <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white h-full w-full">
+                      🧮 Calculate Your ROI
+                    </Button>
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-6 text-sm text-gray-600">
@@ -74,14 +70,13 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative min-h-[350px]">
+              <div className="relative">
                 <Image
                   src="/images/businesswoman.png"
                   alt="Professional businesswoman with testimonial overlay showing Kuhlekt's impact on accounts receivable automation"
                   width={500}
                   height={350}
                   className="rounded-lg w-full h-auto max-w-lg"
-                  priority
                 />
 
                 <Card className="absolute top-6 right-6 w-64 bg-white shadow-xl z-20 border-0">
