@@ -3,34 +3,28 @@
 import type React from "react"
 import Link from "next/link"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Check } from "lucide-react"
+import { Check, Pencil } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface PricingData {
   bronze: {
     usd: string
-    aud: string
     billing: string
     setupFeeUsd: string
-    setupFeeAud: string
   }
   silver: {
     usd: string
-    aud: string
     billing: string
     setupFeeUsd: string
-    setupFeeAud: string
   }
   gold: {
     usd: string
-    aud: string
     billing: string
     setupFeeUsd: string
-    setupFeeAud: string
   }
   platinum: {
     price: string
@@ -47,6 +41,24 @@ interface Feature {
   platinum: string | boolean
 }
 
+const USD_TO_AUD_RATE = 1.3 // 30% markup from USD
+
+const convertUsdToAud = (usdPrice: string): string => {
+  const numPrice = Number.parseFloat(usdPrice.replace(/,/g, ""))
+  if (isNaN(numPrice)) return usdPrice
+  const audPrice = numPrice * USD_TO_AUD_RATE
+  const rounded = Math.round(audPrice / 10) * 10
+  return rounded.toLocaleString()
+}
+
+const convertAudToUsd = (audPrice: string): string => {
+  const numPrice = Number.parseFloat(audPrice.replace(/,/g, ""))
+  if (isNaN(numPrice)) return audPrice
+  const usdPrice = numPrice / USD_TO_AUD_RATE
+  const rounded = Math.round(usdPrice / 10) * 10
+  return rounded.toLocaleString()
+}
+
 export default function PricingTablePage() {
   const [currency, setCurrency] = useState<"USD" | "AUD">("USD")
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly")
@@ -59,27 +71,26 @@ export default function PricingTablePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState("")
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showExitDialog, setShowExitDialog] = useState(false)
+
+  const [editValues, setEditValues] = useState<Record<string, string>>({})
+
   const [pricingData, setPricingData] = useState<PricingData>({
     bronze: {
       usd: "980",
-      aud: "1,140",
       billing: "No contract\nbilled monthly",
       setupFeeUsd: "990",
-      setupFeeAud: "1,300",
     },
     silver: {
       usd: "1,900",
-      aud: "2,510",
       billing: "No contract\nbilled monthly",
       setupFeeUsd: "1,350",
-      setupFeeAud: "1,750",
     },
     gold: {
       usd: "2,900",
-      aud: "3,150",
       billing: "on annual contract\nbilled monthly",
       setupFeeUsd: "1,600",
-      setupFeeAud: "1,750",
     },
     platinum: {
       price: "Get a quote",
@@ -175,7 +186,7 @@ export default function PricingTablePage() {
       try {
         setPricingData(JSON.parse(savedPricing))
       } catch (e) {
-        console.error("[v0] Failed to load pricing data:", e)
+        console.error("Failed to load pricing data:", e)
       }
     }
 
@@ -183,12 +194,13 @@ export default function PricingTablePage() {
       try {
         setFeatures(JSON.parse(savedFeatures))
       } catch (e) {
-        console.error("[v0] Failed to load features data:", e)
+        console.error("Failed to load features data:", e)
       }
     }
   }, [])
 
   const updatePricingData = (tier: keyof PricingData, field: string, value: string) => {
+    setHasUnsavedChanges(true)
     setPricingData((prev) => ({
       ...prev,
       [tier]: {
@@ -199,6 +211,7 @@ export default function PricingTablePage() {
   }
 
   const updateFeatureValue = (index: number, tier: "bronze" | "silver" | "gold" | "platinum", value: string) => {
+    setHasUnsavedChanges(true)
     setFeatures((prev) =>
       prev.map((feature, i) =>
         i === index
@@ -211,22 +224,29 @@ export default function PricingTablePage() {
     )
   }
 
-  const renderFeatureValue = (value: any, featureIndex: number, tier: "bronze" | "silver" | "gold" | "platinum") => {
-    if (editMode) {
-      return (
-        <Input
-          value={String(value)}
-          onChange={(e) => updateFeatureValue(featureIndex, tier, e.target.value)}
-          className="text-center text-sm"
-        />
-      )
-    }
+  const renderFeatureValue = useCallback(
+    (value: any, featureIndex: number, tier: "bronze" | "silver" | "gold" | "platinum") => {
+      if (editMode) {
+        return (
+          <Input
+            key={`feature-${featureIndex}-${tier}`}
+            ref={(el) => {
+              if (el) inputRefs.current[`feature-${featureIndex}-${tier}`] = el
+            }}
+            value={String(value)}
+            onChange={(e) => updateFeatureValue(featureIndex, tier, e.target.value)}
+            className="text-center text-sm"
+          />
+        )
+      }
 
-    // Display logic
-    if (value === "true" || value === true) return <Check className="h-5 w-5 text-green-600" />
-    if (value === "false" || value === false) return <span className="text-gray-400">—</span>
-    return value
-  }
+      // Display logic
+      if (value === "true" || value === true) return <Check className="h-5 w-5 text-green-600" />
+      if (value === "false" || value === false) return <span className="text-gray-400">—</span>
+      return value
+    },
+    [editMode],
+  )
 
   const tabs = [
     { id: "bronze", name: "Bronze", color: "bg-amber-600" },
@@ -237,12 +257,29 @@ export default function PricingTablePage() {
 
   const handleEditModeClick = () => {
     if (editMode) {
-      setEditMode(false)
+      if (hasUnsavedChanges) {
+        setShowExitDialog(true)
+      } else {
+        setEditMode(false)
+        setHasUnsavedChanges(false)
+      }
     } else {
       setShowPasswordDialog(true)
       setPassword("")
       setPasswordError("")
     }
+  }
+
+  const initializeEditValues = () => {
+    const values: Record<string, string> = {}
+    const tiers = ["bronze", "silver", "gold"] as const
+    tiers.forEach((tier) => {
+      const usdPrice = pricingData[tier].usd
+      const usdSetup = pricingData[tier].setupFeeUsd
+      values[`${tier}-usd`] = currency === "AUD" ? convertUsdToAud(usdPrice) : usdPrice
+      values[`${tier}-setupFeeUsd`] = currency === "AUD" ? convertUsdToAud(usdSetup) : usdSetup
+    })
+    setEditValues(values)
   }
 
   const verifyPassword = async () => {
@@ -262,6 +299,7 @@ export default function PricingTablePage() {
         setEditMode(true)
         setShowPasswordDialog(false)
         setPassword("")
+        initializeEditValues()
       } else {
         setPasswordError("Incorrect password. Please try again.")
       }
@@ -278,24 +316,59 @@ export default function PricingTablePage() {
     }
   }
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = useCallback(() => {
     setIsSaving(true)
     setSaveMessage("")
 
     try {
-      localStorage.setItem("pricing-table-data", JSON.stringify(pricingData))
+      // Convert edit values back to USD before saving
+      const updatedPricingData = { ...pricingData }
+      const tiers = ["bronze", "silver", "gold"] as const
+
+      tiers.forEach((tier) => {
+        const priceKey = `${tier}-usd`
+        const setupKey = `${tier}-setupFeeUsd`
+
+        if (editValues[priceKey] !== undefined) {
+          const rawValue = editValues[priceKey]
+          updatedPricingData[tier] = {
+            ...updatedPricingData[tier],
+            usd: currency === "AUD" ? convertAudToUsd(rawValue) : rawValue,
+          }
+        }
+        if (editValues[setupKey] !== undefined) {
+          const rawValue = editValues[setupKey]
+          updatedPricingData[tier] = {
+            ...updatedPricingData[tier],
+            setupFeeUsd: currency === "AUD" ? convertAudToUsd(rawValue) : rawValue,
+          }
+        }
+      })
+
+      setPricingData(updatedPricingData)
+      localStorage.setItem("pricing-table-data", JSON.stringify(updatedPricingData))
       localStorage.setItem("pricing-table-features", JSON.stringify(features))
       setSaveMessage("✓ Changes saved successfully!")
+      setHasUnsavedChanges(false)
 
       setTimeout(() => {
         setSaveMessage("")
       }, 3000)
     } catch (e) {
-      console.error("[v0] Failed to save pricing data:", e)
+      console.error("Failed to save pricing data:", e)
       setSaveMessage("✗ Failed to save changes")
     } finally {
       setIsSaving(false)
     }
+  }, [pricingData, editValues, currency, features])
+
+  const getPriceForCurrency = (tier: "bronze" | "silver" | "gold", field: "usd" | "setupFeeUsd"): string => {
+    const usdValue = pricingData[tier][field]
+    if (currency === "USD") {
+      return usdValue
+    }
+    // Calculate AUD from USD
+    return convertUsdToAud(usdValue)
   }
 
   const getDisplayPrice = (price: string): string => {
@@ -314,11 +387,88 @@ export default function PricingTablePage() {
     return rounded.toLocaleString()
   }
 
+  const handlePriceChange = (tier: "bronze" | "silver" | "gold", field: "usd" | "setupFeeUsd", value: string) => {
+    setHasUnsavedChanges(true)
+    setEditValues((prev) => ({
+      ...prev,
+      [`${tier}-${field}`]: value,
+    }))
+  }
+
+  const getEditInputValue = (tier: "bronze" | "silver" | "gold", field: "usd" | "setupFeeUsd"): string => {
+    const key = `${tier}-${field}`
+    if (editValues[key] !== undefined) {
+      return editValues[key]
+    }
+    const usdValue = pricingData[tier][field]
+    if (currency === "USD") {
+      return usdValue
+    }
+    return convertUsdToAud(usdValue)
+  }
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open && isVerifying) {
+      return
+    }
+    setShowPasswordDialog(open)
+  }
+
+  const handleExitDialogOpenChange = (open: boolean) => {
+    if (!open && hasUnsavedChanges) {
+      setShowExitDialog(true)
+      return
+    }
+    setShowExitDialog(open)
+  }
+
+  const handleExitWithoutSaving = () => {
+    setEditMode(false)
+    setHasUnsavedChanges(false)
+    setShowExitDialog(false)
+  }
+
+  const handleSaveAndExit = () => {
+    handleSaveChanges()
+    setShowExitDialog(false)
+  }
+
+  const scrollPositionRef = useRef(0)
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const handleCurrencyChange = (checked: boolean) => {
+    if (editMode) {
+      return // Prevent currency changes while editing
+    }
+    setCurrency(checked ? "AUD" : "USD")
+  }
+
+  const handleBillingPeriodChange = useCallback((period: "monthly" | "annual") => {
+    setBillingPeriod(period)
+  }, [])
+
+  const handleTabChange = useCallback((tabId: string) => {
+    setSelectedTab(tabId)
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 md:py-16">
         <div className="mb-8 md:mb-12 text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight">Choose Your Plan</h1>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight">
+              Choose Your Plan
+            </h1>
+            <button
+              onClick={handleEditModeClick}
+              className={`p-2 rounded-full transition-colors ${
+                editMode ? "bg-red-100 text-red-600 hover:bg-red-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+              title={editMode ? "Exit Edit Mode" : "Edit Pricing"}
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+          </div>
           <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
             Select the perfect plan for your business needs
           </p>
@@ -327,7 +477,7 @@ export default function PricingTablePage() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 bg-slate-100 rounded-full p-1 border border-slate-300">
                 <button
-                  onClick={() => setBillingPeriod("monthly")}
+                  onClick={() => handleBillingPeriodChange("monthly")}
                   className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
                     billingPeriod === "monthly" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
                   }`}
@@ -335,7 +485,7 @@ export default function PricingTablePage() {
                   Monthly
                 </button>
                 <button
-                  onClick={() => setBillingPeriod("annual")}
+                  onClick={() => handleBillingPeriodChange("annual")}
                   className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
                     billingPeriod === "annual" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
                   }`}
@@ -352,15 +502,18 @@ export default function PricingTablePage() {
             )}
           </div>
 
-          {/* Currency Selector */}
-          <div className="flex justify-center gap-4 mt-6">
-            <span className={`font-medium ${currency === "AUD" ? "text-gray-500" : "text-gray-900"}`}>AUD</span>
+          {/* Currency Selector - swapped positions so USD is on left */}
+          <div className="flex justify-center gap-4 mt-6 items-center">
+            <span className={`font-medium ${currency === "USD" ? "text-gray-900" : "text-gray-500"}`}>USD</span>
             <Switch
-              checked={currency === "USD"}
-              onCheckedChange={(checked) => setCurrency(checked ? "USD" : "AUD")}
+              checked={currency === "AUD"}
+              onCheckedChange={handleCurrencyChange}
+              disabled={editMode}
               className="data-[state=checked]:bg-cyan-500"
             />
-            <span className={`font-medium ${currency === "USD" ? "text-gray-500" : "text-gray-900"}`}>USD</span>
+            <span className={`font-medium ${currency === "AUD" ? "text-gray-900" : "text-gray-500"}`}>AUD</span>
+            {/* Visual feedback when currency selector is disabled */}
+            {editMode && <span className="text-xs text-slate-500 ml-2">(locked during edit)</span>}
           </div>
 
           {/* Desktop View */}
@@ -385,28 +538,16 @@ export default function PricingTablePage() {
                                   {currency === "USD" ? "$" : "A$"}
                                 </span>
                                 {editMode ? (
-                                  <input
+                                  <Input
                                     type="text"
-                                    value={
-                                      pricingData[tier as keyof PricingData][
-                                        currency === "USD" ? "usd" : "aud"
-                                      ] as string
-                                    }
+                                    value={getEditInputValue(tier as "bronze" | "silver" | "gold", "usd")}
                                     onChange={(e) =>
-                                      updatePricingData(
-                                        tier as keyof PricingData,
-                                        currency === "USD" ? "usd" : "aud",
-                                        e.target.value,
-                                      )
+                                      handlePriceChange(tier as "bronze" | "silver" | "gold", "usd", e.target.value)
                                     }
                                     className="w-24 bg-slate-700 text-white px-2 py-1 rounded text-center"
                                   />
                                 ) : (
-                                  getDisplayPrice(
-                                    pricingData[tier as keyof PricingData][
-                                      currency === "USD" ? "usd" : "aud"
-                                    ] as string,
-                                  )
+                                  getDisplayPrice(getPriceForCurrency(tier as "bronze" | "silver" | "gold", "usd"))
                                 )}
                               </>
                             )}
@@ -425,24 +566,18 @@ export default function PricingTablePage() {
                     <td className="p-4 font-medium text-slate-900">Setup fees</td>
                     {["bronze", "silver", "gold", "platinum"].map((tier) => (
                       <td key={tier} className="p-4 text-center border-l border-slate-300">
-                        {editMode ? (
+                        {tier === "platinum" ? (
+                          pricingData.platinum.setupFee
+                        ) : editMode ? (
                           <Input
-                            value={
-                              currency === "USD"
-                                ? pricingData[tier as keyof PricingData].setupFeeUsd
-                                : pricingData[tier as keyof PricingData].setupFeeAud
-                            }
+                            value={getEditInputValue(tier as "bronze" | "silver" | "gold", "setupFeeUsd")}
                             onChange={(e) =>
-                              updatePricingData(
-                                tier as keyof PricingData,
-                                currency === "USD" ? "setupFeeUsd" : "setupFeeAud",
-                                e.target.value,
-                              )
+                              handlePriceChange(tier as "bronze" | "silver" | "gold", "setupFeeUsd", e.target.value)
                             }
                             className="text-center bg-white text-slate-900 px-2 py-1 rounded border border-slate-300"
                           />
                         ) : (
-                          `$${currency === "USD" ? pricingData[tier as keyof PricingData].setupFeeUsd : pricingData[tier as keyof PricingData].setupFeeAud}`
+                          `${currency === "USD" ? "$" : "A$"}${getPriceForCurrency(tier as "bronze" | "silver" | "gold", "setupFeeUsd")}`
                         )}
                       </td>
                     ))}
@@ -451,23 +586,7 @@ export default function PricingTablePage() {
                   {/* Features */}
                   {features.map((feature, index) => (
                     <tr key={index} className="bg-slate-100 border-b border-slate-300">
-                      <td
-                        className={`p-4 font-medium text-slate-900 ${feature.name.includes("Setup") || feature.name.includes("Scheduled") || feature.name.includes("Ad hoc") || feature.name.includes("Reminders") || feature.name.includes("Payments") || feature.name.includes("Direct Debits") || feature.name.includes("Download") || feature.name.includes("Dispute") || feature.name.includes("Invoice") || feature.name.includes("Statement") ? "pl-8 text-sm" : ""}`}
-                      >
-                        {editMode ? (
-                          <Input
-                            value={feature.name}
-                            onChange={(e) =>
-                              setFeatures((prev) =>
-                                prev.map((f, i) => (i === index ? { ...f, name: e.target.value } : f)),
-                              )
-                            }
-                            className="text-sm bg-white text-slate-900 px-2 py-1 rounded border border-slate-300"
-                          />
-                        ) : (
-                          feature.name
-                        )}
-                      </td>
+                      <td className="p-4 text-left font-medium text-slate-700 text-sm">{feature.name}</td>
                       {["bronze", "silver", "gold", "platinum"].map((tier) => (
                         <td key={tier} className="p-4 text-center border-l border-slate-300">
                           {renderFeatureValue(
@@ -486,213 +605,173 @@ export default function PricingTablePage() {
 
           {/* Mobile View */}
           <div className="lg:hidden space-y-6">
-            {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-              {(["bronze", "silver", "gold", "platinum"] as const).map((tier) => (
+            <div className="flex gap-2 justify-center flex-wrap">
+              {tabs.map((tab) => (
                 <button
-                  key={tier}
-                  onClick={() => setSelectedTab(tier)}
-                  className={`px-6 py-3 rounded-lg font-semibold whitespace-nowrap transition-all ${
-                    selectedTab === tier
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-700 border border-slate-300"
+                  key={tab.id}
+                  onClick={() => setSelectedTab(tab.id)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedTab === tab.id
+                      ? `${tab.color} text-white`
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
-                  {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                  {tab.name}
                 </button>
               ))}
             </div>
 
-            {/* Selected Plan Card */}
-            <div className="bg-white rounded-xl border border-slate-300 overflow-hidden">
-              <div className="bg-slate-100 p-6 text-center">
-                <div className="text-slate-900 font-bold text-2xl capitalize mb-3">{selectedTab}</div>
-                <div className="text-4xl font-bold text-slate-900 mb-2">
+            {/* Memoized Mobile Card */}
+            <div className="bg-slate-50 border border-slate-300 rounded-lg p-6 space-y-4 min-h-[400px]">
+              <div>
+                <div className="text-slate-600 text-sm">Plan</div>
+                <div className="text-2xl font-bold text-slate-900 capitalize">{selectedTab}</div>
+              </div>
+
+              <div>
+                <div className="text-slate-600 text-sm">Price</div>
+                <div className="text-3xl font-bold text-slate-900">
                   {selectedTab === "platinum" ? (
-                    <span className="text-3xl">{pricingData.platinum.price}</span>
+                    <span className="text-2xl">{pricingData.platinum.price}</span>
                   ) : (
                     <>
-                      <span className="text-lg font-normal text-slate-600">{currency === "USD" ? "$" : "A$"}</span>
+                      <span className="text-sm font-normal text-slate-600">{currency === "USD" ? "$" : "A$"}</span>
                       {editMode ? (
-                        <input
+                        <Input
                           type="text"
-                          value={
-                            pricingData[selectedTab as keyof PricingData][currency === "USD" ? "usd" : "aud"] as string
-                          }
+                          value={getEditInputValue(selectedTab as "bronze" | "silver" | "gold", "usd")}
                           onChange={(e) =>
-                            updatePricingData(
-                              selectedTab as keyof PricingData,
-                              currency === "USD" ? "usd" : "aud",
-                              e.target.value,
-                            )
+                            handlePriceChange(selectedTab as "bronze" | "silver" | "gold", "usd", e.target.value)
                           }
-                          className="w-32 bg-white text-slate-900 px-2 py-1 rounded text-center border border-slate-300"
+                          className="w-32 bg-slate-700 text-white px-2 py-1 rounded text-center"
                         />
                       ) : (
-                        getDisplayPrice(
-                          pricingData[selectedTab as keyof PricingData][currency === "USD" ? "usd" : "aud"] as string,
-                        )
+                        getDisplayPrice(getPriceForCurrency(selectedTab as "bronze" | "silver" | "gold", "usd"))
                       )}
                     </>
                   )}
                 </div>
-                <div className="text-slate-700 text-sm font-medium">
-                  {billingPeriod === "monthly" ? "billed monthly" : "billed annually"}
-                </div>
-                <div className="mt-4 text-sm text-slate-600">
-                  Setup fee: $
-                  {currency === "USD"
-                    ? pricingData[selectedTab as keyof PricingData].setupFeeUsd
-                    : pricingData[selectedTab as keyof PricingData].setupFeeAud}
+              </div>
+
+              <div>
+                <div className="text-slate-600 text-sm">Setup fees</div>
+                <div className="text-lg font-bold text-slate-900">
+                  {selectedTab === "platinum" ? (
+                    pricingData.platinum.setupFee
+                  ) : editMode ? (
+                    <Input
+                      value={getEditInputValue(selectedTab as "bronze" | "silver" | "gold", "setupFeeUsd")}
+                      onChange={(e) =>
+                        handlePriceChange(selectedTab as "bronze" | "silver" | "gold", "setupFeeUsd", e.target.value)
+                      }
+                      className="w-32 bg-slate-700 text-white px-2 py-1 rounded text-center"
+                    />
+                  ) : (
+                    `${currency === "USD" ? "$" : "A$"}${getPriceForCurrency(selectedTab as "bronze" | "silver" | "gold", "setupFeeUsd")}`
+                  )}
                 </div>
               </div>
-              <div className="p-6 space-y-4">
+
+              <div className="space-y-2 pt-2">
                 {features.map((feature, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-start py-3 border-b border-slate-300 last:border-0"
-                  >
-                    <div
-                      className={`font-medium text-slate-900 ${feature.name.includes("Setup") || feature.name.includes("Scheduled") || feature.name.includes("Ad hoc") || feature.name.includes("Reminders") || feature.name.includes("Payments") || feature.name.includes("Direct Debits") || feature.name.includes("Download") || feature.name.includes("Dispute") || feature.name.includes("Invoice") || feature.name.includes("Statement") ? "pl-4 text-sm" : ""}`}
-                    >
-                      {editMode ? (
-                        <Input
-                          value={feature.name}
-                          onChange={(e) =>
-                            setFeatures((prev) =>
-                              prev.map((f, i) => (i === index ? { ...f, name: e.target.value } : f)),
-                            )
-                          }
-                          className="text-sm bg-white text-slate-900 px-2 py-1 rounded border border-slate-300"
-                        />
-                      ) : (
-                        feature.name
-                      )}
-                    </div>
-                    <div className="text-sm font-medium">
+                  <div key={index} className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-700">{feature.name}</span>
+                    <span className="text-sm font-medium text-slate-900">
                       {renderFeatureValue(
                         feature[selectedTab as keyof Feature],
                         index,
                         selectedTab as "bronze" | "silver" | "gold" | "platinum",
                       )}
-                    </div>
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Footnotes Section */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-2 text-sm text-slate-600">
-            <p>
-              <strong>**</strong> Copies received via email BCC from ERP alternate options available by quote.
-            </p>
-            <p>
-              <strong>***</strong> Based on Stripe other providers quoted. Fees to client accounts.
-            </p>
-            <p>
-              <strong>****</strong> Additional Regional Onboarding @ $140 PCM each in currency selected table.
-            </p>
-            <p>
-              <strong>Core</strong> Users defined as Finance, Collections staff, Collection Managers, CFO, Accountants.
-            </p>
-            <p>
-              <strong>Sales</strong> Users defined as Sales and operational staff required to have logins for workflow
-              and escalations.
-            </p>
-            <p>All figures in selected currency and exempt of any Taxes, Duties and or fees.</p>
-            <p>AUD available only in Australia</p>
+          {/* Edit Mode Controls */}
+          <div className="mt-8 flex justify-center gap-4">
+            <Button onClick={handleEditModeClick} variant={editMode ? "destructive" : "outline"}>
+              {editMode ? "Exit Edit Mode" : "Edit Pricing"}
+            </Button>
+            {editMode && (
+              <>
+                <Button onClick={handleSaveChanges} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+                {saveMessage && (
+                  <span className={`self-center ${saveMessage.includes("✓") ? "text-green-600" : "text-red-600"}`}>
+                    {saveMessage}
+                  </span>
+                )}
+                {hasUnsavedChanges && (
+                  <span className="self-center text-sm text-yellow-600 font-medium">⚠️ Unsaved changes</span>
+                )}
+              </>
+            )}
           </div>
 
-          {/* CTA Section */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 mb-16">
-            <div className="bg-slate-50 rounded-lg p-12 text-center">
-              <h2 className="text-3xl font-bold text-slate-900 mb-4">Ready to get started?</h2>
-              <p className="text-lg text-slate-600 mb-8">
-                Contact us to discuss which plan is right for your business.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/demo">
-                  <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-6 text-lg">
-                    Schedule a Demo
-                  </Button>
-                </Link>
-                <Link href="/contact">
-                  <Button size="lg" variant="outline" className="px-8 py-6 text-lg bg-transparent">
-                    Contact Sales
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Password Dialog */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Admin Password</DialogTitle>
-            <DialogDescription>Please enter your admin password to enable edit mode.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handlePasswordKeyDown}
-              autoFocus
-            />
-            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={verifyPassword} disabled={isVerifying}>
-                {isVerifying ? "Verifying..." : "Confirm"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Mode Toggle Icon */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={handleEditModeClick}
-          className="w-20 h-20 rounded-full shadow-2xl hover:shadow-xl transition-all bg-white p-3 border-4 border-blue-500 hover:border-blue-600 hover:scale-110"
-          title={editMode ? "Exit Edit Mode" : "Edit Mode"}
-        >
-          <img
-            src="/images/kuhlekt-20cloud-20transparent-20b-ground-20with-20tm-20medium-2080-20pxls.jpg"
-            alt="Edit"
-            className="w-full h-full object-contain"
-          />
-        </button>
-      </div>
-
-      {/* Save Changes Button */}
-      {editMode && (
-        <div className="fixed top-20 right-6 z-50 flex flex-col items-end gap-2">
-          <Button
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-2xl"
-          >
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Button>
-          {saveMessage && (
-            <div
-              className={`text-sm font-medium px-4 py-2 rounded-lg shadow-lg ${
-                saveMessage.includes("✓") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-              }`}
-            >
-              {saveMessage}
+          {editMode && (
+            <div className="mt-4 text-sm text-slate-600">
+              <p>Edit prices in {currency}. Calculations are automatically handled.</p>
             </div>
           )}
         </div>
-      )}
+
+        {/* Password Dialog */}
+        <Dialog open={showPasswordDialog} onOpenChange={handleDialogOpenChange}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Enter Admin Password</DialogTitle>
+              <DialogDescription>Enter your admin password to edit pricing and features</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Admin password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handlePasswordKeyDown}
+                disabled={isVerifying}
+                autoFocus
+              />
+              {passwordError && <div className="text-red-600 text-sm">{passwordError}</div>}
+              <Button
+                onClick={verifyPassword}
+                disabled={isVerifying || !password}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+              >
+                {isVerifying ? "Verifying..." : "Verify"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Exit Dialog */}
+        <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Unsaved Changes</DialogTitle>
+              <DialogDescription>You have unsaved changes. What would you like to do?</DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3">
+              <Button onClick={handleSaveAndExit} className="flex-1 bg-green-600 hover:bg-green-700">
+                Save & Exit
+              </Button>
+              <Button onClick={handleExitWithoutSaving} variant="outline" className="flex-1 bg-transparent">
+                Exit Without Saving
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Back to Home */}
+        <div className="text-center mt-12">
+          <Link href="/" className="text-cyan-600 hover:text-cyan-700 font-medium">
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

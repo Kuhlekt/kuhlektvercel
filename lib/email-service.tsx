@@ -10,14 +10,12 @@ interface EmailOptions {
 }
 
 function validateEmailInput(options: EmailOptions): { valid: boolean; errors: string[] } {
-  console.log("=== Validating Email Input ===")
   const errors: string[] = []
 
   // Validate recipients
   const recipients = Array.isArray(options.to) ? options.to : [options.to]
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  console.log("Validating recipients:", recipients)
   for (const email of recipients) {
     if (!email || typeof email !== "string" || !emailRegex.test(email)) {
       errors.push(`Invalid email address: ${email}`)
@@ -25,13 +23,11 @@ function validateEmailInput(options: EmailOptions): { valid: boolean; errors: st
   }
 
   // Validate subject
-  console.log("Validating subject:", options.subject?.substring(0, 50))
   if (!options.subject || typeof options.subject !== "string" || options.subject.length > 998) {
     errors.push("Invalid subject line")
   }
 
   // Validate content
-  console.log("Validating content - text length:", options.text?.length)
   if (!options.text) {
     errors.push("Email must have text content")
   }
@@ -47,46 +43,25 @@ function validateEmailInput(options: EmailOptions): { valid: boolean; errors: st
     }
   }
 
-  console.log("Validation result:", errors.length === 0 ? "PASSED" : "FAILED")
-  if (errors.length > 0) {
-    console.error("Validation errors:", errors)
-  }
-
   return { valid: errors.length === 0, errors }
 }
 
 export async function sendEmail(options: EmailOptions) {
-  console.log("=== Email Service: sendEmail START ===")
-
   // Check if we're on the server
   if (typeof window !== "undefined") {
-    console.error("✗ Email service called from client side")
     throw new Error("Email service can only be used on the server")
   }
 
-  console.log("✓ Running on server")
-  console.log("Recipient:", Array.isArray(options.to) ? options.to[0] : options.to)
-  console.log("Subject:", options.subject)
-
   const validation = validateEmailInput(options)
   if (!validation.valid) {
-    console.error("✗ Email validation failed:", validation.errors)
     return {
       success: false,
       error: "Invalid email parameters: " + validation.errors.join(", "),
     }
   }
 
-  console.log("✓ Validation passed")
-
   try {
     const recipient = Array.isArray(options.to) ? options.to[0] : options.to
-
-    console.log("Calling sendEmailWithSES...")
-    console.log("Recipient:", recipient)
-    console.log("Subject:", options.subject)
-    console.log("Has HTML:", !!options.html)
-    console.log("Text length:", options.text.length)
 
     // Use AWS SES to send the email
     const result = await sendEmailWithSES({
@@ -96,31 +71,18 @@ export async function sendEmail(options: EmailOptions) {
       html: options.html,
     })
 
-    console.log("sendEmailWithSES returned:", JSON.stringify(result, null, 2))
-
     if (result.success) {
-      console.log("✓✓ Email sent successfully")
-      console.log("Message ID:", result.messageId)
       return {
         success: true,
         messageId: result.messageId,
       }
     } else {
-      console.error("✗✗ Email sending failed")
-      console.error("Error:", result.message)
       return {
         success: false,
         error: result.message || "Failed to send email",
       }
     }
   } catch (error) {
-    console.error("=== Email Service Error ===")
-    console.error("Error type:", typeof error)
-    console.error("Error:", error)
-    console.error("Error name:", error instanceof Error ? error.name : "Unknown")
-    console.error("Error message:", error instanceof Error ? error.message : String(error))
-    console.error("Stack:", error instanceof Error ? error.stack : "No stack trace")
-
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -148,20 +110,31 @@ ${data.message}
 Submitted at: ${new Date().toLocaleString()}
   `
 
+  const escapeHtml = (text: string) => {
+    const map: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    }
+    return text.replace(/[&<>"']/g, (m) => map[m])
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1f2937;">New Contact Form Submission</h2>
       
       <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Contact Information</h3>
-        <p><strong>Name:</strong> ${data.name}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Company:</strong> ${data.company || "Not provided"}</p>
+        <p><strong>Name:</strong> ${escapeHtml(data.name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
+        <p><strong>Company:</strong> ${escapeHtml(data.company || "Not provided")}</p>
       </div>
 
       <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Message</h3>
-        <p style="white-space: pre-wrap;">${data.message}</p>
+        <p style="white-space: pre-wrap;">${escapeHtml(data.message)}</p>
       </div>
 
       <div style="margin-top: 30px; color: #6b7280; font-size: 12px;">
@@ -211,24 +184,35 @@ ${data.challenges ? `Challenges:\n${data.challenges}` : ""}
 Submitted at: ${new Date().toLocaleString()}
   `
 
+  const escapeHtml = (text: string) => {
+    const map: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    }
+    return text.replace(/[&<>"']/g, (m) => map[m])
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1f2937;">New Demo Request</h2>
       
       <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Contact Information</h3>
-        <p><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Phone:</strong> ${data.phone || "Not provided"}</p>
-        <p><strong>Company:</strong> ${data.company}</p>
-        <p><strong>Job Title:</strong> ${data.jobTitle || "Not provided"}</p>
+        <p><strong>Name:</strong> ${escapeHtml(data.firstName)} ${escapeHtml(data.lastName)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(data.phone || "Not provided")}</p>
+        <p><strong>Company:</strong> ${escapeHtml(data.company)}</p>
+        <p><strong>Job Title:</strong> ${escapeHtml(data.jobTitle || "Not provided")}</p>
       </div>
 
       <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Company Details</h3>
-        <p><strong>Company Size:</strong> ${data.companySize || "Not specified"}</p>
-        <p><strong>Current Solution:</strong> ${data.currentSolution || "Not specified"}</p>
-        <p><strong>Timeline:</strong> ${data.timeline || "Not specified"}</p>
+        <p><strong>Company Size:</strong> ${escapeHtml(data.companySize || "Not specified")}</p>
+        <p><strong>Current Solution:</strong> ${escapeHtml(data.currentSolution || "Not specified")}</p>
+        <p><strong>Timeline:</strong> ${escapeHtml(data.timeline || "Not specified")}</p>
       </div>
 
       ${
@@ -236,7 +220,7 @@ Submitted at: ${new Date().toLocaleString()}
           ? `
       <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3>Challenges</h3>
-        <p style="white-space: pre-wrap;">${data.challenges}</p>
+        <p style="white-space: pre-wrap;">${escapeHtml(data.challenges)}</p>
       </div>
       `
           : ""

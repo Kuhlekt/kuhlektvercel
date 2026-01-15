@@ -17,11 +17,11 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center flex-shrink-0">
             <Image
-              src="/images/design-mode/Kuhlekt%20transparent%20b_ground%20with%20TM%20medium%20400%20Pxls%20-%20Copy.png"
+              src="/images/kuhlekt-20logo-20transparent-20used-20on-20app.png"
               alt="Kuhlekt Logo"
-              width={120}
-              height={40}
-              className="h-8 w-auto"
+              width={140}
+              height={45}
+              className="h-10 w-auto"
               priority
             />
           </Link>

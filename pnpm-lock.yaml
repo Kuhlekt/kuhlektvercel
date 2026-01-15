@@ -71,14 +71,8 @@ importers:
       '@react-pdf/renderer':
         specifier: latest
         version: 4.3.2(react@19.0.0)
-      '@supabase/auth-helpers-nextjs':
-        specifier: latest
-        version: 0.15.0(@supabase/supabase-js@2.90.1)
-      '@supabase/ssr':
-        specifier: 0.7.0
-        version: 0.7.0(@supabase/supabase-js@2.90.1)
       '@supabase/supabase-js':
-        specifier: latest
+        specifier: 2.90.1
         version: 2.90.1
       ai:
         specifier: latest
@@ -1635,12 +1629,6 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@supabase/auth-helpers-nextjs@0.15.0':
-    resolution: {integrity: sha512-VtXz3GGnxluoxks1g3SaCoYr2OZ7PgRukDl+pLWrDfD2dPDaG8hmkp5iBZsU+lmsDYALGNO2dgbymgpAfD8eCQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-    peerDependencies:
-      '@supabase/supabase-js': ^2.76.1
-
   '@supabase/auth-js@2.90.1':
     resolution: {integrity: sha512-vxb66dgo6h3yyPbR06735Ps+dK3hj0JwS8w9fdQPVZQmocSTlKUW5MfxSy99mN0XqCCuLMQ3jCEiIIUU23e9ng==}
     engines: {node: '>=20.0.0'}
@@ -1656,11 +1644,6 @@ packages:
   '@supabase/realtime-js@2.90.1':
     resolution: {integrity: sha512-PWbnEMkcQRuor8jhObp4+Snufkq8C6fBp+MchVp2qBPY1NXk/c3Iv3YyiFYVzo0Dzuw4nAlT4+ahuPggy4r32w==}
     engines: {node: '>=20.0.0'}
-
-  '@supabase/ssr@0.7.0':
-    resolution: {integrity: sha512-G65t5EhLSJ5c8hTCcXifSL9Q/ZRXvqgXeNo+d3P56f4U1IxwTqjB64UfmfixvmMcjuxnq2yGqEWVJqUcO+AzAg==}
-    peerDependencies:
-      '@supabase/supabase-js': ^2.43.4
 
   '@supabase/storage-js@2.90.1':
     resolution: {integrity: sha512-GHY+Ps/K/RBfRj7kwx+iVf2HIdqOS43rM2iDOIDpapyUnGA9CCBFzFV/XvfzznGykd//z2dkGZhlZZprsVFqGg==}
@@ -2097,10 +2080,6 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
-
-  cookie@1.1.1:
-    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
-    engines: {node: '>=18'}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -5521,11 +5500,6 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@supabase/auth-helpers-nextjs@0.15.0(@supabase/supabase-js@2.90.1)':
-    dependencies:
-      '@supabase/supabase-js': 2.90.1
-      cookie: 1.1.1
-
   '@supabase/auth-js@2.90.1':
     dependencies:
       tslib: 2.8.1
@@ -5547,11 +5521,6 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
-
-  '@supabase/ssr@0.7.0(@supabase/supabase-js@2.90.1)':
-    dependencies:
-      '@supabase/supabase-js': 2.90.1
-      cookie: 1.1.1
 
   '@supabase/storage-js@2.90.1':
     dependencies:
@@ -6025,8 +5994,6 @@ snapshots:
   commander@4.1.1: {}
 
   concat-map@0.0.1: {}
-
-  cookie@1.1.1: {}
 
   cross-spawn@7.0.6:
     dependencies:
