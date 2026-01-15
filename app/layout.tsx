@@ -7,6 +7,7 @@ import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ChatbotWidget } from "@/components/chatbot-widget"
+import { PriceDropBanner } from "@/components/price-drop-banner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -34,6 +35,8 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <GlobalErrorHandler />
+
+        <PriceDropBanner />
 
         <Script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128" strategy="afterInteractive" />
         <Script
