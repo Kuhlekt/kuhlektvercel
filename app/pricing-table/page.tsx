@@ -2,8 +2,7 @@
 
 import type React from "react"
 import Link from "next/link"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -39,80 +38,7 @@ interface PricingFeatureValue {
   value: string
 }
 
-const DEFAULT_TIERS: PricingTier[] = [
-  {
-    id: "bronze",
-    tier_name: "bronze",
-    display_name: "Bronze",
-    usd_price: "980",
-    aud_price: "1,140",
-    usd_setup_fee: "990",
-    aud_setup_fee: "1,300",
-    billing_term: "No contract billed monthly",
-    display_order: 1,
-    is_active: true,
-  },
-  {
-    id: "silver",
-    tier_name: "silver",
-    display_name: "Silver",
-    usd_price: "1,900",
-    aud_price: "2,510",
-    usd_setup_fee: "1,350",
-    aud_setup_fee: "1,750",
-    billing_term: "No contract billed monthly",
-    display_order: 2,
-    is_active: true,
-  },
-  {
-    id: "gold",
-    tier_name: "gold",
-    display_name: "Gold",
-    usd_price: "2,900",
-    aud_price: "3,150",
-    usd_setup_fee: "1,600",
-    aud_setup_fee: "1,750",
-    billing_term: "on annual contract billed monthly",
-    display_order: 3,
-    is_active: true,
-  },
-  {
-    id: "platinum",
-    tier_name: "platinum",
-    display_name: "Platinum",
-    usd_price: "Get a quote",
-    aud_price: "Get a quote",
-    usd_setup_fee: "Get a quote",
-    aud_setup_fee: "Get a quote",
-    billing_term: "on annual contract billed monthly",
-    display_order: 4,
-    is_active: true,
-  },
-]
-
-const DEFAULT_FEATURES = [
-  "Minimum",
-  "Maximum Core Users",
-  "Maximum Sales Users",
-  "CSV SFTP load only",
-  "Unlimited accounts",
-  "Unlimited open items",
-  "Regions / Businesses",
-  "Kuhlekt collection management platform",
-  "Multiple dunning procedures",
-  "Escalations",
-  "Provisioning",
-  "Dispute workflow management",
-  "Kuhlekt portal",
-  "Payments",
-  "Direct Debits",
-  "Download transactions CSV",
-  "Dispute lodgement",
-  "Invoice download",
-  "Statement download",
-]
-
-export default function PricingTablePage() {
+const PricingTablePage = () => {
   const [currency, setCurrency] = useState<"USD" | "AUD">("USD")
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly")
   const [selectedTab, setSelectedTab] = useState("bronze")
@@ -125,30 +51,35 @@ export default function PricingTablePage() {
   const [saveMessage, setSaveMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
-  const [tiers, setTiers] = useState<PricingTier[]>(DEFAULT_TIERS)
+  const [tiers, setTiers] = useState<PricingTier[]>([])
   const [features, setFeatures] = useState<PricingFeature[]>([])
   const [featureValues, setFeatureValues] = useState<PricingFeatureValue[]>([])
 
+  const hasLoadedRef = useRef(false)
+  const editModeRef = useRef(false)
+
   useEffect(() => {
+    editModeRef.current = editMode
+  }, [editMode])
+
+  useEffect(() => {
+    if (hasLoadedRef.current) return
+
     async function fetchPricingData() {
+      hasLoadedRef.current = true
+
       try {
-        const response = await fetch("/api/pricing")
+        const response = await fetch("/api/pricing", { cache: "no-store" })
         const result = await response.json()
 
         if (result.success && result.data) {
-          if (result.data.tiers && result.data.tiers.length > 0) {
-            setTiers(result.data.tiers)
-          }
-          if (result.data.features && result.data.features.length > 0) {
-            setFeatures(result.data.features)
-          }
-          if (result.data.featureValues) {
-            setFeatureValues(result.data.featureValues)
-          }
+          setTiers(result.data.tiers || [])
+          setFeatures(result.data.features || [])
+          setFeatureValues(result.data.featureValues || [])
         }
+        setIsLoading(false)
       } catch (error) {
-        console.error("[Pricing] Failed to fetch pricing data:", error)
-      } finally {
+        console.error("Failed to fetch pricing data:", error)
         setIsLoading(false)
       }
     }
@@ -218,7 +149,6 @@ export default function PricingTablePage() {
       if (data.success) {
         setShowPasswordDialog(false)
         setPassword("")
-        // Set edit mode after clearing dialog to ensure clean state transition
         setEditMode(true)
       } else {
         setPasswordError("Incorrect password. Please try again.")
@@ -245,6 +175,8 @@ export default function PricingTablePage() {
 
   const handlePasswordKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault()
+      e.stopPropagation()
       verifyPassword()
     }
   }
@@ -267,11 +199,10 @@ export default function PricingTablePage() {
       const result = await response.json()
 
       if (result.success) {
-        setSaveMessage("✓ Changes saved to database!")
+        setSaveMessage("✓ Saved to database - All environments updated!")
         setTimeout(() => {
-          setEditMode(false)
           setSaveMessage("")
-        }, 1500)
+        }, 3000)
       } else {
         setSaveMessage(`✗ ${result.error || "Failed to save changes"}`)
       }
@@ -309,7 +240,6 @@ export default function PricingTablePage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 md:py-16">
-        {/* Save button when in edit mode */}
         {editMode && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-4">
             {saveMessage && (
@@ -317,6 +247,16 @@ export default function PricingTablePage() {
                 {saveMessage}
               </span>
             )}
+            <Button
+              onClick={() => {
+                setEditMode(false)
+                setSaveMessage("")
+              }}
+              variant="outline"
+              className="border-slate-300"
+            >
+              Exit Edit Mode
+            </Button>
             <Button onClick={handleSaveChanges} disabled={isSaving} className="bg-green-600 hover:bg-green-700">
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
@@ -358,7 +298,6 @@ export default function PricingTablePage() {
             )}
           </div>
 
-          {/* Currency Selector */}
           <div className="flex justify-center gap-4 mt-6">
             <span className={`font-medium ${currency === "AUD" ? "text-gray-500" : "text-gray-900"}`}>AUD</span>
             <Switch
@@ -369,7 +308,6 @@ export default function PricingTablePage() {
             <span className={`font-medium ${currency === "USD" ? "text-gray-500" : "text-gray-900"}`}>USD</span>
           </div>
 
-          {/* Desktop View */}
           <div className="hidden lg:block">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white rounded-xl border border-slate-300 overflow-hidden">
@@ -418,7 +356,6 @@ export default function PricingTablePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Setup Fees Row */}
                   <tr className="bg-slate-100">
                     <td className="p-4 font-medium text-slate-900">Setup fees</td>
                     {tiers.map((tier) => (
@@ -442,7 +379,6 @@ export default function PricingTablePage() {
                     ))}
                   </tr>
 
-                  {/* Features */}
                   {features.map((feature) => (
                     <tr key={feature.id} className="bg-slate-100 border-b border-slate-300">
                       <td className="p-4 font-medium text-slate-900">
@@ -472,7 +408,6 @@ export default function PricingTablePage() {
             </div>
           </div>
 
-          {/* Mobile View */}
           <div className="lg:hidden space-y-6">
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {tiers.map((tier) => (
@@ -534,7 +469,6 @@ export default function PricingTablePage() {
               ))}
           </div>
 
-          {/* Footnotes */}
           <div className="mt-8 text-left text-sm text-slate-600 space-y-1">
             <p>** Copies received via email BCC from ERP alternate options available by quote.</p>
             <p>*** Based on Stripe other providers quoted. Fees to client accounts.</p>
@@ -550,7 +484,6 @@ export default function PricingTablePage() {
             <p>AUD available only in Australia</p>
           </div>
 
-          {/* CTA Section */}
           <div className="mt-12 bg-slate-100 rounded-2xl p-8 border border-slate-300">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Ready to get started?</h2>
             <p className="text-slate-600 mb-6">Contact us to discuss which plan is right for your business.</p>
@@ -571,15 +504,27 @@ export default function PricingTablePage() {
         </div>
       </div>
 
-      {/* Password Dialog */}
       {showPasswordDialog && (
-        <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <Dialog
+          open={showPasswordDialog}
+          onOpenChange={(open) => {
+            if (!open && !isVerifying) {
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Enter Admin Password</DialogTitle>
               <DialogDescription>Please enter the admin password to enable edit mode</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                verifyPassword()
+              }}
+              className="space-y-4"
+            >
               <Input
                 type="password"
                 placeholder="Password"
@@ -587,12 +532,16 @@ export default function PricingTablePage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handlePasswordKeyDown}
                 disabled={isVerifying}
+                autoFocus
               />
               {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
               <div className="flex gap-2 justify-end">
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
                     setShowPasswordDialog(false)
                     setPassword("")
                     setPasswordError("")
@@ -601,27 +550,25 @@ export default function PricingTablePage() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={verifyPassword} disabled={isVerifying || !password}>
+                <Button type="submit" disabled={isVerifying || !password}>
                   {isVerifying ? "Verifying..." : "Verify"}
                 </Button>
               </div>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* Edit Mode Icon */}
       <button
         onClick={handleEditModeClick}
-        className="fixed bottom-4 right-4 z-50 p-2 rounded-full bg-white border-4 border-blue-500 shadow-2xl hover:scale-110 transition-transform"
-        title={editMode ? "Exit Edit Mode" : "Enter Edit Mode"}
+        className="fixed bottom-4 right-4 z-50 p-1 rounded-full bg-white border-2 border-blue-500 shadow-xl hover:scale-110 transition-transform"
       >
         <Image
           src="/images/kuhlekt-cloud-logo.jpg"
-          alt="Edit"
-          width={20}
-          height={20}
-          className="w-20 h-20 object-contain"
+          alt="Admin"
+          width={12}
+          height={12}
+          className="w-12 h-12 object-contain"
         />
       </button>
 
@@ -629,3 +576,5 @@ export default function PricingTablePage() {
     </div>
   )
 }
+
+export default PricingTablePage
