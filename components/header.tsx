@@ -4,13 +4,40 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { supabase } from "@/lib/supabase/client"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [clientLogo, setClientLogo] = useState<string | null>(null)
+  const [clientName, setClientName] = useState<string>("Kuhlekt")
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const fetchClientLogo = async () => {
+      // Check for clientId in URL params or localStorage
+      const params = new URLSearchParams(window.location.search)
+      const clientId = params.get("clientId") || localStorage.getItem("clientId")
+
+      if (clientId) {
+        try {
+          const { data, error } = await supabase.from("tenants").select("logo_url, name").eq("id", clientId).single()
+
+          if (data && !error) {
+            setClientLogo(data.logo_url)
+            setClientName(data.name || "Kuhlekt")
+            localStorage.setItem("clientId", clientId)
+          }
+        } catch (err) {
+          console.error("Failed to fetch client logo:", err)
+        }
+      }
+    }
+
+    fetchClientLogo()
   }, [])
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
@@ -83,16 +110,26 @@ export function Header() {
     <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center flex-shrink-0">
-            <Image
-              src="/images/kuhlekt-logo.png"
-              alt="Kuhlekt Logo"
-              width={150}
-              height={50}
-              className="h-10 w-auto"
-              priority
-            />
+            {clientLogo ? (
+              <Image
+                src={clientLogo || "/placeholder.svg"}
+                alt={`${clientName} Logo`}
+                width={150}
+                height={50}
+                className="h-10 w-auto"
+                priority
+              />
+            ) : (
+              <Image
+                src="/images/kuhlekt-logo.png"
+                alt="Kuhlekt Logo"
+                width={150}
+                height={50}
+                className="h-10 w-auto"
+                priority
+              />
+            )}
           </Link>
 
           {/* Desktop Navigation */}

@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://www.googletagmanager.com https://chat.hindleconsultants.com; style-src 'self' 'unsafe-inline' https://chat.hindleconsultants.com; img-src 'self' data: https: blob:; font-src 'self' data: https://chat.hindleconsultants.com; connect-src 'self' https://*.supabase.co https://chat.hindleconsultants.com; frame-src 'self' https://www.google.com https://chat.hindleconsultants.com; child-src 'self' https://chat.hindleconsultants.com; object-src 'none'; base-uri 'self'; form-action 'self';",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://www.googletagmanager.com https://hc-chatbot-v22.vercel.app; style-src 'self' 'unsafe-inline' https://hc-chatbot-v22.vercel.app; img-src 'self' data: https: blob:; font-src 'self' data: https://hc-chatbot-v22.vercel.app; connect-src 'self' https://*.supabase.co https://hc-chatbot-v22.vercel.app; frame-src 'self' https://www.google.com https://hc-chatbot-v22.vercel.app; child-src 'self' https://hc-chatbot-v22.vercel.app; object-src 'none'; base-uri 'self'; form-action 'self';",
   )
 
   return response
