@@ -1,14 +1,83 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+
+  if (!mounted) {
+    return (
+      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center flex-shrink-0">
+              <Image
+                src="/images/kuhlekt-logo.png"
+                alt="Kuhlekt Logo"
+                width={150}
+                height={50}
+                className="h-10 w-auto"
+                priority
+              />
+            </Link>
+            <nav className="hidden md:flex space-x-8">
+              <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200">
+                Home
+              </Link>
+              <Link
+                href="/product"
+                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+              >
+                Product
+              </Link>
+              <Link
+                href="/solutions"
+                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+              >
+                Solutions
+              </Link>
+              <Link
+                href="/about"
+                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+              >
+                About
+              </Link>
+              <Link
+                href="/pricing-table"
+                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/contact"
+                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-200"
+              >
+                Contact
+              </Link>
+            </nav>
+            <div className="hidden md:flex">
+              <Link href="/demo">
+                <Button className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-6 py-2 transition-colors duration-200">
+                  Schedule a Demo
+                </Button>
+              </Link>
+            </div>
+            <div className="md:hidden w-10 h-10"></div>
+          </div>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">

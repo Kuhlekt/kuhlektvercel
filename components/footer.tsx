@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -12,6 +12,11 @@ export function Footer() {
   const [isCareersModalOpen, setIsCareersModalOpen] = useState(false)
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const openCareersModal = () => setIsCareersModalOpen(true)
   const closeCareersModal = () => setIsCareersModalOpen(false)
@@ -122,9 +127,11 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <button onClick={openCareersModal} className="hover:text-gray-900 text-left">
-                    Careers
-                  </button>
+                  {mounted && (
+                    <button onClick={openCareersModal} className="hover:text-gray-900 text-left">
+                      Careers
+                    </button>
+                  )}
                 </li>
                 <li>
                   <Link href="/contact#top" className="hover:text-gray-900 text-left">
@@ -132,14 +139,18 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <button onClick={openTermsModal} className="hover:text-gray-900 text-left">
-                    Terms of Trade
-                  </button>
+                  {mounted && (
+                    <button onClick={openTermsModal} className="hover:text-gray-900 text-left">
+                      Terms of Trade
+                    </button>
+                  )}
                 </li>
                 <li>
-                  <button onClick={openPrivacyModal} className="hover:text-gray-900 text-left">
-                    Privacy and Security Policy
-                  </button>
+                  {mounted && (
+                    <button onClick={openPrivacyModal} className="hover:text-gray-900 text-left">
+                      Privacy and Security Policy
+                    </button>
+                  )}
                 </li>
               </ul>
             </div>
@@ -172,12 +183,15 @@ export function Footer() {
       </div>
 
       {/* Modals */}
-      <CareersModal isOpen={isCareersModalOpen} onClose={closeCareersModal} />
-      <PrivacyModal isOpen={isPrivacyModalOpen} onClose={closePrivacyModal} />
-      <TermsModal isOpen={isTermsModalOpen} onClose={closeTermsModal} />
+      {mounted && (
+        <>
+          <CareersModal isOpen={isCareersModalOpen} onClose={closeCareersModal} />
+          <PrivacyModal isOpen={isPrivacyModalOpen} onClose={closePrivacyModal} />
+          <TermsModal isOpen={isTermsModalOpen} onClose={closeTermsModal} />
+        </>
+      )}
     </footer>
   )
 }
 
-// Export as default as well to support both import styles
 export default Footer
