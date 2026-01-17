@@ -6,7 +6,6 @@ import "./globals.css"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { ChatbotWidget } from "@/components/chatbot-widget"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -52,7 +51,21 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
-        <ChatbotWidget />
+
+        <Script
+          id="chatbot-widget"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var script = document.createElement('script');
+                script.src = 'https://chat.hindleconsultants.com/widget.js';
+                script.setAttribute('data-tenant-id', 'c3a22737-835a-480b-9cd2-5ee9b40d3be4');
+                document.body.appendChild(script);
+              })();
+            `,
+          }}
+        />
       </body>
     </html>
   )

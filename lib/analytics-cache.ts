@@ -31,15 +31,4 @@ export function clearAnalyticsCache(): void {
   analyticsCache.clear()
 }
 
-// Clean up expired cache entries periodically
-setInterval(
-  () => {
-    const now = Date.now()
-    for (const [key, cached] of analyticsCache.entries()) {
-      if (now > cached.timestamp + cached.ttl) {
-        analyticsCache.delete(key)
-      }
-    }
-  },
-  5 * 60 * 1000,
-) // Clean every 5 minutes
+// Cache cleanup now happens on-demand when entries are accessed
