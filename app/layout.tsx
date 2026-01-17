@@ -52,20 +52,17 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
 
-        <div id="hc-widget-container"></div>
-
         <Script
           id="chatbot-widget"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function(w,d,s,o,f,js,fjs){
-                w['HCWidget']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
-                js=d.createElement(s);fjs=d.getElementsByTagName(s)[0];
-                js.id=o;js.src=f;js.async=1;fjs.parentNode.insertBefore(js,fjs);
-              }(window,document,'script','hc','https://hc-chatbot-v22.vercel.app/widget.js'));
-              hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
-              console.log('[v0] Chatbot script initialized');
+              (function() {
+                var script = document.createElement('script');
+                script.src = 'https://chatbot.hindleconsultants.com/widget.js';
+                script.setAttribute('data-tenant-id', 'c3a22737-835a-480b-9cd2-5ee9b40d3be4');
+                document.body.appendChild(script);
+              })();
             `,
           }}
         />
