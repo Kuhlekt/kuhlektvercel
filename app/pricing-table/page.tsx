@@ -69,7 +69,7 @@ const PricingTablePage = () => {
       hasLoadedRef.current = true
 
       try {
-        const response = await fetch("/api/pricing", { cache: "no-store" })
+        const response = await fetch("/api/pricing")
         const result = await response.json()
 
         if (result.success && result.data) {

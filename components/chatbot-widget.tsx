@@ -1,32 +1,17 @@
 "use client"
 import { useEffect } from "react"
 
-declare global {
-  interface Window {
-    KALI_API_URL: string
-    TENANT_SLUG: string
-  }
-}
-
 export function ChatbotWidget() {
   useEffect(() => {
-    window.KALI_API_URL = "https://chatbot.hindleconsultants.com"
-    window.TENANT_SLUG = "kuhlekt"
-
     const script = document.createElement("script")
-    script.src = "https://chatbot.hindleconsultants.com/widget.js?v=2.7"
-    script.async = true
-
-    console.log("[v0] Loading chatbot widget from:", script.src)
-    console.log("[v0] KALI_API_URL set to:", window.KALI_API_URL)
-
-    script.onload = () => {
-      console.log("[v0] Chatbot widget loaded successfully")
-    }
-
-    script.onerror = (error) => {
-      console.error("[v0] Failed to load chatbot widget:", error)
-    }
+    script.innerHTML = `
+      (function() {
+        var script = document.createElement('script');
+        script.src = 'https://hc-chatbot-v22.vercel.app/widget.js';
+        script.setAttribute('data-tenant-id', 'c3a22737-835a-480b-9cd2-5ee9b40d3be4');
+        document.body.appendChild(script);
+      })();
+    `
 
     document.body.appendChild(script)
 
