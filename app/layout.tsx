@@ -54,6 +54,7 @@ export default function RootLayout({
 
         <Script
           id="chatbot-init"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               window.hc = window.hc || function() {
@@ -66,6 +67,7 @@ export default function RootLayout({
         <Script
           id="chatbot-widget"
           src="https://chatbot.hindleconsultants.com/widget.js"
+          strategy="lazyOnload"
           async
         />
       </body>
