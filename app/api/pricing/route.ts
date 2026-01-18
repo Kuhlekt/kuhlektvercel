@@ -4,7 +4,15 @@ import { NextResponse } from "next/server"
 // GET - Fetch pricing data from database
 export async function GET() {
   try {
-    const sql = neon(process.env.DATABASE_URL!)
+    if (!process.env.DATABASE_URL) {
+      console.error("[Pricing API] DATABASE_URL environment variable is not set")
+      return NextResponse.json(
+        { success: false, error: "Database connection not configured" },
+        { status: 500 },
+      )
+    }
+
+    const sql = neon(process.env.DATABASE_URL)
 
     // Fetch pricing tiers
     const tiers = await sql("SELECT * FROM pricing_tiers WHERE is_active = true ORDER BY display_order ASC")
@@ -24,15 +32,26 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error("[Pricing API] Unexpected error:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch pricing data" }, { status: 500 })
+    console.error("[Pricing API] Error fetching pricing data:", error)
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch pricing data" },
+      { status: 500 },
+    )
   }
 }
 
 // POST - Save pricing data to database (requires admin auth)
 export async function POST(request: Request) {
   try {
-    const sql = neon(process.env.DATABASE_URL!)
+    if (!process.env.DATABASE_URL) {
+      console.error("[Pricing API] DATABASE_URL environment variable is not set")
+      return NextResponse.json(
+        { success: false, error: "Database connection not configured" },
+        { status: 500 },
+      )
+    }
+
+    const sql = neon(process.env.DATABASE_URL)
     const body = await request.json()
     const { tiers, features, featureValues } = body
 
@@ -89,7 +108,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: "Pricing data saved successfully" })
   } catch (error) {
-    console.error("[Pricing API] Unexpected error:", error)
-    return NextResponse.json({ success: false, error: "Failed to save pricing data" }, { status: 500 })
+    console.error("[Pricing API] Error saving pricing data:", error)
+    return NextResponse.json(
+      { success: false, error: "Failed to save pricing data" },
+      { status: 500 },
+    )
   }
 }
