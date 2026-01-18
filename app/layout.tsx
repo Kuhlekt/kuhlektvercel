@@ -53,18 +53,22 @@ export default function RootLayout({
         <Footer />
 
         <Script
-          id="chatbot-widget"
+          id="chatbot-hc-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function(w,d,s,o,f,js,fjs){
-                w['HCWidget']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
-                js=d.createElement(s);fjs=d.getElementsByTagName(s)[0];
-                js.id=o;js.src=f;js.async=1;fjs.parentNode.insertBefore(js,fjs);
-              }(window,document,'script','hc','https://chatbot.hindleconsultants.com/widget.js'));
-              hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
+              window.hc = window.hc || function() {
+                (window.hc.q = window.hc.q || []).push(arguments);
+              };
+              window.hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
             `,
           }}
+        />
+        <Script
+          id="chatbot-widget"
+          src="https://chatbot.hindleconsultants.com/widget.js"
+          strategy="beforeInteractive"
+          async
         />
       </body>
     </html>
