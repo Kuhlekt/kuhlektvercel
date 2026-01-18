@@ -57,12 +57,12 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                var script = document.createElement('script');
-                script.src = 'https://chatbot.hindleconsultants.com/widget.js';
-                script.setAttribute('data-tenant-id', 'c3a22737-835a-480b-9cd2-5ee9b40d3be4');
-                document.body.appendChild(script);
-              })();
+              (function(w,d,s,o,f,js,fjs){
+                w['HCWidget']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
+                js=d.createElement(s);fjs=d.getElementsByTagName(s)[0];
+                js.id=o;js.src=f;js.async=1;fjs.parentNode.insertBefore(js,fjs);
+              }(window,document,'script','hc','https://chatbot.hindleconsultants.com/widget.js'));
+              hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
             `,
           }}
         />
