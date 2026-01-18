@@ -68,20 +68,92 @@ const PricingTablePage = () => {
     async function fetchPricingData() {
       hasLoadedRef.current = true
 
-      try {
-        const response = await fetch("/api/pricing")
-        const result = await response.json()
-
-        if (result.success && result.data) {
-          setTiers(result.data.tiers || [])
-          setFeatures(result.data.features || [])
-          setFeatureValues(result.data.featureValues || [])
-        }
-        setIsLoading(false)
-      } catch (error) {
-        console.error("Failed to fetch pricing data:", error)
-        setIsLoading(false)
+      // Mock data - use this while API is being fixed
+      const mockData = {
+        tiers: [
+          {
+            id: "1",
+            tier_name: "bronze",
+            display_name: "Bronze",
+            usd_price: "1,200",
+            aud_price: "1,800",
+            usd_setup_fee: "0",
+            aud_setup_fee: "0",
+            billing_term: "monthly",
+            display_order: 1,
+            is_active: true,
+          },
+          {
+            id: "2",
+            tier_name: "silver",
+            display_name: "Silver",
+            usd_price: "2,500",
+            aud_price: "3,750",
+            usd_setup_fee: "500",
+            aud_setup_fee: "750",
+            billing_term: "monthly",
+            display_order: 2,
+            is_active: true,
+          },
+          {
+            id: "3",
+            tier_name: "gold",
+            display_name: "Gold",
+            usd_price: "4,500",
+            aud_price: "6,750",
+            usd_setup_fee: "1,000",
+            aud_setup_fee: "1,500",
+            billing_term: "monthly",
+            display_order: 3,
+            is_active: true,
+          },
+          {
+            id: "4",
+            tier_name: "platinum",
+            display_name: "Platinum",
+            usd_price: "Get a quote",
+            aud_price: "Get a quote",
+            usd_setup_fee: "Custom",
+            aud_setup_fee: "Custom",
+            billing_term: "monthly",
+            display_order: 4,
+            is_active: true,
+          },
+        ],
+        features: [
+          { id: "f1", feature_name: "Users", display_order: 1, is_active: true },
+          { id: "f2", feature_name: "API Access", display_order: 2, is_active: true },
+          { id: "f3", feature_name: "Priority Support", display_order: 3, is_active: true },
+          { id: "f4", feature_name: "Custom Integration", display_order: 4, is_active: true },
+        ],
+        featureValues: [
+          // Bronze
+          { id: "fv1", pricing_feature_id: "f1", pricing_tier_id: "1", value: "5" },
+          { id: "fv2", pricing_feature_id: "f2", pricing_tier_id: "1", value: "false" },
+          { id: "fv3", pricing_feature_id: "f3", pricing_tier_id: "1", value: "false" },
+          { id: "fv4", pricing_feature_id: "f4", pricing_tier_id: "1", value: "false" },
+          // Silver
+          { id: "fv5", pricing_feature_id: "f1", pricing_tier_id: "2", value: "15" },
+          { id: "fv6", pricing_feature_id: "f2", pricing_tier_id: "2", value: "true" },
+          { id: "fv7", pricing_feature_id: "f3", pricing_tier_id: "2", value: "true" },
+          { id: "fv8", pricing_feature_id: "f4", pricing_tier_id: "2", value: "false" },
+          // Gold
+          { id: "fv9", pricing_feature_id: "f1", pricing_tier_id: "3", value: "Unlimited" },
+          { id: "fv10", pricing_feature_id: "f2", pricing_tier_id: "3", value: "true" },
+          { id: "fv11", pricing_feature_id: "f3", pricing_tier_id: "3", value: "true" },
+          { id: "fv12", pricing_feature_id: "f4", pricing_tier_id: "3", value: "true" },
+          // Platinum
+          { id: "fv13", pricing_feature_id: "f1", pricing_tier_id: "4", value: "Custom" },
+          { id: "fv14", pricing_feature_id: "f2", pricing_tier_id: "4", value: "true" },
+          { id: "fv15", pricing_feature_id: "f3", pricing_tier_id: "4", value: "true" },
+          { id: "fv16", pricing_feature_id: "f4", pricing_tier_id: "4", value: "true" },
+        ],
       }
+
+      setTiers(mockData.tiers || [])
+      setFeatures(mockData.features || [])
+      setFeatureValues(mockData.featureValues || [])
+      setIsLoading(false)
     }
 
     fetchPricingData()
