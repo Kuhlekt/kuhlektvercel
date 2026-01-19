@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
+import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
@@ -31,9 +32,7 @@ export default function RootLayout({
         <meta name="google-site-verification" content="SMT2000342327Q08" />
       </head>
       <body className={inter.className}>
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <GlobalErrorHandler />
 
         <Script async src="https://www.googletagmanager.com/gtag/js?id=AW-942617128" strategy="afterInteractive" />
         <Script
@@ -49,32 +48,27 @@ export default function RootLayout({
           }}
         />
 
+        <Header />
+        <main>{children}</main>
+        <Footer />
+
         <Script
           id="chatbot-init"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               window.hc = window.hc || function() {
                 (window.hc.q = window.hc.q || []).push(arguments);
               };
+              window.hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
             `,
           }}
         />
         <Script
           id="chatbot-widget"
           src="https://chatbot.hindleconsultants.com/widget.js"
-          strategy="afterInteractive"
-        />
-        <Script
-          id="chatbot-start"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && window.hc) {
-                window.hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
-              }
-            `,
-          }}
+          strategy="beforeInteractive"
+          async
         />
       </body>
     </html>
