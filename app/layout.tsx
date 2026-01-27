@@ -67,8 +67,7 @@ export default function RootLayout({
         <Script
           id="chatbot-widget"
           src="https://chatbot.hindleconsultants.com/widget.js"
-          strategy="beforeInteractive"
-          async
+          strategy="afterInteractive"
         />
       </body>
     </html>

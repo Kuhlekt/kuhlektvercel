@@ -130,6 +130,19 @@ export async function POST(request: NextRequest) {
     console.log("✓ All required fields present")
     console.log("Calculator type:", calculatorType)
     console.log("Email:", email)
+    console.log("Results:", JSON.stringify(results))
+
+    // Safely format numbers
+    const formatCurrency = (num: any) => {
+      const n = Number(num)
+      if (isNaN(n)) return "$0"
+      return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+    }
+    const formatNumber = (num: any, decimals = 0) => {
+      const n = Number(num)
+      if (isNaN(n)) return "0"
+      return n.toFixed(decimals)
+    }
 
     let emailBody = ""
 
@@ -146,7 +159,7 @@ export async function POST(request: NextRequest) {
               <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #0891b2;">Estimated Annual Savings</h3>
                 <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.annualSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  ${formatCurrency(results.annualSavings)}
                 </p>
               </div>
 
@@ -154,19 +167,19 @@ export async function POST(request: NextRequest) {
               <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Current DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.currentDSO?.toFixed(0)} days</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatNumber(results.currentDSO)} days</td>
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">New DSO</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #0891b2;">${results.newDSO?.toFixed(0)} days</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #0891b2;">${formatNumber(results.newDSO)} days</td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Current Cash Tied Up</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.currentCashTied?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatCurrency(results.currentCashTied)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Cash Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.cashReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">${formatCurrency(results.cashReleased)}</td>
                 </tr>
               </table>
 
@@ -198,11 +211,11 @@ export async function POST(request: NextRequest) {
               <div style="background-color: #f0f9ff; border-left: 4px solid #0891b2; padding: 20px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #0891b2;">Total Annual Benefit</h3>
                 <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #0891b2;">
-                  $${results.totalAnnualBenefit?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  ${formatCurrency(results.totalAnnualBenefit)}
                 </p>
                 <p style="margin: 0;">
-                  <strong>ROI:</strong> ${results.roi?.toFixed(0)}% | 
-                  <strong>Payback:</strong> ${results.paybackMonths?.toFixed(1)} months
+                  <strong>ROI:</strong> ${formatNumber(results.roi)}% | 
+                  <strong>Payback:</strong> ${formatNumber(results.paybackMonths, 1)} months
                 </p>
               </div>
 
@@ -210,23 +223,23 @@ export async function POST(request: NextRequest) {
               <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">DSO Improvement</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${results.dsoReductionDays?.toFixed(0)} days</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatNumber(results.dsoReductionDays)} days</td>
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Working Capital Released</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.workingCapitalReleased?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">${formatCurrency(results.workingCapitalReleased)}</td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Interest Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.interestSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">${formatCurrency(results.interestSavings)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Labour Cost Savings</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.labourCostSavings?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">${formatCurrency(results.labourCostSavings)}</td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Bad Debt Reduction</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">$${results.badDebtReduction?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; color: #10b981;">${formatCurrency(results.badDebtReduction)}</td>
                 </tr>
               </table>
 
@@ -234,15 +247,15 @@ export async function POST(request: NextRequest) {
               <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Implementation Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.implementationCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatCurrency(results.implementationCost)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Annual Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.annualCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatCurrency(results.annualCost)}</td>
                 </tr>
                 <tr style="background-color: #f9fafb;">
                   <td style="padding: 12px; border: 1px solid #e5e7eb;">Total First Year Cost</td>
-                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">$${results.totalFirstYearCost?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                  <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">${formatCurrency(results.totalFirstYearCost)}</td>
                 </tr>
               </table>
 

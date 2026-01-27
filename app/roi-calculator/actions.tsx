@@ -69,30 +69,44 @@ export async function calculateSimpleROI(data: SimpleROIData) {
 }
 
 export async function calculateDetailedROI(data: DetailedROIData) {
-  const implementationCost = Number.parseFloat(data.implementationCost)
-  const monthlyCost = Number.parseFloat(data.monthlyCost)
-  const labourCosts = Number.parseFloat(data.perAnnumDirectLabourCosts)
-  const labourSavingsPercent = Number.parseFloat(data.labourSavings) / 100
-  const interestRate = Number.parseFloat(data.interestRate) / 100
-  const currentDSO = Number.parseFloat(data.currentDSODays)
-  const dsoImprovementPercent = Number.parseFloat(data.dsoImprovement) / 100
-  const debtorsBalance = Number.parseFloat(data.debtorsBalance)
-  const currentBadDebts = Number.parseFloat(data.currentBadDebts)
+  console.log("[v0] calculateDetailedROI called with:", data)
+  
+  const implementationCost = Number.parseFloat(data.implementationCost || "0")
+  const monthlyCost = Number.parseFloat(data.monthlyCost || "0")
+  const labourCosts = Number.parseFloat(data.perAnnumDirectLabourCosts || "0")
+  const labourSavingsPercent = Number.parseFloat(data.labourSavings || "0") / 100
+  const interestRate = Number.parseFloat(data.interestRate || "0") / 100
+  const currentDSO = Number.parseFloat(data.currentDSODays || "0")
+  const dsoImprovementPercent = Number.parseFloat(data.dsoImprovement || "0") / 100
+  const debtorsBalance = Number.parseFloat(data.debtorsBalance || "0")
+  const currentBadDebts = Number.parseFloat(data.currentBadDebts || "0")
 
-  // Validate inputs
-  if (isNaN(implementationCost) || implementationCost < 0) {
-    throw new Error("Implementation cost must be a positive number")
+  console.log("[v0] Parsed values:", {
+    implementationCost,
+    monthlyCost,
+    labourCosts,
+    labourSavingsPercent,
+    interestRate,
+    currentDSO,
+    dsoImprovementPercent,
+    debtorsBalance,
+    currentBadDebts,
+  })
+
+  // Validate inputs - allow 0 but require valid numbers
+  if (isNaN(implementationCost)) {
+    throw new Error("Implementation cost must be a valid number")
   }
-  if (isNaN(monthlyCost) || monthlyCost < 0) {
-    throw new Error("Monthly cost must be a positive number")
+  if (isNaN(monthlyCost)) {
+    throw new Error("Monthly cost must be a valid number")
   }
-  if (isNaN(labourCosts) || labourCosts < 0) {
-    throw new Error("Labour costs must be a positive number")
+  if (isNaN(labourCosts)) {
+    throw new Error("Labour costs must be a valid number")
   }
   if (isNaN(currentDSO) || currentDSO <= 0) {
     throw new Error("Current DSO must be a positive number")
   }
-  if (isNaN(debtorsBalance) || debtorsBalance < 0) {
+  if (isNaN(debtorsBalance) || debtorsBalance <= 0) {
     throw new Error("Debtors balance must be a positive number")
   }
   if (isNaN(dsoImprovementPercent) || dsoImprovementPercent < 0 || dsoImprovementPercent > 1) {
@@ -113,10 +127,10 @@ export async function calculateDetailedROI(data: DetailedROIData) {
 
   const totalAnnualBenefit = labourCostSavings + interestSavings + badDebtReduction
   const netBenefit = totalAnnualBenefit - totalFirstYearCost
-  const roi = (netBenefit / totalFirstYearCost) * 100
-  const paybackMonths = totalFirstYearCost / (totalAnnualBenefit / 12)
+  const roi = totalFirstYearCost > 0 ? (netBenefit / totalFirstYearCost) * 100 : 0
+  const paybackMonths = totalAnnualBenefit > 0 ? totalFirstYearCost / (totalAnnualBenefit / 12) : 999
 
-  return {
+  const results = {
     implementationCost,
     annualCost,
     totalFirstYearCost,
@@ -133,4 +147,7 @@ export async function calculateDetailedROI(data: DetailedROIData) {
     roi,
     paybackMonths,
   }
+
+  console.log("[v0] Calculated results:", results)
+  return results
 }
