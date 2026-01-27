@@ -52,17 +52,20 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
-        <ChatbotDebug />
 
         <Script
           id="chatbot-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.hc = window.hc || function() {
-                (window.hc.q = window.hc.q || []).push(arguments);
-              };
-              window.hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
+              (function() {
+                if (typeof window !== 'undefined') {
+                  window.hc = window.hc || function() {
+                    (window.hc.q = window.hc.q || []).push(arguments);
+                  };
+                  window.hc('init', { tenantId: 'c3a22737-835a-480b-9cd2-5ee9b40d3be4' });
+                }
+              })();
             `,
           }}
         />
@@ -70,6 +73,7 @@ export default function RootLayout({
           id="chatbot-widget"
           src="https://chatbot.hindleconsultants.com/widget.js"
           strategy="afterInteractive"
+          defer
         />
       </body>
     </html>
