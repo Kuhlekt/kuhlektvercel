@@ -6,6 +6,7 @@ import "./globals.css"
 import { GlobalErrorHandler } from "@/components/global-error-handler"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { ChatbotDebug } from "@/components/chatbot-debug"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -51,6 +52,7 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
+        <ChatbotDebug />
 
         <Script
           id="chatbot-init"
