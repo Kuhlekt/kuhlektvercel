@@ -58,6 +58,7 @@ export async function POST(request: Request) {
           billing_term: tier.billing_term,
           display_order: tier.display_order,
           is_active: tier.is_active ?? true,
+          annual_discount: tier.annual_discount,
           updated_at: new Date().toISOString(),
         })
       }

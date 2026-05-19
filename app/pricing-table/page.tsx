@@ -22,6 +22,7 @@ interface PricingTier {
   billing_term: string
   display_order: number
   is_active: boolean
+  annual_discount?: number
 }
 
 interface PricingFeature {
@@ -50,6 +51,7 @@ const PricingTablePage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [annualDiscount, setAnnualDiscount] = useState(15)
 
   const [tiers, setTiers] = useState<PricingTier[]>([])
   const [features, setFeatures] = useState<PricingFeature[]>([])
@@ -76,6 +78,12 @@ const PricingTablePage = () => {
           setTiers(result.data.tiers || [])
           setFeatures(result.data.features || [])
           setFeatureValues(result.data.featureValues || [])
+          
+          // Extract annual discount from first tier if available
+          const firstTier = result.data.tiers?.[0]
+          if (firstTier?.annual_discount) {
+            setAnnualDiscount(firstTier.annual_discount)
+          }
         }
         setIsLoading(false)
       } catch (error) {
@@ -186,9 +194,28 @@ const PricingTablePage = () => {
     setSaveMessage("")
 
     try {
-      // Mock save - pricing data stored locally
-      // TODO: Connect to proper database when ready
-      setSaveMessage("✓ Changes saved locally")
+      // Update tiers with annual_discount
+      const tiersWithDiscount = tiers.map((tier) => ({
+        ...tier,
+        annual_discount: annualDiscount,
+      }))
+
+      const response = await fetch("/api/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tiers: tiersWithDiscount,
+          features,
+          featureValues,
+        }),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        setSaveMessage("✓ Changes saved successfully")
+      } else {
+        setSaveMessage("✗ Failed to save changes")
+      }
       setTimeout(() => {
         setSaveMessage("")
       }, 3000)
@@ -207,7 +234,8 @@ const PricingTablePage = () => {
     const numPrice = Number.parseFloat(price.replace(/,/g, ""))
     if (isNaN(numPrice)) return price
 
-    const discounted = numPrice * 0.85
+    const discountFactor = 1 - annualDiscount / 100
+    const discounted = numPrice * discountFactor
     const rounded = Math.round(discounted / 10) * 10
     return rounded.toLocaleString()
   }
@@ -279,7 +307,7 @@ const PricingTablePage = () => {
             </div>
             {billingPeriod === "annual" && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium">
-                15% Discount Available for Annual Pricing - Pre-Paid
+                {annualDiscount}% Discount Available for Annual Pricing - Pre-Paid
               </div>
             )}
           </div>
@@ -363,6 +391,28 @@ const PricingTablePage = () => {
                         )}
                       </td>
                     ))}
+                  </tr>
+
+                  <tr className="bg-slate-100">
+                    <td className="p-4 font-medium text-slate-900">Annual Discount %</td>
+                    <td className="p-4 text-center border-l border-slate-300" colSpan={tiers.length}>
+                      {editMode ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Input
+                            type="number"
+                            value={annualDiscount}
+                            onChange={(e) => setAnnualDiscount(Number.parseFloat(e.target.value) || 0)}
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className="w-24 text-center bg-white text-slate-900 px-2 py-1 rounded border border-slate-300"
+                          />
+                          <span className="text-slate-600">%</span>
+                        </div>
+                      ) : (
+                        `${annualDiscount}%`
+                      )}
+                    </td>
                   </tr>
 
                   {features.map((feature) => (
